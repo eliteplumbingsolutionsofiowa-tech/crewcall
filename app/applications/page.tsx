@@ -231,7 +231,12 @@ export default function ApplicationsPage() {
         return
       }
 
-      setWorkerApps((applicationsData || []) as WorkerApplication[])
+      const cleanedWorkerApps = (applicationsData || []).map((app: any) => ({
+        ...app,
+        jobs: Array.isArray(app.jobs) ? app.jobs[0] : app.jobs,
+      }))
+
+      setWorkerApps(cleanedWorkerApps as unknown as WorkerApplication[])
       setLoading(false)
     }
 
