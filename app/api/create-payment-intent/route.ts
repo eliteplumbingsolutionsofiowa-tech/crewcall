@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-// ✅ FIXED (removed apiVersion)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const supabaseAdmin = createClient(
@@ -42,10 +41,7 @@ export async function POST(req: NextRequest) {
     const connectedAccountId = (job.profiles as any)?.stripe_account_id
 
     if (!amount || amount < 100) {
-      return NextResponse.json(
-        { error: 'Invalid job price' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid job price' }, { status: 400 })
     }
 
     if (!connectedAccountId) {
@@ -87,10 +83,7 @@ export async function POST(req: NextRequest) {
       .eq('id', job.id)
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -104,5 +97,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
-}
 }
