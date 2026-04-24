@@ -57,7 +57,12 @@ export default function ApplicantsList({ jobId }: { jobId: string }) {
       }
 
       if (isMounted) {
-        setApplicants((data || []) as Applicant[])
+        const cleanedApplicants = (data || []).map((app: any) => ({
+  ...app,
+  profiles: Array.isArray(app.profiles) ? app.profiles[0] : app.profiles,
+}))
+
+setApplicants(cleanedApplicants as unknown as Applicant[])
         setLoading(false)
       }
     }
