@@ -82,7 +82,14 @@ export default function ProfileReviews({
         return
       }
 
-      setReviews((data || []) as Review[])
+      const cleanedReviews = (data || []).map((review: any) => ({
+  ...review,
+  reviewer: Array.isArray(review.reviewer)
+    ? review.reviewer[0]
+    : review.reviewer,
+}))
+
+setReviews(cleanedReviews as unknown as Review[])
       setLoading(false)
     }
 
