@@ -189,7 +189,14 @@ export default function ApplicationsPage() {
             return
           }
 
-          setCompanyApplicants((applicantsData || []) as CompanyApplicant[])
+          const cleanedApplicants = (applicantsData || []).map((app: any) => ({
+            ...app,
+            profiles: Array.isArray(app.profiles)
+              ? app.profiles[0]
+              : app.profiles,
+          }))
+
+          setCompanyApplicants(cleanedApplicants as CompanyApplicant[])
         } else {
           setCompanyApplicants([])
         }
@@ -278,7 +285,7 @@ export default function ApplicationsPage() {
               </p>
               <div className="mt-5">
                 <Link
-                  href="/post-job"
+                  href="/jobs/new"
                   className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white"
                 >
                   Post Job
