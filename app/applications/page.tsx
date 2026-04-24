@@ -429,8 +429,7 @@ export default function ApplicationsPage() {
                         <span className="font-semibold text-gray-900">
                           Pay:
                         </span>{' '}
-                        {formatPay(app.jobs?.pay_rate)}
-                      </div>
+{formatPay(app.jobs?.pay_rate ?? null)}                      </div>
 
                       <div>
                         <span className="font-semibold text-gray-900">
