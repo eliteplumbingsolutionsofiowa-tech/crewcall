@@ -84,7 +84,12 @@ export default function MessagesPage() {
         return
       }
 
-      const rows = (conversationRows || []) as ConversationRow[]
+     const rows = (conversationRows || []).map((conversation: any) => ({
+  ...conversation,
+  jobs: Array.isArray(conversation.jobs)
+    ? conversation.jobs[0]
+    : conversation.jobs,
+})) as unknown as ConversationRow[]
 
       if (rows.length === 0) {
         setConversations([])
