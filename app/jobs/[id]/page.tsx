@@ -103,7 +103,12 @@ export default function JobDetailPage() {
         setErrorMessage('Could not load applicants.')
         setApplicants([])
       } else {
-        setApplicants((applicantsData as Applicant[]) || [])
+        const cleanedApplicants = (applicantsData || []).map((app: any) => ({
+  ...app,
+  profiles: Array.isArray(app.profiles) ? app.profiles[0] : app.profiles,
+}))
+
+setApplicants(cleanedApplicants as unknown as Applicant[])
       }
 
       setLoading(false)
