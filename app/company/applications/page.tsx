@@ -101,13 +101,22 @@ export default function CompanyApplicationsPage() {
       console.error('Error loading applications:', error)
       setApplications([])
     } else {
-      setApplications((data as ApplicationRow[]) ?? [])
+      const cleanedApplications = (data || []).map((app: any) => ({
+        ...app,
+        jobs: Array.isArray(app.jobs) ? app.jobs[0] : app.jobs,
+        worker: Array.isArray(app.worker) ? app.worker[0] : app.worker,
+      }))
+
+      setApplications(cleanedApplications as unknown as ApplicationRow[])
     }
 
     setLoading(false)
   }
 
-  async function updateStatus(applicationId: string, nextStatus: 'accepted' | 'rejected') {
+  async function updateStatus(
+    applicationId: string,
+    nextStatus: 'accepted' | 'rejected'
+  ) {
     setUpdatingId(applicationId)
 
     const { error } = await supabase
@@ -204,7 +213,9 @@ export default function CompanyApplicationsPage() {
           padding: '24px',
         }}
       >
-        <p style={{ fontSize: '18px', color: '#374151' }}>Loading applicants...</p>
+        <p style={{ fontSize: '18px', color: '#374151' }}>
+          Loading applicants...
+        </p>
       </main>
     )
   }
@@ -317,12 +328,7 @@ export default function CompanyApplicationsPage() {
         padding: '32px 20px 48px',
       }}
     >
-      <div
-        style={{
-          maxWidth: 1150,
-          margin: '0 auto',
-        }}
-      >
+      <div style={{ maxWidth: 1150, margin: '0 auto' }}>
         <div
           style={{
             background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
@@ -367,8 +373,8 @@ export default function CompanyApplicationsPage() {
               lineHeight: 1.6,
             }}
           >
-            Sort through applicants, update statuses, and message workers without
-            bouncing around the app.
+            Sort through applicants, update statuses, and message workers
+            without bouncing around the app.
           </p>
 
           <div
@@ -382,7 +388,7 @@ export default function CompanyApplicationsPage() {
             <Link href="/" style={lightLinkStyle}>
               Back Home
             </Link>
-            <Link href="/post-job" style={blueLinkStyle}>
+            <Link href="/jobs/new" style={blueLinkStyle}>
               Post a Job
             </Link>
             <Link href="/messages" style={outlineLightLinkStyle}>
@@ -495,15 +501,15 @@ export default function CompanyApplicationsPage() {
             </p>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gap: '16px',
-            }}
-          >
+          <div style={{ display: 'grid', gap: '16px' }}>
             {filteredApplications.map((application) => {
-              const workerName = application.worker?.full_name || 'Unnamed Worker'
-              const location = [application.worker?.city, application.worker?.state]
+              const workerName =
+                application.worker?.full_name || 'Unnamed Worker'
+
+              const location = [
+                application.worker?.city,
+                application.worker?.state,
+              ]
                 .filter(Boolean)
                 .join(', ')
 
@@ -546,8 +552,12 @@ export default function CompanyApplicationsPage() {
                           flexWrap: 'wrap',
                         }}
                       >
-                        <Badge text={application.jobs?.title || 'Untitled Job'} />
-                        {application.jobs?.trade && <Badge text={application.jobs.trade} />}
+                        <Badge
+                          text={application.jobs?.title || 'Untitled Job'}
+                        />
+                        {application.jobs?.trade && (
+                          <Badge text={application.jobs.trade} />
+                        )}
                         {application.jobs?.location && (
                           <Badge text={application.jobs.location} />
                         )}
@@ -561,14 +571,17 @@ export default function CompanyApplicationsPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                      gridTemplateColumns:
+                        'repeat(auto-fit, minmax(220px, 1fr))',
                       gap: '14px',
                       marginBottom: '18px',
                     }}
                   >
                     <InfoBox
                       label="Applied"
-                      value={new Date(application.created_at).toLocaleDateString()}
+                      value={new Date(
+                        application.created_at
+                      ).toLocaleDateString()}
                     />
                     <InfoBox
                       label="Pay"
@@ -595,31 +608,44 @@ export default function CompanyApplicationsPage() {
                     </button>
 
                     <button
-                      onClick={() => updateStatus(application.id, 'accepted')}
+                      onClick={() =>
+                        updateStatus(application.id, 'accepted')
+                      }
                       disabled={updatingId === application.id}
                       style={{
                         ...successButtonStyle,
                         opacity: updatingId === application.id ? 0.7 : 1,
-                        cursor: updatingId === application.id ? 'not-allowed' : 'pointer',
+                        cursor:
+                          updatingId === application.id
+                            ? 'not-allowed'
+                            : 'pointer',
                       }}
                     >
                       {updatingId === application.id ? 'Saving...' : 'Accept'}
                     </button>
 
                     <button
-                      onClick={() => updateStatus(application.id, 'rejected')}
+                      onClick={() =>
+                        updateStatus(application.id, 'rejected')
+                      }
                       disabled={updatingId === application.id}
                       style={{
                         ...dangerButtonStyle,
                         opacity: updatingId === application.id ? 0.7 : 1,
-                        cursor: updatingId === application.id ? 'not-allowed' : 'pointer',
+                        cursor:
+                          updatingId === application.id
+                            ? 'not-allowed'
+                            : 'pointer',
                       }}
                     >
                       {updatingId === application.id ? 'Saving...' : 'Reject'}
                     </button>
 
                     {application.jobs?.id && (
-                      <Link href={`/jobs/${application.jobs.id}`} style={secondaryLinkStyle}>
+                      <Link
+                        href={`/jobs/${application.jobs.id}`}
+                        style={secondaryLinkStyle}
+                      >
                         View Job
                       </Link>
                     )}
@@ -655,13 +681,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
       >
         {label}
       </p>
-      <h3
-        style={{
-          margin: 0,
-          fontSize: '30px',
-          color: '#111827',
-        }}
-      >
+      <h3 style={{ margin: 0, fontSize: '30px', color: '#111827' }}>
         {value}
       </h3>
     </div>
@@ -705,13 +725,7 @@ function InfoBox({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Badge({
-  text,
-  subtle = false,
-}: {
-  text: string
-  subtle?: boolean
-}) {
+function Badge({ text, subtle = false }: { text: string; subtle?: boolean }) {
   return (
     <span
       style={{
@@ -731,18 +745,9 @@ function Badge({
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, React.CSSProperties> = {
-    pending: {
-      backgroundColor: '#fef3c7',
-      color: '#92400e',
-    },
-    accepted: {
-      backgroundColor: '#dcfce7',
-      color: '#166534',
-    },
-    rejected: {
-      backgroundColor: '#fee2e2',
-      color: '#991b1b',
-    },
+    pending: { backgroundColor: '#fef3c7', color: '#92400e' },
+    accepted: { backgroundColor: '#dcfce7', color: '#166534' },
+    rejected: { backgroundColor: '#fee2e2', color: '#991b1b' },
   }
 
   return (
