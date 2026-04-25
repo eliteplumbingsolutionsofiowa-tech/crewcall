@@ -66,7 +66,15 @@ export default function PublicProfilePage() {
         .eq('reviewee_id', profileId)
         .order('created_at', { ascending: false })
 
-      setReviews((reviewData as Review[]) || [])
+      const cleanedReviews = (reviewData || []).map((review: any) => ({
+  ...review,
+  jobs: Array.isArray(review.jobs) ? review.jobs[0] : review.jobs,
+  reviewer: Array.isArray(review.reviewer)
+    ? review.reviewer[0]
+    : review.reviewer,
+}))
+
+setReviews(cleanedReviews as unknown as Review[])
       setLoading(false)
     }
 

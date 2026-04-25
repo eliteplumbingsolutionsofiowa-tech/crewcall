@@ -111,7 +111,12 @@ export default function MyWorkPage() {
         return
       }
 
-      setJobs((data || []) as Job[])
+      const cleanedJobs = (data || []).map((job: any) => ({
+  ...job,
+  profiles: Array.isArray(job.profiles) ? job.profiles[0] : job.profiles,
+}))
+
+setJobs(cleanedJobs as unknown as Job[])
       setLoading(false)
     }
 

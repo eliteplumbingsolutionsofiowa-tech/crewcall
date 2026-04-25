@@ -1,10 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function NewReviewPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading review...</div>}>
+      <NewReviewContent />
+    </Suspense>
+  )
+}
+
+function NewReviewContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -19,6 +19,14 @@ type UserState = {
 }
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={<BillingLoading />}>
+      <BillingContent />
+    </Suspense>
+  )
+}
+
+function BillingContent() {
   const searchParams = useSearchParams()
 
   const [profile, setProfile] = useState<BillingProfile | null>(null)
@@ -143,15 +151,7 @@ export default function BillingPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-100 px-6 py-10">
-        <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm">
-          <p className="text-gray-600">Loading billing...</p>
-        </div>
-      </main>
-    )
-  }
+  if (loading) return <BillingLoading />
 
   const isCompany = profile?.role === 'company'
 
@@ -233,6 +233,16 @@ export default function BillingPage() {
             </div>
           )}
         </div>
+      </div>
+    </main>
+  )
+}
+
+function BillingLoading() {
+  return (
+    <main className="min-h-screen bg-gray-100 px-6 py-10">
+      <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm">
+        <p className="text-gray-600">Loading billing...</p>
       </div>
     </main>
   )

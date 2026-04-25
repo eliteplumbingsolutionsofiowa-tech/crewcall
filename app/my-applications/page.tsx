@@ -85,8 +85,19 @@ export default function MyApplicationsPage() {
         .eq('worker_id', user.id)
         .order('created_at', { ascending: false })
 
-      const applicationList = (data as Application[]) || []
-      setApplications(applicationList)
+      const applicationList = (data || []).map((application: any) => ({
+  ...application,
+  jobs: Array.isArray(application.jobs)
+    ? {
+        ...application.jobs[0],
+        company: Array.isArray(application.jobs[0]?.company)
+          ? application.jobs[0].company[0]
+          : application.jobs[0]?.company,
+      }
+    : application.jobs,
+})) as unknown as Application[]
+
+setApplications(applicationList) 
 
       const jobIds = applicationList
         .map((app) => app.jobs?.id)
