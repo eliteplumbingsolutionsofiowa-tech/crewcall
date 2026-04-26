@@ -110,7 +110,7 @@ export default function ConversationPage() {
   async function handleSendMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
-    if (!newMessage.trim() || !userId || !conversationId) return
+    if (!newMessage.trim() || !userId || !conversationId || !conversation) return
 
     const messageText = newMessage.trim()
 
@@ -118,15 +118,35 @@ export default function ConversationPage() {
     setErrorMessage(null)
     setNewMessage('')
 
-    const { error } = await supabase.from('messages').insert({
+    const { error: messageError } = await supabase.from('messages').insert({
       conversation_id: conversationId,
       sender_id: userId,
       body: messageText,
     })
 
-    if (error) {
+    if (messageError) {
       setErrorMessage('Could not send message.')
       setNewMessage(messageText)
+      setSending(false)
+      return
+    }
+
+    const receiverId =
+      userId === conversation.worker_id
+        ? conversation.company_id
+        : conversation.worker_id
+
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: receiverId,
+        type: 'message',
+        content: 'New message received',
+        is_read: false,
+      })
+
+    if (notificationError) {
+      console.error('Could not create notification:', notificationError)
     }
 
     setSending(false)
@@ -172,7 +192,9 @@ export default function ConversationPage() {
                         : 'bg-gray-100 text-gray-900'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      {message.body}
+                    </p>
                     <p
                       className={`mt-2 text-xs ${
                         isMine ? 'text-blue-100' : 'text-gray-500'
