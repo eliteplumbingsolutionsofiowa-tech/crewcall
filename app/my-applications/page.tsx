@@ -1,334 +1,248 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type Application = {
+type ApplicationRow = {
   id: string
-  status: string
+  status: string | null
   created_at: string
-  jobs: {
-    id: string
-    title: string
-    trade: string
-    location: string
-    pay_rate: string | null
-    start_date: string | null
-    status: string
-    company_id: string
-    hired_worker_id: string | null
-    company: {
-      full_name: string | null
-      company_name: string | null
-    } | null
-  } | null
+  job_id: string
 }
 
-type Review = {
+type JobRow = {
   id: string
-  job_id: string
-  reviewer_id: string
-  reviewee_id: string
-  rating: number
-  comment: string | null
+  title: string | null
+  trade: string | null
+  location: string | null
+  pay_rate: string | null
+  start_date: string | null
+  status: string | null
+}
+
+type ApplicationWithJob = ApplicationRow & {
+  job: JobRow | null
+}
+
+function formatDate(value: string | null) {
+  if (!value) return 'Not scheduled'
+  return new Date(value).toLocaleDateString()
+}
+
+function statusClass(status: string | null) {
+  const normalized = String(status || '').toLowerCase()
+
+  if (normalized === 'accepted' || normalized === 'hired') {
+    return 'bg-green-100 text-green-700 border-green-200'
+  }
+
+  if (normalized === 'declined' || normalized === 'rejected') {
+    return 'bg-red-100 text-red-700 border-red-200'
+  }
+
+  return 'bg-yellow-100 text-yellow-700 border-yellow-200'
 }
 
 export default function MyApplicationsPage() {
-  const [applications, setApplications] = useState<Application[]>([])
-  const [reviews, setReviews] = useState<Review[]>([])
+  const [applications, setApplications] = useState<ApplicationWithJob[]>([])
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [ratingByJob, setRatingByJob] = useState<Record<string, number>>({})
-  const [commentByJob, setCommentByJob] = useState<Record<string, string>>({})
-  const [savingJobId, setSavingJobId] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadApplications() {
-      setLoading(true)
+    loadApplications()
+  }, [])
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+  async function loadApplications() {
+    setLoading(true)
+    setMessage(null)
 
-      if (!user) {
-        setApplications([])
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError) {
+      setMessage(userError.message)
+      setLoading(false)
+      return
+    }
+
+    if (!user) {
+      setMessage('You must be logged in to view your applications.')
+      setLoading(false)
+      return
+    }
+
+    const { data: applicationData, error: applicationError } = await supabase
+      .from('applications')
+      .select('id, status, created_at, job_id')
+      .eq('worker_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (applicationError) {
+      setMessage(applicationError.message)
+      setLoading(false)
+      return
+    }
+
+    const appRows = (applicationData || []) as ApplicationRow[]
+    const jobIds = appRows.map((app) => app.job_id).filter(Boolean)
+
+    let jobsById = new Map<string, JobRow>()
+
+    if (jobIds.length > 0) {
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .select('id, title, trade, location, pay_rate, start_date, status')
+        .in('id', jobIds)
+
+      if (jobError) {
+        setMessage(jobError.message)
         setLoading(false)
         return
       }
 
-      setUserId(user.id)
-
-      const { data } = await supabase
-        .from('applications')
-        .select(`
-          id,
-          status,
-          created_at,
-          jobs (
-            id,
-            title,
-            trade,
-            location,
-            pay_rate,
-            start_date,
-            status,
-            company_id,
-            hired_worker_id,
-            company:company_id (
-              full_name,
-              company_name
-            )
-          )
-        `)
-        .eq('worker_id', user.id)
-        .order('created_at', { ascending: false })
-
-      const applicationList = (data || []).map((application: any) => ({
-  ...application,
-  jobs: Array.isArray(application.jobs)
-    ? {
-        ...application.jobs[0],
-        company: Array.isArray(application.jobs[0]?.company)
-          ? application.jobs[0].company[0]
-          : application.jobs[0]?.company,
-      }
-    : application.jobs,
-})) as unknown as Application[]
-
-setApplications(applicationList) 
-
-      const jobIds = applicationList
-        .map((app) => app.jobs?.id)
-        .filter(Boolean) as string[]
-
-      if (jobIds.length > 0) {
-        const { data: reviewData } = await supabase
-          .from('reviews')
-          .select('id, job_id, reviewer_id, reviewee_id, rating, comment')
-          .eq('reviewer_id', user.id)
-          .in('job_id', jobIds)
-
-        setReviews((reviewData as Review[]) || [])
-      }
-
-      setLoading(false)
+      jobsById = new Map(
+        ((jobData || []) as JobRow[]).map((job) => [job.id, job])
+      )
     }
 
-    loadApplications()
-  }, [])
+    setApplications(
+      appRows.map((app) => ({
+        ...app,
+        job: jobsById.get(app.job_id) || null,
+      }))
+    )
 
-  async function submitCompanyReview(jobId: string, companyId: string) {
-    if (!userId) return
-
-    setSavingJobId(jobId)
-    setErrorMessage(null)
-
-    const rating = ratingByJob[jobId] || 5
-    const comment = commentByJob[jobId]?.trim() || null
-
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert({
-        job_id: jobId,
-        reviewer_id: userId,
-        reviewee_id: companyId,
-        rating,
-        comment,
-      })
-      .select('id, job_id, reviewer_id, reviewee_id, rating, comment')
-      .single()
-
-    if (error) {
-      console.error(error)
-      setErrorMessage('Could not submit company review.')
-      setSavingJobId(null)
-      return
-    }
-
-    setReviews((prev) => [...prev, data as Review])
-    setSavingJobId(null)
-  }
-
-  if (loading) {
-    return <div className="p-6">Loading your applications...</div>
+    setLoading(false)
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">My Applications</h1>
-        <p className="mt-2 text-gray-600">
-          Track jobs you applied to and review companies after completed work.
-        </p>
-      </div>
+    <main className="min-h-screen bg-gray-50 px-6 py-10">
+      <div className="mx-auto max-w-5xl">
+        <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
+                Worker Dashboard
+              </p>
+              <h1 className="mt-2 text-4xl font-bold text-gray-900">
+                My Applications
+              </h1>
+              <p className="mt-4 text-lg text-gray-600">
+                Track the jobs you applied for and see whether they are pending,
+                accepted, or declined.
+              </p>
+            </div>
 
-      {errorMessage && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-          {errorMessage}
-        </div>
-      )}
+            <Link
+              href="/jobs"
+              className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+            >
+              Browse Jobs
+            </Link>
+          </div>
+        </section>
 
-      {applications.length === 0 ? (
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <p className="text-gray-600">You have not applied to any jobs yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {applications.map((application) => {
-            const job = application.jobs
-            if (!job) return null
+        {message && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
+            {message}
+          </div>
+        )}
 
-            const companyName =
-              job.company?.company_name ||
-              job.company?.full_name ||
-              'Company'
+        {loading ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-gray-600 shadow-sm">
+            Loading applications...
+          </div>
+        ) : applications.length === 0 ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900">
+              No applications yet
+            </h2>
+            <p className="mt-2 text-gray-600">
+              When you apply for jobs, they will show up here.
+            </p>
+            <Link
+              href="/jobs"
+              className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700"
+            >
+              Find Jobs
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {applications.map((application) => {
+              const job = application.job
 
-            const isHired =
-              application.status === 'hired' ||
-              job.hired_worker_id === userId
+              return (
+                <div
+                  key={application.id}
+                  className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {job?.title || 'Job unavailable'}
+                      </h2>
 
-            const isCompleted = job.status === 'completed'
-            const existingReview = reviews.find(
-              (review) =>
-                review.job_id === job.id &&
-                review.reviewer_id === userId &&
-                review.reviewee_id === job.company_id
-            )
+                      <div className="mt-3 grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Trade:
+                          </span>{' '}
+                          {job?.trade || 'Not listed'}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Location:
+                          </span>{' '}
+                          {job?.location || 'Not listed'}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Pay:
+                          </span>{' '}
+                          {job?.pay_rate || 'Not listed'}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Start:
+                          </span>{' '}
+                          {formatDate(job?.start_date || null)}
+                        </p>
+                      </div>
 
-            return (
-              <div
-                key={application.id}
-                className="rounded-2xl border bg-white p-5 shadow-sm"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {job.title}
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      {job.trade} • {job.location}
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      Company: {companyName}
-                    </p>
-
-                    <div className="mt-3 space-y-1 text-sm text-gray-600">
-                      <p>
-                        <span className="font-medium text-gray-900">Pay:</span>{' '}
-                        {job.pay_rate || 'Not listed'}
-                      </p>
-                      <p>
-                        <span className="font-medium text-gray-900">
-                          Start Date:
-                        </span>{' '}
-                        {job.start_date || 'Not listed'}
+                      <p className="mt-3 text-sm text-gray-500">
+                        Applied {formatDate(application.created_at)}
                       </p>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col items-start gap-2 md:items-end">
-                    {isCompleted && isHired ? (
-                      <span className="rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700">
-                        Completed
+                    <div className="flex flex-col gap-3 sm:items-end">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${statusClass(
+                          application.status
+                        )}`}
+                      >
+                        {application.status || 'pending'}
                       </span>
-                    ) : isHired ? (
-                      <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                        Hired
-                      </span>
-                    ) : application.status === 'rejected' ? (
-                      <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
-                        Not Selected
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-700">
-                        Pending
-                      </span>
-                    )}
 
-                    <Link
-                      href={`/jobs/${job.id}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      View Job
-                    </Link>
-
-                    <Link
-                      href={`/profiles/${job.company_id}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      View Company
-                    </Link>
+                      {job?.id && (
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                        >
+                          View Job
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {isCompleted && isHired && (
-                  <div className="mt-5 rounded-xl border bg-gray-50 p-4">
-                    <h3 className="font-bold text-gray-900">Review Company</h3>
-
-                    {existingReview ? (
-                      <div className="mt-3 rounded-xl bg-green-50 p-4 text-green-800">
-                        <p className="font-semibold">
-                          Review submitted: {'⭐'.repeat(existingReview.rating)}
-                        </p>
-                        {existingReview.comment && (
-                          <p className="mt-2">{existingReview.comment}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-3 space-y-3">
-                        <select
-                          value={ratingByJob[job.id] || 5}
-                          onChange={(e) =>
-                            setRatingByJob((prev) => ({
-                              ...prev,
-                              [job.id]: Number(e.target.value),
-                            }))
-                          }
-                          className="rounded-xl border px-4 py-2"
-                        >
-                          <option value={5}>5 Stars</option>
-                          <option value={4}>4 Stars</option>
-                          <option value={3}>3 Stars</option>
-                          <option value={2}>2 Stars</option>
-                          <option value={1}>1 Star</option>
-                        </select>
-
-                        <textarea
-                          value={commentByJob[job.id] || ''}
-                          onChange={(e) =>
-                            setCommentByJob((prev) => ({
-                              ...prev,
-                              [job.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="How was this company to work for?"
-                          className="min-h-24 w-full rounded-xl border px-4 py-3"
-                        />
-
-                        <button
-                          onClick={() =>
-                            submitCompanyReview(job.id, job.company_id)
-                          }
-                          disabled={savingJobId === job.id}
-                          className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white disabled:opacity-50"
-                        >
-                          {savingJobId === job.id
-                            ? 'Submitting...'
-                            : 'Submit Company Review'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </main>
   )
 }

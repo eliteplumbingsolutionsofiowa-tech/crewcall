@@ -9,331 +9,409 @@ type Job = {
   id: string
   title: string
   description: string | null
-  trade: string
-  location: string
+  trade: string | null
+  location: string | null
   pay_rate: string | null
-  start_date: string | null
-  status: string
+  status: string | null
+  payment_status: string | null
   company_id: string
-  hired_worker_id: string | null
+  assigned_worker_id: string | null
+}
+
+type Profile = {
+  id: string
+  role: 'worker' | 'company'
+  full_name: string | null
 }
 
 type Applicant = {
   id: string
+  job_id: string
   worker_id: string
-  status: string
+  status: string | null
   created_at: string
-  profiles: {
+  worker: {
     id: string
     full_name: string | null
+    trade: string | null
     city: string | null
     state: string | null
-    phone: string | null
+    years_experience: string | null
   } | null
 }
 
-export default function JobDetailPage() {
+export default function JobDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const jobId = params.id as string
+  const jobId = String(params.id || '')
 
   const [job, setJob] = useState<Job | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [assignedWorker, setAssignedWorker] = useState<Profile | null>(null)
   const [applicants, setApplicants] = useState<Applicant[]>([])
-  const [userId, setUserId] = useState<string | null>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [hireLoadingId, setHireLoadingId] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [workingId, setWorkingId] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadPage() {
-      setLoading(true)
-      setErrorMessage(null)
+    loadPage()
+  }, [])
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+  async function loadPage() {
+    setLoading(true)
+    setMessage(null)
 
-      const currentUserId = user?.id ?? null
-      setUserId(currentUserId)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-      if (currentUserId) {
-        const { data: myProfile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', currentUserId)
-          .single()
+    if (!user) {
+      router.push('/login')
+      return
+    }
 
-        setUserRole(myProfile?.role ?? null)
-      }
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, role, full_name')
+      .eq('id', user.id)
+      .maybeSingle()
 
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('id', jobId)
-        .single()
+    if (profileError || !profileData) {
+      setMessage(profileError?.message || 'Profile not found.')
+      setLoading(false)
+      return
+    }
 
-      if (jobError || !jobData) {
-        setErrorMessage('Could not load job.')
-        setLoading(false)
-        return
-      }
+    setProfile(profileData as Profile)
 
-      setJob(jobData)
+    const { data: jobData, error: jobError } = await supabase
+      .from('jobs')
+      .select(
+        'id, title, description, trade, location, pay_rate, status, payment_status, company_id, assigned_worker_id'
+      )
+      .eq('id', jobId)
+      .maybeSingle()
 
-      const { data: applicantsData, error: applicantsError } = await supabase
+    if (jobError || !jobData) {
+      setMessage(jobError?.message || 'Job not found.')
+      setLoading(false)
+      return
+    }
+
+    setJob(jobData as Job)
+
+    if (jobData.assigned_worker_id) {
+      const { data: workerData } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('id', jobData.assigned_worker_id)
+        .maybeSingle()
+
+      setAssignedWorker(workerData as Profile | null)
+    } else {
+      setAssignedWorker(null)
+    }
+
+    if (profileData.role === 'company' && jobData.company_id === user.id) {
+      const { data: applicantData } = await supabase
         .from('applications')
         .select(`
           id,
+          job_id,
           worker_id,
           status,
           created_at,
-          profiles:worker_id (
+          worker:profiles!applications_worker_id_fkey (
             id,
             full_name,
+            trade,
             city,
             state,
-            phone
+            years_experience
           )
         `)
         .eq('job_id', jobId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
 
-      if (applicantsError) {
-        setErrorMessage('Could not load applicants.')
-        setApplicants([])
-      } else {
-        const cleanedApplicants = (applicantsData || []).map((app: any) => ({
-  ...app,
-  profiles: Array.isArray(app.profiles) ? app.profiles[0] : app.profiles,
-}))
-
-setApplicants(cleanedApplicants as unknown as Applicant[])
-      }
-
-      setLoading(false)
+      setApplicants((applicantData as unknown as Applicant[]) || [])
     }
 
-    loadPage()
-  }, [jobId])
+    setLoading(false)
+  }
 
-  async function handleHireWorker(applicant: Applicant) {
-    if (!job) return
+  async function hireWorker(applicant: Applicant) {
+    if (!job || !profile) return
 
-    setHireLoadingId(applicant.id)
-    setErrorMessage(null)
+    setWorkingId(applicant.id)
+    setMessage(null)
 
-    try {
-      const { error: jobUpdateError } = await supabase
-        .from('jobs')
-        .update({
-          status: 'assigned',
-          hired_worker_id: applicant.worker_id,
-        })
-        .eq('id', job.id)
-
-      if (jobUpdateError) throw jobUpdateError
-
-      const { error: hireAppError } = await supabase
-        .from('applications')
-        .update({ status: 'hired' })
-        .eq('id', applicant.id)
-
-      if (hireAppError) throw hireAppError
-
-      const otherApplicantIds = applicants
-        .filter((a) => a.id !== applicant.id)
-        .map((a) => a.id)
-
-      if (otherApplicantIds.length > 0) {
-        const { error: rejectOthersError } = await supabase
-          .from('applications')
-          .update({ status: 'rejected' })
-          .in('id', otherApplicantIds)
-
-        if (rejectOthersError) throw rejectOthersError
-      }
-
-      setJob({
-        ...job,
+    const { error: jobError } = await supabase
+      .from('jobs')
+      .update({
+        assigned_worker_id: applicant.worker_id,
         status: 'assigned',
-        hired_worker_id: applicant.worker_id,
       })
+      .eq('id', job.id)
+      .eq('company_id', profile.id)
 
-      setApplicants((prev) =>
-        prev.map((a) => {
-          if (a.id === applicant.id) {
-            return { ...a, status: 'hired' }
-          }
-          return { ...a, status: 'rejected' }
-        })
-      )
-    } catch (error) {
-      console.error(error)
-      setErrorMessage('Could not hire worker.')
-    } finally {
-      setHireLoadingId(null)
+    if (jobError) {
+      setMessage(jobError.message)
+      setWorkingId(null)
+      return
     }
+
+    await supabase
+      .from('applications')
+      .update({ status: 'hired' })
+      .eq('id', applicant.id)
+
+    await supabase
+      .from('applications')
+      .update({ status: 'not_selected' })
+      .eq('job_id', job.id)
+      .neq('id', applicant.id)
+
+    setWorkingId(null)
+    await loadPage()
+  }
+
+  async function messageAssignedWorker() {
+    if (!job || !job.assigned_worker_id) return
+
+    setWorkingId('message')
+
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('job_id', job.id)
+      .eq('worker_id', job.assigned_worker_id)
+      .eq('company_id', job.company_id)
+      .maybeSingle()
+
+    let conversationId = existing?.id
+
+    if (!conversationId) {
+      const { data: newConversation } = await supabase
+        .from('conversations')
+        .insert({
+          job_id: job.id,
+          worker_id: job.assigned_worker_id,
+          company_id: job.company_id,
+        })
+        .select('id')
+        .single()
+
+      conversationId = newConversation?.id
+    }
+
+    if (conversationId) {
+      router.push(`/messages/${conversationId}`)
+    }
+
+    setWorkingId(null)
   }
 
   if (loading) {
-    return <div className="p-6">Loading job...</div>
+    return (
+      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+        <div className="mx-auto max-w-5xl rounded-3xl border border-white/10 bg-white/5 p-8">
+          Loading job...
+        </div>
+      </main>
+    )
   }
 
-  if (!job) {
-    return <div className="p-6">Job not found.</div>
+  if (!job || !profile) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+        <div className="mx-auto max-w-5xl rounded-3xl border border-red-400/30 bg-red-400/10 p-8 text-red-200">
+          {message || 'Job not found.'}
+        </div>
+      </main>
+    )
   }
 
-  const isCompanyOwner = userId && job.company_id === userId
-  const alreadyHired = !!job.hired_worker_id
+  const isCompany = profile.role === 'company'
+  const isWorker = profile.role === 'worker'
+  const isOwner = job.company_id === profile.id
+  const isOpen = job.status === 'open'
+  const isAssigned = job.status === 'assigned'
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <div className="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{job.title}</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {job.trade} • {job.location}
-            </p>
+    <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <Link href="/jobs" className="text-sm font-semibold text-cyan-300">
+          ← Back to jobs
+        </Link>
+
+        {message && (
+          <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
+            {message}
           </div>
-
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-semibold ${
-              job.status === 'open'
-                ? 'bg-green-100 text-green-700'
-                : job.status === 'assigned'
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            {job.status}
-          </span>
-        </div>
-
-        {job.description && (
-          <p className="mb-4 whitespace-pre-wrap text-gray-700">{job.description}</p>
         )}
 
-        <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
-          <div>
-            <span className="font-semibold text-gray-900">Pay:</span>{' '}
-            {job.pay_rate || 'Not listed'}
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">
+                Job Details
+              </p>
+
+              <h1 className="mt-3 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black text-transparent">
+                {job.title}
+              </h1>
+
+              <p className="mt-3 text-slate-300">
+                {job.trade || 'Trade not listed'} •{' '}
+                {job.location || 'Location not listed'}
+              </p>
+
+              <p className="mt-3 text-xl font-black text-cyan-300">
+                {job.pay_rate || 'Pay not listed'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-900 px-5 py-4 text-center">
+              <p className="text-xs uppercase tracking-widest text-slate-400">
+                Status
+              </p>
+              <p className="mt-1 text-lg font-black capitalize">
+                {job.status || 'open'}
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="font-semibold text-gray-900">Start Date:</span>{' '}
-            {job.start_date || 'Not listed'}
+
+          <p className="mt-6 whitespace-pre-wrap text-slate-300">
+            {job.description || 'No description provided.'}
+          </p>
+
+          {isAssigned && assignedWorker && (
+            <div className="mt-6 rounded-2xl border border-green-400/30 bg-green-400/10 p-5">
+              <p className="text-xs uppercase tracking-widest text-green-300">
+                Worker Assigned
+              </p>
+
+              <Link
+                href={`/workers/${assignedWorker.id}`}
+                className="mt-1 block text-xl font-black text-white hover:text-cyan-300"
+              >
+                {assignedWorker.full_name || 'View Worker'}
+              </Link>
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            {isWorker && isOpen && (
+              <Link
+                href={`/jobs/${job.id}/apply`}
+                className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
+              >
+                Apply
+              </Link>
+            )}
+
+            {isCompany && isOwner && isAssigned && (
+              <>
+                <button
+                  onClick={messageAssignedWorker}
+                  className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
+                >
+                  {workingId === 'message' ? 'Opening...' : 'Message Worker'}
+                </button>
+
+                <Link
+                  href={`/jobs/${job.id}/pay`}
+                  className="rounded-2xl border border-white/10 px-6 py-3 font-bold text-white hover:bg-white/10"
+                >
+                  Pay Worker
+                </Link>
+              </>
+            )}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {errorMessage && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+        {isCompany && isOwner && (
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black">Applicants</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Review worker profiles and hire from this job.
+                </p>
+              </div>
 
-      {isCompanyOwner ? (
-        <section className="rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold">Applicants</h2>
-            <span className="text-sm text-gray-500">
-              {applicants.length} applicant{applicants.length === 1 ? '' : 's'}
-            </span>
-          </div>
+              <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-200">
+                {applicants.length} Applicant{applicants.length === 1 ? '' : 's'}
+              </div>
+            </div>
 
-          {applicants.length === 0 ? (
-            <p className="text-gray-500">No applicants yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {applicants.map((applicant) => {
-                const fullName =
-                  applicant.profiles?.full_name?.trim() || 'Worker'
-                const location = [applicant.profiles?.city, applicant.profiles?.state]
-                  .filter(Boolean)
-                  .join(', ')
-
-                const isHired = applicant.status === 'hired'
-                const isRejected = applicant.status === 'rejected'
-                const disableHire = alreadyHired || hireLoadingId !== null
-
-                return (
+            {applicants.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-slate-900 p-5 text-slate-300">
+                No workers have applied yet.
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                {applicants.map((applicant) => (
                   <div
                     key={applicant.id}
-                    className="rounded-2xl border border-gray-200 p-4"
+                    className="rounded-2xl border border-white/10 bg-slate-900 p-5"
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {fullName}
-                        </h3>
+                        <Link
+                          href={`/workers/${applicant.worker_id}`}
+                          className="text-xl font-black text-white hover:text-cyan-300"
+                        >
+                          {applicant.worker?.full_name || 'Unnamed Worker'}
+                        </Link>
 
-                        {location && (
-                          <p className="text-sm text-gray-500">{location}</p>
-                        )}
+                        <p className="mt-1 text-sm text-slate-400">
+                          {applicant.worker?.trade || 'Trade not listed'} •{' '}
+                          {[applicant.worker?.city, applicant.worker?.state]
+                            .filter(Boolean)
+                            .join(', ') || 'Location not listed'}
+                        </p>
 
-                        {applicant.profiles?.phone && (
-                          <p className="text-sm text-gray-500">
-                            {applicant.profiles.phone}
-                          </p>
-                        )}
+                        <p className="mt-2 text-sm text-slate-300">
+                          Experience:{' '}
+                          {applicant.worker?.years_experience
+                            ? `${applicant.worker.years_experience} years`
+                            : 'Not listed'}
+                        </p>
 
-                        <p className="mt-2 text-sm">
-                          <span className="font-medium text-gray-900">Status:</span>{' '}
-                          <span
-                            className={
-                              isHired
-                                ? 'font-semibold text-green-700'
-                                : isRejected
-                                ? 'font-semibold text-red-600'
-                                : 'text-gray-600'
-                            }
-                          >
-                            {applicant.status}
-                          </span>
+                        <p className="mt-2 text-xs uppercase tracking-widest text-slate-500">
+                          Application Status: {applicant.status || 'pending'}
                         </p>
                       </div>
 
                       <div className="flex flex-wrap gap-2">
                         <Link
-                          href={`/messages?worker=${applicant.worker_id}&job=${job.id}`}
-                          className="rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          href={`/workers/${applicant.worker_id}`}
+                          className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/10"
                         >
-                          Message
+                          View Profile
                         </Link>
 
-                        {isHired ? (
+                        {job.status === 'open' && (
                           <button
-                            disabled
-                            className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white opacity-90"
+                            onClick={() => hireWorker(applicant)}
+                            disabled={workingId === applicant.id}
+                            className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60"
                           >
-                            Hired
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleHireWorker(applicant)}
-                            disabled={disableHire}
-                            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {hireLoadingId === applicant.id ? 'Hiring...' : 'Hire Worker'}
+                            {workingId === applicant.id
+                              ? 'Hiring...'
+                              : 'Hire Worker'}
                           </button>
                         )}
                       </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
-      ) : (
-        <section className="rounded-2xl border bg-white p-6 shadow-sm">
-          <h2 className="mb-2 text-xl font-bold">Job Status</h2>
-          <p className="text-gray-600">
-            This job is currently <span className="font-semibold">{job.status}</span>.
-          </p>
-        </section>
-      )}
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+      </div>
     </main>
   )
 }

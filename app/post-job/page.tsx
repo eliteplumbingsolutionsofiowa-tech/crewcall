@@ -207,7 +207,7 @@ export default function PostJobPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
           >
             {saving ? 'Posting...' : 'Post Job'}
           </button>

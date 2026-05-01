@@ -118,7 +118,7 @@ export default function Navbar() {
 
               <Link
                 href="/jobs/new"
-                className="rounded-xl bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                className="rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 Post Job
               </Link>

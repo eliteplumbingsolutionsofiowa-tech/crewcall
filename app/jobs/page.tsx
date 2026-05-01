@@ -6,330 +6,242 @@ import { supabase } from '@/lib/supabase'
 
 type Job = {
   id: string
-  title: string
+  title: string | null
   description: string | null
-  trade: string
-  location: string
+  trade: string | null
+  location: string | null
   pay_rate: string | null
-  status: string
-  company_id: string
-  is_featured: boolean | null
-  featured_until: string | null
-  company: {
-    company_name: string | null
-    full_name: string | null
-    insurance_status: string | null
-    liability_status: string | null
-  } | null
-}
-
-type SavedJobRow = {
-  job_id: string
+  start_date: string | null
+  status: string | null
+  payment_status: string | null
+  company_id: string | null
+  assigned_worker_id: string | null
+  created_at: string
 }
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([])
-  const [savedJobIds, setSavedJobIds] = useState<string[]>([])
-  const [interestCounts, setInterestCounts] = useState<Record<string, number>>({})
-  const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const [message, setMessage] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [trade, setTrade] = useState('')
-  const [verifiedOnly, setVerifiedOnly] = useState(false)
-  const [openOnly, setOpenOnly] = useState(false)
+  const [tradeFilter, setTradeFilter] = useState('all')
 
   useEffect(() => {
     loadJobs()
   }, [])
 
+  const trades = useMemo(() => {
+    const unique = new Set(
+      jobs
+        .map((job) => job.trade)
+        .filter((trade): trade is string => Boolean(trade))
+    )
+
+    return Array.from(unique).sort()
+  }, [jobs])
+
+  const filteredJobs = useMemo(() => {
+    const term = search.toLowerCase().trim()
+
+    return jobs.filter((job) => {
+      const matchesSearch =
+        !term ||
+        job.title?.toLowerCase().includes(term) ||
+        job.description?.toLowerCase().includes(term) ||
+        job.trade?.toLowerCase().includes(term) ||
+        job.location?.toLowerCase().includes(term)
+
+      const matchesTrade =
+        tradeFilter === 'all' || job.trade === tradeFilter
+
+      return matchesSearch && matchesTrade
+    })
+  }, [jobs, search, tradeFilter])
+
   async function loadJobs() {
     setLoading(true)
+    setMessage(null)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    setUserId(user?.id ?? null)
-
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('jobs')
-      .select(`
-        *,
-        company:company_id (
-          company_name,
-          full_name,
-          insurance_status,
-          liability_status
-        )
-      `)
+      .select(
+        'id, title, description, trade, location, pay_rate, start_date, status, payment_status, company_id, assigned_worker_id, created_at'
+      )
+      .eq('status', 'open')
+      .is('assigned_worker_id', null)
       .order('created_at', { ascending: false })
 
-    const jobList = (data as Job[]) || []
-    setJobs(jobList)
-
-    const jobIds = jobList.map((job) => job.id)
-
-    if (user) {
-      const { data: savedData } = await supabase
-        .from('saved_jobs')
-        .select('job_id')
-        .eq('worker_id', user.id)
-
-      setSavedJobIds(savedData?.map((item) => item.job_id) || [])
-    }
-
-    if (jobIds.length > 0) {
-      const { data: allSavedData } = await supabase
-        .from('saved_jobs')
-        .select('job_id')
-        .in('job_id', jobIds)
-
-      const counts: Record<string, number> = {}
-
-      jobIds.forEach((jobId) => {
-        counts[jobId] =
-          (allSavedData as SavedJobRow[] | null)?.filter(
-            (saved) => saved.job_id === jobId
-          ).length || 0
-      })
-
-      setInterestCounts(counts)
-    }
-
-    setLoading(false)
-  }
-
-  async function toggleSaveJob(jobId: string) {
-    if (!userId) {
-      alert('Please log in to save jobs.')
+    if (error) {
+      setMessage(error.message)
+      setJobs([])
+      setLoading(false)
       return
     }
 
-    const alreadySaved = savedJobIds.includes(jobId)
-
-    if (alreadySaved) {
-      await supabase
-        .from('saved_jobs')
-        .delete()
-        .eq('worker_id', userId)
-        .eq('job_id', jobId)
-
-      setSavedJobIds((prev) => prev.filter((id) => id !== jobId))
-      setInterestCounts((prev) => ({
-        ...prev,
-        [jobId]: Math.max((prev[jobId] || 1) - 1, 0),
-      }))
-    } else {
-      await supabase.from('saved_jobs').insert({
-        worker_id: userId,
-        job_id: jobId,
-      })
-
-      setSavedJobIds((prev) => [...prev, jobId])
-      setInterestCounts((prev) => ({
-        ...prev,
-        [jobId]: (prev[jobId] || 0) + 1,
-      }))
-    }
+    setJobs((data || []) as Job[])
+    setLoading(false)
   }
 
-  function isFeatured(job: Job) {
-    if (!job.is_featured || !job.featured_until) return false
-    return new Date(job.featured_until).getTime() > Date.now()
+  function formatDate(date: string | null) {
+    if (!date) return 'Start date not set'
+
+    return new Date(date).toLocaleDateString()
   }
 
-  const filteredJobs = useMemo(() => {
-    return jobs
-      .filter((job) => {
-        const notCancelled = job.status !== 'cancelled'
-
-        const matchesSearch = job.location
-          .toLowerCase()
-          .includes(search.toLowerCase())
-
-        const matchesTrade = trade ? job.trade === trade : true
-
-        const verified =
-          job.company?.insurance_status === 'verified' &&
-          job.company?.liability_status === 'verified'
-
-        const matchesVerified = verifiedOnly ? verified : true
-        const matchesOpen = openOnly ? job.status === 'open' : true
-
-        return (
-          notCancelled &&
-          matchesSearch &&
-          matchesTrade &&
-          matchesVerified &&
-          matchesOpen
-        )
-      })
-      .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
-  }, [jobs, search, trade, verifiedOnly, openOnly])
-
-  if (loading) return <div className="p-6">Loading jobs...</div>
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-gray-600">Loading open jobs...</p>
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 space-y-6">
-      <div className="rounded-3xl border bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
-        <p className="mt-2 text-slate-600">
-          Search, filter, apply, and save jobs for later.
-        </p>
-      </div>
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
+                Browse Work
+              </p>
 
-      <div className="flex flex-wrap gap-3 rounded-2xl border bg-white p-4 shadow-sm">
-        <input
-          placeholder="Search location..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="rounded-xl border px-3 py-2"
-        />
+              <h1 className="mt-2 text-4xl font-bold text-gray-900">
+                Open CrewCall Jobs
+              </h1>
 
-        <select
-          value={trade}
-          onChange={(e) => setTrade(e.target.value)}
-          className="rounded-xl border px-3 py-2"
-        >
-          <option value="">All Trades</option>
-          <option value="Plumbing">Plumbing</option>
-          <option value="Electrical">Electrical</option>
-          <option value="HVAC">HVAC</option>
-          <option value="Concrete">Concrete</option>
-          <option value="Framing">Framing</option>
-          <option value="Drywall">Drywall</option>
-          <option value="Roofing">Roofing</option>
-          <option value="Painting">Painting</option>
-          <option value="General Labor">General Labor</option>
-          <option value="Other">Other</option>
-        </select>
+              <p className="mt-2 text-gray-600">
+                Find open trade work posted by local companies.
+              </p>
+            </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={verifiedOnly}
-            onChange={() => setVerifiedOnly(!verifiedOnly)}
-          />
-          Verified Only
-        </label>
+            <Link
+              href="/profile"
+              className="w-fit rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              Complete Profile
+            </Link>
+          </div>
+        </section>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={openOnly}
-            onChange={() => setOpenOnly(!openOnly)}
-          />
-          Open Jobs Only
-        </label>
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by job, trade, or location..."
+              className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+            />
 
-        <Link
-          href="/saved-jobs"
-          className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-        >
-          Saved Jobs
-        </Link>
-      </div>
+            <select
+              value={tradeFilter}
+              onChange={(e) => setTradeFilter(e.target.value)}
+              className="rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+            >
+              <option value="all">All trades</option>
+              {trades.map((trade) => (
+                <option key={trade} value={trade}>
+                  {trade}
+                </option>
+              ))}
+            </select>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {filteredJobs.map((job) => {
-          const featured = isFeatured(job)
-          const saved = savedJobIds.includes(job.id)
-          const savedCount = interestCounts[job.id] || 0
+            <button
+              onClick={loadJobs}
+              className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Refresh
+            </button>
+          </div>
+        </section>
 
-          const companyName =
-            job.company?.company_name ||
-            job.company?.full_name ||
-            'Company'
+        {message && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            {message}
+          </div>
+        )}
 
-          const verified =
-            job.company?.insurance_status === 'verified' &&
-            job.company?.liability_status === 'verified'
+        {filteredJobs.length === 0 && (
+          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-8 shadow-sm">
+            <h2 className="text-xl font-bold text-yellow-900">
+              No open jobs yet
+            </h2>
 
-          return (
+            <p className="mt-2 text-yellow-800">
+              There are no available jobs posted right now. Check back soon.
+            </p>
+          </div>
+        )}
+
+        <div className="grid gap-4">
+          {filteredJobs.map((job) => (
             <div
               key={job.id}
-              className={
-                featured
-                  ? 'rounded-3xl border-2 border-yellow-300 bg-yellow-50 p-6 shadow-md'
-                  : 'rounded-3xl border bg-white p-6 shadow-sm'
-              }
+              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-bold text-slate-900">
-                      {job.title}
-                    </h2>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {job.title || 'Untitled Job'}
+                      </h2>
 
-                    {featured && (
-                      <span className="rounded-full bg-yellow-200 px-3 py-1 text-xs font-bold text-yellow-900">
-                        ⭐ Featured
+                      <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                        Open
                       </span>
-                    )}
+                    </div>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      {job.trade || 'Trade not set'} ·{' '}
+                      {job.location || 'Location not set'}
+                    </p>
                   </div>
 
-                  <p className="mt-1 text-sm text-slate-500">{companyName}</p>
+                  {job.description && (
+                    <p className="max-w-3xl text-sm text-gray-700">
+                      {job.description}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                    <span>
+                      Pay:{' '}
+                      <strong className="text-gray-900">
+                        {job.pay_rate || 'Not set'}
+                      </strong>
+                    </span>
+
+                    <span>
+                      Start:{' '}
+                      <strong className="text-gray-900">
+                        {formatDate(job.start_date)}
+                      </strong>
+                    </span>
+                  </div>
                 </div>
 
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase text-slate-600">
-                  {job.status}
-                </span>
-              </div>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    View Details
+                  </Link>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                {verified ? (
-                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                    ✔ Verified Company
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    Not Verified
-                  </span>
-                )}
-
-                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                  Saved by {savedCount} worker{savedCount === 1 ? '' : 's'}
-                </span>
-              </div>
-
-              <p className="mt-4 text-sm text-slate-700">
-                {job.trade} · {job.location}
-              </p>
-
-              <p className="mt-2 text-sm text-slate-600">
-                Pay: {job.pay_rate || 'Not listed'}
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Link
-                  href={`/jobs/${job.id}`}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  View Job
-                </Link>
-
-                <button
-                  onClick={() => toggleSaveJob(job.id)}
-                  className={
-                    saved
-                      ? 'rounded-xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-200'
-                      : 'rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100'
-                  }
-                >
-                  {saved ? 'Saved ❤️' : 'Save Job 🤍'}
-                </button>
-
-                <Link
-                  href={`/profiles/${job.company_id}`}
-                  className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  View Company
-                </Link>
+                  <Link
+                    href={`/jobs/${job.id}/apply`}
+                    className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+                  >
+                    Apply
+                  </Link>
+                </div>
               </div>
             </div>
-          )
-        })}
+          ))}
+        </div>
       </div>
     </main>
   )

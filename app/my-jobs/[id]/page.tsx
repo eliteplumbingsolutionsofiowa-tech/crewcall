@@ -1,342 +1,221 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Job = {
   id: string
   title: string
-  description: string | null
   trade: string
   location: string
   pay_rate: string | null
   status: string
-  company_id: string
-}
-
-type Application = {
-  id: string
-  worker_id: string
-  status: string
-  created_at: string
+  payment_status: string | null
+  assigned_worker_id: string | null
 }
 
 type Profile = {
   id: string
   full_name: string | null
-  phone: string | null
-  city: string | null
-  state: string | null
   company_name: string | null
 }
 
-type Applicant = Application & {
+type Applicant = {
+  id: string
+  worker_id: string
+  status: string
   profile: Profile | null
 }
 
 export default function JobDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const jobId = params.id as string
 
   const [job, setJob] = useState<Job | null>(null)
-  const [applications, setApplications] = useState<Applicant[]>([])
+  const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [assignedWorker, setAssignedWorker] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [startingMessageFor, setStartingMessageFor] = useState<string | null>(null)
-  const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (jobId) {
-      fetchJobAndApplicants()
-    }
-  }, [jobId])
+    load()
+  }, [])
 
-  const fetchJobAndApplicants = async () => {
+  async function load() {
     setLoading(true)
 
-    const { data: jobData, error: jobError } = await supabase
+    // JOB
+    const { data: jobData } = await supabase
       .from('jobs')
       .select('*')
       .eq('id', jobId)
       .single()
 
-    if (jobError) {
-      console.error('Error loading job:', jobError.message)
-      setLoading(false)
-      return
-    }
-
     setJob(jobData)
 
-    const { data: appData, error: appError } = await supabase
+    // APPS
+    const { data: apps } = await supabase
       .from('applications')
-      .select('id, worker_id, status, created_at')
+      .select('*')
       .eq('job_id', jobId)
-      .order('created_at', { ascending: false })
 
-    if (appError) {
-      console.error('Error loading applications:', appError.message)
-      setApplications([])
-      setLoading(false)
-      return
-    }
+    const workerIds = apps?.map((a) => a.worker_id) || []
 
-    const apps = appData || []
-
-    if (apps.length === 0) {
-      setApplications([])
-      setLoading(false)
-      return
-    }
-
-    const workerIds = apps.map((app) => app.worker_id)
-
-    const { data: profileData, error: profileError } = await supabase
+    const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, city, state, company_name')
+      .select('id, full_name, company_name')
       .in('id', workerIds)
 
-    if (profileError) {
-      console.error('Error loading profiles:', profileError.message)
+    const merged =
+      apps?.map((a) => ({
+        ...a,
+        profile: profiles?.find((p) => p.id === a.worker_id) || null,
+      })) || []
+
+    setApplicants(merged)
+
+    // ASSIGNED WORKER
+    if (jobData?.assigned_worker_id) {
+      const { data: worker } = await supabase
+        .from('profiles')
+        .select('id, full_name, company_name')
+        .eq('id', jobData.assigned_worker_id)
+        .single()
+
+      setAssignedWorker(worker)
     }
 
-    const profiles = profileData || []
-
-    const mergedApplicants: Applicant[] = apps.map((app) => ({
-      ...app,
-      profile: profiles.find((profile) => profile.id === app.worker_id) || null,
-    }))
-
-    setApplications(mergedApplicants)
     setLoading(false)
   }
 
-  const messageWorker = async (workerId: string) => {
+  async function hire(app: Applicant) {
     if (!job) return
 
-    setStartingMessageFor(workerId)
+    // update job
+    await supabase
+      .from('jobs')
+      .update({
+        status: 'assigned',
+        assigned_worker_id: app.worker_id,
+      })
+      .eq('id', job.id)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      alert('You must be logged in')
-      setStartingMessageFor(null)
-      return
-    }
-
-    const { data: existingConversation, error: existingError } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('job_id', job.id)
-      .eq('company_id', user.id)
-      .eq('worker_id', workerId)
-      .maybeSingle()
-
-    if (existingError) {
-      console.error(existingError.message)
-    }
-
-    if (existingConversation) {
-      setStartingMessageFor(null)
-      router.push(`/messages/${existingConversation.id}`)
-      return
-    }
-
-    const { data: newConversation, error: createError } = await supabase
-      .from('conversations')
-      .insert([
-        {
-          job_id: job.id,
-          company_id: user.id,
-          worker_id: workerId,
-        },
-      ])
-      .select('id')
-      .single()
-
-    setStartingMessageFor(null)
-
-    if (createError) {
-      alert(createError.message)
-      return
-    }
-
-    router.push(`/messages/${newConversation.id}`)
-  }
-
-  const updateApplicationStatus = async (
-    applicationId: string,
-    newStatus: 'hired' | 'rejected'
-  ) => {
-    if (!job) return
-
-    setUpdatingApplicationId(applicationId)
-
-    const { error } = await supabase
+    // update application
+    await supabase
       .from('applications')
-      .update({ status: newStatus })
-      .eq('id', applicationId)
+      .update({ status: 'hired' })
+      .eq('id', app.id)
 
-    if (error) {
-      alert(error.message)
-      setUpdatingApplicationId(null)
-      return
-    }
-
-    if (newStatus === 'hired') {
-      const { error: jobError } = await supabase
-        .from('jobs')
-        .update({ status: 'assigned' })
-        .eq('id', job.id)
-
-      if (jobError) {
-        console.error('Error updating job status:', jobError.message)
-      } else {
-        setJob((prev) => (prev ? { ...prev, status: 'assigned' } : prev))
-      }
-    }
-
-    setApplications((prev) =>
-      prev.map((app) =>
-        app.id === applicationId ? { ...app, status: newStatus } : app
-      )
-    )
-
-    setUpdatingApplicationId(null)
+    load()
   }
 
-  if (loading) {
-    return <div style={{ padding: '24px' }}>Loading...</div>
-  }
-
-  if (!job) {
-    return <div style={{ padding: '24px' }}>Job not found</div>
-  }
+  if (loading) return <div className="p-6">Loading...</div>
+  if (!job) return <div className="p-6">Job not found</div>
 
   return (
-    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '32px', marginBottom: '10px' }}>{job.title}</h1>
+    <main className="p-6 max-w-5xl mx-auto space-y-6">
 
-      <p><strong>Trade:</strong> {job.trade}</p>
-      <p><strong>Location:</strong> {job.location}</p>
-      <p><strong>Pay:</strong> {job.pay_rate || 'Not listed'}</p>
-      <p><strong>Status:</strong> {job.status}</p>
+      {/* HEADER */}
+      <div>
+        <h1 className="text-3xl font-bold">{job.title}</h1>
+        <p className="text-gray-600">
+          {job.trade} · {job.location}
+        </p>
+      </div>
 
-      <p style={{ marginTop: '16px' }}>
-        {job.description || 'No description'}
-      </p>
+      {/* ASSIGNED WORKER */}
+      {assignedWorker && (
+        <div className="bg-white border rounded-2xl p-5">
+          <h2 className="text-lg font-bold mb-3">Assigned Worker</h2>
 
-      <hr style={{ margin: '24px 0' }} />
+          <p className="font-semibold">
+            {assignedWorker.company_name || assignedWorker.full_name}
+          </p>
 
-      <h2>Applicants ({applications.length})</h2>
+          <div className="flex gap-2 mt-3 flex-wrap">
 
-      {applications.length === 0 ? (
-        <p>No one has applied yet.</p>
-      ) : (
-        <div style={{ marginTop: '16px' }}>
-          {applications.map((app) => (
-            <div key={app.id} style={cardStyle}>
-              <h3 style={{ margin: '0 0 10px 0' }}>
-                {app.profile?.full_name || 'No name'}
-              </h3>
+            <Link href={`/messages?start=${assignedWorker.id}`} className="btn-primary">
+              Message
+            </Link>
 
-              <p style={metaStyle}>
-                <strong>Phone:</strong> {app.profile?.phone || 'Not provided'}
-              </p>
+            <Link href={`/profile/${assignedWorker.id}`} className="btn">
+              View Profile
+            </Link>
 
-              <p style={metaStyle}>
-                <strong>Location:</strong>{' '}
-                {app.profile?.city || app.profile?.state
-                  ? [app.profile?.city, app.profile?.state].filter(Boolean).join(', ')
-                  : 'Not provided'}
-              </p>
+            {job.payment_status !== 'paid' && (
+              <Link
+                href={`/jobs/${job.id}/pay`}
+                className="btn-secondary"
+              >
+                Pay Worker
+              </Link>
+            )}
 
-              <p style={metaStyle}>
-                <strong>Company:</strong> {app.profile?.company_name || 'Not provided'}
-              </p>
-
-              <p style={metaStyle}>
-                <strong>Status:</strong> {app.status}
-              </p>
-
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                Applied: {new Date(app.created_at).toLocaleString()}
-              </p>
-
-              <div style={actionsRowStyle}>
-                <button
-                  onClick={() => messageWorker(app.worker_id)}
-                  style={messageButtonStyle}
-                  disabled={startingMessageFor === app.worker_id}
-                >
-                  {startingMessageFor === app.worker_id ? 'Opening...' : 'Message Worker'}
-                </button>
-
-                <button
-                  onClick={() => updateApplicationStatus(app.id, 'hired')}
-                  style={hireButtonStyle}
-                  disabled={updatingApplicationId === app.id || app.status === 'hired'}
-                >
-                  {updatingApplicationId === app.id ? 'Updating...' : 'Hire'}
-                </button>
-
-                <button
-                  onClick={() => updateApplicationStatus(app.id, 'rejected')}
-                  style={rejectButtonStyle}
-                  disabled={updatingApplicationId === app.id || app.status === 'rejected'}
-                >
-                  {updatingApplicationId === app.id ? 'Updating...' : 'Reject'}
-                </button>
-              </div>
-            </div>
-          ))}
+            {job.status === 'completed' && (
+              <Link
+                href={`/reviews/new?jobId=${job.id}&revieweeId=${assignedWorker.id}`}
+                className="btn-warning"
+              >
+                Leave Review
+              </Link>
+            )}
+          </div>
         </div>
       )}
-    </div>
+
+      {/* APPLICANTS */}
+      {!assignedWorker && (
+        <div>
+          <h2 className="text-xl font-bold mb-4">
+            Applicants ({applicants.length})
+          </h2>
+
+          {applicants.length === 0 ? (
+            <p>No applicants yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {applicants.map((app) => (
+                <div
+                  key={app.id}
+                  className="bg-white border rounded-2xl p-4"
+                >
+                  <p className="font-semibold">
+                    {app.profile?.company_name ||
+                      app.profile?.full_name ||
+                      'Worker'}
+                  </p>
+
+                  <div className="flex gap-2 mt-3 flex-wrap">
+
+                    <button
+                      onClick={() => hire(app)}
+                      className="btn-secondary"
+                    >
+                      Hire
+                    </button>
+
+                    <Link
+                      href={`/messages?start=${app.worker_id}`}
+                      className="btn-primary"
+                    >
+                      Message
+                    </Link>
+
+                    <Link
+                      href={`/profile/${app.worker_id}`}
+                      className="btn"
+                    >
+                      Profile
+                    </Link>
+
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </main>
   )
-}
-
-const cardStyle: React.CSSProperties = {
-  border: '1px solid #ddd',
-  borderRadius: '10px',
-  padding: '16px',
-  marginBottom: '10px',
-  backgroundColor: '#fff',
-}
-
-const metaStyle: React.CSSProperties = {
-  margin: '4px 0',
-}
-
-const actionsRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '10px',
-  flexWrap: 'wrap',
-  marginTop: '14px',
-}
-
-const messageButtonStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: '8px',
-  border: 'none',
-  cursor: 'pointer',
-}
-
-const hireButtonStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: '8px',
-  border: 'none',
-  cursor: 'pointer',
-  backgroundColor: '#dff5e1',
-}
-
-const rejectButtonStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: '8px',
-  border: 'none',
-  cursor: 'pointer',
-  backgroundColor: '#f8d7da',
 }

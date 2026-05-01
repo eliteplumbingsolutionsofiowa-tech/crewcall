@@ -1,147 +1,155 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-export const dynamic = 'force-dynamic'
-
 type Job = {
   id: string
-  title: string | null
-  location: string | null
+  title: string
+  assigned_worker_id: string | null
+  status: string | null
   pay_rate: string | null
-  description: string | null
+  payment_status: string | null
 }
 
-function formatPay(payRate: string | null) {
-  if (!payRate) return 'Pay not set'
+export default function PayPage() {
+  const params = useParams()
+  const jobId = String(params.id || '')
 
-  const value = String(payRate).trim()
+  const [job, setJob] = useState<Job | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [paying, setPaying] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
 
-  if (value.includes('/hr') || value.includes('/hour')) {
-    return value.startsWith('$') ? value : `$${value}`
+  useEffect(() => {
+    loadJob()
+  }, [jobId])
+
+  async function loadJob() {
+    setLoading(true)
+    setMessage(null)
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('id, title, assigned_worker_id, status, pay_rate, payment_status')
+      .eq('id', jobId)
+      .maybeSingle()
+
+    if (error || !data) {
+      setJob(null)
+    } else {
+      setJob(data as Job)
+    }
+
+    setLoading(false)
   }
 
-  const cleaned = value.replace(/[^0-9.]/g, '')
-  if (!cleaned) return value
+  async function handlePay() {
+    if (!job) return
 
-  const num = Number(cleaned)
-  if (!Number.isFinite(num)) return value
+    setPaying(true)
+    setMessage(null)
 
-  return `$${num.toFixed(2)}`
-}
+    if (!job.assigned_worker_id) {
+      setMessage('No worker assigned to this job yet.')
+      setPaying(false)
+      return
+    }
 
-export default async function JobPayPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
+    const amount = job.pay_rate || '0'
 
-  if (!id) {
-    return (
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        <h1 className="text-2xl font-bold text-red-600">Pay Page Error</h1>
-        <p className="mt-4 text-gray-700">Job ID is missing.</p>
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, amount }),
+    })
 
-        <Link
-          href="/jobs"
-          className="mt-6 inline-block rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          Back to Jobs
-        </Link>
-      </main>
-    )
+    const text = await res.text()
+
+    let result: any = {}
+
+    try {
+      result = JSON.parse(text)
+    } catch {
+      console.error('RAW NON-JSON RESPONSE:', text)
+      setMessage('Server did not return JSON. Check app/api/checkout/route.ts.')
+      setPaying(false)
+      return
+    }
+
+    if (!res.ok || !result.url) {
+      setMessage(result.error || 'Could not start payment.')
+      setPaying(false)
+      return
+    }
+
+    window.location.href = result.url
   }
 
-  const { data, error } = await supabase
-    .from('jobs')
-    .select('id, title, location, pay_rate, description')
-    .eq('id', id)
-    .maybeSingle()
+  if (loading) return <div className="p-6">Loading...</div>
 
-  if (error) {
+  if (!job) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        <h1 className="text-2xl font-bold text-red-600">Pay Page Error</h1>
-        <p className="mt-4 text-gray-700">{error.message}</p>
-
-        <Link
-          href="/jobs"
-          className="mt-6 inline-block rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          Back to Jobs
-        </Link>
-      </main>
-    )
-  }
-
-  if (!data) {
-    return (
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main className="p-6">
         <h1 className="text-2xl font-bold">Job not found</h1>
-        <p className="mt-4 text-gray-700">
-          No matching job was found for this pay page.
-        </p>
-
-        <Link
-          href="/jobs"
-          className="mt-6 inline-block rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
-        >
+        <Link href="/jobs" className="text-blue-600">
           Back to Jobs
         </Link>
       </main>
     )
   }
-
-  const job = data as Job
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <div className="mb-6">
-        <Link
-          href={`/jobs/${job.id}`}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          ← Back to Job
-        </Link>
-      </div>
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-xl rounded-2xl border bg-white p-6 shadow-sm">
+        <h1 className="text-3xl font-bold">Pay Worker</h1>
 
-      <div className="rounded-2xl border bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">{job.title || 'Untitled Job'}</h1>
+        <div className="mt-6 space-y-2 text-gray-700">
+          <p>
+            <strong>Job:</strong> {job.title}
+          </p>
 
-        <p className="mt-2 text-gray-600">
-          {job.location || 'No location listed'}
-        </p>
+          <p>
+            <strong>Status:</strong> {job.status || 'Open'}
+          </p>
 
-        <div className="mt-6 rounded-xl border bg-gray-50 p-5">
-          <div className="text-sm font-medium text-gray-500">Pay</div>
-          <div className="mt-2 text-3xl font-bold text-gray-900">
-            {formatPay(job.pay_rate)}
-          </div>
-          <div className="mt-2 text-xs text-gray-400">
-            Raw value: {job.pay_rate || 'empty'}
-          </div>
-        </div>
+          <p>
+            <strong>Payment:</strong> {job.payment_status || 'unpaid'}
+          </p>
 
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold">Description</h2>
-          <p className="mt-2 whitespace-pre-wrap text-gray-700">
-            {job.description || 'No description provided.'}
+          <p>
+            <strong>Amount:</strong> {job.pay_rate || '$0'}
           </p>
         </div>
 
-        <div className="mt-8 flex gap-3">
-          <Link
-            href="/jobs"
-            className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+        {!job.assigned_worker_id && (
+          <div className="mt-4 rounded-xl bg-yellow-50 p-3 text-yellow-800">
+            A worker must be assigned before payment can be sent.
+          </div>
+        )}
+
+        {message && (
+          <div className="mt-4 rounded-xl bg-red-50 p-3 text-red-700">
+            {message}
+          </div>
+        )}
+
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={handlePay}
+            disabled={paying || !job.assigned_worker_id}
+            className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:opacity-50"
           >
-            Back to Jobs
-          </Link>
+            {paying ? 'Opening Stripe...' : 'Send Payment'}
+          </button>
 
           <Link
             href={`/jobs/${job.id}`}
-            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white"
+            className="rounded-xl border px-5 py-3 font-semibold hover:bg-gray-100"
           >
-            Back to Listing
+            Back to Job
           </Link>
         </div>
       </div>

@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type ConversationRow = {
@@ -34,107 +35,209 @@ type ConversationCard = ConversationRow & {
 }
 
 export default function MessagesPage() {
+  return (
+    <Suspense fallback={<MessagesLoading />}>
+      <MessagesContent />
+    </Suspense>
+  )
+}
+
+function MessagesContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationCard[]>([])
 
   useEffect(() => {
-    async function loadConversations() {
-      setLoading(true)
-      setErrorMessage(null)
+    initMessages()
+  }, [])
 
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
+  async function initMessages() {
+    setLoading(true)
+    setErrorMessage(null)
 
-      const user = session?.user
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
-      if (sessionError || !user) {
-        setErrorMessage('You must be logged in to view messages.')
-        setLoading(false)
-        return
-      }
+    const user = session?.user
 
-      setCurrentUserId(user.id)
-
-      const { data: conversationRows, error: conversationError } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          created_at,
-          worker_id,
-          company_id,
-          job_id,
-          jobs (
-            id,
-            title,
-            location,
-            trade,
-            pay_rate
-          )
-        `)
-        .or(`worker_id.eq.${user.id},company_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
-
-      if (conversationError) {
-        setErrorMessage(conversationError.message)
-        setLoading(false)
-        return
-      }
-
-     const rows = (conversationRows || []).map((conversation: any) => ({
-  ...conversation,
-  jobs: Array.isArray(conversation.jobs)
-    ? conversation.jobs[0]
-    : conversation.jobs,
-})) as unknown as ConversationRow[]
-
-      if (rows.length === 0) {
-        setConversations([])
-        setLoading(false)
-        return
-      }
-
-      const otherUserIds = Array.from(
-        new Set(
-          rows.map((row) => (row.worker_id === user.id ? row.company_id : row.worker_id))
-        )
-      )
-
-      const { data: profileRows, error: profileError } = await supabase
-        .from('profiles')
-        .select(
-          'id, full_name, company_name, role, primary_trade, insured, liability_form_url'
-        )
-        .in('id', otherUserIds)
-
-      if (profileError) {
-        setErrorMessage(profileError.message)
-        setLoading(false)
-        return
-      }
-
-      const profileMap = new Map(
-        ((profileRows || []) as Profile[]).map((profile) => [profile.id, profile])
-      )
-
-      const merged: ConversationCard[] = rows.map((row) => {
-        const otherId = row.worker_id === user.id ? row.company_id : row.worker_id
-
-        return {
-          ...row,
-          otherProfile: profileMap.get(otherId) || null,
-        }
-      })
-
-      setConversations(merged)
+    if (sessionError || !user) {
+      setErrorMessage('You must be logged in to view messages.')
       setLoading(false)
+      return
     }
 
-    loadConversations()
-  }, [])
+    setCurrentUserId(user.id)
+
+    const targetUserId = searchParams.get('start') || searchParams.get('user')
+    const targetJobId = searchParams.get('job')
+
+    if (targetUserId) {
+      await openOrCreateConversation(user.id, targetUserId, targetJobId)
+      return
+    }
+
+    if (targetJobId) {
+      await openConversationByJob(user.id, targetJobId)
+      return
+    }
+
+    await loadConversations(user.id)
+  }
+
+  async function openOrCreateConversation(
+    userId: string,
+    targetUserId: string,
+    targetJobId: string | null
+  ) {
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+
+    const isWorker = myProfile?.role === 'worker'
+
+    const workerId = isWorker ? userId : targetUserId
+    const companyId = isWorker ? targetUserId : userId
+
+    let query = supabase
+      .from('conversations')
+      .select('id')
+      .eq('worker_id', workerId)
+      .eq('company_id', companyId)
+
+    if (targetJobId) {
+      query = query.eq('job_id', targetJobId)
+    }
+
+    const { data: existing } = await query.maybeSingle()
+
+    if (existing) {
+      router.push(`/messages/${existing.id}`)
+      return
+    }
+
+    const { data: newConversation, error } = await supabase
+      .from('conversations')
+      .insert({
+        worker_id: workerId,
+        company_id: companyId,
+        job_id: targetJobId || null,
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      setErrorMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    router.push(`/messages/${newConversation.id}`)
+  }
+
+  async function openConversationByJob(userId: string, targetJobId: string) {
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('job_id', targetJobId)
+      .or(`worker_id.eq.${userId},company_id.eq.${userId}`)
+      .maybeSingle()
+
+    if (existing) {
+      router.push(`/messages/${existing.id}`)
+      return
+    }
+
+    setErrorMessage('No conversation found for this job yet.')
+    setLoading(false)
+  }
+
+  async function loadConversations(userId: string) {
+    const { data: conversationRows, error: conversationError } = await supabase
+      .from('conversations')
+      .select(`
+        id,
+        created_at,
+        worker_id,
+        company_id,
+        job_id,
+        jobs (
+          id,
+          title,
+          location,
+          trade,
+          pay_rate
+        )
+      `)
+      .or(`worker_id.eq.${userId},company_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+
+    if (conversationError) {
+      setErrorMessage(conversationError.message)
+      setLoading(false)
+      return
+    }
+
+    const rows = (conversationRows || []).map((conversation: any) => ({
+      ...conversation,
+      jobs: Array.isArray(conversation.jobs)
+        ? conversation.jobs[0]
+        : conversation.jobs,
+    })) as ConversationRow[]
+
+    if (rows.length === 0) {
+      setConversations([])
+      setLoading(false)
+      return
+    }
+
+    const otherUserIds = Array.from(
+      new Set(
+        rows.map((row) =>
+          row.worker_id === userId ? row.company_id : row.worker_id
+        )
+      )
+    )
+
+    const { data: profileRows, error: profileError } = await supabase
+      .from('profiles')
+      .select(
+        'id, full_name, company_name, role, primary_trade, insured, liability_form_url'
+      )
+      .in('id', otherUserIds)
+
+    if (profileError) {
+      setErrorMessage(profileError.message)
+      setLoading(false)
+      return
+    }
+
+    const profileMap = new Map(
+      ((profileRows || []) as Profile[]).map((profile) => [
+        profile.id,
+        profile,
+      ])
+    )
+
+    const merged: ConversationCard[] = rows.map((row) => {
+      const otherId = row.worker_id === userId ? row.company_id : row.worker_id
+
+      return {
+        ...row,
+        otherProfile: profileMap.get(otherId) || null,
+      }
+    })
+
+    setConversations(merged)
+    setLoading(false)
+  }
 
   const stats = useMemo(() => {
     const workerChats = conversations.filter(
@@ -152,22 +255,11 @@ export default function MessagesPage() {
     }
   }, [conversations])
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50">
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-8 py-8 text-white">
-            <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
-            <p className="mt-2 text-sm text-slate-200">Loading inbox...</p>
-          </div>
-        </section>
-      </main>
-    )
-  }
+  if (loading) return <MessagesLoading />
 
   if (errorMessage) {
     return (
-      <main className="min-h-screen bg-slate-50">
+      <main className="min-h-screen bg-slate-50 p-6">
         <div className="rounded-3xl border border-red-200 bg-white p-8 shadow-sm">
           <div className="text-red-600">{errorMessage}</div>
         </div>
@@ -176,7 +268,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-slate-50 p-6">
       <div className="space-y-6">
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-8 py-8 text-white">
@@ -184,8 +276,8 @@ export default function MessagesPage() {
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-200">
-                  Manage job conversations, keep applicants moving, and stay on top
-                  of hiring.
+                  Manage job conversations, keep applicants moving, and stay on
+                  top of hiring.
                 </p>
               </div>
 
@@ -203,6 +295,7 @@ export default function MessagesPage() {
                 <h2 className="text-xl font-semibold text-slate-900">
                   No conversations yet
                 </h2>
+
                 <p className="mt-2 text-sm text-slate-600">
                   Once you start messaging on jobs, your inbox will show up here.
                 </p>
@@ -220,8 +313,8 @@ export default function MessagesPage() {
               <div className="grid gap-5 lg:grid-cols-2">
                 {conversations.map((conversation) => {
                   const otherName =
-                    conversation.otherProfile?.full_name ||
                     conversation.otherProfile?.company_name ||
+                    conversation.otherProfile?.full_name ||
                     'Conversation'
 
                   const verified = Boolean(
@@ -270,7 +363,9 @@ export default function MessagesPage() {
                       <div className="mt-5 grid gap-3 sm:grid-cols-2">
                         <InfoPill
                           label="Job"
-                          value={conversation.jobs?.title || 'General conversation'}
+                          value={
+                            conversation.jobs?.title || 'General conversation'
+                          }
                         />
                         <InfoPill
                           label="Location"
@@ -317,6 +412,15 @@ export default function MessagesPage() {
                             View Job
                           </Link>
                         )}
+
+                        {conversation.otherProfile?.id && (
+                          <Link
+                            href={`/profile/${conversation.otherProfile.id}`}
+                            className="inline-flex rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                          >
+                            View Profile
+                          </Link>
+                        )}
                       </div>
                     </article>
                   )
@@ -330,13 +434,20 @@ export default function MessagesPage() {
   )
 }
 
-function TopStat({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function MessagesLoading() {
+  return (
+    <main className="min-h-screen bg-slate-50 p-6">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 px-8 py-8 text-white">
+          <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
+          <p className="mt-2 text-sm text-slate-200">Loading inbox...</p>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function TopStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-200">
@@ -347,13 +458,7 @@ function TopStat({
   )
 }
 
-function InfoPill({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function InfoPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">

@@ -224,7 +224,7 @@ function BillingContent() {
                   className={`rounded-xl px-6 py-3 font-semibold text-white ${
                     connecting
                       ? 'cursor-not-allowed bg-gray-400'
-                      : 'bg-black hover:bg-gray-800'
+                      : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
                   {connecting ? 'Opening Stripe...' : 'Connect Stripe'}

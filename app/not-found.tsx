@@ -10,7 +10,7 @@ export default function NotFound() {
 
       <Link
         href="/jobs"
-        className="mt-6 rounded-xl bg-black px-5 py-2 text-sm font-medium text-white"
+        className="mt-6 rounded-xl bg-blue-600 px-5 py-2 text-sm font-medium text-white"
       >
         Go to Jobs
       </Link>

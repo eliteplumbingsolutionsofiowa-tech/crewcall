@@ -2,133 +2,258 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 type Profile = {
   id: string
   role: 'worker' | 'company' | null
+  full_name: string | null
+  company_name: string | null
 }
 
 export default function CrewCallNav() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loaded, setLoaded] = useState(false)
   const router = useRouter()
 
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+  const [pendingInvites, setPendingInvites] = useState(0)
+  const [acceptedInvites, setAcceptedInvites] = useState(0)
+
   useEffect(() => {
-    loadProfile()
+    loadNav()
+
+    const channel = supabase
+      .channel('crewcall-nav-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, loadNav)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, loadNav)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, loadNav)
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
-  async function loadProfile() {
+  async function loadNav() {
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
       setProfile(null)
+      setUnreadMessages(0)
+      setPendingInvites(0)
+      setAcceptedInvites(0)
       setLoaded(true)
       return
     }
 
-    const { data } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, full_name, company_name')
       .eq('id', user.id)
       .maybeSingle()
 
-    setProfile((data as Profile) || null)
+    const currentProfile = profileData as Profile | null
+    setProfile(currentProfile)
+
+    const { count: unreadCount } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .neq('sender_id', user.id)
+      .eq('read', false)
+
+    setUnreadMessages(unreadCount || 0)
+
+    if (currentProfile?.role === 'worker') {
+      const { count: pendingCount } = await supabase
+        .from('invites')
+        .select('*', { count: 'exact', head: true })
+        .eq('worker_id', user.id)
+        .eq('status', 'pending')
+
+      setPendingInvites(pendingCount || 0)
+      setAcceptedInvites(0)
+    }
+
+    if (currentProfile?.role === 'company') {
+      const { count: acceptedCount } = await supabase
+        .from('invites')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', user.id)
+        .eq('status', 'accepted')
+
+      setAcceptedInvites(acceptedCount || 0)
+      setPendingInvites(0)
+    }
+
     setLoaded(true)
   }
 
-  async function handleSignOut() {
+  async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
   }
 
-  const isWorker = profile?.role === 'worker'
-  const isCompany = profile?.role === 'company'
+  const displayName =
+    profile?.company_name ||
+    profile?.full_name ||
+    (profile?.role === 'company' ? 'Company' : 'Worker')
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <nav className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-slate-900 text-sm font-bold text-white shadow-sm">
-            CC
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white shadow-md">
+            C
           </div>
 
           <div>
-            <div className="text-lg font-bold tracking-tight text-slate-900">
-              CrewCall
+            <div className="text-xl font-black tracking-tight text-gray-950">
+              Crew<span className="text-blue-600">Call</span>
             </div>
-            <div className="text-xs text-slate-500">
-              Find work. Build crews. Move fast.
+            <div className="text-xs font-semibold text-gray-500">
+              Find help. Find work. Fast.
             </div>
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-2 md:flex">
-          <NavLink href="/">Home</NavLink>
-          <NavLink href="/jobs">Jobs</NavLink>
+        {loaded && (
+          <div className="flex items-center gap-2">
+            {!profile && (
+              <>
+                <Link
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  href="/login"
+                >
+                  Login
+                </Link>
 
-          {loaded && !profile && (
-            <>
-              <NavLink href="/login">Login</NavLink>
-              <NavLink href="/signup">Signup</NavLink>
-            </>
-          )}
+                <Link
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                  href="/signup"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
 
-          {isWorker && (
-            <>
-              <NavLink href="/saved-jobs">Saved Jobs</NavLink>
-              <NavLink href="/my-applications">Applications</NavLink>
-              <NavLink href="/messages">Messages</NavLink>
-              <NavLink href="/profile">Profile</NavLink>
+            {profile && (
+              <>
+                <Link
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  href="/jobs"
+                >
+                  Jobs
+                </Link>
 
-              <button
-                onClick={handleSignOut}
-                className="ml-2 rounded-xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-200"
-              >
-                Sign Out
-              </button>
-            </>
-          )}
+                {profile.role === 'company' && (
+                  <>
+                    <Link
+                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/workers"
+                    >
+                      Find Workers
+                    </Link>
 
-          {isCompany && (
-            <>
-              <NavLink href="/jobs/new">Post Job</NavLink>
-              <NavLink href="/my-jobs">My Jobs</NavLink>
-              <NavLink href="/messages">Messages</NavLink>
-              <NavLink href="/profile">Profile</NavLink>
-              <NavLink href="/compliance">Compliance</NavLink>
+                    <Link
+                      className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
+                      href="/post-job"
+                    >
+                      Post Job
+                    </Link>
 
-              <button
-                onClick={handleSignOut}
-                className="ml-2 rounded-xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-200"
-              >
-                Sign Out
-              </button>
-            </>
-          )}
-        </nav>
+                    <Link
+                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/my-jobs"
+                    >
+                      My Jobs
+                    </Link>
+
+                    <Link
+                      className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/invites"
+                    >
+                      Invites
+                      {acceptedInvites > 0 && (
+                        <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
+                          {acceptedInvites}
+                        </span>
+                      )}
+                    </Link>
+
+                    <Link
+                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/dashboard"
+                    >
+                      Dashboard
+                    </Link>
+                  </>
+                )}
+
+                {profile.role === 'worker' && (
+                  <>
+                    <Link
+                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/my-applications"
+                    >
+                      Applications
+                    </Link>
+
+                    <Link
+                      className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/invites"
+                    >
+                      Invites
+                      {pendingInvites > 0 && (
+                        <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
+                          {pendingInvites}
+                        </span>
+                      )}
+                    </Link>
+
+                    <Link
+                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                      href="/worker/dashboard"
+                    >
+                      Worker Dashboard
+                    </Link>
+                  </>
+                )}
+
+                <Link
+                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  href="/messages"
+                >
+                  Messages
+                  {unreadMessages > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white">
+                      {unreadMessages}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  href="/profile"
+                >
+                  {displayName}
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
-    </header>
-  )
-}
-
-function NavLink({
-  href,
-  children,
-}: {
-  href: string
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-    >
-      {children}
-    </Link>
+    </nav>
   )
 }

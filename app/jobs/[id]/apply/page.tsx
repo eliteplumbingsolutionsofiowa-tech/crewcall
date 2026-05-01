@@ -1,27 +1,49 @@
 'use client'
 
-import Link from 'next/link'
-import { useRouter, useParams } from 'next/navigation'
-import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import {
+  CrewButton,
+  CrewCard,
+  LoadingState,
+  PageHeader,
+  StatusBadge,
+} from '@/app/components/CrewCallUI'
+
+type Profile = {
+  id: string
+  role: 'worker' | 'company' | null
+}
+
+type Job = {
+  id: string
+  title: string | null
+  trade: string | null
+  location: string | null
+  pay_rate: string | null
+  status: string | null
+}
 
 export default function ApplyPage() {
-  const router = useRouter()
   const params = useParams()
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
+  const router = useRouter()
   const jobId = String(params.id || '')
 
-  async function handleApply() {
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [job, setJob] = useState<Job | null>(null)
+  const [alreadyApplied, setAlreadyApplied] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadPage()
+  }, [])
+
+  async function loadPage() {
     setLoading(true)
     setMessage(null)
-
-    if (!jobId) {
-      setMessage('Job ID is missing.')
-      setLoading(false)
-      return
-    }
 
     const {
       data: { user },
@@ -40,114 +62,171 @@ export default function ApplyPage() {
       return
     }
 
-    const { data: job, error: jobError } = await supabase
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const loadedProfile = profileData as Profile | null
+    setProfile(loadedProfile)
+
+    const { data: jobData, error: jobError } = await supabase
       .from('jobs')
-      .select('id, title, company_id')
+      .select('id, title, trade, location, pay_rate, status')
       .eq('id', jobId)
       .maybeSingle()
 
-    if (jobError || !job) {
+    if (jobError) {
+      setMessage(jobError.message)
+      setLoading(false)
+      return
+    }
+
+    if (!jobData) {
       setMessage('Job not found.')
       setLoading(false)
       return
     }
 
-    if (job.company_id === user.id) {
-      setMessage('You cannot apply to your own job.')
-      setLoading(false)
-      return
-    }
+    setJob(jobData as Job)
 
-    const { data: existingApplication } = await supabase
-      .from('job_applications')
+    const { data: existingApp } = await supabase
+      .from('applications')
       .select('id')
       .eq('job_id', jobId)
       .eq('worker_id', user.id)
       .maybeSingle()
 
-    if (existingApplication) {
-      setMessage('You already applied to this job.')
-      setLoading(false)
+    setAlreadyApplied(!!existingApp)
+    setLoading(false)
+  }
+
+  async function handleApply() {
+    setSubmitting(true)
+    setMessage(null)
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage(userError?.message || 'You must be logged in to apply.')
+      setSubmitting(false)
       return
     }
 
-    const { error: applicationError } = await supabase
-      .from('job_applications')
-      .insert({
-        job_id: jobId,
-        worker_id: user.id,
-        status: 'pending',
-      })
-
-    if (applicationError) {
-      setMessage(applicationError.message)
-      setLoading(false)
+    if (profile?.role !== 'worker') {
+      setMessage('Only worker accounts can apply for jobs.')
+      setSubmitting(false)
       return
     }
 
-    const { data: existingConversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('job_id', jobId)
-      .eq('worker_id', user.id)
-      .eq('company_id', job.company_id)
-      .maybeSingle()
-
-    if (!existingConversation) {
-      await supabase.from('conversations').insert({
-        job_id: jobId,
-        worker_id: user.id,
-        company_id: job.company_id,
-      })
+    if (!job || job.status !== 'open') {
+      setMessage('This job is no longer open for applications.')
+      setSubmitting(false)
+      return
     }
 
-    await supabase.from('notifications').insert({
-      user_id: job.company_id,
-      title: 'New Applicant',
-      body: `Someone applied to your job: ${job.title || 'Job'}`,
-      read: false,
+    if (alreadyApplied) {
+      setMessage('You already applied for this job.')
+      setSubmitting(false)
+      return
+    }
+
+    const { error } = await supabase.from('applications').insert({
+      job_id: jobId,
+      worker_id: user.id,
+      status: 'pending',
     })
 
-    setMessage('Application submitted!')
-    setLoading(false)
+    if (error) {
+      setMessage(error.message)
+      setSubmitting(false)
+      return
+    }
 
-    setTimeout(() => {
-      router.push(`/jobs/${jobId}`)
-      router.refresh()
-    }, 1000)
+    setAlreadyApplied(true)
+    setSubmitting(false)
+    router.push('/applications')
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-6 py-8">
+        <div className="mx-auto max-w-4xl">
+          <LoadingState text="Loading application..." />
+        </div>
+      </main>
+    )
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <div className="mb-6">
-        <Link
-          href={`/jobs/${jobId}`}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          ← Back to Job
-        </Link>
-      </div>
-
-      <div className="rounded-3xl border bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold">Apply for Job</h1>
-
-        <p className="mt-3 text-gray-600">
-          Click below to submit your application.
-        </p>
-
-        <div className="mt-6">
-          <button
-            onClick={handleApply}
-            disabled={loading}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {loading ? 'Submitting...' : 'Submit Application'}
-          </button>
-        </div>
+    <main className="min-h-screen bg-gray-50 px-6 py-8">
+      <div className="mx-auto max-w-4xl">
+        <PageHeader
+          title="Apply for Job"
+          subtitle="Confirm the job details before submitting your application."
+          action={
+            <CrewButton href={`/jobs/${jobId}`} variant="ghost">
+              Back to Job
+            </CrewButton>
+          }
+        />
 
         {message && (
-          <div className="mt-4 text-sm text-blue-600">{message}</div>
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            {message}
+          </div>
         )}
+
+        <CrewCard>
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {job?.title || 'Untitled Job'}
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                {job?.trade || 'Trade not listed'}
+              </p>
+            </div>
+
+            <StatusBadge status={job?.status} />
+          </div>
+
+          <div className="grid gap-3 text-sm text-gray-700 md:grid-cols-2">
+            <p>
+              <span className="font-semibold text-gray-900">Location:</span>{' '}
+              {job?.location || 'Not listed'}
+            </p>
+
+            <p>
+              <span className="font-semibold text-gray-900">Pay:</span>{' '}
+              {job?.pay_rate || 'Not listed'}
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            {alreadyApplied ? (
+              <CrewButton href="/applications" variant="ghost">
+                Already Applied
+              </CrewButton>
+            ) : (
+              <CrewButton
+                onClick={handleApply}
+                disabled={submitting || profile?.role !== 'worker' || job?.status !== 'open'}
+                variant="primary"
+              >
+                {submitting ? 'Submitting...' : 'Submit Application'}
+              </CrewButton>
+            )}
+
+            <CrewButton href="/jobs" variant="ghost">
+              Browse More Jobs
+            </CrewButton>
+          </div>
+        </CrewCard>
       </div>
     </main>
   )

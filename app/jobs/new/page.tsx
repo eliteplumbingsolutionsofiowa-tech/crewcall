@@ -3,6 +3,22 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { CrewButton } from '@/app/components/CrewButton'
+import { CrewCard } from '@/app/components/CrewCard'
+import { CrewInput } from '@/app/components/CrewInput'
+
+const trades = [
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Framing',
+  'Concrete',
+  'Drywall',
+  'Roofing',
+  'Painting',
+  'Flooring',
+  'General Labor',
+]
 
 export default function NewJobPage() {
   const router = useRouter()
@@ -13,167 +29,154 @@ export default function NewJobPage() {
   const [payRate, setPayRate] = useState('')
   const [startDate, setStartDate] = useState('')
   const [description, setDescription] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
 
-  async function createJob(e: React.FormEvent<HTMLFormElement>) {
+  async function createJob(e: React.FormEvent) {
     e.preventDefault()
-
-    setSaving(true)
-    setErrorMessage(null)
+    setLoading(true)
+    setMessage(null)
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setErrorMessage('You must be logged in to post a job.')
-      setSaving(false)
+      setMessage('You must be logged in to post a job.')
+      setLoading(false)
       return
     }
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .insert({
-        company_id: user.id,
-        title,
-        trade,
-        location,
-        pay_rate: payRate || null,
-        start_date: startDate || null,
-        description: description || null,
-        status: 'open',
-      })
-      .select('id')
-      .single()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profile?.role !== 'company') {
+      setMessage('Only company accounts can post jobs.')
+      setLoading(false)
+      return
+    }
+
+    const { error } = await supabase.from('jobs').insert({
+      company_id: user.id,
+      title,
+      trade,
+      location,
+      pay_rate: payRate,
+      start_date: startDate || null,
+      description,
+      status: 'open',
+      payment_status: 'unpaid',
+    })
 
     if (error) {
-      setErrorMessage(error.message)
-      setSaving(false)
+      setMessage(error.message)
+      setLoading(false)
       return
     }
 
-    router.push(`/jobs/${data.id}`)
+    router.push('/my-jobs')
   }
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <div className="mb-6 rounded-3xl border bg-white p-6 shadow-sm">
-        <p className="text-sm font-bold uppercase text-blue-700">
-          Company Tools
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900">
-          Post a Job
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Create a job opening and start receiving applicants.
-        </p>
-      </div>
-
-      <form
-        onSubmit={createJob}
-        className="space-y-5 rounded-3xl border bg-white p-6 shadow-sm"
-      >
-        {errorMessage && (
-          <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
-            {errorMessage}
-          </div>
-        )}
-
+    <main className="min-h-screen bg-gray-50 px-6 py-8">
+      <div className="mx-auto max-w-3xl space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-semibold">
-            Job Title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            placeholder="Example: Licensed plumber needed"
-            className="w-full rounded-xl border px-4 py-3"
-          />
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+            CrewCall
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-gray-900">
+            Post a Job
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Add the work you need help with and let available workers apply.
+          </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold">Trade</label>
-            <select
-              value={trade}
-              onChange={(e) => setTrade(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3"
-            >
-              <option>Plumbing</option>
-              <option>Electrical</option>
-              <option>HVAC</option>
-              <option>Concrete</option>
-              <option>Framing</option>
-              <option>Drywall</option>
-              <option>Roofing</option>
-              <option>Painting</option>
-              <option>General Labor</option>
-              <option>Other</option>
-            </select>
-          </div>
+        <CrewCard>
+          <form onSubmit={createJob} className="space-y-5">
+            <CrewInput
+              label="Job Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Example: Rough-in help needed"
+              required
+            />
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold">
-              Location
-            </label>
-            <input
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Trade
+              </label>
+              <select
+                value={trade}
+                onChange={(e) => setTrade(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                {trades.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <CrewInput
+              label="Location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              required
               placeholder="Example: Des Moines, IA"
-              className="w-full rounded-xl border px-4 py-3"
+              required
             />
-          </div>
-        </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold">
-              Pay Rate
-            </label>
-            <input
+            <CrewInput
+              label="Pay Rate / Job Price"
               value={payRate}
               onChange={(e) => setPayRate(e.target.value)}
-              placeholder="Example: $35/hr or $2,500 flat"
-              className="w-full rounded-xl border px-4 py-3"
+              placeholder="Example: $45/hr or $1,200"
+              required
             />
-          </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold">
-              Start Date
-            </label>
-            <input
+            <CrewInput
+              label="Start Date"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3"
             />
-          </div>
-        </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-semibold">
-            Job Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the work, schedule, requirements, tools needed, and any special notes."
-            className="min-h-36 w-full rounded-xl border px-4 py-3"
-          />
-        </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">
+                Job Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the work, schedule, expectations, tools needed, and any special requirements."
+                required
+                rows={6}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving ? 'Posting...' : 'Post Job'}
-        </button>
-      </form>
+            {message && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {message}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <CrewButton type="submit" disabled={loading}>
+                {loading ? 'Posting...' : 'Post Job'}
+              </CrewButton>
+
+              <CrewButton href="/my-jobs" variant="ghost">
+                Cancel
+              </CrewButton>
+            </div>
+          </form>
+        </CrewCard>
+      </div>
     </main>
   )
 }
