@@ -33,13 +33,14 @@ export default function MyWorkPage() {
   async function loadWork() {
     setLoading(true)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('jobs')
       .select(`
         *,
@@ -50,6 +51,12 @@ export default function MyWorkPage() {
       `)
       .eq('assigned_worker_id', user.id)
       .order('start_date', { ascending: false })
+
+    if (error) {
+      console.error(error)
+      setLoading(false)
+      return
+    }
 
     const cleaned =
       data?.map((j: any) => ({
@@ -63,24 +70,16 @@ export default function MyWorkPage() {
     setLoading(false)
   }
 
-  function companyName(job: Job) {
-    return (
-      job.company?.company_name ||
-      job.company?.full_name ||
-      'Company'
-    )
-  }
+  async function markComplete(jobId: string) {
+    if (!confirm('Mark this job as completed?')) return
 
-  function paymentBadge(status: string | null) {
-    if (status === 'paid') return 'bg-green-100 text-green-700'
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-700'
-    return 'bg-gray-100 text-gray-700'
-  }
+    await supabase
+      .from('jobs')
+      .update({ status: 'completed' })
+      .eq('id', jobId)
 
-  function statusBadge(status: string | null) {
-    if (status === 'completed') return 'bg-green-100 text-green-700'
-    if (status === 'assigned') return 'bg-blue-100 text-blue-700'
-    return 'bg-gray-100 text-gray-700'
+    // instant refresh (no reload flash)
+    loadWork()
   }
 
   if (loading) {
@@ -95,52 +94,63 @@ export default function MyWorkPage() {
         <div>
           <h1 className="text-3xl font-bold">My Work</h1>
           <p className="text-gray-600 mt-1">
-            Manage jobs, track payments, and build your reputation.
+            Track jobs, payments, and reviews.
           </p>
         </div>
 
-        {/* ACTIVE JOBS */}
-        <section>
-          <h2 className="text-xl font-bold mb-4">Active Jobs</h2>
+        {/* ACTIVE */}
+        <Section title="Active Jobs" empty="No active jobs.">
+          {activeJobs.map((job) => (
+            <JobCard key={job.id} job={job} onComplete={markComplete} active />
+          ))}
+        </Section>
 
-          {activeJobs.length === 0 ? (
-            <Empty text="No active jobs." />
-          ) : (
-            <div className="grid gap-4">
-              {activeJobs.map((job) => (
-                <Card key={job.id} job={job} active />
-              ))}
-            </div>
-          )}
-        </section>
+        {/* COMPLETED */}
+        <Section title="Completed Jobs" empty="No completed jobs yet.">
+          {completedJobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
+        </Section>
 
-        {/* COMPLETED JOBS */}
-        <section>
-          <h2 className="text-xl font-bold mb-4">Completed Jobs</h2>
-
-          {completedJobs.length === 0 ? (
-            <Empty text="No completed jobs yet." />
-          ) : (
-            <div className="grid gap-4">
-              {completedJobs.map((job) => (
-                <Card key={job.id} job={job} />
-              ))}
-            </div>
-          )}
-        </section>
       </div>
     </main>
   )
 }
 
+/* ---------- SECTION ---------- */
+
+function Section({
+  title,
+  empty,
+  children,
+}: {
+  title: string
+  empty: string
+  children: React.ReactNode
+}) {
+  return (
+    <section>
+      <h2 className="text-xl font-bold mb-4">{title}</h2>
+
+      {Array.isArray(children) && children.length === 0 ? (
+        <Empty text={empty} />
+      ) : (
+        <div className="grid gap-4">{children}</div>
+      )}
+    </section>
+  )
+}
+
 /* ---------- CARD ---------- */
 
-function Card({
+function JobCard({
   job,
-  active = false,
+  active,
+  onComplete,
 }: {
   job: Job
   active?: boolean
+  onComplete?: (id: string) => void
 }) {
   const company =
     job.company?.company_name ||
@@ -150,44 +160,40 @@ function Card({
   return (
     <div className="bg-white border rounded-2xl p-5 shadow-sm">
 
-      <div className="flex flex-wrap gap-2 mb-2">
-        <span className={`px-3 py-1 text-xs rounded-full ${statusBadge(job.status)}`}>
-          {job.status}
-        </span>
-
-        <span className={`px-3 py-1 text-xs rounded-full ${paymentBadge(job.payment_status)}`}>
-          {job.payment_status || 'unpaid'}
-        </span>
+      {/* BADGES */}
+      <div className="flex gap-2 mb-2">
+        <Badge type="status" value={job.status} />
+        <Badge type="payment" value={job.payment_status} />
       </div>
 
+      {/* TITLE */}
       <h3 className="text-lg font-bold">
         {job.title || 'Untitled Job'}
       </h3>
 
-      <p className="text-sm text-gray-600">
-        {company}
-      </p>
+      <p className="text-sm text-gray-600">{company}</p>
 
-      <div className="mt-3 text-sm text-gray-700 grid grid-cols-2 md:grid-cols-4 gap-2">
-        <div>{job.trade || 'No trade'}</div>
-        <div>{job.location || 'No location'}</div>
-        <div>{job.pay_rate || 'No pay set'}</div>
+      {/* DETAILS */}
+      <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+        <div>{job.trade || '-'}</div>
+        <div>{job.location || '-'}</div>
+        <div>{job.pay_rate || '-'}</div>
         <div>
           {job.start_date
             ? new Date(job.start_date).toLocaleDateString()
-            : 'No date'}
+            : '-'}
         </div>
       </div>
 
-      {/* PAYMENT STATUS */}
+      {/* STATUS MESSAGES */}
       {job.status === 'completed' && job.payment_status !== 'paid' && (
-        <div className="mt-3 text-sm text-yellow-700 bg-yellow-50 p-3 rounded-xl">
-          Waiting for company to send payment
+        <div className="mt-3 text-yellow-700 bg-yellow-50 p-3 rounded-xl">
+          Waiting for payment
         </div>
       )}
 
       {job.payment_status === 'paid' && (
-        <div className="mt-3 text-sm text-green-700 bg-green-50 p-3 rounded-xl">
+        <div className="mt-3 text-green-700 bg-green-50 p-3 rounded-xl">
           Paid {job.paid_at && `on ${new Date(job.paid_at).toLocaleDateString()}`}
         </div>
       )}
@@ -204,13 +210,13 @@ function Card({
         </Link>
 
         <Link href={`/profile/${job.company_id}`} className="btn">
-          Company Profile
+          Company
         </Link>
 
-        {active && (
+        {active && onComplete && (
           <button
+            onClick={() => onComplete(job.id)}
             className="btn-secondary"
-            onClick={() => markComplete(job.id)}
           >
             Mark Complete
           </button>
@@ -221,7 +227,7 @@ function Card({
             href={`/reviews/new?jobId=${job.id}&revieweeId=${job.company_id}`}
             className="btn-warning"
           >
-            Leave Review
+            Review
           </Link>
         )}
       </div>
@@ -229,20 +235,36 @@ function Card({
   )
 }
 
-/* ---------- ACTION ---------- */
+/* ---------- BADGE ---------- */
 
-async function markComplete(jobId: string) {
-  if (!confirm('Mark this job as completed?')) return
+function Badge({
+  type,
+  value,
+}: {
+  type: 'status' | 'payment'
+  value: string | null
+}) {
+  const styles =
+    type === 'status'
+      ? value === 'completed'
+        ? 'bg-green-100 text-green-700'
+        : value === 'assigned'
+        ? 'bg-blue-100 text-blue-700'
+        : 'bg-gray-100 text-gray-700'
+      : value === 'paid'
+      ? 'bg-green-100 text-green-700'
+      : value === 'pending'
+      ? 'bg-yellow-100 text-yellow-700'
+      : 'bg-gray-100 text-gray-700'
 
-  await supabase
-    .from('jobs')
-    .update({ status: 'completed' })
-    .eq('id', jobId)
-
-  location.reload()
+  return (
+    <span className={`px-3 py-1 text-xs rounded-full ${styles}`}>
+      {value || (type === 'payment' ? 'unpaid' : 'unknown')}
+    </span>
+  )
 }
 
-/* ---------- UI ---------- */
+/* ---------- EMPTY ---------- */
 
 function Empty({ text }: { text: string }) {
   return (
@@ -250,16 +272,4 @@ function Empty({ text }: { text: string }) {
       {text}
     </div>
   )
-}
-
-function statusBadge(status: string | null) {
-  if (status === 'completed') return 'bg-green-100 text-green-700'
-  if (status === 'assigned') return 'bg-blue-100 text-blue-700'
-  return 'bg-gray-100 text-gray-700'
-}
-
-function paymentBadge(status: string | null) {
-  if (status === 'paid') return 'bg-green-100 text-green-700'
-  if (status === 'pending') return 'bg-yellow-100 text-yellow-700'
-  return 'bg-gray-100 text-gray-700'
 }
