@@ -5,7 +5,8 @@ import { createClient } from '@supabase/supabase-js'
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
+console.log('STRIPE KEY START:', stripeSecretKey?.slice(0, 10))
+console.log('STRIPE KEY LENGTH:', stripeSecretKey?.length)
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null
 
 const supabaseAdmin =
