@@ -3,18 +3,17 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+function getEnv(name: string) {
+  const value = process.env[name]?.trim()
 
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null
+  if (!value) {
+    throw new Error(`Missing ${name}`)
+  }
 
-const supabaseAdmin =
-  supabaseUrl && supabaseServiceKey
-    ? createClient(supabaseUrl, supabaseServiceKey)
-    : null
+  return value
+}
 
 function parseDollarAmount(value: unknown) {
   const cleaned = String(value || '0').replace(/[^0-9.]/g, '')
@@ -23,35 +22,22 @@ function parseDollarAmount(value: unknown) {
 
 export async function POST(req: Request) {
   try {
-    if (!stripe) {
-      return NextResponse.json(
-        { error: 'Stripe secret key is missing.' },
-        { status: 500 }
-      )
-    }
+    const stripeSecretKey = getEnv('STRIPE_SECRET_KEY')
+    const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL')
+    const supabaseServiceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY')
+    const siteUrl = getEnv('NEXT_PUBLIC_SITE_URL').replace(/\/$/, '')
 
-    if (!supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Supabase admin keys are missing.' },
-        { status: 500 }
-      )
-    }
+    console.log('STRIPE KEY START:', stripeSecretKey.slice(0, 8))
+    console.log('STRIPE KEY LENGTH:', stripeSecretKey.length)
 
-    if (!siteUrl) {
-      return NextResponse.json(
-        { error: 'NEXT_PUBLIC_SITE_URL is missing.' },
-        { status: 500 }
-      )
-    }
+    const stripe = new Stripe(stripeSecretKey)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
     const body = await req.json()
     const jobId = body.jobId
 
     if (!jobId) {
-      return NextResponse.json(
-        { error: 'Missing job ID.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing job ID.' }, { status: 400 })
     }
 
     const { data: job, error: jobError } = await supabaseAdmin
@@ -76,8 +62,6 @@ export async function POST(req: Request) {
       )
     }
 
-    const amountInCents = Math.round(grossAmount * 100)
-
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -86,7 +70,7 @@ export async function POST(req: Request) {
           quantity: 1,
           price_data: {
             currency: 'usd',
-            unit_amount: amountInCents,
+            unit_amount: Math.round(grossAmount * 100),
             product_data: {
               name: job.title || 'CrewCall Job Payment',
               description: `Payment for CrewCall job ${job.id}`,
@@ -110,14 +94,13 @@ export async function POST(req: Request) {
       .eq('id', job.id)
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
     return NextResponse.json({ url: session.url })
   } catch (error: any) {
+    console.error('STRIPE CHECKOUT ERROR:', error)
+
     return NextResponse.json(
       { error: error?.message || 'Unable to create Stripe checkout session.' },
       { status: 500 }
