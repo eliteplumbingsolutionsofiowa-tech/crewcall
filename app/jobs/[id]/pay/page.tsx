@@ -60,7 +60,7 @@ export default function PayPage() {
 
     const amount = job.pay_rate || '0'
 
-    const res = await fetch('/api/checkout', {
+    const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jobId: job.id, amount }),
@@ -74,7 +74,7 @@ export default function PayPage() {
       result = JSON.parse(text)
     } catch {
       console.error('RAW NON-JSON RESPONSE:', text)
-      setMessage('Server did not return JSON. Check app/api/checkout/route.ts.')
+      setMessage('Server did not return JSON. Check app/api/stripe/checkout/route.ts.')
       setPaying(false)
       return
     }
