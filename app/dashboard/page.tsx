@@ -65,8 +65,7 @@ export default function WorkerDashboardPage() {
 
     const { data, error } = await supabase
       .from('jobs')
-      .select(
-        `
+      .select(`
         id,
         title,
         description,
@@ -78,8 +77,7 @@ export default function WorkerDashboardPage() {
         payment_status,
         assigned_worker_id,
         created_at
-      `
-      )
+      `)
       .eq('assigned_worker_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -93,6 +91,7 @@ export default function WorkerDashboardPage() {
     const loadedJobs = (data as Job[]) || []
 
     setJobs(loadedJobs)
+
     setStats({
       assigned: loadedJobs.filter((job) => job.status === 'assigned').length,
       completed: loadedJobs.filter((job) => job.status === 'completed').length,
@@ -117,7 +116,7 @@ export default function WorkerDashboardPage() {
 
   function jobStatusTone(status: string | null) {
     if (status === 'completed') {
-      return 'bg-blue-100 text-blue-700'
+      return 'bg-emerald-100 text-emerald-700'
     }
 
     if (status === 'assigned') {
@@ -151,144 +150,191 @@ export default function WorkerDashboardPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-7xl px-6 py-10">
+      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 px-6 py-10">
         <LoadingSpinner label="Loading worker dashboard..." />
       </main>
     )
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-950">
-            Worker Dashboard
-          </h1>
+    <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-100 px-4 py-10">
+      <div className="absolute left-[-120px] top-20 h-72 w-72 rounded-full bg-blue-300/30 blur-3xl" />
+      <div className="absolute right-[-100px] top-40 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
 
-          <p className="mt-2 text-base text-slate-600">
-            Track assigned jobs, completed work, and payment status.
-          </p>
+      <div className="relative mx-auto max-w-7xl">
+        <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
+              CrewCall Worker
+            </p>
+
+            <h1 className="mt-2 text-5xl font-black tracking-tight text-slate-950">
+              Dashboard
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-lg text-slate-600">
+              Track your assigned work, completed jobs, and payments in one place.
+            </p>
+          </div>
+
+          <Link
+            href="/invites"
+            className="rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-sm font-black text-white shadow-xl shadow-blue-500/20 transition hover:scale-[1.02]"
+          >
+            View Invites
+          </Link>
         </div>
 
-        <Link
-          href="/invites"
-          className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-        >
-          View Invites
-        </Link>
-      </div>
+        {errorMessage && (
+          <StatusCard
+            title="Could not load dashboard"
+            message={errorMessage}
+            tone="danger"
+          />
+        )}
 
-      {errorMessage && (
-        <StatusCard
-          title="Could not load dashboard"
-          message={errorMessage}
-          tone="danger"
-        />
-      )}
-
-      {!errorMessage && (
-        <>
-          <section className="grid gap-4 md:grid-cols-4">
-            <StatCard label="Assigned" value={stats.assigned} />
-            <StatCard label="Completed" value={stats.completed} />
-            <StatCard label="Paid" value={stats.paid} />
-            <StatCard label="Unpaid" value={stats.unpaid} />
-          </section>
-
-          {jobs.length === 0 ? (
-            <div className="mt-8">
-              <StatusCard
-                title="No assigned jobs yet"
-                message="When a company hires or assigns you to a job, it will show up here."
-                actionText="Browse Jobs"
-                actionHref="/jobs"
-                tone="warning"
+        {!errorMessage && (
+          <>
+            <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <StatCard
+                label="Assigned"
+                value={stats.assigned}
+                gradient="from-blue-500 to-cyan-500"
               />
-            </div>
-          ) : (
-            <section className="mt-8 space-y-5">
-              {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-                >
-                  <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
-                    <div>
-                      <div className="flex flex-wrap gap-2">
-                        <span
-                          className={`rounded-full px-4 py-1 text-xs font-black uppercase ${jobStatusTone(
-                            job.status
-                          )}`}
-                        >
-                          {job.status || 'Unknown'}
-                        </span>
 
-                        <span
-                          className={`rounded-full px-4 py-1 text-xs font-black uppercase ${paymentTone(
-                            job.payment_status
-                          )}`}
-                        >
-                          {paymentLabel(job.payment_status)}
-                        </span>
-                      </div>
+              <StatCard
+                label="Completed"
+                value={stats.completed}
+                gradient="from-emerald-500 to-green-500"
+              />
 
-                      <h2 className="mt-4 text-2xl font-black text-slate-950">
-                        {job.title || 'Untitled Job'}
-                      </h2>
+              <StatCard
+                label="Paid"
+                value={stats.paid}
+                gradient="from-purple-500 to-indigo-500"
+              />
 
-                      <p className="mt-2 text-base text-slate-600">
-                        {job.trade || 'Trade not listed'} •{' '}
-                        {job.location || 'Location not listed'}
-                      </p>
+              <StatCard
+                label="Unpaid"
+                value={stats.unpaid}
+                gradient="from-orange-500 to-red-500"
+              />
+            </section>
 
-                      <div className="mt-3 space-y-1 text-base text-slate-600">
-                        <p>
-                          <span className="font-semibold text-slate-800">
-                            Pay:
-                          </span>{' '}
-                          {job.pay_rate || 'Not listed'}
+            {jobs.length === 0 ? (
+              <div className="mt-10">
+                <StatusCard
+                  title="No assigned jobs yet"
+                  message="When a company hires or assigns you to a job, it will show up here."
+                  actionText="Browse Jobs"
+                  actionHref="/jobs"
+                  tone="warning"
+                />
+              </div>
+            ) : (
+              <section className="mt-10 space-y-6">
+                {jobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-2xl shadow-slate-900/5 backdrop-blur"
+                  >
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap gap-3">
+                          <span
+                            className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-wide ${jobStatusTone(
+                              job.status
+                            )}`}
+                          >
+                            {job.status || 'Unknown'}
+                          </span>
+
+                          <span
+                            className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-wide ${paymentTone(
+                              job.payment_status
+                            )}`}
+                          >
+                            {paymentLabel(job.payment_status)}
+                          </span>
+                        </div>
+
+                        <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950">
+                          {job.title || 'Untitled Job'}
+                        </h2>
+
+                        <p className="mt-2 text-lg text-slate-600">
+                          {job.trade || 'Trade not listed'} •{' '}
+                          {job.location || 'Location not listed'}
                         </p>
 
-                        <p>
-                          <span className="font-semibold text-slate-800">
-                            Start Date:
-                          </span>{' '}
-                          {formatDate(job.start_date)}
-                        </p>
+                        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                          <div className="rounded-2xl bg-slate-50 p-4">
+                            <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                              Pay Rate
+                            </p>
+
+                            <p className="mt-2 text-xl font-black text-slate-950">
+                              {job.pay_rate || 'Not listed'}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl bg-slate-50 p-4">
+                            <p className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                              Start Date
+                            </p>
+
+                            <p className="mt-2 text-xl font-black text-slate-950">
+                              {formatDate(job.start_date)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-3">
-                      <Link
-                        href={`/jobs/${job.id}`}
-                        className="rounded-xl border border-slate-900 px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-100"
-                      >
-                        View Job
-                      </Link>
+                      <div className="flex flex-wrap gap-3 lg:w-[260px] lg:flex-col">
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center text-sm font-black text-slate-900 shadow-sm transition hover:scale-[1.02] hover:bg-slate-50"
+                        >
+                          View Job
+                        </Link>
 
-                      <Link
-                        href={`/messages?jobId=${job.id}`}
-                        className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700"
-                      >
-                        Messages
-                      </Link>
+                        <Link
+                          href={`/messages?jobId=${job.id}`}
+                          className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-4 text-center text-sm font-black text-white shadow-xl shadow-blue-500/20 transition hover:scale-[1.02]"
+                        >
+                          Messages
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </section>
-          )}
-        </>
-      )}
+                ))}
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </main>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  gradient,
+}: {
+  label: string
+  value: number
+  gradient: string
+}) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-      <p className="text-base font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-black text-slate-950">{value}</p>
+    <div
+      className={`rounded-[2rem] bg-gradient-to-br ${gradient} p-6 text-white shadow-2xl`}
+    >
+      <p className="text-sm font-black uppercase tracking-[0.25em] text-white/80">
+        {label}
+      </p>
+
+      <p className="mt-5 text-5xl font-black tracking-tight">{value}</p>
     </div>
   )
 }
