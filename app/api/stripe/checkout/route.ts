@@ -7,11 +7,7 @@ export const runtime = 'nodejs'
 
 function getEnv(name: string) {
   const value = process.env[name]?.trim()
-
-  if (!value) {
-    throw new Error(`Missing ${name}`)
-  }
-
+  if (!value) throw new Error(`Missing ${name}`)
   return value
 }
 
@@ -36,6 +32,9 @@ export async function POST(req: Request) {
     const body = await req.json()
     const jobId = body.jobId
 
+    console.log('CHECKOUT BODY:', body)
+    console.log('JOB ID RECEIVED:', jobId)
+
     if (!jobId) {
       return NextResponse.json({ error: 'Missing job ID.' }, { status: 400 })
     }
@@ -45,6 +44,9 @@ export async function POST(req: Request) {
       .select('id, title, pay_rate, payment_status')
       .eq('id', jobId)
       .maybeSingle()
+
+    console.log('JOB RESULT:', job)
+    console.log('JOB ERROR:', jobError)
 
     if (jobError || !job) {
       return NextResponse.json(
@@ -78,9 +80,7 @@ export async function POST(req: Request) {
           },
         },
       ],
-      metadata: {
-        jobId: job.id,
-      },
+      metadata: { jobId: job.id },
       success_url: `${siteUrl}/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/jobs/${job.id}/pay`,
     })
@@ -100,7 +100,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url })
   } catch (error: any) {
     console.error('STRIPE CHECKOUT ERROR:', error)
-
     return NextResponse.json(
       { error: error?.message || 'Unable to create Stripe checkout session.' },
       { status: 500 }
