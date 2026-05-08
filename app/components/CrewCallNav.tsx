@@ -26,9 +26,16 @@ export default function CrewCallNav() {
 
     const channel = supabase
       .channel('crewcall-nav-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, loadNav)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'invites' }, loadNav)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, loadNav)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        loadNav
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invites' },
+        loadNav
+      )
       .subscribe()
 
     return () => {
@@ -57,6 +64,7 @@ export default function CrewCallNav() {
       .maybeSingle()
 
     const currentProfile = profileData as Profile | null
+
     setProfile(currentProfile)
 
     const { count: unreadCount } = await supabase
@@ -68,24 +76,24 @@ export default function CrewCallNav() {
     setUnreadMessages(unreadCount || 0)
 
     if (currentProfile?.role === 'worker') {
-      const { count: pendingCount } = await supabase
+      const { count } = await supabase
         .from('invites')
         .select('*', { count: 'exact', head: true })
         .eq('worker_id', user.id)
         .eq('status', 'pending')
 
-      setPendingInvites(pendingCount || 0)
+      setPendingInvites(count || 0)
       setAcceptedInvites(0)
     }
 
     if (currentProfile?.role === 'company') {
-      const { count: acceptedCount } = await supabase
+      const { count } = await supabase
         .from('invites')
         .select('*', { count: 'exact', head: true })
         .eq('company_id', user.id)
         .eq('status', 'accepted')
 
-      setAcceptedInvites(acceptedCount || 0)
+      setAcceptedInvites(count || 0)
       setPendingInvites(0)
     }
 
@@ -115,6 +123,7 @@ export default function CrewCallNav() {
             <div className="text-xl font-black tracking-tight text-gray-950">
               Crew<span className="text-blue-600">Call</span>
             </div>
+
             <div className="text-xs font-semibold text-gray-500">
               Find help. Find work. Fast.
             </div>
@@ -126,17 +135,107 @@ export default function CrewCallNav() {
             {!profile && (
               <>
                 <Link
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                   href="/login"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
                   Login
                 </Link>
 
                 <Link
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
                   href="/signup"
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
                 >
                   Sign Up
+                </Link>
+              </>
+            )}
+
+            {profile?.role === 'company' && (
+              <>
+                <Link
+                  href="/jobs"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Jobs
+                </Link>
+
+                <Link
+                  href="/workers"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Find Workers
+                </Link>
+
+                <Link
+                  href="/post-job"
+                  className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
+                >
+                  Post Job
+                </Link>
+
+                <Link
+                  href="/my-jobs"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  My Jobs
+                </Link>
+
+                <Link
+                  href="/invites"
+                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Invites
+
+                  {acceptedInvites > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
+                      {acceptedInvites}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  href="/dashboard"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Dashboard
+                </Link>
+              </>
+            )}
+
+            {profile?.role === 'worker' && (
+              <>
+                <Link
+                  href="/jobs"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Jobs
+                </Link>
+
+                <Link
+                  href="/my-applications"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Applications
+                </Link>
+
+                <Link
+                  href="/invites"
+                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Invites
+
+                  {pendingInvites > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
+                      {pendingInvites}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  href="/worker/dashboard"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Dashboard
                 </Link>
               </>
             )}
@@ -144,91 +243,11 @@ export default function CrewCallNav() {
             {profile && (
               <>
                 <Link
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                  href="/jobs"
-                >
-                  Jobs
-                </Link>
-
-                {profile.role === 'company' && (
-                  <>
-                    <Link
-                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/workers"
-                    >
-                      Find Workers
-                    </Link>
-
-                    <Link
-                      className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
-                      href="/post-job"
-                    >
-                      Post Job
-                    </Link>
-
-                    <Link
-                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/my-jobs"
-                    >
-                      My Jobs
-                    </Link>
-
-                    <Link
-                      className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/invites"
-                    >
-                      Invites
-                      {acceptedInvites > 0 && (
-                        <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
-                          {acceptedInvites}
-                        </span>
-                      )}
-                    </Link>
-
-                    <Link
-                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/dashboard"
-                    >
-                      Dashboard
-                    </Link>
-                  </>
-                )}
-
-                {profile.role === 'worker' && (
-                  <>
-                    <Link
-                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/my-applications"
-                    >
-                      Applications
-                    </Link>
-
-                    <Link
-                      className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/invites"
-                    >
-                      Invites
-                      {pendingInvites > 0 && (
-                        <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
-                          {pendingInvites}
-                        </span>
-                      )}
-                    </Link>
-
-                    <Link
-                      className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      href="/worker/dashboard"
-                    >
-                      Worker Dashboard
-                    </Link>
-                  </>
-                )}
-
-                <Link
-                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                   href="/messages"
+                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
                   Messages
+
                   {unreadMessages > 0 && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white">
                       {unreadMessages}
@@ -237,8 +256,8 @@ export default function CrewCallNav() {
                 </Link>
 
                 <Link
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                   href="/profile"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
                   {displayName}
                 </Link>
