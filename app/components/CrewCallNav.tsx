@@ -181,6 +181,13 @@ export default function CrewCallNav() {
                 </Link>
 
                 <Link
+                  href="/completed-jobs"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Completed Jobs
+                </Link>
+
+                <Link
                   href="/invites"
                   className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
@@ -216,6 +223,13 @@ export default function CrewCallNav() {
                   className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
                   Applications
+                </Link>
+
+                <Link
+                  href="/completed-jobs"
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Completed Jobs
                 </Link>
 
                 <Link
