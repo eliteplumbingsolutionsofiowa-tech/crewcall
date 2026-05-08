@@ -18,7 +18,11 @@ type Profile = {
   insurance_provider: string | null
   job_experience: string | null
   liability_form_signed: boolean | null
+
   stripe_account_id: string | null
+  stripe_charges_enabled: boolean | null
+  stripe_payouts_enabled: boolean | null
+  stripe_details_submitted: boolean | null
 }
 
 export default function ProfilePage() {
@@ -62,7 +66,10 @@ export default function ProfilePage() {
         insurance_provider,
         job_experience,
         liability_form_signed,
-        stripe_account_id
+        stripe_account_id,
+        stripe_charges_enabled,
+        stripe_payouts_enabled,
+        stripe_details_submitted
       `)
       .eq('id', user.id)
       .single()
@@ -143,6 +150,26 @@ export default function ProfilePage() {
     setProfile({ ...profile, [field]: value })
   }
 
+  function StatusBadge({
+    label,
+    active,
+  }: {
+    label: string
+    active: boolean
+  }) {
+    return (
+      <div
+        className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+          active
+            ? 'border-green-200 bg-green-50 text-green-700'
+            : 'border-gray-200 bg-gray-50 text-gray-500'
+        }`}
+      >
+        {active ? '✅' : '⚪'} {label}
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 p-6">
@@ -187,7 +214,7 @@ export default function ProfilePage() {
             </div>
 
             {isWorker && (
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 className="text-lg font-bold text-gray-900">
                   Stripe Payouts
                 </h2>
@@ -196,7 +223,29 @@ export default function ProfilePage() {
                   Connect your Stripe account so companies can pay you directly.
                 </p>
 
-                <div className="mt-4">
+                <div className="mt-5 grid gap-3">
+                  <StatusBadge
+                    label="Stripe Connected"
+                    active={!!profile.stripe_account_id}
+                  />
+
+                  <StatusBadge
+                    label="Charges Enabled"
+                    active={!!profile.stripe_charges_enabled}
+                  />
+
+                  <StatusBadge
+                    label="Payouts Enabled"
+                    active={!!profile.stripe_payouts_enabled}
+                  />
+
+                  <StatusBadge
+                    label="Identity Submitted"
+                    active={!!profile.stripe_details_submitted}
+                  />
+                </div>
+
+                <div className="mt-5">
                   <CrewButton
                     onClick={connectStripe}
                     disabled={connectLoading}
@@ -204,7 +253,7 @@ export default function ProfilePage() {
                     {connectLoading
                       ? 'Opening Stripe...'
                       : profile.stripe_account_id
-                        ? 'Continue Stripe Setup'
+                        ? 'Manage Stripe Account'
                         : 'Connect Stripe Payouts'}
                   </CrewButton>
                 </div>
