@@ -14,6 +14,7 @@ type Job = {
   pay_rate: string | null
   status: string | null
   payment_status: string | null
+  payout_status: string | null
   company_id: string
   assigned_worker_id: string | null
 }
@@ -87,7 +88,19 @@ export default function JobDetailsPage() {
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
       .select(
-        'id, title, description, trade, location, pay_rate, status, payment_status, company_id, assigned_worker_id'
+        `
+        id,
+        title,
+        description,
+        trade,
+        location,
+        pay_rate,
+        status,
+        payment_status,
+        payout_status,
+        company_id,
+        assigned_worker_id
+      `
       )
       .eq('id', jobId)
       .maybeSingle()
@@ -211,6 +224,41 @@ export default function JobDetailsPage() {
     setWorkingId(null)
   }
 
+  async function releasePayout() {
+    if (!job) return
+
+    setWorkingId('release')
+    setMessage(null)
+
+    try {
+      const response = await fetch('/api/stripe/release-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setMessage(data.error || 'Failed to release payout.')
+        setWorkingId(null)
+        return
+      }
+
+      setMessage('Worker payout released successfully.')
+      setWorkingId(null)
+
+      await loadPage()
+    } catch (error: any) {
+      setMessage(error.message)
+      setWorkingId(null)
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
@@ -236,6 +284,13 @@ export default function JobDetailsPage() {
   const isOwner = job.company_id === profile.id
   const isOpen = job.status === 'open'
   const isAssigned = job.status === 'assigned'
+
+  const canReleasePayout =
+    isCompany &&
+    isOwner &&
+    job.status === 'completed' &&
+    job.payment_status === 'paid' &&
+    job.payout_status !== 'released'
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
@@ -275,9 +330,22 @@ export default function JobDetailsPage() {
               <p className="text-xs uppercase tracking-widest text-slate-400">
                 Status
               </p>
+
               <p className="mt-1 text-lg font-black capitalize">
                 {job.status || 'open'}
               </p>
+
+              {job.payment_status && (
+                <p className="mt-2 text-sm text-green-300">
+                  Payment: {job.payment_status}
+                </p>
+              )}
+
+              {job.payout_status && (
+                <p className="mt-1 text-sm text-cyan-300">
+                  Payout: {job.payout_status}
+                </p>
+              )}
             </div>
           </div>
 
@@ -316,7 +384,9 @@ export default function JobDetailsPage() {
                   onClick={messageAssignedWorker}
                   className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
                 >
-                  {workingId === 'message' ? 'Opening...' : 'Message Worker'}
+                  {workingId === 'message'
+                    ? 'Opening...'
+                    : 'Message Worker'}
                 </button>
 
                 <Link
@@ -327,6 +397,18 @@ export default function JobDetailsPage() {
                 </Link>
               </>
             )}
+
+            {canReleasePayout && (
+              <button
+                onClick={releasePayout}
+                disabled={workingId === 'release'}
+                className="rounded-2xl bg-green-500 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-green-500/20 hover:bg-green-400 disabled:opacity-60"
+              >
+                {workingId === 'release'
+                  ? 'Releasing Payout...'
+                  : 'Release Worker Payout'}
+              </button>
+            )}
           </div>
         </section>
 
@@ -335,13 +417,15 @@ export default function JobDetailsPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black">Applicants</h2>
+
                 <p className="mt-1 text-sm text-slate-400">
                   Review worker profiles and hire from this job.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-200">
-                {applicants.length} Applicant{applicants.length === 1 ? '' : 's'}
+                {applicants.length} Applicant
+                {applicants.length === 1 ? '' : 's'}
               </div>
             </div>
 
@@ -362,12 +446,18 @@ export default function JobDetailsPage() {
                           href={`/workers/${applicant.worker_id}`}
                           className="text-xl font-black text-white hover:text-cyan-300"
                         >
-                          {applicant.worker?.full_name || 'Unnamed Worker'}
+                          {applicant.worker?.full_name ||
+                            'Unnamed Worker'}
                         </Link>
 
                         <p className="mt-1 text-sm text-slate-400">
-                          {applicant.worker?.trade || 'Trade not listed'} •{' '}
-                          {[applicant.worker?.city, applicant.worker?.state]
+                          {applicant.worker?.trade ||
+                            'Trade not listed'}{' '}
+                          •{' '}
+                          {[
+                            applicant.worker?.city,
+                            applicant.worker?.state,
+                          ]
                             .filter(Boolean)
                             .join(', ') || 'Location not listed'}
                         </p>
@@ -380,7 +470,8 @@ export default function JobDetailsPage() {
                         </p>
 
                         <p className="mt-2 text-xs uppercase tracking-widest text-slate-500">
-                          Application Status: {applicant.status || 'pending'}
+                          Application Status:{' '}
+                          {applicant.status || 'pending'}
                         </p>
                       </div>
 
