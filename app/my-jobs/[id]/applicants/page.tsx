@@ -27,6 +27,10 @@ type Application = {
   worker_phone: string | null
   worker_city: string | null
   worker_state: string | null
+  worker_trade: string | null
+  years_experience: string | null
+  insurance_provider: string | null
+  liability_form_signed: boolean | null
 }
 
 export default function JobApplicantsPage() {
@@ -49,8 +53,7 @@ export default function JobApplicantsPage() {
     const seen = new Set<string>()
 
     return applications.filter((app) => {
-      const key = app.id || `${app.job_id}-${app.worker_id}`
-
+      const key = app.worker_id || app.id
       if (seen.has(key)) return false
       seen.add(key)
       return true
@@ -124,7 +127,9 @@ export default function JobApplicantsPage() {
     if (workerIds.length > 0) {
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, full_name, email, phone, city, state')
+        .select(
+          'id, full_name, email, phone, city, state, trade, years_experience, insurance_provider, liability_form_signed'
+        )
         .in('id', workerIds)
 
       profilesById = new Map((profilesData || []).map((p: any) => [p.id, p]))
@@ -144,6 +149,10 @@ export default function JobApplicantsPage() {
         worker_phone: profile?.phone || null,
         worker_city: profile?.city || null,
         worker_state: profile?.state || null,
+        worker_trade: profile?.trade || null,
+        years_experience: profile?.years_experience || null,
+        insurance_provider: profile?.insurance_provider || null,
+        liability_form_signed: profile?.liability_form_signed || false,
       }
     })
 
@@ -193,10 +202,10 @@ export default function JobApplicantsPage() {
 
     const classes =
       value === 'accepted'
-        ? 'bg-green-100 text-green-700 border-green-200'
+        ? 'border-green-200 bg-green-100 text-green-700'
         : value === 'rejected'
-          ? 'bg-red-100 text-red-700 border-red-200'
-          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+          ? 'border-red-200 bg-red-100 text-red-700'
+          : 'border-yellow-200 bg-yellow-100 text-yellow-800'
 
     return (
       <span
@@ -283,45 +292,100 @@ export default function JobApplicantsPage() {
                 className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h2 className="text-xl font-bold text-gray-900">
-                        {application.worker_name || 'Unnamed worker'}
-                      </h2>
+                      <Link
+                        href={`/workers/${application.worker_id}`}
+                        className="text-xl font-bold text-blue-700 hover:underline"
+                      >
+                        {application.worker_name || 'Worker Profile'}
+                      </Link>
+
                       {statusBadge(application.status)}
+
                       {isHired && (
                         <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
                           Hired
                         </span>
                       )}
+
+                      {application.liability_form_signed && (
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                          Liability Signed
+                        </span>
+                      )}
                     </div>
 
-                    <div className="space-y-1 text-sm text-gray-600">
+                    <div className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+                      <p>
+                        <span className="font-semibold text-gray-800">
+                          Trade:
+                        </span>{' '}
+                        {application.worker_trade || 'Not listed'}
+                      </p>
+
+                      <p>
+                        <span className="font-semibold text-gray-800">
+                          Experience:
+                        </span>{' '}
+                        {application.years_experience
+                          ? `${application.years_experience} years`
+                          : 'Not listed'}
+                      </p>
+
+                      <p>
+                        <span className="font-semibold text-gray-800">
+                          Insurance:
+                        </span>{' '}
+                        {application.insurance_provider || 'Not listed'}
+                      </p>
+
+                      <p>
+                        <span className="font-semibold text-gray-800">
+                          Applied:
+                        </span>{' '}
+                        {new Date(application.created_at).toLocaleDateString()}
+                      </p>
+
                       {application.worker_email && (
-                        <p>Email: {application.worker_email}</p>
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Email:
+                          </span>{' '}
+                          {application.worker_email}
+                        </p>
                       )}
 
                       {application.worker_phone && (
-                        <p>Phone: {application.worker_phone}</p>
+                        <p>
+                          <span className="font-semibold text-gray-800">
+                            Phone:
+                          </span>{' '}
+                          {application.worker_phone}
+                        </p>
                       )}
 
                       {(application.worker_city || application.worker_state) && (
                         <p>
-                          Location:{' '}
+                          <span className="font-semibold text-gray-800">
+                            Location:
+                          </span>{' '}
                           {[application.worker_city, application.worker_state]
                             .filter(Boolean)
                             .join(', ')}
                         </p>
                       )}
-
-                      <p>
-                        Applied:{' '}
-                        {new Date(application.created_at).toLocaleDateString()}
-                      </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 sm:min-w-40">
+                  <div className="flex flex-col gap-2 sm:min-w-44">
+                    <Link
+                      href={`/workers/${application.worker_id}`}
+                      className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-center text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                      View Profile
+                    </Link>
+
                     {!isHired && job?.status !== 'completed' && (
                       <button
                         onClick={() => hireWorker(application)}

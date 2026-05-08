@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 type Application = {
   id: string
@@ -11,10 +11,8 @@ type Application = {
   worker_id: string
   status: string | null
   created_at: string
-
   job_title: string | null
   job_location: string | null
-
   worker_name: string | null
   worker_email: string | null
   worker_rating: number
@@ -26,6 +24,7 @@ export default function CompanyApplicationsPage() {
 
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -45,11 +44,16 @@ export default function CompanyApplicationsPage() {
       return
     }
 
-    // JOBS
-    const { data: jobs } = await supabase
+    const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
       .select('id, title, location')
       .eq('company_id', user.id)
+
+    if (jobsError) {
+      setMessage(jobsError.message)
+      setLoading(false)
+      return
+    }
 
     if (!jobs || jobs.length === 0) {
       setApplications([])
@@ -63,18 +67,23 @@ export default function CompanyApplicationsPage() {
 
     const jobIds = jobs.map((j: any) => j.id)
 
-    // APPLICATIONS
-    const { data: apps } = await supabase
+    const { data: apps, error: appsError } = await supabase
       .from('applications')
       .select('id, job_id, worker_id, status, created_at')
       .in('job_id', jobIds)
       .order('created_at', { ascending: false })
 
+    if (appsError) {
+      setMessage(appsError.message)
+      setApplications([])
+      setLoading(false)
+      return
+    }
+
     const rawApps = apps || []
 
-    // WORKERS
     const workerIds = Array.from(
-      new Set(rawApps.map((a: any) => a.worker_id))
+      new Set(rawApps.map((a: any) => a.worker_id).filter(Boolean))
     )
 
     let profileMap = new Map<string, any>()
@@ -93,7 +102,6 @@ export default function CompanyApplicationsPage() {
       profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
     }
 
-    // MERGE + ADD RATINGS
     const merged: Application[] = rawApps.map((a: any) => {
       const job = jobMap.get(a.job_id)
       const worker = profileMap.get(a.worker_id)
@@ -108,10 +116,8 @@ export default function CompanyApplicationsPage() {
         worker_id: a.worker_id,
         status: a.status,
         created_at: a.created_at,
-
-        job_title: job?.title || null,
-        job_location: job?.location || null,
-
+        job_title: job?.title || 'Untitled Job',
+        job_location: job?.location || 'Location not set',
         worker_name: worker?.full_name || 'Worker',
         worker_email: worker?.email || null,
         worker_rating: Number(avg.toFixed(1)),
@@ -123,7 +129,6 @@ export default function CompanyApplicationsPage() {
     setLoading(false)
   }
 
-  // GROUP BY JOB (clean UI)
   const grouped = useMemo(() => {
     const map = new Map<string, Application[]>()
 
@@ -131,6 +136,7 @@ export default function CompanyApplicationsPage() {
       if (!map.has(app.job_id)) {
         map.set(app.job_id, [])
       }
+
       map.get(app.job_id)!.push(app)
     }
 
@@ -142,20 +148,25 @@ export default function CompanyApplicationsPage() {
 
     const styles =
       s === 'accepted'
-        ? 'bg-green-100 text-green-700'
+        ? 'border-green-200 bg-green-100 text-green-700'
         : s === 'rejected'
-        ? 'bg-red-100 text-red-700'
-        : 'bg-yellow-100 text-yellow-800'
+          ? 'border-red-200 bg-red-100 text-red-700'
+          : 'border-yellow-200 bg-yellow-100 text-yellow-800'
 
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles}`}>
+      <span
+        className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${styles}`}
+      >
         {s}
       </span>
     )
   }
 
   async function hire(app: Application) {
-    const { error } = await supabase
+    setActionLoading(app.id)
+    setMessage(null)
+
+    const { error: jobError } = await supabase
       .from('jobs')
       .update({
         status: 'assigned',
@@ -163,8 +174,9 @@ export default function CompanyApplicationsPage() {
       })
       .eq('id', app.job_id)
 
-    if (error) {
-      alert(error.message)
+    if (jobError) {
+      setMessage(jobError.message)
+      setActionLoading(null)
       return
     }
 
@@ -173,31 +185,61 @@ export default function CompanyApplicationsPage() {
       .update({ status: 'accepted' })
       .eq('id', app.id)
 
-    loadApplications()
+    await supabase
+      .from('applications')
+      .update({ status: 'rejected' })
+      .eq('job_id', app.job_id)
+      .neq('id', app.id)
+
+    setMessage(`${app.worker_name || 'Worker'} has been hired.`)
+    setActionLoading(null)
+    await loadApplications()
   }
 
   if (loading) {
-    return <div className="p-6">Loading applications...</div>
+    return (
+      <main className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-gray-600">Loading applications...</p>
+        </div>
+      </main>
+    )
   }
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">Applications</h1>
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Applications</h1>
+          <p className="mt-1 text-gray-600">
+            Review workers who applied to your posted jobs.
+          </p>
+        </div>
+
+        {message && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-medium text-blue-800">
+            {message}
+          </div>
+        )}
 
         {grouped.length === 0 && (
-          <div className="bg-white p-6 rounded-xl border">
-            No applications yet.
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-900">
+              No applications yet
+            </h2>
+            <p className="mt-2 text-gray-600">
+              Applications will appear here when workers apply to your jobs.
+            </p>
           </div>
         )}
 
         {grouped.map(([jobId, apps]) => (
           <div key={jobId} className="space-y-4">
-            <div className="bg-white p-5 rounded-xl border shadow-sm">
-              <h2 className="text-xl font-bold">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900">
                 {apps[0].job_title}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500">
                 {apps[0].job_location}
               </p>
             </div>
@@ -206,39 +248,44 @@ export default function CompanyApplicationsPage() {
               {apps.map((a) => (
                 <div
                   key={a.id}
-                  className="bg-white border rounded-xl p-5 shadow-sm flex justify-between items-center"
+                  className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <h3 className="font-bold text-lg">
-                      {a.worker_name}
-                    </h3>
+                    <Link
+                      href={`/workers/${a.worker_id}`}
+                      className="text-lg font-bold text-blue-700 hover:underline"
+                    >
+                      {a.worker_name || 'Worker Profile'}
+                    </Link>
 
-                    <p className="text-sm text-gray-600">
-                      {a.worker_email}
+                    {a.worker_email && (
+                      <p className="mt-1 text-sm text-gray-600">
+                        {a.worker_email}
+                      </p>
+                    )}
+
+                    <p className="mt-1 text-sm text-gray-700">
+                      ⭐ {a.worker_rating || '0.0'} ({a.review_count} reviews)
                     </p>
 
-                    <p className="text-sm mt-1">
-                      ⭐ {a.worker_rating} ({a.review_count})
-                    </p>
-
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(a.created_at).toLocaleDateString()}
+                    <p className="mt-1 text-xs text-gray-400">
+                      Applied {new Date(a.created_at).toLocaleDateString()}
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col gap-2 sm:min-w-40 sm:items-end">
                     {badge(a.status)}
 
                     <Link
-                      href={`/profile/${a.worker_id}`}
-                      className="text-blue-600 text-sm font-medium"
+                      href={`/workers/${a.worker_id}`}
+                      className="text-sm font-semibold text-blue-600 hover:underline"
                     >
                       View Profile
                     </Link>
 
                     <Link
-                      href={`/messages?user=${a.worker_id}`}
-                      className="text-gray-600 text-sm"
+                      href={`/messages?workerId=${a.worker_id}&jobId=${a.job_id}`}
+                      className="text-sm font-semibold text-gray-600 hover:underline"
                     >
                       Message
                     </Link>
@@ -246,9 +293,10 @@ export default function CompanyApplicationsPage() {
                     {a.status !== 'accepted' && (
                       <button
                         onClick={() => hire(a)}
-                        className="bg-green-600 text-white px-4 py-1 rounded text-sm"
+                        disabled={actionLoading === a.id}
+                        className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Hire
+                        {actionLoading === a.id ? 'Hiring...' : 'Hire'}
                       </button>
                     )}
                   </div>
