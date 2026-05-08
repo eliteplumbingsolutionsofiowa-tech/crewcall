@@ -21,6 +21,13 @@ export async function POST(req: Request) {
       )
     }
 
+    if (!siteUrl) {
+      return NextResponse.json(
+        { error: 'Missing NEXT_PUBLIC_SITE_URL.' },
+        { status: 500 }
+      )
+    }
+
     const { userId, email } = await req.json()
 
     if (!userId || !email) {
@@ -32,7 +39,9 @@ export async function POST(req: Request) {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, role, stripe_account_id')
+      .select(
+        'id, role, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted'
+      )
       .eq('id', userId)
       .single()
 
@@ -65,12 +74,35 @@ export async function POST(req: Request) {
 
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
-        .update({ stripe_account_id: accountId })
+        .update({
+          stripe_account_id: accountId,
+          stripe_charges_enabled: account.charges_enabled || false,
+          stripe_payouts_enabled: account.payouts_enabled || false,
+          stripe_details_submitted: account.details_submitted || false,
+        })
         .eq('id', userId)
 
       if (updateError) {
         return NextResponse.json(
           { error: updateError.message },
+          { status: 400 }
+        )
+      }
+    } else {
+      const account = await stripe.accounts.retrieve(accountId)
+
+      const { error: syncError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          stripe_charges_enabled: account.charges_enabled || false,
+          stripe_payouts_enabled: account.payouts_enabled || false,
+          stripe_details_submitted: account.details_submitted || false,
+        })
+        .eq('id', userId)
+
+      if (syncError) {
+        return NextResponse.json(
+          { error: syncError.message },
           { status: 400 }
         )
       }
