@@ -17,6 +17,9 @@ type Job = {
   company_id: string | null
   assigned_worker_id: string | null
   created_at: string
+
+  company_name?: string | null
+  company_verified?: boolean | null
 }
 
 export default function JobsPage() {
@@ -49,7 +52,8 @@ export default function JobsPage() {
         job.title?.toLowerCase().includes(term) ||
         job.description?.toLowerCase().includes(term) ||
         job.trade?.toLowerCase().includes(term) ||
-        job.location?.toLowerCase().includes(term)
+        job.location?.toLowerCase().includes(term) ||
+        job.company_name?.toLowerCase().includes(term)
 
       const matchesTrade =
         tradeFilter === 'all' || job.trade === tradeFilter
@@ -64,9 +68,20 @@ export default function JobsPage() {
 
     const { data, error } = await supabase
       .from('jobs')
-      .select(
-        'id, title, description, trade, location, pay_rate, start_date, status, payment_status, company_id, assigned_worker_id, created_at'
-      )
+      .select(`
+        id,
+        title,
+        description,
+        trade,
+        location,
+        pay_rate,
+        start_date,
+        status,
+        payment_status,
+        company_id,
+        assigned_worker_id,
+        created_at
+      `)
       .eq('status', 'open')
       .is('assigned_worker_id', null)
       .order('created_at', { ascending: false })
@@ -78,7 +93,45 @@ export default function JobsPage() {
       return
     }
 
-    setJobs((data || []) as Job[])
+    const rawJobs = (data || []) as Job[]
+
+    const companyIds = Array.from(
+      new Set(
+        rawJobs
+          .map((job) => job.company_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    )
+
+    let companyMap = new Map<string, any>()
+
+    if (companyIds.length > 0) {
+      const { data: companies } = await supabase
+        .from('profiles')
+        .select('id, company_name, verified')
+        .in('id', companyIds)
+
+      companyMap = new Map(
+        (companies || []).map((company: any) => [
+          company.id,
+          company,
+        ])
+      )
+    }
+
+    const mergedJobs: Job[] = rawJobs.map((job) => {
+      const company = job.company_id
+        ? companyMap.get(job.company_id)
+        : null
+
+      return {
+        ...job,
+        company_name: company?.company_name || 'Company',
+        company_verified: company?.verified || false,
+      }
+    })
+
+    setJobs(mergedJobs)
     setLoading(false)
   }
 
@@ -118,7 +171,7 @@ export default function JobsPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-lg text-slate-600">
-                Find open trade work posted by local companies.
+                Find open trade work posted by trusted companies.
               </p>
             </div>
 
@@ -136,7 +189,7 @@ export default function JobsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search jobs, trades, or locations..."
+              placeholder="Search jobs, companies, trades, or locations..."
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-500"
             />
 
@@ -197,6 +250,21 @@ export default function JobsPage() {
                     <span className="rounded-full bg-emerald-100 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-700">
                       Open
                     </span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <Link
+                      href={`/companies/${job.company_id}`}
+                      className="text-lg font-bold text-blue-700 hover:underline"
+                    >
+                      {job.company_name || 'Company'}
+                    </Link>
+
+                    {job.company_verified && (
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-700">
+                        Verified
+                      </span>
+                    )}
                   </div>
 
                   <p className="mt-3 text-lg text-slate-600">
