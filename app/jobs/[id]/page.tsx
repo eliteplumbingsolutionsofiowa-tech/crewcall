@@ -56,7 +56,8 @@ export default function JobDetailsPage() {
 
   useEffect(() => {
     loadPage()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId])
 
   async function loadPage() {
     setLoading(true)
@@ -87,8 +88,7 @@ export default function JobDetailsPage() {
 
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
-      .select(
-        `
+      .select(`
         id,
         title,
         description,
@@ -100,8 +100,7 @@ export default function JobDetailsPage() {
         payout_status,
         company_id,
         assigned_worker_id
-      `
-      )
+      `)
       .eq('id', jobId)
       .maybeSingle()
 
@@ -147,6 +146,8 @@ export default function JobDetailsPage() {
         .order('created_at', { ascending: false })
 
       setApplicants((applicantData as unknown as Applicant[]) || [])
+    } else {
+      setApplicants([])
     }
 
     setLoading(false)
@@ -192,6 +193,7 @@ export default function JobDetailsPage() {
     if (!job || !job.assigned_worker_id) return
 
     setWorkingId('message')
+    setMessage(null)
 
     const { data: existing } = await supabase
       .from('conversations')
@@ -224,6 +226,39 @@ export default function JobDetailsPage() {
     setWorkingId(null)
   }
 
+  async function completeJob() {
+    if (!job || !profile) return
+
+    setWorkingId('complete')
+    setMessage(null)
+
+    try {
+      const response = await fetch('/api/jobs/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job.id,
+          companyId: profile.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setMessage(data.error || 'Failed to complete job.')
+        setWorkingId(null)
+        return
+      }
+
+      setMessage('Job marked completed.')
+      setWorkingId(null)
+      await loadPage()
+    } catch (error: any) {
+      setMessage(error.message)
+      setWorkingId(null)
+    }
+  }
+
   async function releasePayout() {
     if (!job) return
 
@@ -233,12 +268,8 @@ export default function JobDetailsPage() {
     try {
       const response = await fetch('/api/stripe/release-payment', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jobId: job.id,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
       })
 
       const data = await response.json()
@@ -251,7 +282,6 @@ export default function JobDetailsPage() {
 
       setMessage('Worker payout released successfully.')
       setWorkingId(null)
-
       await loadPage()
     } catch (error: any) {
       setMessage(error.message)
@@ -285,6 +315,12 @@ export default function JobDetailsPage() {
   const isOpen = job.status === 'open'
   const isAssigned = job.status === 'assigned'
 
+  const canCompleteJob =
+    isCompany &&
+    isOwner &&
+    job.status === 'assigned' &&
+    job.payment_status === 'paid'
+
   const canReleasePayout =
     isCompany &&
     isOwner &&
@@ -300,7 +336,7 @@ export default function JobDetailsPage() {
         </Link>
 
         {message && (
-          <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
+          <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-4 text-sm text-cyan-100">
             {message}
           </div>
         )}
@@ -353,7 +389,7 @@ export default function JobDetailsPage() {
             {job.description || 'No description provided.'}
           </p>
 
-          {isAssigned && assignedWorker && (
+          {(isAssigned || job.status === 'completed') && assignedWorker && (
             <div className="mt-6 rounded-2xl border border-green-400/30 bg-green-400/10 p-5">
               <p className="text-xs uppercase tracking-widest text-green-300">
                 Worker Assigned
@@ -382,7 +418,8 @@ export default function JobDetailsPage() {
               <>
                 <button
                   onClick={messageAssignedWorker}
-                  className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
+                  disabled={workingId === 'message'}
+                  className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300 disabled:opacity-60"
                 >
                   {workingId === 'message'
                     ? 'Opening...'
@@ -395,6 +432,18 @@ export default function JobDetailsPage() {
                 >
                   Pay Worker
                 </Link>
+
+                {canCompleteJob && (
+                  <button
+                    onClick={completeJob}
+                    disabled={workingId === 'complete'}
+                    className="rounded-2xl bg-orange-500 px-6 py-3 font-bold text-white shadow-lg shadow-orange-500/20 hover:bg-orange-400 disabled:opacity-60"
+                  >
+                    {workingId === 'complete'
+                      ? 'Completing Job...'
+                      : 'Mark Job Complete'}
+                  </button>
+                )}
               </>
             )}
 
@@ -446,18 +495,12 @@ export default function JobDetailsPage() {
                           href={`/workers/${applicant.worker_id}`}
                           className="text-xl font-black text-white hover:text-cyan-300"
                         >
-                          {applicant.worker?.full_name ||
-                            'Unnamed Worker'}
+                          {applicant.worker?.full_name || 'Unnamed Worker'}
                         </Link>
 
                         <p className="mt-1 text-sm text-slate-400">
-                          {applicant.worker?.trade ||
-                            'Trade not listed'}{' '}
-                          •{' '}
-                          {[
-                            applicant.worker?.city,
-                            applicant.worker?.state,
-                          ]
+                          {applicant.worker?.trade || 'Trade not listed'} •{' '}
+                          {[applicant.worker?.city, applicant.worker?.state]
                             .filter(Boolean)
                             .join(', ') || 'Location not listed'}
                         </p>
@@ -470,8 +513,7 @@ export default function JobDetailsPage() {
                         </p>
 
                         <p className="mt-2 text-xs uppercase tracking-widest text-slate-500">
-                          Application Status:{' '}
-                          {applicant.status || 'pending'}
+                          Application Status: {applicant.status || 'pending'}
                         </p>
                       </div>
 
