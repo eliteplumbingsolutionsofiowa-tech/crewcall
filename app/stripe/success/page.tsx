@@ -9,6 +9,7 @@ type Job = {
   id: string
   title: string | null
   payment_status: string | null
+  payout_status: string | null
   status: string | null
 }
 
@@ -38,7 +39,13 @@ function StripeSuccessContent() {
 
     const { data, error } = await supabase
       .from('jobs')
-      .select('id, title, payment_status, status')
+      .select(`
+        id,
+        title,
+        payment_status,
+        payout_status,
+        status
+      `)
       .eq('stripe_checkout_session_id', sessionId)
       .maybeSingle()
 
@@ -50,7 +57,7 @@ function StripeSuccessContent() {
 
     if (!data) {
       setMessage(
-        'Payment finished, but CrewCall could not find the matching job. Go back to My Jobs and refresh.'
+        'Payment finished, but CrewCall could not find the matching job.'
       )
       setLoading(false)
       return
@@ -61,9 +68,12 @@ function StripeSuccessContent() {
 
     if (
       foundJob.payment_status === 'paid' &&
-      foundJob.status === 'completed'
+      foundJob.payout_status === 'released'
     ) {
-      setMessage('Payment already confirmed. This job is completed.')
+      setMessage(
+        'Payment and worker payout already completed successfully.'
+      )
+
       setSuccess(true)
       setLoading(false)
       return
@@ -73,8 +83,10 @@ function StripeSuccessContent() {
       .from('jobs')
       .update({
         payment_status: 'paid',
+        payout_status: 'released',
         status: 'completed',
         paid_at: new Date().toISOString(),
+        payout_released_at: new Date().toISOString(),
       })
       .eq('id', foundJob.id)
 
@@ -87,10 +99,14 @@ function StripeSuccessContent() {
     setJob({
       ...foundJob,
       payment_status: 'paid',
+      payout_status: 'released',
       status: 'completed',
     })
 
-    setMessage('Payment confirmed. This job is now completed.')
+    setMessage(
+      'Payment confirmed. Worker payout released. Job completed successfully.'
+    )
+
     setSuccess(true)
     setLoading(false)
   }
@@ -149,14 +165,21 @@ function StripeSuccessContent() {
               <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Job
               </p>
+
               <p className="text-2xl font-black text-gray-950">
                 {job?.title || 'CrewCall Job'}
               </p>
 
               {success && (
-                <span className="mt-2 inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">
-                  ✓ Completed
-                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">
+                    ✓ Completed
+                  </span>
+
+                  <span className="inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-sm font-bold text-cyan-700">
+                    ✓ Payout Released
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -196,9 +219,12 @@ function StripeSuccessContent() {
           <div className="mt-8 rounded-3xl bg-gradient-to-r from-blue-600 via-purple-600 to-orange-500 p-5 text-white shadow-xl">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-lg font-black">Thanks for using CrewCall.</p>
+                <p className="text-lg font-black">
+                  CrewCall marketplace payment complete.
+                </p>
+
                 <p className="text-sm text-white/85">
-                  Together, we get the job done.
+                  Worker paid. Job archived. Reviews unlocked.
                 </p>
               </div>
 
@@ -225,7 +251,10 @@ export default function StripeSuccessPage() {
             <h1 className="text-2xl font-black text-gray-900">
               Loading payment...
             </h1>
-            <p className="mt-3 text-gray-600">Confirming Stripe payment.</p>
+
+            <p className="mt-3 text-gray-600">
+              Confirming Stripe payment.
+            </p>
           </div>
         </main>
       }
