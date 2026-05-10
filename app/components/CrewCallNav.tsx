@@ -17,6 +17,8 @@ export default function CrewCallNav() {
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [pendingInvites, setPendingInvites] = useState(0)
   const [acceptedInvites, setAcceptedInvites] = useState(0)
@@ -106,44 +108,177 @@ export default function CrewCallNav() {
     router.refresh()
   }
 
+  function closeMobile() {
+    setMobileOpen(false)
+  }
+
   const displayName =
     profile?.company_name ||
     profile?.full_name ||
     (profile?.role === 'company' ? 'Company' : 'Worker')
 
+  function NavLink({
+    href,
+    label,
+    badge,
+    mobile = false,
+  }: {
+    href: string
+    label: string
+    badge?: number
+    mobile?: boolean
+  }) {
+    return (
+      <Link
+        href={href}
+        onClick={closeMobile}
+        className={`relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-100 ${
+          mobile ? 'w-full text-left' : ''
+        }`}
+      >
+        {label}
+
+        {!!badge && badge > 0 && (
+          <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
+            {badge}
+          </span>
+        )}
+      </Link>
+    )
+  }
+
   return (
     <nav className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white shadow-md">
-            C
-          </div>
-
-          <div>
-            <div className="text-xl font-black tracking-tight text-gray-950">
-              Crew<span className="text-blue-600">Call</span>
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white shadow-md">
+              C
             </div>
 
-            <div className="text-xs font-semibold text-gray-500">
-              Find help. Find work. Fast.
-            </div>
-          </div>
-        </Link>
+            <div>
+              <div className="text-xl font-black tracking-tight text-gray-950">
+                Crew<span className="text-blue-600">Call</span>
+              </div>
 
-        {loaded && (
-          <div className="flex items-center gap-2">
+              <div className="text-xs font-semibold text-gray-500">
+                Find help. Find work. Fast.
+              </div>
+            </div>
+          </Link>
+
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="flex items-center justify-center rounded-xl border border-gray-200 bg-white p-3 text-gray-700 shadow-sm transition hover:bg-gray-50 lg:hidden"
+          >
+            <span className="text-lg font-black">
+              {mobileOpen ? '✕' : '☰'}
+            </span>
+          </button>
+
+          {loaded && (
+            <div className="hidden items-center gap-2 lg:flex">
+              {!profile && (
+                <>
+                  <NavLink href="/login" label="Login" />
+
+                  <Link
+                    href="/signup"
+                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
+
+              {profile?.role === 'company' && (
+                <>
+                  <NavLink href="/jobs" label="Jobs" />
+                  <NavLink href="/workers" label="Find Workers" />
+
+                  <Link
+                    href="/post-job"
+                    className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
+                  >
+                    Post Job
+                  </Link>
+
+                  <NavLink href="/my-jobs" label="My Jobs" />
+                  <NavLink
+                    href="/completed-jobs"
+                    label="Completed Jobs"
+                  />
+                  <NavLink
+                    href="/invites"
+                    label="Invites"
+                    badge={acceptedInvites}
+                  />
+                  <NavLink href="/dashboard" label="Dashboard" />
+                </>
+              )}
+
+              {profile?.role === 'worker' && (
+                <>
+                  <NavLink href="/jobs" label="Jobs" />
+                  <NavLink
+                    href="/my-applications"
+                    label="Applications"
+                  />
+                  <NavLink
+                    href="/completed-jobs"
+                    label="Completed Jobs"
+                  />
+                  <NavLink
+                    href="/invites"
+                    label="Invites"
+                    badge={pendingInvites}
+                  />
+                  <NavLink
+                    href="/worker/dashboard"
+                    label="Dashboard"
+                  />
+                </>
+              )}
+
+              {profile && (
+                <>
+                  <NavLink
+                    href="/messages"
+                    label="Messages"
+                    badge={unreadMessages}
+                  />
+
+                  <NavLink
+                    href="/profile"
+                    label={displayName}
+                  />
+
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {mobileOpen && loaded && (
+          <div className="mt-5 flex flex-col gap-2 rounded-3xl border border-gray-200 bg-white p-4 shadow-xl lg:hidden">
             {!profile && (
               <>
-                <Link
+                <NavLink
                   href="/login"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Login
-                </Link>
+                  label="Login"
+                  mobile
+                />
 
                 <Link
                   href="/signup"
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                  onClick={closeMobile}
+                  className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
                 >
                   Sign Up
                 </Link>
@@ -152,133 +287,97 @@ export default function CrewCallNav() {
 
             {profile?.role === 'company' && (
               <>
-                <Link
-                  href="/jobs"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Jobs
-                </Link>
-
-                <Link
+                <NavLink href="/jobs" label="Jobs" mobile />
+                <NavLink
                   href="/workers"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Find Workers
-                </Link>
+                  label="Find Workers"
+                  mobile
+                />
 
                 <Link
                   href="/post-job"
-                  className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
+                  onClick={closeMobile}
+                  className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-bold text-white hover:bg-orange-600"
                 >
                   Post Job
                 </Link>
 
-                <Link
+                <NavLink
                   href="/my-jobs"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  My Jobs
-                </Link>
+                  label="My Jobs"
+                  mobile
+                />
 
-                <Link
+                <NavLink
                   href="/completed-jobs"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Completed Jobs
-                </Link>
+                  label="Completed Jobs"
+                  mobile
+                />
 
-                <Link
+                <NavLink
                   href="/invites"
-                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Invites
+                  label="Invites"
+                  badge={acceptedInvites}
+                  mobile
+                />
 
-                  {acceptedInvites > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
-                      {acceptedInvites}
-                    </span>
-                  )}
-                </Link>
-
-                <Link
+                <NavLink
                   href="/dashboard"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Dashboard
-                </Link>
+                  label="Dashboard"
+                  mobile
+                />
               </>
             )}
 
             {profile?.role === 'worker' && (
               <>
-                <Link
-                  href="/jobs"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Jobs
-                </Link>
+                <NavLink href="/jobs" label="Jobs" mobile />
 
-                <Link
+                <NavLink
                   href="/my-applications"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Applications
-                </Link>
+                  label="Applications"
+                  mobile
+                />
 
-                <Link
+                <NavLink
                   href="/completed-jobs"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Completed Jobs
-                </Link>
+                  label="Completed Jobs"
+                  mobile
+                />
 
-                <Link
+                <NavLink
                   href="/invites"
-                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Invites
+                  label="Invites"
+                  badge={pendingInvites}
+                  mobile
+                />
 
-                  {pendingInvites > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
-                      {pendingInvites}
-                    </span>
-                  )}
-                </Link>
-
-                <Link
+                <NavLink
                   href="/worker/dashboard"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Dashboard
-                </Link>
+                  label="Dashboard"
+                  mobile
+                />
               </>
             )}
 
             {profile && (
               <>
-                <Link
+                <NavLink
                   href="/messages"
-                  className="relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Messages
+                  label="Messages"
+                  badge={unreadMessages}
+                  mobile
+                />
 
-                  {unreadMessages > 0 && (
-                    <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white">
-                      {unreadMessages}
-                    </span>
-                  )}
-                </Link>
-
-                <Link
+                <NavLink
                   href="/profile"
-                  className="rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  {displayName}
-                </Link>
+                  label={displayName}
+                  mobile
+                />
 
                 <button
                   onClick={handleLogout}
-                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  className="rounded-xl border border-gray-200 px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
                   Logout
                 </button>
