@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import NotificationBell from '@/app/components/NotificationBell'
 
 type Profile = {
   id: string
@@ -36,6 +37,11 @@ export default function CrewCallNav() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'invites' },
+        loadNav
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
         loadNav
       )
       .subscribe()
@@ -167,14 +173,18 @@ export default function CrewCallNav() {
             </div>
           </Link>
 
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="flex items-center justify-center rounded-xl border border-gray-200 bg-white p-3 text-gray-700 shadow-sm transition hover:bg-gray-50 lg:hidden"
-          >
-            <span className="text-lg font-black">
-              {mobileOpen ? '✕' : '☰'}
-            </span>
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            {loaded && profile && <NotificationBell />}
+
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="flex items-center justify-center rounded-xl border border-gray-200 bg-white p-3 text-gray-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <span className="text-lg font-black">
+                {mobileOpen ? '✕' : '☰'}
+              </span>
+            </button>
+          </div>
 
           {loaded && (
             <div className="hidden items-center gap-2 lg:flex">
@@ -242,16 +252,15 @@ export default function CrewCallNav() {
 
               {profile && (
                 <>
+                  <NotificationBell />
+
                   <NavLink
                     href="/messages"
                     label="Messages"
                     badge={unreadMessages}
                   />
 
-                  <NavLink
-                    href="/profile"
-                    label={displayName}
-                  />
+                  <NavLink href="/profile" label={displayName} />
 
                   <button
                     onClick={handleLogout}
@@ -269,11 +278,7 @@ export default function CrewCallNav() {
           <div className="mt-5 flex flex-col gap-2 rounded-3xl border border-gray-200 bg-white p-4 shadow-xl lg:hidden">
             {!profile && (
               <>
-                <NavLink
-                  href="/login"
-                  label="Login"
-                  mobile
-                />
+                <NavLink href="/login" label="Login" mobile />
 
                 <Link
                   href="/signup"
@@ -288,11 +293,7 @@ export default function CrewCallNav() {
             {profile?.role === 'company' && (
               <>
                 <NavLink href="/jobs" label="Jobs" mobile />
-                <NavLink
-                  href="/workers"
-                  label="Find Workers"
-                  mobile
-                />
+                <NavLink href="/workers" label="Find Workers" mobile />
 
                 <Link
                   href="/post-job"
@@ -302,56 +303,41 @@ export default function CrewCallNav() {
                   Post Job
                 </Link>
 
-                <NavLink
-                  href="/my-jobs"
-                  label="My Jobs"
-                  mobile
-                />
-
+                <NavLink href="/my-jobs" label="My Jobs" mobile />
                 <NavLink
                   href="/completed-jobs"
                   label="Completed Jobs"
                   mobile
                 />
-
                 <NavLink
                   href="/invites"
                   label="Invites"
                   badge={acceptedInvites}
                   mobile
                 />
-
-                <NavLink
-                  href="/dashboard"
-                  label="Dashboard"
-                  mobile
-                />
+                <NavLink href="/dashboard" label="Dashboard" mobile />
               </>
             )}
 
             {profile?.role === 'worker' && (
               <>
                 <NavLink href="/jobs" label="Jobs" mobile />
-
                 <NavLink
                   href="/my-applications"
                   label="Applications"
                   mobile
                 />
-
                 <NavLink
                   href="/completed-jobs"
                   label="Completed Jobs"
                   mobile
                 />
-
                 <NavLink
                   href="/invites"
                   label="Invites"
                   badge={pendingInvites}
                   mobile
                 />
-
                 <NavLink
                   href="/worker/dashboard"
                   label="Dashboard"
@@ -369,11 +355,7 @@ export default function CrewCallNav() {
                   mobile
                 />
 
-                <NavLink
-                  href="/profile"
-                  label={displayName}
-                  mobile
-                />
+                <NavLink href="/profile" label={displayName} mobile />
 
                 <button
                   onClick={handleLogout}

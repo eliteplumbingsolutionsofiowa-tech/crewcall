@@ -185,6 +185,15 @@ export default function JobDetailsPage() {
       .eq('job_id', job.id)
       .neq('id', applicant.id)
 
+    await supabase.from('notifications').insert({
+      user_id: applicant.worker_id,
+      title: 'You were hired',
+      body: `You were hired for ${job.title}`,
+      link_url: `/jobs/${job.id}`,
+      read: false,
+    })
+
+    setMessage('Worker hired successfully.')
     setWorkingId(null)
     await loadPage()
   }
