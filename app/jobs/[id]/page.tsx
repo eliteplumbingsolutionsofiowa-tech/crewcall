@@ -174,10 +174,16 @@ export default function JobDetailsPage() {
       return
     }
 
-    await supabase
+    const { error: hiredError } = await supabase
       .from('applications')
       .update({ status: 'hired' })
       .eq('id', applicant.id)
+
+    if (hiredError) {
+      setMessage(hiredError.message)
+      setWorkingId(null)
+      return
+    }
 
     await supabase
       .from('applications')
@@ -185,15 +191,28 @@ export default function JobDetailsPage() {
       .eq('job_id', job.id)
       .neq('id', applicant.id)
 
-    await supabase.from('notifications').insert({
-      user_id: applicant.worker_id,
-      title: 'You were hired',
-      body: `You were hired for ${job.title}`,
-      link_url: `/jobs/${job.id}`,
-      read: false,
-    })
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: applicant.worker_id,
+        title: 'You were hired',
+        body: `You were hired for ${job.title}`,
+        link_url: `/jobs/${job.id}`,
+        read: false,
+      })
 
-    setMessage('Worker hired successfully.')
+    if (notificationError) {
+      console.log('NOTIFICATION ERROR:', notificationError)
+
+      setMessage(
+        `Worker hired, but notification failed: ${notificationError.message}`
+      )
+
+      setWorkingId(null)
+      return
+    }
+
+    setMessage('Worker hired successfully. Notification sent.')
     setWorkingId(null)
     await loadPage()
   }
