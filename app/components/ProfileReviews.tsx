@@ -1,37 +1,56 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Review = {
   id: string
   rating: number
   comment: string | null
-  created_at: string
-  reviewer_id: string
-  reviewer: {
-    full_name: string | null
-    company_name: string | null
-    role: string | null
-  } | null
+  created_at: string | null
+  reviewer_id: string | null
+  reviewer_name: string
+  reviewer_role: string | null
+  job_title: string | null
+}
+
+type RawReview = {
+  id: string
+  rating: number | null
+  comment: string | null
+  created_at: string | null
+  reviewer_id: string | null
+  reviewer:
+    | {
+        full_name: string | null
+        company_name: string | null
+        role: string | null
+      }
+    | {
+        full_name: string | null
+        company_name: string | null
+        role: string | null
+      }[]
+    | null
+  job:
+    | {
+        title: string | null
+      }
+    | {
+        title: string | null
+      }[]
+    | null
 }
 
 export default function ProfileReviews({
   profileId,
-  jobId,
 }: {
   profileId?: string
-  jobId?: string // 👈 NEW: allows leaving review after job
 }) {
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  // ⭐ NEW REVIEW STATE
-  const [rating, setRating] = useState(5)
-  const [comment, setComment] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [canReview, setCanReview] = useState(false)
 
   useEffect(() => {
     loadReviews()
@@ -41,21 +60,18 @@ export default function ProfileReviews({
     setLoading(true)
     setErrorMessage(null)
 
-    let targetProfileId = profileId
-
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!targetProfileId) {
-      if (!user) {
-        setLoading(false)
-        return
-      }
-      targetProfileId = user.id
+    const targetId = profileId || user?.id
+
+    if (!targetId) {
+      setReviews([])
+      setLoading(false)
+      return
     }
 
-    // LOAD REVIEWS
     const { data, error } = await supabase
       .from('reviews')
       .select(`
@@ -68,189 +84,201 @@ export default function ProfileReviews({
           full_name,
           company_name,
           role
+        ),
+        job:job_id (
+          title
         )
       `)
-      .eq('reviewee_id', targetProfileId)
+      .eq('reviewee_id', targetId)
       .order('created_at', { ascending: false })
 
     if (error) {
       setErrorMessage(error.message)
+      setReviews([])
       setLoading(false)
       return
     }
 
-    const cleaned = (data || []).map((r: any) => ({
-      ...r,
-      reviewer: Array.isArray(r.reviewer) ? r.reviewer[0] : r.reviewer,
-    }))
+    const cleanedReviews = ((data || []) as RawReview[]).map((review) => {
+      const reviewer = Array.isArray(review.reviewer)
+        ? review.reviewer[0]
+        : review.reviewer
 
-    setReviews(cleaned as Review[])
+      const job = Array.isArray(review.job)
+        ? review.job[0]
+        : review.job
 
-    // 🔥 CHECK IF USER CAN REVIEW (job completed + not already reviewed)
-    if (user && jobId && targetProfileId !== user.id) {
-      const { data: job } = await supabase
-        .from('jobs')
-        .select('status, assigned_worker_id, company_id')
-        .eq('id', jobId)
-        .maybeSingle()
-
-      if (job?.status === 'completed') {
-        const { data: existing } = await supabase
-          .from('reviews')
-          .select('id')
-          .eq('job_id', jobId)
-          .eq('reviewer_id', user.id)
-          .maybeSingle()
-
-        if (!existing) {
-          setCanReview(true)
-        }
+      return {
+        id: review.id,
+        rating: Number(review.rating || 0),
+        comment: review.comment,
+        created_at: review.created_at,
+        reviewer_id: review.reviewer_id,
+        reviewer_name:
+          reviewer?.company_name ||
+          reviewer?.full_name ||
+          'CrewCall User',
+        reviewer_role: reviewer?.role || null,
+        job_title: job?.title || null,
       }
-    }
-
-    setLoading(false)
-  }
-
-  async function submitReview() {
-    setSubmitting(true)
-    setErrorMessage(null)
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user || !profileId || !jobId) {
-      setErrorMessage('Missing review data.')
-      setSubmitting(false)
-      return
-    }
-
-    const { error } = await supabase.from('reviews').insert({
-      reviewer_id: user.id,
-      reviewee_id: profileId,
-      job_id: jobId,
-      rating,
-      comment,
     })
 
-    if (error) {
-      setErrorMessage(error.message)
-      setSubmitting(false)
-      return
-    }
-
-    setRating(5)
-    setComment('')
-    setCanReview(false)
-
-    await loadReviews()
-    setSubmitting(false)
+    setReviews(cleanedReviews)
+    setLoading(false)
   }
 
   const averageRating = useMemo(() => {
     if (reviews.length === 0) return 0
+
     return (
-      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      reviews.reduce((sum, review) => sum + review.rating, 0) /
+      reviews.length
     )
   }, [reviews])
 
-  function renderStars(rating: number) {
-    return '★'.repeat(rating) + '☆'.repeat(5 - rating)
+  const fiveStarCount = reviews.filter(
+    (review) => review.rating === 5
+  ).length
+
+  function renderStars(value: number) {
+    const rounded = Math.max(0, Math.min(5, Math.round(value)))
+
+    return '★'.repeat(rounded) + '☆'.repeat(5 - rounded)
   }
 
-  function getName(r: Review) {
+  function trustLevel() {
+    if (reviews.length >= 25 && averageRating >= 4.8) {
+      return 'Elite Pro'
+    }
+
+    if (reviews.length >= 10 && averageRating >= 4.5) {
+      return 'Top Rated'
+    }
+
+    if (reviews.length >= 3) {
+      return 'Verified'
+    }
+
+    return 'New Member'
+  }
+
+  if (loading) {
     return (
-      r.reviewer?.company_name ||
-      r.reviewer?.full_name ||
-      'User'
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl">
+        <h2 className="text-3xl font-black text-white">Reviews</h2>
+
+        <p className="mt-3 text-slate-400">Loading reputation...</p>
+      </div>
     )
   }
 
-  if (loading) return <div>Loading reviews...</div>
-
   return (
-    <div className="rounded-3xl border bg-white p-8 shadow-sm">
-      <h2 className="text-2xl font-bold">Reviews</h2>
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
+            Reputation
+          </p>
 
-      {/* ⭐ SUMMARY */}
-      <div className="mt-3 flex items-center gap-3">
-        <span className="text-xl font-bold">
-          {reviews.length ? averageRating.toFixed(1) : '—'}
-        </span>
-        <span className="text-yellow-500">
-          {reviews.length
-            ? renderStars(Math.round(averageRating))
-            : 'No ratings'}
-        </span>
-        <span className="text-sm text-gray-500">
-          ({reviews.length})
-        </span>
-      </div>
+          <h2 className="mt-2 text-4xl font-black text-white">
+            Reviews & Ratings
+          </h2>
 
-      {/* 🔥 LEAVE REVIEW */}
-      {canReview && (
-        <div className="mt-6 rounded-xl border p-4">
-          <h3 className="font-semibold mb-2">Leave a Review</h3>
+          <p className="mt-3 max-w-2xl text-slate-400">
+            Reputation built through completed CrewCall jobs.
+          </p>
 
-          <select
-            value={rating}
-            onChange={(e) => setRating(Number(e.target.value))}
-            className="mb-2 w-full border rounded px-3 py-2"
-          >
-            {[5,4,3,2,1].map((n) => (
-              <option key={n} value={n}>{n} Stars</option>
-            ))}
-          </select>
-
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Write feedback..."
-            className="w-full border rounded px-3 py-2 mb-2"
-          />
-
-          <button
-            onClick={submitReview}
-            disabled={submitting}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            {submitting ? 'Submitting...' : 'Submit Review'}
-          </button>
-        </div>
-      )}
-
-      {/* LIST */}
-      <div className="mt-6 space-y-4">
-        {reviews.length === 0 ? (
-          <div className="text-gray-500">No reviews yet</div>
-        ) : (
-          reviews.map((r) => (
-            <div key={r.id} className="border rounded p-4">
-              <div className="flex justify-between">
-                <div>
-                  <div className="font-semibold">{getName(r)}</div>
-                  <div className="text-yellow-500">
-                    {renderStars(r.rating)}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-400">
-                  {new Date(r.created_at).toLocaleDateString()}
-                </div>
-              </div>
-
-              <p className="mt-2 text-sm text-gray-700">
-                {r.comment || 'No comment'}
-              </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-200">
+              {trustLevel()}
             </div>
-          ))
-        )}
+
+            <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-200">
+              {fiveStarCount} Five-Star Reviews
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-slate-900 px-8 py-6 text-center">
+          <p className="text-5xl font-black text-cyan-300">
+            {reviews.length ? averageRating.toFixed(1) : '—'}
+          </p>
+
+          <p className="mt-2 text-xl text-yellow-400">
+            {renderStars(averageRating)}
+          </p>
+
+          <p className="mt-3 text-sm font-bold uppercase tracking-widest text-slate-400">
+            {reviews.length === 1
+              ? '1 Review'
+              : `${reviews.length} Reviews`}
+          </p>
+        </div>
       </div>
 
       {errorMessage && (
-        <div className="mt-4 text-red-600 text-sm">
+        <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
           {errorMessage}
         </div>
       )}
+
+      <div className="mt-8">
+        {reviews.length === 0 ? (
+          <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-6 text-sm font-semibold text-yellow-100">
+            No reviews yet. Completed job reviews will appear here.
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {reviews.map((review) => (
+              <div
+                key={review.id}
+                className="rounded-3xl border border-white/10 bg-slate-900 p-6"
+              >
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Link
+                        href={`/profile?user=${review.reviewer_id}`}
+                        className="text-xl font-black text-white hover:text-cyan-300"
+                      >
+                        {review.reviewer_name}
+                      </Link>
+
+                      {review.reviewer_role && (
+                        <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-cyan-200">
+                          {review.reviewer_role}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-2 text-lg font-bold text-yellow-400">
+                      {renderStars(review.rating)}
+                    </p>
+
+                    {review.job_title && (
+                      <p className="mt-2 text-sm text-slate-400">
+                        Job: {review.job_title}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="text-sm font-semibold text-slate-500">
+                    {review.created_at
+                      ? new Date(review.created_at).toLocaleDateString()
+                      : ''}
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-white/5 bg-black/20 p-4">
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-slate-300">
+                    {review.comment || 'No written feedback left.'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
