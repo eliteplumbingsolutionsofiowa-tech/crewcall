@@ -31,6 +31,8 @@ type Applicant = {
   worker_id: string
   status: string | null
   created_at: string
+  requested_pay_rate: string | null
+  negotiation_message: string | null
   worker: {
     id: string
     full_name: string | null
@@ -115,7 +117,7 @@ export default function JobDetailsPage() {
     if (jobData.assigned_worker_id) {
       const { data: workerData } = await supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select('id, role, full_name')
         .eq('id', jobData.assigned_worker_id)
         .maybeSingle()
 
@@ -125,7 +127,7 @@ export default function JobDetailsPage() {
     }
 
     if (profileData.role === 'company' && jobData.company_id === user.id) {
-      const { data: applicantData } = await supabase
+      const { data: applicantData, error: applicantError } = await supabase
         .from('applications')
         .select(`
           id,
@@ -133,6 +135,8 @@ export default function JobDetailsPage() {
           worker_id,
           status,
           created_at,
+          requested_pay_rate,
+          negotiation_message,
           worker:profiles!applications_worker_id_fkey (
             id,
             full_name,
@@ -145,7 +149,12 @@ export default function JobDetailsPage() {
         .eq('job_id', jobId)
         .order('created_at', { ascending: false })
 
-      setApplicants((applicantData as unknown as Applicant[]) || [])
+      if (applicantError) {
+        setMessage(applicantError.message)
+        setApplicants([])
+      } else {
+        setApplicants((applicantData as unknown as Applicant[]) || [])
+      }
     } else {
       setApplicants([])
     }
@@ -176,7 +185,7 @@ export default function JobDetailsPage() {
 
     const { error: hiredError } = await supabase
       .from('applications')
-      .update({ status: 'hired' })
+      .update({ status: 'accepted' })
       .eq('id', applicant.id)
 
     if (hiredError) {
@@ -187,32 +196,47 @@ export default function JobDetailsPage() {
 
     await supabase
       .from('applications')
-      .update({ status: 'not_selected' })
+      .update({ status: 'rejected' })
       .eq('job_id', job.id)
       .neq('id', applicant.id)
 
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: applicant.worker_id,
-        title: 'You were hired',
-        body: `You were hired for ${job.title}`,
-        link_url: `/jobs/${job.id}`,
-        read: false,
+    const { data: existingConversation } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('job_id', job.id)
+      .eq('worker_id', applicant.worker_id)
+      .eq('company_id', job.company_id)
+      .maybeSingle()
+
+    if (!existingConversation) {
+      await supabase.from('conversations').insert({
+        job_id: job.id,
+        worker_id: applicant.worker_id,
+        company_id: job.company_id,
       })
-
-    if (notificationError) {
-      console.log('NOTIFICATION ERROR:', notificationError)
-
-      setMessage(
-        `Worker hired, but notification failed: ${notificationError.message}`
-      )
-
-      setWorkingId(null)
-      return
     }
 
-    setMessage('Worker hired successfully. Notification sent.')
+    const notificationBody = `You were hired for ${job.title}`
+
+    const { data: existingNotification } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('user_id', applicant.worker_id)
+      .eq('type', 'hire')
+      .eq('body', notificationBody)
+      .maybeSingle()
+
+    if (!existingNotification) {
+      await supabase.from('notifications').insert({
+        user_id: applicant.worker_id,
+        type: 'hire',
+        title: 'You were hired',
+        body: notificationBody,
+        is_read: false,
+      })
+    }
+
+    setMessage('Worker hired successfully.')
     setWorkingId(null)
     await loadPage()
   }
@@ -234,7 +258,7 @@ export default function JobDetailsPage() {
     let conversationId = existing?.id
 
     if (!conversationId) {
-      const { data: newConversation } = await supabase
+      const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
           job_id: job.id,
@@ -243,6 +267,12 @@ export default function JobDetailsPage() {
         })
         .select('id')
         .single()
+
+      if (error) {
+        setMessage(error.message)
+        setWorkingId(null)
+        return
+      }
 
       conversationId = newConversation?.id
     }
@@ -342,17 +372,18 @@ export default function JobDetailsPage() {
   const isOwner = job.company_id === profile.id
   const isOpen = job.status === 'open'
   const isAssigned = job.status === 'assigned'
+  const isCompleted = job.status === 'completed'
 
   const canCompleteJob =
     isCompany &&
     isOwner &&
-    job.status === 'assigned' &&
+    isAssigned &&
     job.payment_status === 'paid'
 
   const canReleasePayout =
     isCompany &&
     isOwner &&
-    job.status === 'completed' &&
+    isCompleted &&
     job.payment_status === 'paid' &&
     job.payout_status !== 'released'
 
@@ -399,17 +430,13 @@ export default function JobDetailsPage() {
                 {job.status || 'open'}
               </p>
 
-              {job.payment_status && (
-                <p className="mt-2 text-sm text-green-300">
-                  Payment: {job.payment_status}
-                </p>
-              )}
+              <p className="mt-2 text-sm text-green-300">
+                Payment: {job.payment_status || 'unpaid'}
+              </p>
 
-              {job.payout_status && (
-                <p className="mt-1 text-sm text-cyan-300">
-                  Payout: {job.payout_status}
-                </p>
-              )}
+              <p className="mt-1 text-sm text-cyan-300">
+                Payout: {job.payout_status || 'not released'}
+              </p>
             </div>
           </div>
 
@@ -417,14 +444,14 @@ export default function JobDetailsPage() {
             {job.description || 'No description provided.'}
           </p>
 
-          {(isAssigned || job.status === 'completed') && assignedWorker && (
+          {(isAssigned || isCompleted) && assignedWorker && (
             <div className="mt-6 rounded-2xl border border-green-400/30 bg-green-400/10 p-5">
               <p className="text-xs uppercase tracking-widest text-green-300">
                 Worker Assigned
               </p>
 
               <Link
-                href={`/workers/${assignedWorker.id}`}
+                href={`/profile?user=${assignedWorker.id}`}
                 className="mt-1 block text-xl font-black text-white hover:text-cyan-300"
               >
                 {assignedWorker.full_name || 'View Worker'}
@@ -438,7 +465,7 @@ export default function JobDetailsPage() {
                 href={`/jobs/${job.id}/apply`}
                 className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
               >
-                Apply
+                Apply / Negotiate
               </Link>
             )}
 
@@ -449,9 +476,7 @@ export default function JobDetailsPage() {
                   disabled={workingId === 'message'}
                   className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300 disabled:opacity-60"
                 >
-                  {workingId === 'message'
-                    ? 'Opening...'
-                    : 'Message Worker'}
+                  {workingId === 'message' ? 'Opening...' : 'Message Worker'}
                 </button>
 
                 <Link
@@ -496,13 +521,13 @@ export default function JobDetailsPage() {
                 <h2 className="text-2xl font-black">Applicants</h2>
 
                 <p className="mt-1 text-sm text-slate-400">
-                  Review worker profiles and hire from this job.
+                  Review worker profiles, requested rates, and negotiation notes.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-200">
-                {applicants.length} Applicant
-                {applicants.length === 1 ? '' : 's'}
+                {applicants.length}{' '}
+                {applicants.length === 1 ? 'Applicant' : 'Applicants'}
               </div>
             </div>
 
@@ -520,7 +545,7 @@ export default function JobDetailsPage() {
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                       <div>
                         <Link
-                          href={`/workers/${applicant.worker_id}`}
+                          href={`/profile?user=${applicant.worker_id}`}
                           className="text-xl font-black text-white hover:text-cyan-300"
                         >
                           {applicant.worker?.full_name || 'Unnamed Worker'}
@@ -533,21 +558,51 @@ export default function JobDetailsPage() {
                             .join(', ') || 'Location not listed'}
                         </p>
 
-                        <p className="mt-2 text-sm text-slate-300">
-                          Experience:{' '}
-                          {applicant.worker?.years_experience
-                            ? `${applicant.worker.years_experience} years`
-                            : 'Not listed'}
-                        </p>
+                        <div className="mt-3 space-y-2">
+                          <p className="text-sm text-slate-300">
+                            Experience:{' '}
+                            {applicant.worker?.years_experience
+                              ? `${applicant.worker.years_experience} years`
+                              : 'Not listed'}
+                          </p>
 
-                        <p className="mt-2 text-xs uppercase tracking-widest text-slate-500">
+                          <p className="text-sm text-cyan-300">
+                            Posted Rate:{' '}
+                            <span className="font-bold">
+                              {job.pay_rate || 'Not provided'}
+                            </span>
+                          </p>
+
+                          <p className="text-sm text-orange-300">
+                            Requested Rate:{' '}
+                            <span className="font-bold">
+                              {applicant.requested_pay_rate ||
+                                job.pay_rate ||
+                                'Not provided'}
+                            </span>
+                          </p>
+
+                          {applicant.negotiation_message && (
+                            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
+                              <p className="text-xs font-black uppercase tracking-widest text-cyan-300">
+                                Negotiation Message
+                              </p>
+
+                              <p className="mt-2 text-sm text-cyan-100">
+                                {applicant.negotiation_message}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <p className="mt-3 text-xs uppercase tracking-widest text-slate-500">
                           Application Status: {applicant.status || 'pending'}
                         </p>
                       </div>
 
                       <div className="flex flex-wrap gap-2">
                         <Link
-                          href={`/workers/${applicant.worker_id}`}
+                          href={`/profile?user=${applicant.worker_id}`}
                           className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/10"
                         >
                           View Profile
