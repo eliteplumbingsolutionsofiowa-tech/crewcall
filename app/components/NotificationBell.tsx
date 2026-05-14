@@ -10,9 +10,7 @@ type Notification = {
   type: string | null
   title: string | null
   body: string | null
-  link_url?: string | null
   is_read: boolean | null
-  read?: boolean | null
   created_at: string
 }
 
@@ -23,59 +21,52 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    let mounted = true
-
-    async function init() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!mounted) return
-
-      if (!user) {
-        setUserId(null)
-        setNotifications([])
-        return
-      }
-
-      setUserId(user.id)
-      await loadNotifications(user.id)
-    }
-
-    init()
-
-    return () => {
-      mounted = false
-    }
+    loadUserAndNotifications()
   }, [])
 
   useEffect(() => {
     if (!userId) return
 
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        async () => {
-          await loadNotifications(userId)
-        }
-      )
-      .subscribe()
+    const channelName = `notifications-bell-${userId}-${Date.now()}`
+
+    const channel = supabase.channel(channelName)
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        loadNotifications(userId)
+      }
+    )
+
+    channel.subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
   }, [userId])
 
-  async function loadNotifications(currentUserId = userId) {
-    if (!currentUserId) return
+  async function loadUserAndNotifications() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
+    if (!user) {
+      setUserId(null)
+      setNotifications([])
+      return
+    }
+
+    setUserId(user.id)
+    await loadNotifications(user.id)
+  }
+
+  async function loadNotifications(currentUserId: string) {
     setLoading(true)
 
     const { data, error } = await supabase
@@ -87,9 +78,7 @@ export default function NotificationBell() {
         type,
         title,
         body,
-        link_url,
         is_read,
-        read,
         created_at
       `
       )
@@ -108,12 +97,8 @@ export default function NotificationBell() {
     setLoading(false)
   }
 
-  function notificationIsRead(notification: Notification) {
-    return Boolean(notification.is_read ?? notification.read ?? false)
-  }
-
   const unreadCount = useMemo(() => {
-    return notifications.filter((notification) => !notificationIsRead(notification)).length
+    return notifications.filter((notification) => !notification.is_read).length
   }, [notifications])
 
   async function markAllRead() {
@@ -121,11 +106,9 @@ export default function NotificationBell() {
 
     const { error } = await supabase
       .from('notifications')
-      .update({
-        is_read: true,
-        read: true,
-      })
+      .update({ is_read: true })
       .eq('user_id', userId)
+      .eq('is_read', false)
 
     if (error) {
       console.error('Mark all read error:', error.message)
@@ -139,12 +122,9 @@ export default function NotificationBell() {
     const nextOpen = !open
     setOpen(nextOpen)
 
-    if (nextOpen) {
+    if (nextOpen && userId) {
       await loadNotifications(userId)
-
-      if (unreadCount > 0) {
-        await markAllRead()
-      }
+      await markAllRead()
     }
   }
 
@@ -154,7 +134,6 @@ export default function NotificationBell() {
         type="button"
         onClick={handleOpen}
         className="relative rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-100"
-        aria-label="Open notifications"
       >
         🔔
 
@@ -189,43 +168,38 @@ export default function NotificationBell() {
                 No notifications yet.
               </div>
             ) : (
-              notifications.map((notification) => {
-                const isRead = notificationIsRead(notification)
-                const href = notification.link_url || '/notifications'
-
-                return (
-                  <Link
-                    key={notification.id}
-                    href={href}
-                    onClick={() => setOpen(false)}
-                    className={`block rounded-xl border p-3 transition hover:shadow-sm ${
-                      isRead
-                        ? 'border-gray-100 bg-gray-50'
-                        : 'border-blue-100 bg-blue-50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-black text-gray-900">
-                        {notification.title || 'CrewCall Notification'}
-                      </p>
-
-                      {!isRead && (
-                        <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-black text-white">
-                          NEW
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="mt-1 text-xs leading-relaxed text-gray-600">
-                      {notification.body || 'No additional details.'}
+              notifications.map((notification) => (
+                <Link
+                  key={notification.id}
+                  href="/notifications"
+                  onClick={() => setOpen(false)}
+                  className={`block rounded-xl border p-3 transition hover:shadow-sm ${
+                    notification.is_read
+                      ? 'border-gray-100 bg-gray-50'
+                      : 'border-blue-100 bg-blue-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-black text-gray-900">
+                      {notification.title || 'CrewCall Notification'}
                     </p>
 
-                    <p className="mt-2 text-[11px] font-semibold text-gray-400">
-                      {new Date(notification.created_at).toLocaleString()}
-                    </p>
-                  </Link>
-                )
-              })
+                    {!notification.is_read && (
+                      <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-black text-white">
+                        NEW
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                    {notification.body || 'No additional details.'}
+                  </p>
+
+                  <p className="mt-2 text-[11px] font-semibold text-gray-400">
+                    {new Date(notification.created_at).toLocaleString()}
+                  </p>
+                </Link>
+              ))
             )}
           </div>
         </div>
