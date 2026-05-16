@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Notification = {
@@ -20,13 +20,13 @@ export default function NotificationBell() {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const channelRef = useRef<any>(null)
-
   useEffect(() => {
-    initialize()
+    loadInitialNotifications()
   }, [])
 
-  async function initialize() {
+  async function loadInitialNotifications() {
+    setLoading(true)
+
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -39,71 +39,13 @@ export default function NotificationBell() {
     }
 
     setUserId(user.id)
-
     await loadNotifications(user.id)
-
-    subscribeToNotifications(user.id)
   }
-
-  function subscribeToNotifications(currentUserId: string) {
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-    }
-
-    const channel = supabase.channel(
-      `notifications-realtime-${currentUserId}`
-    )
-
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${currentUserId}`,
-      },
-      async (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const incoming = payload.new as Notification
-
-          setNotifications((prev) => {
-            const exists = prev.some((n) => n.id === incoming.id)
-
-            if (exists) return prev
-
-            return [incoming, ...prev].slice(0, 20)
-          })
-        }
-
-        await loadNotifications(currentUserId)
-      }
-    )
-
-    channel.subscribe()
-
-    channelRef.current = channel
-  }
-
-  useEffect(() => {
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-      }
-    }
-  }, [])
 
   async function loadNotifications(currentUserId: string) {
     const { data, error } = await supabase
       .from('notifications')
-      .select(`
-        id,
-        user_id,
-        type,
-        title,
-        body,
-        is_read,
-        created_at
-      `)
+      .select('id, user_id, type, title, body, is_read, created_at')
       .eq('user_id', currentUserId)
       .order('created_at', { ascending: false })
       .limit(20)
@@ -120,15 +62,15 @@ export default function NotificationBell() {
   }
 
   const unreadCount = useMemo(() => {
-    return notifications.filter((n) => !n.is_read).length
+    return notifications.filter((notification) => !notification.is_read).length
   }, [notifications])
 
   async function markAllRead() {
     if (!userId) return
 
     const unreadIds = notifications
-      .filter((n) => !n.is_read)
-      .map((n) => n.id)
+      .filter((notification) => !notification.is_read)
+      .map((notification) => notification.id)
 
     if (unreadIds.length === 0) return
 
@@ -151,31 +93,34 @@ export default function NotificationBell() {
   }
 
   async function toggleOpen() {
-    const next = !open
+    const nextOpen = !open
+    setOpen(nextOpen)
 
-    setOpen(next)
-
-    if (next) {
+    if (nextOpen) {
       await markAllRead()
+
+      if (userId) {
+        await loadNotifications(userId)
+      }
     }
   }
 
-  function notificationColor(type: string | null) {
+  function getNotificationStyle(type: string | null) {
     switch (type) {
       case 'hire':
-        return 'border-green-500/20 bg-green-500/10'
+        return 'border-green-400/30 bg-green-400/10'
 
       case 'message':
-        return 'border-cyan-500/20 bg-cyan-500/10'
+        return 'border-cyan-400/30 bg-cyan-400/10'
 
       case 'payment':
-        return 'border-orange-500/20 bg-orange-500/10'
+        return 'border-orange-400/30 bg-orange-400/10'
 
       case 'payout':
-        return 'border-emerald-500/20 bg-emerald-500/10'
+        return 'border-emerald-400/30 bg-emerald-400/10'
 
       case 'review':
-        return 'border-yellow-500/20 bg-yellow-500/10'
+        return 'border-yellow-400/30 bg-yellow-400/10'
 
       default:
         return 'border-white/10 bg-white/5'
@@ -236,7 +181,7 @@ export default function NotificationBell() {
                     key={notification.id}
                     href="/notifications"
                     onClick={() => setOpen(false)}
-                    className={`block rounded-2xl border p-4 transition hover:scale-[1.01] hover:border-cyan-400/30 ${notificationColor(
+                    className={`block rounded-2xl border p-4 transition hover:scale-[1.01] hover:border-cyan-400/30 ${getNotificationStyle(
                       notification.type
                     )}`}
                   >
@@ -256,15 +201,13 @@ export default function NotificationBell() {
                       )}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between">
+                    <div className="mt-3 flex items-center justify-between gap-3">
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
                         {notification.type || 'general'}
                       </p>
 
-                      <p className="text-[11px] text-slate-500">
-                        {new Date(
-                          notification.created_at
-                        ).toLocaleString()}
+                      <p className="text-right text-[11px] text-slate-500">
+                        {new Date(notification.created_at).toLocaleString()}
                       </p>
                     </div>
                   </Link>

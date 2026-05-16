@@ -1,88 +1,243 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function ReviewPage() {
+type Job = {
+  id: string
+  title: string | null
+  company_id: string | null
+  assigned_worker_id: string | null
+}
+
+type Profile = {
+  id: string
+  full_name: string | null
+  company_name: string | null
+}
+
+function ReviewContent() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const jobId = String(params.id || '')
+  const toUserId = searchParams.get('to')
 
+  const [job, setJob] = useState<Job | null>(null)
+  const [reviewee, setReviewee] = useState<Profile | null>(null)
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
 
-  async function submitReview() {
+  useEffect(() => {
+    loadReviewData()
+  }, [jobId, toUserId])
+
+  async function loadReviewData() {
     setLoading(true)
+    setMessage('')
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) return
-
-    // get job to find who to review
-    const { data: job } = await supabase
-      .from('jobs')
-      .select('company_id, assigned_worker_id')
-      .eq('id', jobId)
-      .single()
-
-    if (!job) return
-
-    // determine who is reviewing who
-    let revieweeId = ''
-
-    if (user.id === job.company_id) {
-      revieweeId = job.assigned_worker_id
-    } else {
-      revieweeId = job.company_id
+    if (userError || !user) {
+      setMessage('You must be logged in to leave a review.')
+      setLoading(false)
+      return
     }
 
-    await supabase.from('reviews').insert({
-      job_id: jobId,
+    if (!jobId || !toUserId) {
+      setMessage('Missing review information.')
+      setLoading(false)
+      return
+    }
+
+    const { data: jobData, error: jobError } = await supabase
+      .from('jobs')
+      .select('id, title, company_id, assigned_worker_id')
+      .eq('id', jobId)
+      .maybeSingle()
+
+    if (jobError || !jobData) {
+      setMessage(jobError?.message || 'Job not found.')
+      setLoading(false)
+      return
+    }
+
+    const isCompany = user.id === jobData.company_id
+    const isWorker = user.id === jobData.assigned_worker_id
+    const validReviewTarget =
+      toUserId === jobData.company_id || toUserId === jobData.assigned_worker_id
+
+    if (!isCompany && !isWorker) {
+      setMessage('You can only review jobs you were part of.')
+      setLoading(false)
+      return
+    }
+
+    if (!validReviewTarget || toUserId === user.id) {
+      setMessage('Invalid review target.')
+      setLoading(false)
+      return
+    }
+
+    setJob(jobData as Job)
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, full_name, company_name')
+      .eq('id', toUserId)
+      .maybeSingle()
+
+    setReviewee((profileData as Profile) || null)
+    setLoading(false)
+  }
+
+  async function submitReview() {
+    if (!job || !toUserId) return
+
+    setSaving(true)
+    setMessage('')
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage('You must be logged in to submit a review.')
+      setSaving(false)
+      return
+    }
+
+    const { error } = await supabase.from('reviews').insert({
+      job_id: job.id,
       reviewer_id: user.id,
-      reviewee_id: revieweeId,
+      reviewee_id: toUserId,
       rating,
-      comment,
+      comment: comment.trim() || null,
     })
 
-    router.push('/dashboard')
+    if (error) {
+      setMessage(error.message)
+      setSaving(false)
+      return
+    }
+
+    router.push(`/profile?user=${toUserId}`)
   }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-6 py-10">
+        <div className="mx-auto max-w-xl rounded-2xl bg-white p-8 shadow">
+          Loading review...
+        </div>
+      </main>
+    )
+  }
+
+  const revieweeName =
+    reviewee?.company_name || reviewee?.full_name || 'CrewCall user'
 
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-10">
-      <div className="mx-auto max-w-xl bg-white p-8 rounded-2xl shadow">
-        <h1 className="text-2xl font-bold mb-4">Leave a Review</h1>
+      <div className="mx-auto max-w-xl rounded-2xl bg-white p-8 shadow">
+        <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
+          Completed Job Review
+        </p>
 
-        <label className="block mb-2">Rating</label>
-        <select
-          value={rating}
-          onChange={(e) => setRating(Number(e.target.value))}
-          className="w-full border p-2 rounded mb-4"
-        >
-          {[5,4,3,2,1].map(n => (
-            <option key={n} value={n}>{n} Stars</option>
-          ))}
-        </select>
+        <h1 className="mt-2 text-3xl font-black text-gray-950">
+          Review {revieweeName}
+        </h1>
 
-        <label className="block mb-2">Comment</label>
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          className="w-full border p-2 rounded mb-6"
-        />
+        {job?.title && (
+          <p className="mt-2 text-gray-600">
+            Job: <span className="font-semibold">{job.title}</span>
+          </p>
+        )}
 
-        <button
-          onClick={submitReview}
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-        >
-          Submit Review
-        </button>
+        {message && (
+          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {message}
+          </div>
+        )}
+
+        {!message.includes('Missing') &&
+          !message.includes('Invalid') &&
+          !message.includes('only review') &&
+          !message.includes('logged in') && (
+            <div className="mt-6">
+              <label className="block text-sm font-bold text-gray-800">
+                Rating
+              </label>
+
+              <select
+                value={rating}
+                onChange={(e) => setRating(Number(e.target.value))}
+                className="mt-2 w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-blue-500"
+              >
+                {[5, 4, 3, 2, 1].map((number) => (
+                  <option key={number} value={number}>
+                    {number} Stars
+                  </option>
+                ))}
+              </select>
+
+              <label className="mt-5 block text-sm font-bold text-gray-800">
+                Comment
+              </label>
+
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={5}
+                className="mt-2 w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-blue-500"
+                placeholder="How did the job go?"
+              />
+
+              <button
+                onClick={submitReview}
+                disabled={saving}
+                className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {saving ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          )}
+
+        <div className="mt-6">
+          <Link
+            href="/completed-jobs"
+            className="text-sm font-bold text-blue-600 hover:underline"
+          >
+            Back to completed jobs
+          </Link>
+        </div>
       </div>
     </main>
+  )
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gray-50 px-6 py-10">
+          <div className="mx-auto max-w-xl rounded-2xl bg-white p-8 shadow">
+            Loading review...
+          </div>
+        </main>
+      }
+    >
+      <ReviewContent />
+    </Suspense>
   )
 }

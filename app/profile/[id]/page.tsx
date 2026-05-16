@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { CrewCard } from '@/app/components/CrewCard'
 import { CrewButton } from '@/app/components/CrewButton'
+import ProfileReviews from '@/app/components/ProfileReviews'
 
 type Profile = {
   id: string
@@ -15,256 +16,320 @@ type Profile = {
   city: string | null
   state: string | null
   trade: string | null
-  insurance_provider: string | null
   years_experience: string | null
+  insurance_provider: string | null
   job_experience: string | null
   liability_form_signed: boolean | null
 }
 
-type Review = {
-  id: string
-  rating: number
-  comment: string | null
-  created_at: string
-  reviewer_name: string
-}
+const emptyProfile = (id: string): Profile => ({
+  id,
+  role: null,
+  full_name: '',
+  company_name: '',
+  phone: '',
+  city: '',
+  state: '',
+  trade: '',
+  years_experience: '',
+  insurance_provider: '',
+  job_experience: '',
+  liability_form_signed: false,
+})
 
-export default function PublicProfilePage() {
-  const params = useParams()
-  const profileId = String(params.id || '')
+function ProfileContent() {
+  const searchParams = useSearchParams()
+  const viewedUserId = searchParams.get('user')
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const isOwnProfile = !viewedUserId || viewedUserId === currentUserId
 
   useEffect(() => {
     loadProfile()
-  }, [])
+  }, [viewedUserId])
 
   async function loadProfile() {
     setLoading(true)
+    setMessage('')
 
-    // PROFILE
-    const { data: profileData } = await supabase
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage('Please log in to view profiles.')
+      setLoading(false)
+      return
+    }
+
+    setCurrentUserId(user.id)
+
+    const profileId = viewedUserId || user.id
+
+    const { data, error } = await supabase
       .from('profiles')
-      .select('*')
-      .eq('id', profileId)
-      .single()
-
-    // REVIEWS (clean join)
-    const { data: reviewData } = await supabase
-      .from('reviews')
-      .select(`
+      .select(
+        `
         id,
-        rating,
-        comment,
-        created_at,
-        profiles!reviews_reviewer_id_fkey (
-          full_name,
-          company_name
-        )
-      `)
-      .eq('reviewee_id', profileId)
-      .order('created_at', { ascending: false })
+        role,
+        full_name,
+        company_name,
+        phone,
+        city,
+        state,
+        trade,
+        years_experience,
+        insurance_provider,
+        job_experience,
+        liability_form_signed
+      `
+      )
+      .eq('id', profileId)
+      .maybeSingle()
 
-    const cleaned: Review[] =
-      reviewData?.map((r: any) => ({
-        id: r.id,
-        rating: r.rating,
-        comment: r.comment,
-        created_at: r.created_at,
-        reviewer_name:
-          r.profiles?.company_name ||
-          r.profiles?.full_name ||
-          'User',
-      })) || []
+    if (error) {
+      setMessage(error.message)
+      setProfile(null)
+    } else if (data) {
+      setProfile(data as Profile)
+    } else if (profileId === user.id) {
+      setProfile(emptyProfile(user.id))
+      setMessage('Finish setting up your profile.')
+    } else {
+      setProfile(null)
+      setMessage('Profile not found.')
+    }
 
-    setProfile(profileData)
-    setReviews(cleaned)
     setLoading(false)
   }
 
-  function avgRating() {
-    if (!reviews.length) return '0.0'
-    const total = reviews.reduce((sum, r) => sum + r.rating, 0)
-    return (total / reviews.length).toFixed(1)
+  function updateField(field: keyof Profile, value: string | boolean) {
+    setProfile((prev) => {
+      if (!prev) return prev
+      return { ...prev, [field]: value }
+    })
   }
 
-  function name() {
-    return profile?.company_name || profile?.full_name || 'Profile'
+  async function saveProfile() {
+    if (!profile || !currentUserId || !isOwnProfile) return
+
+    setSaving(true)
+    setMessage('')
+
+    const payload = {
+      id: currentUserId,
+      role: profile.role,
+      full_name: profile.full_name || null,
+      company_name: profile.company_name || null,
+      phone: profile.phone || null,
+      city: profile.city || null,
+      state: profile.state || null,
+      trade: profile.trade || null,
+      years_experience: profile.years_experience || null,
+      insurance_provider: profile.insurance_provider || null,
+      job_experience: profile.job_experience || null,
+      liability_form_signed: Boolean(profile.liability_form_signed),
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(payload, { onConflict: 'id' })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setMessage('Profile saved.')
+      await loadProfile()
+    }
+
+    setSaving(false)
   }
 
   if (loading) {
     return (
-      <main className="p-6">
-        <p>Loading profile...</p>
+      <main className="mx-auto max-w-5xl px-6 py-10">
+        <p className="text-gray-600">Loading profile...</p>
       </main>
     )
   }
 
   if (!profile) {
     return (
-      <main className="p-6">
-        <p>Profile not found.</p>
+      <main className="mx-auto max-w-5xl px-6 py-10">
+        <CrewCard>
+          <p className="text-gray-600">{message || 'Profile not found.'}</p>
+        </CrewCard>
       </main>
     )
   }
 
+  const displayName =
+    profile.role === 'company'
+      ? profile.company_name || profile.full_name || 'Company Profile'
+      : profile.full_name || 'Worker Profile'
+
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <main className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mb-8">
+        <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+          {isOwnProfile ? 'My Profile' : 'Public Profile'}
+        </p>
 
-        {/* HEADER */}
-        <div>
-          <h1 className="text-3xl font-bold">{name()}</h1>
+        <h1 className="mt-2 text-4xl font-bold text-gray-950 sm:text-5xl">
+          {displayName}
+        </h1>
 
-          <p className="text-gray-600 mt-1">
-            {profile.trade || 'No trade listed'} · {profile.city || 'Unknown'}
-            {profile.state ? `, ${profile.state}` : ''}
-          </p>
+        <p className="mt-3 text-lg text-gray-600">
+          {profile.trade || profile.role || 'CrewCall user'}
+          {profile.city || profile.state
+            ? ` · ${[profile.city, profile.state].filter(Boolean).join(', ')}`
+            : ''}
+        </p>
+      </div>
 
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-2xl font-bold">
-              ⭐ {avgRating()}
-            </span>
-            <span className="text-sm text-gray-500">
-              ({reviews.length} reviews)
-            </span>
+      {message && (
+        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-semibold text-blue-800">
+          {message}
+        </div>
+      )}
+
+      <CrewCard>
+        {isOwnProfile && (
+          <div className="mb-6">
+            <label className="text-sm font-bold text-gray-800">
+              Account Type
+            </label>
+
+            <select
+              value={profile.role || ''}
+              onChange={(e) =>
+                updateField('role', e.target.value as 'company' | 'worker')
+              }
+              className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
+            >
+              <option value="">Select role</option>
+              <option value="company">Company</option>
+              <option value="worker">Worker</option>
+            </select>
           </div>
+        )}
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Full Name" value={profile.full_name} editable={isOwnProfile} onChange={(value) => updateField('full_name', value)} />
+          <Field label="Company Name" value={profile.company_name} editable={isOwnProfile} onChange={(value) => updateField('company_name', value)} />
+          <Field label="Phone" value={profile.phone} editable={isOwnProfile} onChange={(value) => updateField('phone', value)} />
+          <Field label="Trade" value={profile.trade} editable={isOwnProfile} onChange={(value) => updateField('trade', value)} />
+          <Field label="City" value={profile.city} editable={isOwnProfile} onChange={(value) => updateField('city', value)} />
+          <Field label="State" value={profile.state} editable={isOwnProfile} onChange={(value) => updateField('state', value)} />
+          <Field label="Years Experience" value={profile.years_experience} editable={isOwnProfile} onChange={(value) => updateField('years_experience', value)} />
+          <Field label="Insurance Provider" value={profile.insurance_provider} editable={isOwnProfile} onChange={(value) => updateField('insurance_provider', value)} />
         </div>
 
-        {/* TRUST / COMPLIANCE (THIS IS HUGE FOR CREWCALL) */}
-        <CrewCard>
-          <h2 className="text-lg font-bold mb-3">Trust & Compliance</h2>
+        <div className="mt-6">
+          <label className="text-sm font-bold text-gray-800">
+            Job Experience
+          </label>
 
-          <div className="grid md:grid-cols-3 gap-3 text-sm">
-
-            <Badge
-              label="Insurance"
-              ok={!!profile.insurance_provider}
+          {isOwnProfile ? (
+            <textarea
+              value={profile.job_experience || ''}
+              onChange={(e) => updateField('job_experience', e.target.value)}
+              rows={6}
+              className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
+              placeholder="Describe your experience, past jobs, skills, licenses, or specialties."
             />
-
-            <Badge
-              label="Liability Form"
-              ok={!!profile.liability_form_signed}
-            />
-
-            <Badge
-              label="Experience"
-              ok={!!profile.years_experience}
-            />
-
-          </div>
-        </CrewCard>
-
-        {/* DETAILS */}
-        <CrewCard>
-          <h2 className="text-lg font-bold mb-3">Details</h2>
-
-          <div className="grid md:grid-cols-2 gap-3 text-sm">
-            <Info label="Role" value={profile.role} />
-            <Info label="Company" value={profile.company_name} />
-            <Info label="Phone" value={profile.phone} />
-            <Info label="Years Experience" value={profile.years_experience} />
-          </div>
-        </CrewCard>
-
-        {/* EXPERIENCE */}
-        <CrewCard>
-          <h2 className="text-lg font-bold mb-3">Job Experience</h2>
-
-          <p className="whitespace-pre-wrap text-gray-700">
-            {profile.job_experience || 'No experience added yet.'}
-          </p>
-        </CrewCard>
-
-        {/* REVIEWS */}
-        <CrewCard>
-          <h2 className="text-lg font-bold mb-3">Reviews</h2>
-
-          {reviews.length === 0 ? (
-            <p className="text-gray-500">
-              No reviews yet — this user hasn’t been rated.
-            </p>
           ) : (
-            <div className="space-y-3">
-              {reviews.map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-gray-100 rounded-xl p-4"
-                >
-                  <div className="flex justify-between text-sm">
-                    <span className="font-semibold">
-                      {r.reviewer_name}
-                    </span>
-
-                    <span className="text-gray-500">
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="mt-1 text-yellow-500 text-sm">
-                    {'★'.repeat(r.rating)}
-                    {'☆'.repeat(5 - r.rating)}
-                  </div>
-
-                  {r.comment && (
-                    <p className="mt-2 text-sm">{r.comment}</p>
-                  )}
-                </div>
-              ))}
-            </div>
+            <p className="mt-2 whitespace-pre-wrap rounded-2xl border border-gray-100 bg-gray-50 p-4 text-gray-700">
+              {profile.job_experience || 'Not listed'}
+            </p>
           )}
-        </CrewCard>
-
-        {/* ACTIONS */}
-        <div className="flex gap-3 flex-wrap">
-          <CrewButton href="/workers">
-            Back
-          </CrewButton>
-
-          <CrewButton href={`/messages?start=${profile.id}`} variant="ghost">
-            Message
-          </CrewButton>
         </div>
+
+        <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <p className="font-bold text-gray-900">Compliance</p>
+
+          {isOwnProfile ? (
+            <label className="mt-3 flex items-center gap-3 text-sm font-semibold text-gray-700">
+              <input
+                type="checkbox"
+                checked={Boolean(profile.liability_form_signed)}
+                onChange={(e) =>
+                  updateField('liability_form_signed', e.target.checked)
+                }
+                className="h-5 w-5 rounded border-gray-300"
+              />
+              Liability form signed
+            </label>
+          ) : (
+            <p className="mt-1 text-gray-700">
+              Liability Form:{' '}
+              {profile.liability_form_signed ? 'Signed' : 'Not signed'}
+            </p>
+          )}
+        </div>
+
+        {isOwnProfile && (
+          <div className="mt-8">
+            <CrewButton onClick={saveProfile} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Profile'}
+            </CrewButton>
+          </div>
+        )}
+      </CrewCard>
+
+      <div className="mt-8">
+        <ProfileReviews profileId={profile.id} />
       </div>
     </main>
   )
 }
 
-/* ---------- SMALL COMPONENTS ---------- */
-
-function Info({
+function Field({
   label,
   value,
+  editable,
+  onChange,
 }: {
   label: string
-  value: string | null | undefined
+  value: string | null
+  editable: boolean
+  onChange: (value: string) => void
 }) {
   return (
-    <div className="bg-gray-100 p-3 rounded-xl">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="font-medium">{value || 'Not listed'}</p>
+    <div>
+      <label className="text-sm font-bold text-gray-800">{label}</label>
+
+      {editable ? (
+        <input
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
+        />
+      ) : (
+        <p className="mt-2 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-gray-700">
+          {value || 'Not listed'}
+        </p>
+      )}
     </div>
   )
 }
 
-function Badge({
-  label,
-  ok,
-}: {
-  label: string
-  ok: boolean
-}) {
+export default function ProfilePage() {
   return (
-    <div
-      className={`rounded-xl p-3 text-center text-sm font-medium ${
-        ok
-          ? 'bg-green-100 text-green-700'
-          : 'bg-red-100 text-red-600'
-      }`}
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-5xl px-6 py-10">
+          <p className="text-gray-600">Loading profile...</p>
+        </main>
+      }
     >
-      {ok ? '✔' : '✖'} {label}
-    </div>
+      <ProfileContent />
+    </Suspense>
   )
 }

@@ -90,19 +90,9 @@ export default function JobDetailsPage() {
 
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
-      .select(`
-        id,
-        title,
-        description,
-        trade,
-        location,
-        pay_rate,
-        status,
-        payment_status,
-        payout_status,
-        company_id,
-        assigned_worker_id
-      `)
+      .select(
+        'id, title, description, trade, location, pay_rate, status, payment_status, payout_status, company_id, assigned_worker_id'
+      )
       .eq('id', jobId)
       .maybeSingle()
 
@@ -162,187 +152,36 @@ export default function JobDetailsPage() {
     setLoading(false)
   }
 
-  async function hireWorker(applicant: Applicant) {
+  async function deleteJob() {
     if (!job || !profile) return
 
-    setWorkingId(applicant.id)
-    setMessage(null)
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this job? This cannot be undone.'
+    )
 
-    const { error: jobError } = await supabase
-      .from('jobs')
-      .update({
-        assigned_worker_id: applicant.worker_id,
-        status: 'assigned',
-      })
-      .eq('id', job.id)
-      .eq('company_id', profile.id)
+    if (!confirmed) return
 
-    if (jobError) {
-      setMessage(jobError.message)
-      setWorkingId(null)
-      return
-    }
-
-    const { error: hiredError } = await supabase
-      .from('applications')
-      .update({ status: 'accepted' })
-      .eq('id', applicant.id)
-
-    if (hiredError) {
-      setMessage(hiredError.message)
-      setWorkingId(null)
-      return
-    }
-
-    await supabase
-      .from('applications')
-      .update({ status: 'rejected' })
-      .eq('job_id', job.id)
-      .neq('id', applicant.id)
-
-    const { data: existingConversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('job_id', job.id)
-      .eq('worker_id', applicant.worker_id)
-      .eq('company_id', job.company_id)
-      .maybeSingle()
-
-    if (!existingConversation) {
-      await supabase.from('conversations').insert({
-        job_id: job.id,
-        worker_id: applicant.worker_id,
-        company_id: job.company_id,
-      })
-    }
-
-    const notificationBody = `You were hired for ${job.title}`
-
-    const { data: existingNotification } = await supabase
-      .from('notifications')
-      .select('id')
-      .eq('user_id', applicant.worker_id)
-      .eq('type', 'hire')
-      .eq('body', notificationBody)
-      .maybeSingle()
-
-    if (!existingNotification) {
-      await supabase.from('notifications').insert({
-        user_id: applicant.worker_id,
-        type: 'hire',
-        title: 'You were hired',
-        body: notificationBody,
-        is_read: false,
-      })
-    }
-
-    setMessage('Worker hired successfully.')
-    setWorkingId(null)
-    await loadPage()
-  }
-
-  async function messageAssignedWorker() {
-    if (!job || !job.assigned_worker_id) return
-
-    setWorkingId('message')
-    setMessage(null)
-
-    const { data: existing } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('job_id', job.id)
-      .eq('worker_id', job.assigned_worker_id)
-      .eq('company_id', job.company_id)
-      .maybeSingle()
-
-    let conversationId = existing?.id
-
-    if (!conversationId) {
-      const { data: newConversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          job_id: job.id,
-          worker_id: job.assigned_worker_id,
-          company_id: job.company_id,
-        })
-        .select('id')
-        .single()
-
-      if (error) {
-        setMessage(error.message)
-        setWorkingId(null)
-        return
-      }
-
-      conversationId = newConversation?.id
-    }
-
-    if (conversationId) {
-      router.push(`/messages/${conversationId}`)
-    }
-
-    setWorkingId(null)
-  }
-
-  async function completeJob() {
-    if (!job || !profile) return
-
-    setWorkingId('complete')
+    setWorkingId('delete')
     setMessage(null)
 
     try {
-      const response = await fetch('/api/jobs/complete', {
+      const response = await fetch('/api/jobs/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId: job.id,
-          companyId: profile.id,
-        }),
+        body: JSON.stringify({ jobId: job.id, companyId: profile.id }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        setMessage(data.error || 'Failed to complete job.')
+        setMessage(data.error || 'Failed to delete job.')
         setWorkingId(null)
         return
       }
 
-      setMessage('Job marked completed.')
-      setWorkingId(null)
-      await loadPage()
+      router.push('/my-jobs')
     } catch (error: any) {
-      setMessage(error.message)
-      setWorkingId(null)
-    }
-  }
-
-  async function releasePayout() {
-    if (!job) return
-
-    setWorkingId('release')
-    setMessage(null)
-
-    try {
-      const response = await fetch('/api/stripe/release-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: job.id }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setMessage(data.error || 'Failed to release payout.')
-        setWorkingId(null)
-        return
-      }
-
-      setMessage('Worker payout released successfully.')
-      setWorkingId(null)
-      await loadPage()
-    } catch (error: any) {
-      setMessage(error.message)
+      setMessage(error.message || 'Something went wrong.')
       setWorkingId(null)
     }
   }
@@ -368,24 +207,8 @@ export default function JobDetailsPage() {
   }
 
   const isCompany = profile.role === 'company'
-  const isWorker = profile.role === 'worker'
   const isOwner = job.company_id === profile.id
-  const isOpen = job.status === 'open'
-  const isAssigned = job.status === 'assigned'
-  const isCompleted = job.status === 'completed'
-
-  const canCompleteJob =
-    isCompany &&
-    isOwner &&
-    isAssigned &&
-    job.payment_status === 'paid'
-
-  const canReleasePayout =
-    isCompany &&
-    isOwner &&
-    isCompleted &&
-    job.payment_status === 'paid' &&
-    job.payout_status !== 'released'
+  const isAssigned = job.status === 'assigned' || job.status === 'completed'
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
@@ -444,7 +267,19 @@ export default function JobDetailsPage() {
             {job.description || 'No description provided.'}
           </p>
 
-          {(isAssigned || isCompleted) && assignedWorker && (
+          {isCompany && isOwner && (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={deleteJob}
+                disabled={workingId === 'delete'}
+                className="rounded-2xl bg-red-500 px-6 py-3 font-bold text-white shadow-lg shadow-red-500/20 hover:bg-red-400 disabled:opacity-60"
+              >
+                {workingId === 'delete' ? 'Deleting...' : 'Delete Job'}
+              </button>
+            </div>
+          )}
+
+          {isAssigned && assignedWorker && (
             <div className="mt-6 rounded-2xl border border-green-400/30 bg-green-400/10 p-5">
               <p className="text-xs uppercase tracking-widest text-green-300">
                 Worker Assigned
@@ -458,60 +293,6 @@ export default function JobDetailsPage() {
               </Link>
             </div>
           )}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            {isWorker && isOpen && (
-              <Link
-                href={`/jobs/${job.id}/apply`}
-                className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
-              >
-                Apply / Negotiate
-              </Link>
-            )}
-
-            {isCompany && isOwner && isAssigned && (
-              <>
-                <button
-                  onClick={messageAssignedWorker}
-                  disabled={workingId === 'message'}
-                  className="rounded-2xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300 disabled:opacity-60"
-                >
-                  {workingId === 'message' ? 'Opening...' : 'Message Worker'}
-                </button>
-
-                <Link
-                  href={`/jobs/${job.id}/pay`}
-                  className="rounded-2xl border border-white/10 px-6 py-3 font-bold text-white hover:bg-white/10"
-                >
-                  Pay Worker
-                </Link>
-
-                {canCompleteJob && (
-                  <button
-                    onClick={completeJob}
-                    disabled={workingId === 'complete'}
-                    className="rounded-2xl bg-orange-500 px-6 py-3 font-bold text-white shadow-lg shadow-orange-500/20 hover:bg-orange-400 disabled:opacity-60"
-                  >
-                    {workingId === 'complete'
-                      ? 'Completing Job...'
-                      : 'Mark Job Complete'}
-                  </button>
-                )}
-              </>
-            )}
-
-            {canReleasePayout && (
-              <button
-                onClick={releasePayout}
-                disabled={workingId === 'release'}
-                className="rounded-2xl bg-green-500 px-6 py-3 font-bold text-slate-950 shadow-lg shadow-green-500/20 hover:bg-green-400 disabled:opacity-60"
-              >
-                {workingId === 'release'
-                  ? 'Releasing Payout...'
-                  : 'Release Worker Payout'}
-              </button>
-            )}
-          </div>
         </section>
 
         {isCompany && isOwner && (
@@ -519,7 +300,6 @@ export default function JobDetailsPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black">Applicants</h2>
-
                 <p className="mt-1 text-sm text-slate-400">
                   Review worker profiles, requested rates, and negotiation notes.
                 </p>
@@ -542,85 +322,54 @@ export default function JobDetailsPage() {
                     key={applicant.id}
                     className="rounded-2xl border border-white/10 bg-slate-900 p-5"
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <Link
-                          href={`/profile?user=${applicant.worker_id}`}
-                          className="text-xl font-black text-white hover:text-cyan-300"
-                        >
-                          {applicant.worker?.full_name || 'Unnamed Worker'}
-                        </Link>
+                    <Link
+                      href={`/profile?user=${applicant.worker_id}`}
+                      className="text-xl font-black text-white hover:text-cyan-300"
+                    >
+                      {applicant.worker?.full_name || 'Unnamed Worker'}
+                    </Link>
 
-                        <p className="mt-1 text-sm text-slate-400">
-                          {applicant.worker?.trade || 'Trade not listed'} •{' '}
-                          {[applicant.worker?.city, applicant.worker?.state]
-                            .filter(Boolean)
-                            .join(', ') || 'Location not listed'}
+                    <p className="mt-1 text-sm text-slate-400">
+                      {applicant.worker?.trade || 'Trade not listed'} •{' '}
+                      {[applicant.worker?.city, applicant.worker?.state]
+                        .filter(Boolean)
+                        .join(', ') || 'Location not listed'}
+                    </p>
+
+                    <p className="mt-3 text-sm text-slate-300">
+                      Experience:{' '}
+                      {applicant.worker?.years_experience
+                        ? `${applicant.worker.years_experience} years`
+                        : 'Not listed'}
+                    </p>
+
+                    <p className="mt-2 text-sm text-cyan-300">
+                      Posted Rate:{' '}
+                      <span className="font-bold">
+                        {job.pay_rate || 'Not provided'}
+                      </span>
+                    </p>
+
+                    <p className="mt-2 text-sm text-orange-300">
+                      Requested Rate:{' '}
+                      <span className="font-bold">
+                        {applicant.requested_pay_rate ||
+                          job.pay_rate ||
+                          'Not provided'}
+                      </span>
+                    </p>
+
+                    {applicant.negotiation_message && (
+                      <div className="mt-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
+                        <p className="text-xs font-black uppercase tracking-widest text-cyan-300">
+                          Negotiation Message
                         </p>
 
-                        <div className="mt-3 space-y-2">
-                          <p className="text-sm text-slate-300">
-                            Experience:{' '}
-                            {applicant.worker?.years_experience
-                              ? `${applicant.worker.years_experience} years`
-                              : 'Not listed'}
-                          </p>
-
-                          <p className="text-sm text-cyan-300">
-                            Posted Rate:{' '}
-                            <span className="font-bold">
-                              {job.pay_rate || 'Not provided'}
-                            </span>
-                          </p>
-
-                          <p className="text-sm text-orange-300">
-                            Requested Rate:{' '}
-                            <span className="font-bold">
-                              {applicant.requested_pay_rate ||
-                                job.pay_rate ||
-                                'Not provided'}
-                            </span>
-                          </p>
-
-                          {applicant.negotiation_message && (
-                            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3">
-                              <p className="text-xs font-black uppercase tracking-widest text-cyan-300">
-                                Negotiation Message
-                              </p>
-
-                              <p className="mt-2 text-sm text-cyan-100">
-                                {applicant.negotiation_message}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        <p className="mt-3 text-xs uppercase tracking-widest text-slate-500">
-                          Application Status: {applicant.status || 'pending'}
+                        <p className="mt-2 text-sm text-cyan-100">
+                          {applicant.negotiation_message}
                         </p>
                       </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/profile?user=${applicant.worker_id}`}
-                          className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/10"
-                        >
-                          View Profile
-                        </Link>
-
-                        {job.status === 'open' && (
-                          <button
-                            onClick={() => hireWorker(applicant)}
-                            disabled={workingId === applicant.id}
-                            className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60"
-                          >
-                            {workingId === applicant.id
-                              ? 'Hiring...'
-                              : 'Hire Worker'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

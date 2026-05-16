@@ -1,14 +1,23 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'danger'
+  | 'ghost'
+  | 'outline'
+  | 'success'
+
 type ButtonProps = {
   children: ReactNode
   href?: string
   onClick?: () => void
   disabled?: boolean
-  type?: 'button' | 'submit'
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
+  type?: 'button' | 'submit' | 'reset'
+  variant?: ButtonVariant
   className?: string
+  fullWidth?: boolean
 }
 
 export function CrewButton({
@@ -19,22 +28,29 @@ export function CrewButton({
   type = 'button',
   variant = 'primary',
   className = '',
+  fullWidth = false,
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60'
+    'inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm sm:text-base font-black transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-blue-200'
 
-  const styles = {
+  const width = fullWidth ? 'w-full' : ''
+
+  const styles: Record<ButtonVariant, string> = {
     primary:
-      'bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300',
+      'border border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700',
     secondary:
-      'border border-white/10 bg-white/5 text-white hover:bg-white/10',
+      'border border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600',
     danger:
-      'bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-400',
+      'border border-red-600 bg-red-600 text-white shadow-lg shadow-red-600/20 hover:bg-red-700',
     ghost:
-      'border border-white/10 bg-transparent text-slate-200 hover:bg-white/10 hover:text-white',
+      'border border-slate-200 bg-white/80 text-slate-700 shadow-sm backdrop-blur hover:bg-slate-100',
+    outline:
+      'border border-blue-600 bg-white text-blue-600 shadow-sm hover:bg-blue-50',
+    success:
+      'border border-green-600 bg-green-600 text-white shadow-lg shadow-green-600/20 hover:bg-green-700',
   }
 
-  const classes = `${base} ${styles[variant]} ${className}`
+  const classes = `${base} ${width} ${styles[variant]} ${className}`
 
   if (href) {
     return (
@@ -55,23 +71,26 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
   const value = String(status || 'unknown').toLowerCase()
 
   const styles: Record<string, string> = {
-    open: 'border-green-400/30 bg-green-400/10 text-green-300',
-    assigned: 'border-cyan-400/30 bg-cyan-400/10 text-cyan-300',
-    completed: 'border-slate-400/30 bg-slate-400/10 text-slate-300',
-    cancelled: 'border-red-400/30 bg-red-400/10 text-red-300',
-    pending: 'border-yellow-400/30 bg-yellow-400/10 text-yellow-300',
-    accepted: 'border-green-400/30 bg-green-400/10 text-green-300',
-    declined: 'border-red-400/30 bg-red-400/10 text-red-300',
-    hired: 'border-cyan-400/30 bg-cyan-400/10 text-cyan-300',
-    not_selected: 'border-slate-400/30 bg-slate-400/10 text-slate-400',
-    paid: 'border-green-400/30 bg-green-400/10 text-green-300',
-    unpaid: 'border-orange-400/30 bg-orange-400/10 text-orange-300',
-    unknown: 'border-white/10 bg-white/5 text-slate-300',
+    open: 'border-green-200 bg-green-50 text-green-700',
+    assigned: 'border-blue-200 bg-blue-50 text-blue-700',
+    completed: 'border-slate-200 bg-slate-50 text-slate-700',
+    cancelled: 'border-red-200 bg-red-50 text-red-700',
+    pending: 'border-yellow-200 bg-yellow-50 text-yellow-800',
+    accepted: 'border-green-200 bg-green-50 text-green-700',
+    declined: 'border-red-200 bg-red-50 text-red-700',
+    rejected: 'border-red-200 bg-red-50 text-red-700',
+    hired: 'border-blue-200 bg-blue-50 text-blue-700',
+    countered: 'border-blue-200 bg-blue-50 text-blue-700',
+    not_selected: 'border-slate-200 bg-slate-50 text-slate-600',
+    paid: 'border-green-200 bg-green-50 text-green-700',
+    unpaid: 'border-orange-200 bg-orange-50 text-orange-700',
+    released: 'border-green-200 bg-green-50 text-green-700',
+    unknown: 'border-slate-200 bg-slate-50 text-slate-600',
   }
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold capitalize ${
+      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${
         styles[value] || styles.unknown
       }`}
     >
@@ -83,20 +102,70 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
 export function CrewCard({
   children,
   className = '',
+  hover = true,
+  glass = false,
 }: {
   children: ReactNode
   className?: string
+  hover?: boolean
+  glass?: boolean
 }) {
   return (
     <div
-      className={`rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur ${className}`}
+      className={`
+        relative overflow-hidden rounded-[2rem] border p-5 shadow-sm transition-all duration-300 sm:p-6
+        ${hover ? 'hover:-translate-y-1 hover:shadow-2xl' : ''}
+        ${
+          glass
+            ? 'border-white/50 bg-white/70 backdrop-blur-xl'
+            : 'border-slate-200 bg-white'
+        }
+        ${className}
+      `}
     >
-      {children}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-blue-50/20" />
+      <div className="relative z-10">{children}</div>
     </div>
   )
 }
 
 export function PageHeader({
+  title,
+  subtitle,
+  action,
+  eyebrow = 'CrewCall',
+}: {
+  title: string
+  subtitle?: string
+  action?: ReactNode
+  eyebrow?: string
+}) {
+  return (
+    <div className="mb-6 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-xl sm:p-8">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-blue-600 sm:text-sm">
+            {eyebrow}
+          </p>
+
+          <h1 className="mt-3 text-3xl font-black text-slate-950 sm:text-5xl">
+            {title}
+          </h1>
+
+          {subtitle && (
+            <p className="mt-3 max-w-3xl text-base text-slate-600 sm:text-lg">
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        {action && <div className="flex shrink-0 flex-wrap gap-3">{action}</div>}
+      </div>
+    </div>
+  )
+}
+
+export function SectionHeader({
   title,
   subtitle,
   action,
@@ -106,17 +175,10 @@ export function PageHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">
-          CrewCall
-        </p>
-
-        <h1 className="mt-2 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-4xl font-black text-transparent">
-          {title}
-        </h1>
-
-        {subtitle && <p className="mt-2 text-sm text-slate-300">{subtitle}</p>}
+        <h2 className="text-2xl font-black text-slate-950">{title}</h2>
+        {subtitle && <p className="mt-1 text-sm text-slate-600">{subtitle}</p>}
       </div>
 
       {action && <div>{action}</div>}
@@ -124,9 +186,29 @@ export function PageHeader({
   )
 }
 
+export function StatCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string
+  value: ReactNode
+  helper?: string
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <div className="mt-2 text-2xl font-black text-slate-950">{value}</div>
+      {helper && <p className="mt-1 text-sm text-slate-500">{helper}</p>}
+    </div>
+  )
+}
+
 export function LoadingState({ text = 'Loading...' }: { text?: string }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300 shadow-2xl">
+    <div className="rounded-[2rem] border border-white/70 bg-white/90 p-6 text-sm font-bold text-slate-600 shadow-xl">
       {text}
     </div>
   )
@@ -142,10 +224,18 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-8 text-center shadow-2xl">
-      <h2 className="text-xl font-black text-white">{title}</h2>
-      {text && <p className="mt-2 text-sm text-slate-300">{text}</p>}
+    <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/90 p-8 text-center shadow-xl">
+      <h2 className="text-2xl font-black text-slate-950">{title}</h2>
+      {text && <p className="mt-2 text-slate-600">{text}</p>}
       {action && <div className="mt-5">{action}</div>}
+    </div>
+  )
+}
+
+export function MobileActionBar({ children }: { children: ReactNode }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur lg:hidden">
+      <div className="mx-auto flex max-w-6xl gap-3">{children}</div>
     </div>
   )
 }

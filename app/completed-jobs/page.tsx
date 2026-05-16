@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 
 type Job = {
   id: string
-  title: string
+  title: string | null
   trade: string | null
   location: string | null
   pay_rate: string | null
@@ -18,6 +18,21 @@ type Job = {
 
   company_name?: string | null
   worker_name?: string | null
+
+  review_target_id?: string | null
+  review_target_name?: string | null
+
+  already_reviewed?: boolean
+}
+
+type Profile = {
+  id: string
+  full_name: string | null
+  company_name: string | null
+}
+
+type ExistingReview = {
+  job_id: string
 }
 
 function formatDate(value: string | null) {
@@ -26,6 +41,7 @@ function formatDate(value: string | null) {
 }
 
 export default function CompletedJobsPage() {
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
@@ -40,31 +56,46 @@ export default function CompletedJobsPage() {
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (userError || !user) {
       setMessage('You must be logged in to view completed jobs.')
-      setLoading(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('jobs')
-      .select(
-        'id, title, trade, location, pay_rate, start_date, payment_status, payout_status, company_id, assigned_worker_id'
-      )
-      .or(`company_id.eq.${user.id},assigned_worker_id.eq.${user.id}`)
-      .eq('status', 'completed')
-      .order('start_date', { ascending: false })
-
-    if (error) {
-      setMessage(error.message)
       setJobs([])
       setLoading(false)
       return
     }
 
-    const rawJobs = (data || []) as Job[]
+    setCurrentUserId(user.id)
+
+    const { data: jobsData, error: jobsError } = await supabase
+      .from('jobs')
+      .select(
+        `
+        id,
+        title,
+        trade,
+        location,
+        pay_rate,
+        start_date,
+        payment_status,
+        payout_status,
+        company_id,
+        assigned_worker_id
+      `
+      )
+      .or(`company_id.eq.${user.id},assigned_worker_id.eq.${user.id}`)
+      .eq('status', 'completed')
+      .order('start_date', { ascending: false })
+
+    if (jobsError) {
+      setMessage(jobsError.message)
+      setJobs([])
+      setLoading(false)
+      return
+    }
+
+    const rawJobs = (jobsData || []) as Job[]
 
     const profileIds = Array.from(
       new Set(
@@ -74,7 +105,7 @@ export default function CompletedJobsPage() {
       )
     )
 
-    let profileMap = new Map<string, any>()
+    let profileMap = new Map<string, Profile>()
 
     if (profileIds.length > 0) {
       const { data: profiles } = await supabase
@@ -82,19 +113,57 @@ export default function CompletedJobsPage() {
         .select('id, full_name, company_name')
         .in('id', profileIds)
 
-      profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+      profileMap = new Map(
+        ((profiles || []) as Profile[]).map((profile) => [
+          profile.id,
+          profile,
+        ])
+      )
     }
 
+    const { data: existingReviews } = await supabase
+      .from('reviews')
+      .select('job_id')
+      .eq('reviewer_id', user.id)
+
+    const reviewedJobIds = new Set(
+      ((existingReviews || []) as ExistingReview[]).map(
+        (review) => review.job_id
+      )
+    )
+
     const mergedJobs = rawJobs.map((job) => {
-      const company = job.company_id ? profileMap.get(job.company_id) : null
+      const company = job.company_id
+        ? profileMap.get(job.company_id)
+        : null
+
       const worker = job.assigned_worker_id
         ? profileMap.get(job.assigned_worker_id)
         : null
 
+      const companyName =
+        company?.company_name || company?.full_name || 'Company'
+
+      const workerName =
+        worker?.full_name || worker?.company_name || 'Worker'
+
+      const reviewTargetId =
+        user.id === job.company_id
+          ? job.assigned_worker_id
+          : job.company_id
+
+      const reviewTargetName =
+        reviewTargetId === job.assigned_worker_id
+          ? workerName
+          : companyName
+
       return {
         ...job,
-        company_name: company?.company_name || company?.full_name || 'Company',
-        worker_name: worker?.full_name || 'Worker',
+        company_name: companyName,
+        worker_name: workerName,
+        review_target_id: reviewTargetId || null,
+        review_target_name: reviewTargetName || 'CrewCall User',
+        already_reviewed: reviewedJobIds.has(job.id),
       }
     })
 
@@ -179,7 +248,7 @@ export default function CompletedJobsPage() {
                         <p>
                           Company:{' '}
                           <Link
-                            href={`/companies/${job.company_id}`}
+                            href={`/profile?user=${job.company_id}`}
                             className="font-bold text-blue-700 hover:underline"
                           >
                             {job.company_name}
@@ -191,7 +260,7 @@ export default function CompletedJobsPage() {
                         <p>
                           Worker:{' '}
                           <Link
-                            href={`/workers/${job.assigned_worker_id}`}
+                            href={`/profile?user=${job.assigned_worker_id}`}
                             className="font-bold text-blue-700 hover:underline"
                           >
                             {job.worker_name}
@@ -200,16 +269,23 @@ export default function CompletedJobsPage() {
                       )}
 
                       <p>Pay: {job.pay_rate || 'Not listed'}</p>
+
                       <p>Start: {formatDate(job.start_date)}</p>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       {badge('Payment', job.payment_status)}
                       {badge('Payout', job.payout_status)}
+
+                      {job.already_reviewed && (
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-700">
+                          Reviewed
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 lg:w-[220px] lg:flex-col">
+                  <div className="flex flex-wrap gap-3 lg:w-[240px] lg:flex-col">
                     <Link
                       href={`/jobs/${job.id}`}
                       className="rounded-xl border border-blue-600 px-4 py-3 text-center text-sm font-bold text-blue-600 hover:bg-blue-50"
@@ -217,12 +293,39 @@ export default function CompletedJobsPage() {
                       View Job
                     </Link>
 
-                    <Link
-                      href={`/jobs/${job.id}/review`}
-                      className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold text-white hover:bg-blue-700"
-                    >
-                      Leave Review
-                    </Link>
+                    {job.review_target_id ? (
+                      job.already_reviewed ? (
+                        <button
+                          disabled
+                          className="cursor-not-allowed rounded-xl bg-gray-300 px-4 py-3 text-center text-sm font-bold text-gray-600"
+                        >
+                          Review Submitted
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/jobs/${job.id}/review?to=${job.review_target_id}`}
+                          className="rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold text-white hover:bg-blue-700"
+                        >
+                          Review {job.review_target_name}
+                        </Link>
+                      )
+                    ) : (
+                      <button
+                        disabled
+                        className="cursor-not-allowed rounded-xl bg-gray-300 px-4 py-3 text-center text-sm font-bold text-gray-600"
+                      >
+                        Review unavailable
+                      </button>
+                    )}
+
+                    {currentUserId && job.review_target_id && (
+                      <Link
+                        href={`/profile?user=${job.review_target_id}`}
+                        className="rounded-xl border border-orange-500 px-4 py-3 text-center text-sm font-bold text-orange-600 hover:bg-orange-50"
+                      >
+                        View Their Profile
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
