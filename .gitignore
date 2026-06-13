@@ -46,3 +46,10 @@ next-env.d.ts
 
 # Supabase temp files
 supabase/.temp/
+
+# Editor temp files
+*.swp
+*.swo
+
+# Supabase temp files
+supabase/.temp/
