@@ -1,373 +1,335 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import NotificationBell from '@/app/components/NotificationBell'
+
+type Role = 'company' | 'worker' | null
 
 type Profile = {
-  id: string
-  role: 'worker' | 'company' | null
-  full_name: string | null
-  company_name: string | null
+  role: Role
 }
 
 export default function CrewCallNav() {
-  const router = useRouter()
+  const pathname = usePathname()
 
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loaded, setLoaded] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-
+  const [role, setRole] = useState<Role>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
-  const [pendingInvites, setPendingInvites] = useState(0)
-  const [acceptedInvites, setAcceptedInvites] = useState(0)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [savedWorkers, setSavedWorkers] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadNav()
-
-    const channel = supabase
-      .channel('crewcall-nav-live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        loadNav
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'invites' },
-        loadNav
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications' },
-        loadNav
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
-
-  async function loadNav() {
+  const loadNavCounts = useCallback(async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setProfile(null)
+      setRole(null)
       setUnreadMessages(0)
-      setPendingInvites(0)
-      setAcceptedInvites(0)
-      setLoaded(true)
+      setUnreadNotifications(0)
+      setSavedWorkers(0)
+      setLoading(false)
       return
     }
 
-    const { data: profileData } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
-      .select('id, role, full_name, company_name')
+      .select('role')
       .eq('id', user.id)
-      .maybeSingle()
+      .maybeSingle<Profile>()
 
-    const currentProfile = profileData as Profile | null
+    const userRole = profile?.role ?? null
+    setRole(userRole)
 
-    setProfile(currentProfile)
-
-    const { count: unreadCount } = await supabase
+    const { count: messageCount } = await supabase
       .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .neq('sender_id', user.id)
-      .eq('read', false)
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_id', user.id)
+      .eq('is_read', false)
 
-    setUnreadMessages(unreadCount || 0)
+    const { count: notificationCount } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .or('is_read.eq.false,read.eq.false')
 
-    if (currentProfile?.role === 'worker') {
-      const { count } = await supabase
-        .from('invites')
-        .select('*', { count: 'exact', head: true })
-        .eq('worker_id', user.id)
-        .eq('status', 'pending')
-
-      setPendingInvites(count || 0)
-      setAcceptedInvites(0)
-    }
-
-    if (currentProfile?.role === 'company') {
-      const { count } = await supabase
-        .from('invites')
-        .select('*', { count: 'exact', head: true })
+    if (userRole === 'company') {
+      const { count: savedWorkerCount } = await supabase
+        .from('saved_workers')
+        .select('id', { count: 'exact', head: true })
         .eq('company_id', user.id)
-        .eq('status', 'accepted')
 
-      setAcceptedInvites(count || 0)
-      setPendingInvites(0)
+      setSavedWorkers(savedWorkerCount ?? 0)
+    } else {
+      setSavedWorkers(0)
     }
 
-    setLoaded(true)
-  }
+    setUnreadMessages(messageCount ?? 0)
+    setUnreadNotifications(notificationCount ?? 0)
+    setLoading(false)
+  }, [])
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
+  useEffect(() => {
+    loadNavCounts()
 
-  function closeMobile() {
-    setMobileOpen(false)
-  }
+    const refresh = () => {
+      loadNavCounts()
+    }
 
-  const displayName =
-    profile?.company_name ||
-    profile?.full_name ||
-    (profile?.role === 'company' ? 'Company' : 'Worker')
+    window.addEventListener('crewcall-refresh-nav', refresh)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('pageshow', refresh)
 
-  function NavLink({
-    href,
-    label,
-    badge,
-    mobile = false,
-  }: {
-    href: string
-    label: string
-    badge?: number
-    mobile?: boolean
-  }) {
-    return (
-      <Link
-        href={href}
-        onClick={closeMobile}
-        className={`relative rounded-xl px-4 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-100 ${
-          mobile ? 'w-full text-left' : ''
-        }`}
-      >
-        {label}
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refresh()
+      }
+    }
 
-        {!!badge && badge > 0 && (
-          <span className="absolute -right-1 -top-1 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-black text-white">
-            {badge}
-          </span>
-        )}
-      </Link>
-    )
-  }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    const messageChannel = supabase
+      .channel('crewcall-nav-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        refresh
+      )
+      .subscribe()
+
+    const notificationChannel = supabase
+      .channel('crewcall-nav-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+        },
+        refresh
+      )
+      .subscribe()
+
+    const savedWorkersChannel = supabase
+      .channel('crewcall-nav-saved-workers')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'saved_workers',
+        },
+        refresh
+      )
+      .subscribe()
+
+    return () => {
+      window.removeEventListener('crewcall-refresh-nav', refresh)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('pageshow', refresh)
+      document.removeEventListener('visibilitychange', handleVisibility)
+
+      supabase.removeChannel(messageChannel)
+      supabase.removeChannel(notificationChannel)
+      supabase.removeChannel(savedWorkersChannel)
+    }
+  }, [loadNavCounts])
+
+  const alertTotal = unreadMessages + unreadNotifications
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto max-w-7xl px-4 py-4">
-        <div className="flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white shadow-md">
-              C
-            </div>
-
-            <div>
-              <div className="text-xl font-black tracking-tight text-gray-950">
-                Crew<span className="text-blue-600">Call</span>
-              </div>
-
-              <div className="text-xs font-semibold text-gray-500">
-                Find help. Find work. Fast.
-              </div>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-2 lg:hidden">
-            {loaded && profile && <NotificationBell />}
-
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="flex items-center justify-center rounded-xl border border-gray-200 bg-white p-3 text-gray-700 shadow-sm transition hover:bg-gray-50"
-            >
-              <span className="text-lg font-black">
-                {mobileOpen ? '✕' : '☰'}
-              </span>
-            </button>
+    <nav className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/95 shadow-2xl shadow-black/30 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <Link
+          href="/dashboard"
+          className="group flex items-center gap-3 no-underline"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-cyan-400 to-blue-500 text-lg font-black !text-slate-950 shadow-xl shadow-cyan-500/25 transition group-hover:scale-[1.04]">
+            C
           </div>
 
-          {loaded && (
-            <div className="hidden items-center gap-2 lg:flex">
-              {!profile && (
-                <>
-                  <NavLink href="/login" label="Login" />
-
-                  <Link
-                    href="/signup"
-                    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              )}
-
-              {profile?.role === 'company' && (
-                <>
-                  <NavLink href="/jobs" label="Jobs" />
-                  <NavLink href="/workers" label="Find Workers" />
-
-                  <Link
-                    href="/post-job"
-                    className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-600"
-                  >
-                    Post Job
-                  </Link>
-
-                  <NavLink href="/my-jobs" label="My Jobs" />
-                  <NavLink
-                    href="/completed-jobs"
-                    label="Completed Jobs"
-                  />
-                  <NavLink
-                    href="/invites"
-                    label="Invites"
-                    badge={acceptedInvites}
-                  />
-                  <NavLink href="/dashboard" label="Dashboard" />
-                </>
-              )}
-
-              {profile?.role === 'worker' && (
-                <>
-                  <NavLink href="/jobs" label="Jobs" />
-                  <NavLink
-                    href="/my-applications"
-                    label="Applications"
-                  />
-                  <NavLink
-                    href="/completed-jobs"
-                    label="Completed Jobs"
-                  />
-                  <NavLink
-                    href="/invites"
-                    label="Invites"
-                    badge={pendingInvites}
-                  />
-                  <NavLink
-                    href="/worker/dashboard"
-                    label="Dashboard"
-                  />
-                </>
-              )}
-
-              {profile && (
-                <>
-                  <NotificationBell />
-
-                  <NavLink
-                    href="/messages"
-                    label="Messages"
-                    badge={unreadMessages}
-                  />
-
-                  <NavLink href="/profile" label={displayName} />
-
-                  <button
-                    onClick={handleLogout}
-                    className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                  >
-                    Logout
-                  </button>
-                </>
-              )}
+          <div className="leading-tight">
+            <div className="text-xl font-black tracking-tight !text-white">
+              CrewCall
             </div>
+
+            <div className="text-xs font-black uppercase tracking-wide !text-cyan-200/80">
+              Skilled labor, on demand
+            </div>
+          </div>
+        </Link>
+
+        <div className="flex max-w-full flex-wrap items-center gap-2 text-sm font-black">
+          <NavLink href="/dashboard" active={pathname === '/dashboard'}>
+            Dashboard
+          </NavLink>
+
+          {role === 'company' && (
+            <>
+              <NavLink
+                href="/post-job"
+                active={pathname.startsWith('/post-job')}
+              >
+                Post Job
+              </NavLink>
+
+              <NavLink
+                href="/my-jobs"
+                active={pathname.startsWith('/my-jobs')}
+              >
+                My Jobs
+              </NavLink>
+
+              <NavLink
+                href="/company/invites"
+                active={pathname.startsWith('/company/invites')}
+              >
+                Invites
+              </NavLink>
+
+              <NavLink
+                href="/company/applications"
+                active={pathname.startsWith('/company/applications')}
+              >
+                Applicants
+              </NavLink>
+
+              <NavLink
+                href="/find-workers"
+                active={pathname.startsWith('/find-workers')}
+              >
+                Find Workers
+              </NavLink>
+
+              <NavLink
+                href="/saved-workers"
+                count={savedWorkers}
+                active={pathname.startsWith('/saved-workers')}
+              >
+                Saved
+              </NavLink>
+            </>
+          )}
+
+          {role === 'worker' && (
+            <>
+              <NavLink href="/jobs" active={pathname.startsWith('/jobs')}>
+                Browse Jobs
+              </NavLink>
+
+              <NavLink
+                href="/applications"
+                active={pathname.startsWith('/applications')}
+              >
+                Applications
+              </NavLink>
+
+              <NavLink
+                href="/my-work"
+                active={pathname.startsWith('/my-work')}
+              >
+                My Work
+              </NavLink>
+            </>
+          )}
+
+          <NavLink
+            href="/messages"
+            count={unreadMessages}
+            active={pathname.startsWith('/messages')}
+          >
+            Messages
+          </NavLink>
+
+          <NavLink
+            href="/notifications"
+            count={alertTotal}
+            active={pathname.startsWith('/notifications')}
+          >
+            Alerts
+          </NavLink>
+
+          <NavLink href="/profile" active={pathname.startsWith('/profile')}>
+            Profile
+          </NavLink>
+
+          {!loading && !role && (
+            <NavLink href="/login" active={pathname.startsWith('/login')}>
+              Login
+            </NavLink>
           )}
         </div>
-
-        {mobileOpen && loaded && (
-          <div className="mt-5 flex flex-col gap-2 rounded-3xl border border-gray-200 bg-white p-4 shadow-xl lg:hidden">
-            {!profile && (
-              <>
-                <NavLink href="/login" label="Login" mobile />
-
-                <Link
-                  href="/signup"
-                  onClick={closeMobile}
-                  className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
-
-            {profile?.role === 'company' && (
-              <>
-                <NavLink href="/jobs" label="Jobs" mobile />
-                <NavLink href="/workers" label="Find Workers" mobile />
-
-                <Link
-                  href="/post-job"
-                  onClick={closeMobile}
-                  className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-bold text-white hover:bg-orange-600"
-                >
-                  Post Job
-                </Link>
-
-                <NavLink href="/my-jobs" label="My Jobs" mobile />
-                <NavLink
-                  href="/completed-jobs"
-                  label="Completed Jobs"
-                  mobile
-                />
-                <NavLink
-                  href="/invites"
-                  label="Invites"
-                  badge={acceptedInvites}
-                  mobile
-                />
-                <NavLink href="/dashboard" label="Dashboard" mobile />
-              </>
-            )}
-
-            {profile?.role === 'worker' && (
-              <>
-                <NavLink href="/jobs" label="Jobs" mobile />
-                <NavLink
-                  href="/my-applications"
-                  label="Applications"
-                  mobile
-                />
-                <NavLink
-                  href="/completed-jobs"
-                  label="Completed Jobs"
-                  mobile
-                />
-                <NavLink
-                  href="/invites"
-                  label="Invites"
-                  badge={pendingInvites}
-                  mobile
-                />
-                <NavLink
-                  href="/worker/dashboard"
-                  label="Dashboard"
-                  mobile
-                />
-              </>
-            )}
-
-            {profile && (
-              <>
-                <NavLink
-                  href="/messages"
-                  label="Messages"
-                  badge={unreadMessages}
-                  mobile
-                />
-
-                <NavLink href="/profile" label={displayName} mobile />
-
-                <button
-                  onClick={handleLogout}
-                  className="rounded-xl border border-gray-200 px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              </>
-            )}
-          </div>
-        )}
       </div>
     </nav>
+  )
+}
+
+function NavLink({
+  href,
+  children,
+  count = 0,
+  active = false,
+}: {
+  href: string
+  children: React.ReactNode
+  count?: number
+  active?: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className={`
+        relative inline-flex items-center justify-center
+        rounded-2xl
+        px-4 py-2
+        text-sm font-black
+        no-underline
+        transition-all duration-200
+        active:scale-[0.98]
+        ${
+          active
+            ? `
+              border border-cyan-400/50
+              bg-cyan-400/15
+              !text-cyan-200
+              shadow-lg shadow-cyan-500/10
+            `
+            : `
+              border border-white/10
+              bg-slate-800/95
+              !text-white
+              shadow-md shadow-black/20
+              hover:border-cyan-400/50
+              hover:bg-slate-700
+              hover:!text-cyan-200
+            `
+        }
+      `}
+    >
+      <span>{children}</span>
+
+      {count > 0 && (
+        <span
+          className="
+            absolute -right-2 -top-2
+            inline-flex min-w-5 items-center justify-center
+            rounded-full
+            bg-orange-500
+            px-1.5 py-0.5
+            text-xs font-black
+            !text-white
+            shadow-lg shadow-orange-500/30
+          "
+        >
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
   )
 }

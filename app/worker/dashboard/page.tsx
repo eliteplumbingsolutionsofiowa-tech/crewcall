@@ -1,8 +1,13 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+
+type Company = {
+  full_name: string | null
+  company_name: string | null
+}
 
 type Job = {
   id: string
@@ -13,257 +18,428 @@ type Job = {
   start_date: string | null
   status: string | null
   payment_status: string | null
-  paid_at: string | null
+  payout_status: string | null
   company_id: string | null
+  company?: Company | null
 }
 
-type Stats = {
-  assigned: number
-  completed: number
-  paid: number
-  unpaid: number
+type ApplicationJob = {
+  id: string
+  title: string | null
+  trade: string | null
+  location: string | null
+  pay_rate: string | null
+  status: string | null
 }
 
-function normalize(value: string | null) {
-  return String(value || '').toLowerCase().trim()
+type Application = {
+  id: string
+  status: string | null
+  created_at: string
+  job_id: string
+  job?: ApplicationJob | null
+}
+
+type RawJob = Omit<Job, 'company'> & {
+  company: Company | Company[] | null
+}
+
+type RawApplication = Omit<Application, 'job'> & {
+  job: ApplicationJob | ApplicationJob[] | null
+}
+
+type QueryError = {
+  message: string
+}
+
+type OrderedQuery<T> = {
+  order: (
+    column: string,
+    options?: { ascending?: boolean }
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type FilteredQuery<T> = {
+  eq: (column: string, value: string) => OrderedQuery<T>
+}
+
+type SelectQuery<T> = {
+  select: (columns: string) => FilteredQuery<T>
+}
+
+function jobsTable() {
+  return supabase.from('jobs') as unknown as SelectQuery<RawJob>
+}
+
+function applicationsTable() {
+  return supabase.from('applications') as unknown as SelectQuery<RawApplication>
+}
+
+function firstOrNull<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value
+}
+
+function cleanStatus(value: string | null) {
+  return (value || 'unknown').replaceAll('_', ' ')
+}
+
+function parsePay(value: string | null) {
+  if (!value) return 0
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  return Number(cleaned) || 0
+}
+
+function money(value: number) {
+  return value.toLocaleString(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  })
 }
 
 function formatDate(value: string | null) {
-  if (!value) return 'Not scheduled'
-  return new Date(value).toLocaleDateString()
+  if (!value) return 'No date set'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'No date set'
+  return date.toLocaleDateString()
 }
 
-export default function WorkerDashboard() {
+export default function WorkerDashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([])
-  const [stats, setStats] = useState<Stats>({
-    assigned: 0,
-    completed: 0,
-    paid: 0,
-    unpaid: 0,
-  })
+  const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
-  const [busyJobId, setBusyJobId] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
-    loadJobs()
+    loadDashboard()
   }, [])
 
-  async function loadJobs() {
+  const stats = useMemo(() => {
+    const active = jobs.filter((job) =>
+      ['assigned', 'in_progress'].includes(job.status || '')
+    )
+
+    const completed = jobs.filter((job) => job.status === 'completed')
+    const paid = jobs.filter((job) => job.payment_status === 'paid')
+    const unpaidCompleted = completed.filter(
+      (job) => job.payment_status !== 'paid'
+    )
+
+    return {
+      activeCount: active.length,
+      completedCount: completed.length,
+      paidCount: paid.length,
+      pendingApplications: applications.filter(
+        (application) => application.status === 'pending'
+      ).length,
+      paidTotal: paid.reduce((sum, job) => sum + parsePay(job.pay_rate), 0),
+      unpaidTotal: unpaidCompleted.reduce(
+        (sum, job) => sum + parsePay(job.pay_rate),
+        0
+      ),
+    }
+  }, [jobs, applications])
+
+  const currentJobs = useMemo(() => {
+    return jobs
+      .filter((job) => ['assigned', 'in_progress'].includes(job.status || ''))
+      .slice(0, 4)
+  }, [jobs])
+
+  const recentApplications = useMemo(() => {
+    return applications.slice(0, 4)
+  }, [applications])
+
+  async function loadDashboard() {
     setLoading(true)
-    setMessage(null)
+    setMessage('')
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      setMessage('You need to log in as a worker to view this page.')
+    if (userError || !user) {
+      setMessage('You must be logged in to view your dashboard.')
       setLoading(false)
       return
     }
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .select(
-        'id, title, trade, location, pay_rate, start_date, status, payment_status, paid_at, company_id'
-      )
+    const { data: assignedJobs, error: jobsError } = await jobsTable()
+      .select(`
+        id,
+        title,
+        trade,
+        location,
+        pay_rate,
+        start_date,
+        status,
+        payment_status,
+        payout_status,
+        company_id,
+        company:profiles!jobs_company_id_fkey (
+          full_name,
+          company_name
+        )
+      `)
       .eq('assigned_worker_id', user.id)
-      .order('created_at', { ascending: false })
+      .order('start_date', { ascending: false })
 
-    if (error) {
-      setMessage(error.message)
-      setJobs([])
+    if (jobsError) {
+      setMessage(jobsError.message)
       setLoading(false)
       return
     }
 
-    const jobList = (data || []) as Job[]
-    setJobs(jobList)
+    const { data: applicationData, error: applicationsError } =
+      await applicationsTable()
+        .select(`
+          id,
+          status,
+          created_at,
+          job_id,
+          job:jobs!applications_job_id_fkey (
+            id,
+            title,
+            trade,
+            location,
+            pay_rate,
+            status
+          )
+        `)
+        .eq('worker_id', user.id)
+        .order('created_at', { ascending: false })
 
-    setStats({
-      assigned: jobList.filter((j) => normalize(j.status) !== 'completed').length,
-      completed: jobList.filter((j) => normalize(j.status) === 'completed').length,
-      paid: jobList.filter((j) => normalize(j.payment_status) === 'paid').length,
-      unpaid: jobList.filter((j) => normalize(j.payment_status) !== 'paid').length,
-    })
+    if (applicationsError) {
+      setMessage(applicationsError.message)
+      setLoading(false)
+      return
+    }
 
+    const cleanedJobs: Job[] = (assignedJobs || []).map((job) => ({
+      ...job,
+      company: firstOrNull(job.company),
+    }))
+
+    const cleanedApplications: Application[] = (applicationData || []).map(
+      (application) => ({
+        ...application,
+        job: firstOrNull(application.job),
+      })
+    )
+
+    setJobs(cleanedJobs)
+    setApplications(cleanedApplications)
     setLoading(false)
   }
 
-  async function markComplete(jobId: string) {
-    if (!confirm('Mark this job as completed?')) return
-
-    setBusyJobId(jobId)
-    setMessage(null)
-
-    const { error } = await supabase
-      .from('jobs')
-      .update({ status: 'completed' })
-      .eq('id', jobId)
-
-    if (error) {
-      setMessage(error.message)
-      setBusyJobId(null)
-      return
-    }
-
-    await loadJobs()
-    setBusyJobId(null)
-  }
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-50 px-6 py-10">
-        <div className="mx-auto max-w-5xl text-gray-600">
-          Loading worker dashboard...
-        </div>
-      </main>
-    )
-  }
-
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-10">
-      <div className="mx-auto max-w-5xl">
-        <section className="mb-8 rounded-2xl border bg-white p-8 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl shadow-black/20 backdrop-blur md:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Worker Dashboard</h1>
-              <p className="mt-2 text-gray-600">
-                Track assigned jobs, completed work, and payment status.
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                CrewCall Worker
+              </p>
+
+              <h1 className="mt-3 text-4xl font-black tracking-tight text-white">
+                Worker Dashboard
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm font-semibold text-slate-300">
+                Track your active work, pending applications, completed jobs, and
+                paid earnings.
               </p>
             </div>
 
-            <Link
-              href="/invites"
-              className="w-fit rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              View Invites
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/jobs"
+                className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
+              >
+                Browse Jobs
+              </Link>
+
+              <Link
+                href="/my-work"
+                className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/15"
+              >
+                My Work
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Active Jobs" value={stats.activeCount} />
+            <StatCard label="Completed" value={stats.completedCount} />
+            <StatCard label="Paid Jobs" value={stats.paidCount} />
+            <StatCard label="Pending Apps" value={stats.pendingApplications} />
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <MoneyCard
+              label="Paid Earnings"
+              value={money(stats.paidTotal)}
+              tone="green"
+            />
+
+            <MoneyCard
+              label="Waiting on Payment"
+              value={money(stats.unpaidTotal)}
+              tone="orange"
+            />
           </div>
         </section>
 
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            { label: 'Assigned', value: stats.assigned },
-            { label: 'Completed', value: stats.completed },
-            { label: 'Paid', value: stats.paid },
-            { label: 'Unpaid', value: stats.unpaid },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl border bg-white p-6 text-center shadow-sm"
-            >
-              <p className="text-sm text-gray-500">{s.label}</p>
-              <p className="mt-2 text-2xl font-bold">{s.value}</p>
-            </div>
-          ))}
-        </div>
-
         {message && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm font-bold text-red-100">
             {message}
           </div>
         )}
 
-        {jobs.length === 0 ? (
-          <div className="rounded-2xl border bg-white p-8 text-center text-gray-500 shadow-sm">
-            No assigned work yet.
+        {loading ? (
+          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 text-slate-300">
+            Loading dashboard...
           </div>
         ) : (
-          <div className="space-y-6">
-            {jobs.map((job) => {
-              const jobStatus = normalize(job.status)
-              const payStatus = normalize(job.payment_status)
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl shadow-black/20 backdrop-blur">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black text-white">
+                    Current Work
+                  </h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-400">
+                    Jobs assigned to you right now.
+                  </p>
+                </div>
 
-              const isCompleted = jobStatus === 'completed'
-              const canMarkComplete = !isCompleted
-
-              return (
-                <div
-                  key={job.id}
-                  className="rounded-2xl border bg-white p-6 shadow-sm"
+                <Link
+                  href="/my-work"
+                  className="text-sm font-black text-cyan-300 hover:text-cyan-200"
                 >
-                  <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <div className="mb-2 flex flex-wrap gap-2">
-                        <span className={statusClass(isCompleted)}>
-                          {isCompleted ? 'completed' : 'assigned'}
-                        </span>
+                  View all →
+                </Link>
+              </div>
 
-                        <span className={paymentClass(payStatus)}>
-                          {payStatus || 'unpaid'}
-                        </span>
+              {currentJobs.length === 0 ? (
+                <EmptyState
+                  title="No active work"
+                  body="When a company hires you, the job will appear here."
+                  href="/jobs"
+                  label="Find Jobs"
+                />
+              ) : (
+                <div className="mt-5 grid gap-4">
+                  {currentJobs.map((job) => {
+                    const companyName =
+                      job.company?.company_name ||
+                      job.company?.full_name ||
+                      'Company'
+
+                    return (
+                      <Link
+                        key={job.id}
+                        href={`/jobs/${job.id}`}
+                        className="rounded-3xl border border-white/10 bg-slate-950/40 p-5 transition hover:border-cyan-300/30 hover:bg-slate-950/60"
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          <Badge value={job.status || 'assigned'} />
+                          <Badge value={job.payment_status || 'unpaid'} />
+                        </div>
+
+                        <h3 className="mt-4 text-xl font-black text-white">
+                          {job.title || 'Untitled Job'}
+                        </h3>
+
+                        <p className="mt-2 text-sm font-semibold text-slate-300">
+                          {companyName}
+                        </p>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <MiniInfo label="Trade" value={job.trade || 'N/A'} />
+                          <MiniInfo
+                            label="Location"
+                            value={job.location || 'N/A'}
+                          />
+                          <MiniInfo
+                            label="Pay"
+                            value={job.pay_rate || 'Not listed'}
+                          />
+                          <MiniInfo
+                            label="Start"
+                            value={formatDate(job.start_date)}
+                          />
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl shadow-black/20 backdrop-blur">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black text-white">
+                    Applications
+                  </h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-400">
+                    Recent jobs you applied to.
+                  </p>
+                </div>
+
+                <Link
+                  href="/applications"
+                  className="text-sm font-black text-cyan-300 hover:text-cyan-200"
+                >
+                  View all →
+                </Link>
+              </div>
+
+              {recentApplications.length === 0 ? (
+                <EmptyState
+                  title="No applications yet"
+                  body="Browse jobs and apply to start getting hired."
+                  href="/jobs"
+                  label="Browse Jobs"
+                />
+              ) : (
+                <div className="mt-5 grid gap-4">
+                  {recentApplications.map((application) => (
+                    <Link
+                      key={application.id}
+                      href={`/jobs/${application.job_id}`}
+                      className="rounded-3xl border border-white/10 bg-slate-950/40 p-5 transition hover:border-cyan-300/30 hover:bg-slate-950/60"
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        <Badge value={application.status || 'pending'} />
+                        <Badge value={application.job?.status || 'job open'} />
                       </div>
 
-                      <h2 className="text-xl font-bold">
-                        {job.title || 'Untitled Job'}
-                      </h2>
+                      <h3 className="mt-4 text-lg font-black text-white">
+                        {application.job?.title || 'Untitled Job'}
+                      </h3>
 
-                      <p className="text-sm text-gray-600">
-                        {job.trade || 'Trade not set'} •{' '}
-                        {job.location || 'Location not set'}
+                      <p className="mt-2 text-sm font-semibold text-slate-300">
+                        {[application.job?.trade, application.job?.location]
+                          .filter(Boolean)
+                          .join(' • ') || 'No trade/location listed'}
                       </p>
 
-                      <p className="mt-2 text-sm">
-                        Pay: {job.pay_rate || 'Not set'}
+                      <p className="mt-3 text-sm font-black text-cyan-300">
+                        {application.job?.pay_rate || 'Pay not listed'}
                       </p>
-
-                      <p className="text-sm">
-                        Start: {formatDate(job.start_date)}
-                      </p>
-
-                      {payStatus === 'paid' && (
-                        <p className="mt-2 text-sm font-semibold text-green-700">
-                          Paid {job.paid_at ? `on ${formatDate(job.paid_at)}` : ''}
-                        </p>
-                      )}
-
-                      {isCompleted && payStatus !== 'paid' && (
-                        <p className="mt-2 text-sm font-semibold text-yellow-700">
-                          Completed — waiting for company payment.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 md:justify-end">
-                      <Link
-                        href={`/jobs/${job.id}`}
-                        className="rounded-xl border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
-                      >
-                        View Job
-                      </Link>
-
-                      <Link
-                        href={`/messages?start=${job.company_id}`}
-                        className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                      >
-                        Message Company
-                      </Link>
-
-                      {canMarkComplete && (
-                        <button
-                          onClick={() => markComplete(job.id)}
-                          disabled={busyJobId === job.id}
-                          className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
-                        >
-                          {busyJobId === job.id ? 'Completing...' : 'Mark Complete'}
-                        </button>
-                      )}
-
-                      {isCompleted && job.company_id && (
-                        <Link
-                          href={`/reviews/new?jobId=${job.id}&revieweeId=${job.company_id}`}
-                          className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
-                        >
-                          Leave Review
-                        </Link>
-                      )}
-                    </div>
-                  </div>
+                    </Link>
+                  ))}
                 </div>
-              )
-            })}
+              )}
+            </section>
           </div>
         )}
       </div>
@@ -271,19 +447,97 @@ export default function WorkerDashboard() {
   )
 }
 
-function statusClass(isCompleted: boolean) {
-  const base = 'rounded-full px-3 py-1 text-xs font-semibold capitalize '
-
-  if (isCompleted) return base + 'bg-green-100 text-green-700'
-
-  return base + 'bg-blue-100 text-blue-700'
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black text-white">{value}</p>
+    </div>
+  )
 }
 
-function paymentClass(status: string) {
-  const base = 'rounded-full px-3 py-1 text-xs font-semibold capitalize '
+function MoneyCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: 'green' | 'orange'
+}) {
+  const classes =
+    tone === 'green'
+      ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-100'
+      : 'border-orange-400/20 bg-orange-400/10 text-orange-100'
 
-  if (status === 'paid') return base + 'bg-green-100 text-green-700'
-  if (status === 'pending') return base + 'bg-yellow-100 text-yellow-700'
+  return (
+    <div className={`rounded-3xl border p-5 ${classes}`}>
+      <p className="text-xs font-black uppercase tracking-wide opacity-80">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
+  )
+}
 
-  return base + 'bg-gray-100 text-gray-700'
+function MiniInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-bold text-white">{value}</p>
+    </div>
+  )
+}
+
+function Badge({ value }: { value: string }) {
+  const lower = value.toLowerCase()
+
+  const classes =
+    lower.includes('paid') ||
+    lower.includes('accepted') ||
+    lower.includes('assigned') ||
+    lower.includes('completed')
+      ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100'
+      : lower.includes('rejected') || lower.includes('closed')
+        ? 'border-red-400/30 bg-red-400/10 text-red-100'
+        : lower.includes('progress') || lower.includes('pending')
+          ? 'border-orange-400/30 bg-orange-400/10 text-orange-100'
+          : 'border-cyan-400/30 bg-cyan-400/10 text-cyan-100'
+
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${classes}`}
+    >
+      {cleanStatus(value)}
+    </span>
+  )
+}
+
+function EmptyState({
+  title,
+  body,
+  href,
+  label,
+}: {
+  title: string
+  body: string
+  href: string
+  label: string
+}) {
+  return (
+    <div className="mt-5 rounded-3xl border border-white/10 bg-slate-950/40 p-6">
+      <h3 className="text-xl font-black text-white">{title}</h3>
+      <p className="mt-2 text-sm font-semibold text-slate-400">{body}</p>
+      <Link
+        href={href}
+        className="mt-5 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
+      >
+        {label}
+      </Link>
+    </div>
+  )
 }

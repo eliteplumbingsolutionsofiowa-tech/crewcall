@@ -1,59 +1,132 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function MessageProfileButton({
-  profileId,
-}: {
-  profileId: string
-}) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+type ProfileRole = 'company' | 'worker' | string | null
 
-  async function handleMessage() {
+type Profile = {
+  id: string
+  role: ProfileRole
+}
+
+type Conversation = {
+  id: string
+}
+
+type ConversationInsert = {
+  worker_id: string
+  company_id: string
+  job_id: string | null
+}
+
+type Props = {
+  targetUserId: string
+  jobId?: string | null
+  label?: string
+  className?: string
+}
+
+type QueryError = {
+  message: string
+}
+
+type MaybeSingleQuery<T> = {
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type SingleQuery<T> = {
+  single: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type SelectIdQuery<T> = {
+  select: (columns: string) => SingleQuery<T>
+}
+
+type EqMaybeQuery<T> = {
+  eq: (column: string, value: string) => MaybeSingleQuery<T>
+}
+
+type SelectMaybeTable<T> = {
+  select: (columns: string) => EqMaybeQuery<T>
+}
+
+type ConversationQuery<T> = {
+  eq: (column: string, value: string) => ConversationQuery<T>
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type ConversationTable<T> = {
+  select: (columns: string) => ConversationQuery<T>
+}
+
+type ConversationInsertTable<TInsert, TReturn> = {
+  insert: (value: TInsert) => SelectIdQuery<TReturn>
+}
+
+function profilesTable() {
+  return supabase.from('profiles') as unknown as SelectMaybeTable<Profile>
+}
+
+function conversationsTable() {
+  return supabase
+    .from('conversations') as unknown as ConversationTable<Conversation>
+}
+
+function conversationsInsertTable() {
+  return supabase
+    .from('conversations') as unknown as ConversationInsertTable<
+      ConversationInsert,
+      Conversation
+    >
+}
+
+export default function MessageJobButton({
+  targetUserId,
+  jobId = null,
+  label = 'Message',
+  className = '',
+}: Props) {
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function startConversation() {
     setLoading(true)
-    setError(null)
+    setMessage(null)
 
     const {
       data: { user },
-      error: authError,
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      setError('You must be logged in.')
+    if (userError || !user) {
+      setMessage('Please log in to send a message.')
       setLoading(false)
       return
     }
 
-    if (user.id === profileId) {
-      setError('You cannot message yourself.')
-      setLoading(false)
-      return
-    }
-
-    const { data: myProfile, error: myProfileError } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .maybeSingle()
+    const { data: myProfile, error: myProfileError } =
+      await profilesTable()
+        .select('id, role')
+        .eq('id', user.id)
+        .maybeSingle()
 
     if (myProfileError || !myProfile) {
-      setError(myProfileError?.message || 'Could not load your profile.')
+      setMessage(myProfileError?.message || 'Could not load your profile.')
       setLoading(false)
       return
     }
 
-    const { data: targetProfile, error: targetProfileError } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', profileId)
-      .maybeSingle()
+    const { data: targetProfile, error: targetProfileError } =
+      await profilesTable()
+        .select('id, role')
+        .eq('id', targetUserId)
+        .maybeSingle()
 
     if (targetProfileError || !targetProfile) {
-      setError(targetProfileError?.message || 'Could not load that profile.')
+      setMessage(
+        targetProfileError?.message || 'Could not load the other profile.'
+      )
       setLoading(false)
       return
     }
@@ -64,77 +137,85 @@ export default function MessageProfileButton({
     if (myProfile.role === 'worker' && targetProfile.role === 'company') {
       workerId = myProfile.id
       companyId = targetProfile.id
-    } else if (myProfile.role === 'company' && targetProfile.role === 'worker') {
+    } else if (
+      myProfile.role === 'company' &&
+      targetProfile.role === 'worker'
+    ) {
       workerId = targetProfile.id
       companyId = myProfile.id
     } else {
-      setError('Messages can only be started between a worker and a company.')
+      setMessage('Messages must be between a company and a worker.')
       setLoading(false)
       return
     }
 
-    const { data: existing, error: existingError } = await supabase
-      .from('conversations')
+    let query = conversationsTable()
       .select('id')
       .eq('worker_id', workerId)
       .eq('company_id', companyId)
-      .is('job_id', null)
-      .maybeSingle()
+
+    if (jobId) {
+      query = query.eq('job_id', jobId)
+    }
+
+    const { data: existingConversation, error: existingError } =
+      await query.maybeSingle()
 
     if (existingError) {
-      setError(existingError.message)
+      setMessage(existingError.message)
       setLoading(false)
       return
     }
 
-    if (existing?.id) {
-      router.push(`/messages/${existing.id}`)
+    if (existingConversation?.id) {
+      window.location.href = `/messages/${existingConversation.id}`
       return
     }
 
-    const { data: created, error: createError } = await supabase
-      .from('conversations')
-      .insert({
-        worker_id: workerId,
-        company_id: companyId,
-        job_id: null,
-      })
-      .select('id')
-      .single()
+    const { data: newConversation, error: createError } =
+      await conversationsInsertTable()
+        .insert({
+          worker_id: workerId,
+          company_id: companyId,
+          job_id: jobId,
+        })
+        .select('id')
+        .single()
 
-    if (createError || !created?.id) {
-      setError(createError?.message || 'Failed to create conversation.')
+    if (createError) {
+      setMessage(createError.message)
       setLoading(false)
       return
     }
 
-    const { error: messageError } = await supabase.from('messages').insert({
-      conversation_id: created.id,
-      sender_id: user.id,
-      body: 'Hi, I’d like to connect.',
-    })
-
-    if (messageError) {
-      setError(messageError.message)
-      setLoading(false)
+    if (newConversation?.id) {
+      window.location.href = `/messages/${newConversation.id}`
       return
     }
 
-    router.push(`/messages/${created.id}`)
+    setMessage('Could not create conversation.')
+    setLoading(false)
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="space-y-2">
       <button
         type="button"
-        onClick={handleMessage}
+        onClick={startConversation}
         disabled={loading}
-        className="rounded-2xl border px-5 py-3 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+        className={
+          className ||
+          'rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-50'
+        }
       >
-        {loading ? 'Opening...' : 'Message'}
+        {loading ? 'Opening...' : label}
       </button>
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {message && (
+        <p className="text-sm font-bold text-red-600">
+          {message}
+        </p>
+      )}
     </div>
   )
 }

@@ -4,6 +4,28 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+type ReviewInsert = {
+  job_id: string
+  reviewer_id: string
+  reviewee_id: string
+  rating: number
+  comment: string | null
+}
+
+type QueryError = {
+  message: string
+}
+
+type InsertTable<TInsert> = {
+  insert: (
+    value: TInsert
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+function reviewsTable() {
+  return supabase.from('reviews') as unknown as InsertTable<ReviewInsert>
+}
+
 export default function NewReviewPage() {
   return (
     <Suspense fallback={<div className="p-6">Loading review...</div>}>
@@ -16,8 +38,8 @@ function NewReviewContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const jobId = searchParams.get('job')
-  const workerId = searchParams.get('worker')
+  const jobId = searchParams.get('job') || searchParams.get('jobId')
+  const workerId = searchParams.get('worker') || searchParams.get('revieweeId')
 
   const [userId, setUserId] = useState<string | null>(null)
   const [rating, setRating] = useState(5)
@@ -46,7 +68,7 @@ function NewReviewContent() {
     setSaving(true)
     setMessage(null)
 
-    const { error } = await supabase.from('reviews').insert({
+    const { error } = await reviewsTable().insert({
       job_id: jobId,
       reviewer_id: userId,
       reviewee_id: workerId,
@@ -67,6 +89,7 @@ function NewReviewContent() {
     <main className="mx-auto max-w-2xl p-6">
       <div className="rounded-3xl border bg-white p-6 shadow-sm">
         <h1 className="text-3xl font-bold text-slate-900">Leave Review</h1>
+
         <p className="mt-2 text-slate-600">
           Rate the worker after the completed job.
         </p>
@@ -80,6 +103,7 @@ function NewReviewContent() {
         <div className="mt-6 space-y-5">
           <div>
             <label className="mb-2 block text-sm font-semibold">Rating</label>
+
             <select
               value={rating}
               onChange={(e) => setRating(Number(e.target.value))}
@@ -95,6 +119,7 @@ function NewReviewContent() {
 
           <div>
             <label className="mb-2 block text-sm font-semibold">Review</label>
+
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -104,6 +129,7 @@ function NewReviewContent() {
           </div>
 
           <button
+            type="button"
             onClick={submitReview}
             disabled={saving}
             className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white disabled:opacity-50"

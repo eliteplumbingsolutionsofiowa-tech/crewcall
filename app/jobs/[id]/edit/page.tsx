@@ -1,183 +1,297 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-type Job = {
+type EditableJob = {
   id: string
-  title: string
-  trade: string
-  location: string
+  company_id: string
+  title: string | null
+  description: string | null
+  trade: string | null
+  location: string | null
   pay_rate: string | null
   start_date: string | null
-  description: string | null
+  status: string | null
+}
+
+type JobUpdatePayload = {
+  title: string
+  description: string
+  trade: string
+  location: string
+  pay_rate: string
+  start_date: string | null
   status: string
-  company_id: string
-  is_featured: boolean | null
 }
 
 export default function EditJobPage() {
   const params = useParams()
   const router = useRouter()
-  const jobId = params.id as string
 
-  const [job, setJob] = useState<Job | null>(null)
+  const jobId = String(params.id || '')
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [trade, setTrade] = useState('')
+  const [location, setLocation] = useState('')
+  const [payRate, setPayRate] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [status, setStatus] = useState('open')
+
+  const canSave = useMemo(() => {
+    return title.trim().length > 0 && trade.trim().length > 0
+  }, [title, trade])
 
   useEffect(() => {
-    loadJob()
-  }, [])
+    async function loadJob() {
+      setLoading(true)
+      setMessage(null)
 
-  async function loadJob() {
-    setLoading(true)
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      if (userError || !user) {
+        router.replace('/login')
+        return
+      }
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single()
+      const { data, error } = await supabase
+        .from('jobs')
+        .select(
+          'id, company_id, title, description, trade, location, pay_rate, start_date, status'
+        )
+        .eq('id', jobId)
+        .maybeSingle<EditableJob>()
 
-    if (error || !data) {
-      setErrorMessage('Could not load job.')
+      if (error) {
+        setMessage(error.message)
+        setLoading(false)
+        return
+      }
+
+      if (!data) {
+        setMessage('Job not found.')
+        setLoading(false)
+        return
+      }
+
+      if (data.company_id !== user.id) {
+        setMessage('You are not allowed to edit this job.')
+        setLoading(false)
+        return
+      }
+
+      setTitle(data.title || '')
+      setDescription(data.description || '')
+      setTrade(data.trade || '')
+      setLocation(data.location || '')
+      setPayRate(data.pay_rate || '')
+      setStartDate(data.start_date || '')
+      setStatus(data.status || 'open')
+
       setLoading(false)
-      return
     }
 
-    if (!user || data.company_id !== user.id) {
-      setErrorMessage('You can only edit jobs you posted.')
-      setLoading(false)
+    if (jobId) {
+      loadJob()
+    }
+  }, [jobId, router])
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!canSave) {
+      setMessage('Job title and trade are required.')
       return
     }
-
-    setJob(data)
-    setLoading(false)
-  }
-
-  async function saveJob(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!job) return
 
     setSaving(true)
-    setErrorMessage(null)
+    setMessage(null)
+
+    const payload: JobUpdatePayload = {
+      title: title.trim(),
+      description: description.trim(),
+      trade: trade.trim(),
+      location: location.trim(),
+      pay_rate: payRate.trim(),
+      start_date: startDate ? startDate : null,
+      status,
+    }
 
     const { error } = await supabase
       .from('jobs')
-      .update({
-        title: job.title,
-        trade: job.trade,
-        location: job.location,
-        pay_rate: job.pay_rate || null,
-        start_date: job.start_date || null,
-        description: job.description || null,
-        status: job.status,
-      })
-      .eq('id', job.id)
+      .update(payload as never)
+      .eq('id', jobId)
 
     if (error) {
-      setErrorMessage(error.message)
+      setMessage(error.message)
       setSaving(false)
       return
     }
 
-    router.push(`/jobs/${job.id}`)
+    router.push(`/jobs/${jobId}`)
   }
 
-  async function closeJob() {
-    if (!job) return
-
-    setSaving(true)
-
-    await supabase
-      .from('jobs')
-      .update({ status: 'cancelled' })
-      .eq('id', job.id)
-
-    router.push(`/jobs/${job.id}`)
-  }
-
-  async function deleteJob() {
-    if (!job) return
-
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this job?'
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl">
+          <p className="text-sm text-slate-300">Loading job editor...</p>
+        </div>
+      </main>
     )
-
-    if (!confirmed) return
-
-    setDeleting(true)
-
-    await supabase.from('jobs').delete().eq('id', job.id)
-
-    router.push('/jobs')
   }
-
-  if (loading) return <div className="p-6">Loading job...</div>
-
-  if (!job) return <div className="p-6 text-red-600">Job not found</div>
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <h1 className="mb-4 text-2xl font-bold">Edit Job</h1>
+    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.25em] text-orange-400">
+              CrewCall
+            </p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+              Edit Job
+            </h1>
+            <p className="mt-2 text-sm text-slate-300">
+              Update the job details workers will see.
+            </p>
+          </div>
 
-      <form onSubmit={saveJob} className="space-y-4">
-        <input
-          value={job.title}
-          onChange={(e) => setJob({ ...job, title: e.target.value })}
-          className="w-full border p-2"
-        />
-
-        <textarea
-          value={job.description || ''}
-          onChange={(e) => setJob({ ...job, description: e.target.value })}
-          className="w-full border p-2"
-        />
-
-        <div className="flex gap-3">
-          <button className="bg-blue-600 px-4 py-2 text-white">
-            Save
-          </button>
-
-          <button
-            type="button"
-            onClick={() => router.push(`/jobs/${job.id}`)}
-            className="border px-4 py-2"
+          <Link
+            href={`/jobs/${jobId}`}
+            className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/15"
           >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={() => router.push(`/jobs/${job.id}/boost`)}
-            className="bg-yellow-500 px-4 py-2"
-          >
-            Boost Job
-          </button>
-
-          <button
-            type="button"
-            onClick={closeJob}
-            className="bg-gray-800 px-4 py-2 text-white"
-          >
-            Close
-          </button>
-
-          <button
-            type="button"
-            onClick={deleteJob}
-            className="bg-red-600 px-4 py-2 text-white"
-          >
-            Delete
-          </button>
+            Back to Job
+          </Link>
         </div>
-      </form>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-3xl border border-white/10 bg-white/10 p-5 shadow-2xl sm:p-6"
+        >
+          {message ? (
+            <div className="mb-5 rounded-2xl border border-orange-400/30 bg-orange-500/10 p-4 text-sm font-bold text-orange-200">
+              {message}
+            </div>
+          ) : null}
+
+          <div className="grid gap-5">
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">
+                Job Title
+              </span>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
+                placeholder="Example: Licensed plumber needed"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">Trade</span>
+              <input
+                value={trade}
+                onChange={(event) => setTrade(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
+                placeholder="Example: Plumbing"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">
+                Location
+              </span>
+              <input
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
+                placeholder="Example: Des Moines, IA"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">
+                Pay Rate
+              </span>
+              <input
+                value={payRate}
+                onChange={(event) => setPayRate(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
+                placeholder="Example: $45/hr or $2,500 flat"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">
+                Start Date
+              </span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-orange-400"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">Status</span>
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-orange-400"
+              >
+                <option value="open">Open</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="closed">Closed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-200">
+                Description
+              </span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={7}
+                className="resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
+                placeholder="Describe the job, scope, tools needed, schedule, and expectations..."
+              />
+            </label>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="submit"
+              disabled={saving || !canSave}
+              className="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+
+            <Link
+              href={`/jobs/${jobId}`}
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/15"
+            >
+              Cancel
+            </Link>
+          </div>
+        </form>
+      </div>
     </main>
   )
 }

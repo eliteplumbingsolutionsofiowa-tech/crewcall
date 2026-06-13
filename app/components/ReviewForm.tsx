@@ -3,102 +3,136 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+type Props = {
+  jobId: string
+  revieweeId: string
+  existingRating?: number | null
+  existingComment?: string | null
+  onReviewSaved?: () => void
+}
+
+type ReviewPayload = {
+  job_id: string
+  reviewer_id: string
+  reviewee_id: string
+  rating: number
+  comment: string | null
+}
+
+type QueryError = {
+  message: string
+}
+
+type UpsertTable<TPayload> = {
+  upsert: (
+    value: TPayload,
+    options: { onConflict: string }
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+function reviewsTable() {
+  return supabase.from('reviews') as unknown as UpsertTable<ReviewPayload>
+}
+
 export default function ReviewForm({
   jobId,
   revieweeId,
-  label,
-}: {
-  jobId: string
-  revieweeId: string
-  label: string
-}) {
-  const [rating, setRating] = useState(5)
-  const [comment, setComment] = useState('')
-  const [loading, setLoading] = useState(false)
+  existingRating = null,
+  existingComment = null,
+  onReviewSaved,
+}: Props) {
+  const [rating, setRating] = useState(existingRating || 5)
+  const [comment, setComment] = useState(existingComment || '')
+  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  async function saveReview() {
+    setSaving(true)
     setMessage(null)
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    const user = session?.user
+      if (userError || !user) {
+        setMessage('You must be logged in to leave a review.')
+        return
+      }
 
-    if (sessionError || !user) {
-      setMessage('You must be logged in.')
-      setLoading(false)
-      return
-    }
-
-    const { error } = await supabase.from('reviews').upsert(
-      {
+      const payload: ReviewPayload = {
         job_id: jobId,
         reviewer_id: user.id,
         reviewee_id: revieweeId,
         rating,
-        comment: comment.trim() || null,
-      },
-      {
-        onConflict: 'job_id,reviewer_id,reviewee_id',
+        comment: comment.trim() ? comment.trim() : null,
       }
-    )
 
-    if (error) {
-      setMessage(error.message)
-      setLoading(false)
-      return
+      const { error } = await reviewsTable().upsert(payload, {
+        onConflict: 'job_id,reviewer_id,reviewee_id',
+      })
+
+      if (error) {
+        setMessage(error.message)
+        return
+      }
+
+      setMessage('Review saved.')
+      onReviewSaved?.()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Review failed.')
+    } finally {
+      setSaving(false)
     }
-
-    setMessage('Review submitted.')
-    setLoading(false)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 rounded-2xl border bg-white p-4">
-      <div className="text-sm font-semibold text-gray-900">{label}</div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 className="text-lg font-black text-slate-900">Leave a review</h3>
 
-      <div className="mt-3">
-        <label className="block text-sm text-gray-700">Rating</label>
+      <div className="mt-4">
+        <label className="text-sm font-black text-slate-700">Rating</label>
+
         <select
           value={rating}
-          onChange={(e) => setRating(Number(e.target.value))}
-          className="mt-1 w-full rounded-xl border px-3 py-2"
+          onChange={(event) => setRating(Number(event.target.value))}
+          className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
         >
-          <option value={5}>5 - Great</option>
-          <option value={4}>4 - Good</option>
-          <option value={3}>3 - Okay</option>
-          <option value={2}>2 - Poor</option>
-          <option value={1}>1 - Bad</option>
+          <option value={5}>5 stars</option>
+          <option value={4}>4 stars</option>
+          <option value={3}>3 stars</option>
+          <option value={2}>2 stars</option>
+          <option value={1}>1 star</option>
         </select>
       </div>
 
-      <div className="mt-3">
-        <label className="block text-sm text-gray-700">Comment</label>
+      <div className="mt-4">
+        <label className="text-sm font-black text-slate-700">Comment</label>
+
         <textarea
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          rows={3}
-          placeholder="Leave a quick review..."
-          className="mt-1 w-full rounded-xl border px-3 py-2"
+          onChange={(event) => setComment(event.target.value)}
+          rows={4}
+          placeholder="How did the job go?"
+          className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500"
         />
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {loading ? 'Submitting...' : 'Submit Review'}
-        </button>
+      {message && (
+        <p className="mt-4 rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">
+          {message}
+        </p>
+      )}
 
-        {message && <div className="text-sm text-blue-600">{message}</div>}
-      </div>
-    </form>
+      <button
+        type="button"
+        onClick={saveReview}
+        disabled={saving}
+        className="mt-5 w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {saving ? 'Saving...' : 'Save review'}
+      </button>
+    </div>
   )
 }

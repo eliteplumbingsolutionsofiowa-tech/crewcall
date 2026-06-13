@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 type CompanyProfile = {
   id: string
-  role: string | null
+  role: 'company' | 'worker' | null
   full_name: string | null
   company_name: string | null
   phone: string | null
@@ -21,7 +21,7 @@ type Review = {
   rating: number | null
   comment: string | null
   created_at: string
-  reviewer_name: string | null
+  reviewer_id: string | null
 }
 
 type Job = {
@@ -36,9 +36,17 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString()
 }
 
+function Badge({ label }: { label: string }) {
+  return (
+    <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-black text-blue-700">
+      {label}
+    </span>
+  )
+}
+
 export default function CompanyProfilePage() {
   const params = useParams()
-  const companyId = String(params.id || '')
+  const companyId = String(params?.id || '')
 
   const [company, setCompany] = useState<CompanyProfile | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
@@ -48,8 +56,7 @@ export default function CompanyProfilePage() {
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    loadCompany()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void loadCompany()
   }, [companyId])
 
   async function loadCompany() {
@@ -68,18 +75,20 @@ export default function CompanyProfilePage() {
       return
     }
 
-    if (!data || data.role !== 'company') {
+    const companyData = data as CompanyProfile | null
+
+    if (!companyData || companyData.role !== 'company') {
       setMessage('Company profile not found.')
       setLoading(false)
       return
     }
 
-    setCompany(data as CompanyProfile)
+    setCompany(companyData)
 
     const { data: reviewData } = await supabase
       .from('reviews')
-      .select('id, rating, comment, created_at, reviewer_name')
-      .eq('reviewed_user_id', companyId)
+      .select('id, rating, comment, created_at, reviewer_id')
+      .eq('reviewee_id', companyId)
       .order('created_at', { ascending: false })
 
     setReviews((reviewData as Review[]) || [])
@@ -178,140 +187,76 @@ export default function CompanyProfilePage() {
                 ★ {ratingDisplay}
               </p>
 
-              <p className="mt-2 text-xs font-bold uppercase tracking-wide text-blue-500">
-                Company Rating
-              </p>
-
-              <p className="mt-3 text-sm text-blue-700">
-                Based on {reviews.length} review
-                {reviews.length === 1 ? '' : 's'}
+              <p className="mt-2 text-sm font-semibold text-blue-600">
+                Average Rating
               </p>
             </div>
           </div>
         </section>
 
-        <div className="grid gap-5 md:grid-cols-4">
-          <StatCard title="Rating" value={`★ ${ratingDisplay}`} />
-          <StatCard title="Reviews" value={String(reviews.length)} />
-          <StatCard
-            title="Completed Jobs"
-            value={String(completedJobs.length)}
-          />
-          <StatCard title="Open Jobs" value={String(openJobs.length)} />
-        </div>
+        <section className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
+            <h2 className="text-3xl font-black text-slate-950">Open Jobs</h2>
 
-        <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                Open Jobs
-              </h2>
-
-              <p className="mt-1 text-slate-600">
-                Active jobs currently posted by this company.
-              </p>
-            </div>
-          </div>
-
-          {openJobs.length === 0 ? (
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">
-              This company has no open jobs right now.
-            </div>
-          ) : (
-            <div className="mt-6 grid gap-4">
-              {openJobs.map((job) => (
-                <Link
-                  key={job.id}
-                  href={`/jobs/${job.id}`}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:scale-[1.01] hover:border-blue-200"
-                >
-                  <h3 className="text-xl font-black text-slate-950">
-                    {job.title || 'Untitled Job'}
-                  </h3>
-
-                  <p className="mt-2 text-slate-600">
-                    {job.trade || 'Trade not listed'} •{' '}
-                    {job.location || 'Location not listed'}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-black text-slate-950">
-                Reviews
-              </h2>
-
-              <p className="mt-1 text-slate-600">
-                Feedback from workers and completed jobs.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-2 text-sm font-black text-yellow-700">
-              ★ {ratingDisplay}
-            </div>
-          </div>
-
-          {reviews.length === 0 ? (
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">
-              No reviews yet.
-            </div>
-          ) : (
             <div className="mt-6 space-y-4">
-              {reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-xl font-black text-yellow-500">
-                        ★ {review.rating || 5}
+              {openJobs.length === 0 ? (
+                <p className="text-slate-500">No open jobs.</p>
+              ) : (
+                openJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                  >
+                    <p className="text-xl font-black text-slate-950">
+                      {job.title || 'Untitled Job'}
+                    </p>
+
+                    <p className="mt-2 text-sm text-slate-600">
+                      {job.trade || 'Trade not listed'} ·{' '}
+                      {job.location || 'Location not listed'}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
+            <h2 className="text-3xl font-black text-slate-950">Reviews</h2>
+
+            <div className="mt-6 space-y-4">
+              {reviews.length === 0 ? (
+                <p className="text-slate-500">No reviews yet.</p>
+              ) : (
+                reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="font-black text-slate-950">
+                        CrewCall User
                       </p>
 
-                      <p className="mt-3 whitespace-pre-wrap text-slate-700">
-                        {review.comment || 'No comment left.'}
-                      </p>
-
-                      <p className="mt-4 text-sm text-slate-500">
-                        — {review.reviewer_name || 'CrewCall User'}
+                      <p className="font-black text-yellow-500">
+                        ★ {review.rating || 0}
                       </p>
                     </div>
 
-                    <p className="text-sm font-semibold text-slate-400">
+                    {review.comment && (
+                      <p className="mt-3 text-slate-700">{review.comment}</p>
+                    )}
+
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       {formatDate(review.created_at)}
                     </p>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-          )}
+          </div>
         </section>
       </div>
     </main>
-  )
-}
-
-function Badge({ label }: { label: string }) {
-  return (
-    <span className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-black text-blue-700">
-      {label}
-    </span>
-  )
-}
-
-function StatCard({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-xl">
-      <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-        {title}
-      </p>
-
-      <p className="mt-4 text-3xl font-black text-slate-950">{value}</p>
-    </div>
   )
 }

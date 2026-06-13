@@ -7,11 +7,11 @@ import { supabase } from '@/lib/supabase'
 
 type Job = {
   id: string
-  title: string
-  trade: string
-  location: string
+  title: string | null
+  trade: string | null
+  location: string | null
   pay_rate: string | null
-  status: string
+  status: string | null
   payment_status: string | null
   assigned_worker_id: string | null
 }
@@ -22,16 +22,101 @@ type Profile = {
   company_name: string | null
 }
 
-type Applicant = {
+type ApplicationRow = {
   id: string
   worker_id: string
-  status: string
+  status: string | null
+}
+
+type Applicant = ApplicationRow & {
   profile: Profile | null
+}
+
+type JobUpdate = {
+  status: string
+  assigned_worker_id: string
+}
+
+type ApplicationUpdate = {
+  status: string
+}
+
+type QueryError = {
+  message: string
+}
+
+type MaybeSingleQuery<T> = {
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type EqMaybeQuery<T> = {
+  eq: (column: string, value: string) => MaybeSingleQuery<T>
+}
+
+type EqListQuery<T> = {
+  eq: (
+    column: string,
+    value: string
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type InListQuery<T> = {
+  in: (
+    column: string,
+    values: string[]
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type SelectMaybeTable<T> = {
+  select: (columns: string) => EqMaybeQuery<T>
+}
+
+type SelectEqTable<T> = {
+  select: (columns: string) => EqListQuery<T>
+}
+
+type SelectInTable<T> = {
+  select: (columns: string) => InListQuery<T>
+}
+
+type UpdateEqQuery = {
+  eq: (
+    column: string,
+    value: string
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+type UpdateTable<TUpdate> = {
+  update: (value: TUpdate) => UpdateEqQuery
+}
+
+function jobsSelectTable() {
+  return supabase.from('jobs') as unknown as SelectMaybeTable<Job>
+}
+
+function jobsUpdateTable() {
+  return supabase.from('jobs') as unknown as UpdateTable<JobUpdate>
+}
+
+function applicationsSelectTable() {
+  return supabase.from('applications') as unknown as SelectEqTable<ApplicationRow>
+}
+
+function applicationsUpdateTable() {
+  return supabase.from('applications') as unknown as UpdateTable<ApplicationUpdate>
+}
+
+function profilesInTable() {
+  return supabase.from('profiles') as unknown as SelectInTable<Profile>
+}
+
+function profilesMaybeTable() {
+  return supabase.from('profiles') as unknown as SelectMaybeTable<Profile>
 }
 
 export default function JobDetailPage() {
   const params = useParams()
-  const jobId = params.id as string
+  const jobId = String(params?.id || '')
 
   const [job, setJob] = useState<Job | null>(null)
   const [applicants, setApplicants] = useState<Applicant[]>([])
@@ -39,51 +124,73 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    load()
-  }, [])
+    if (jobId) {
+      load()
+    }
+  }, [jobId])
 
   async function load() {
     setLoading(true)
 
-    // JOB
-    const { data: jobData } = await supabase
-      .from('jobs')
-      .select('*')
+    const { data: jobData } = await jobsSelectTable()
+      .select(
+        `
+        id,
+        title,
+        trade,
+        location,
+        pay_rate,
+        status,
+        payment_status,
+        assigned_worker_id
+      `
+      )
       .eq('id', jobId)
-      .single()
+      .maybeSingle()
 
     setJob(jobData)
+    setAssignedWorker(null)
 
-    // APPS
-    const { data: apps } = await supabase
-      .from('applications')
-      .select('*')
+    const { data: rawApps } = await applicationsSelectTable()
+      .select(
+        `
+        id,
+        worker_id,
+        status
+      `
+      )
       .eq('job_id', jobId)
 
-    const workerIds = apps?.map((a) => a.worker_id) || []
+    const apps = rawApps || []
 
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, company_name')
-      .in('id', workerIds)
+    const workerIds = apps
+      .map((app) => app.worker_id)
+      .filter((workerId): workerId is string => Boolean(workerId))
 
-    const merged =
-      apps?.map((a) => ({
-        ...a,
-        profile: profiles?.find((p) => p.id === a.worker_id) || null,
-      })) || []
+    let profiles: Profile[] = []
+
+    if (workerIds.length > 0) {
+      const { data: rawProfiles } = await profilesInTable()
+        .select('id, full_name, company_name')
+        .in('id', workerIds)
+
+      profiles = rawProfiles || []
+    }
+
+    const merged: Applicant[] = apps.map((app) => ({
+      ...app,
+      profile: profiles.find((profile) => profile.id === app.worker_id) || null,
+    }))
 
     setApplicants(merged)
 
-    // ASSIGNED WORKER
     if (jobData?.assigned_worker_id) {
-      const { data: worker } = await supabase
-        .from('profiles')
+      const { data: rawWorker } = await profilesMaybeTable()
         .select('id, full_name, company_name')
         .eq('id', jobData.assigned_worker_id)
-        .single()
+        .maybeSingle()
 
-      setAssignedWorker(worker)
+      setAssignedWorker(rawWorker || null)
     }
 
     setLoading(false)
@@ -92,50 +199,54 @@ export default function JobDetailPage() {
   async function hire(app: Applicant) {
     if (!job) return
 
-    // update job
-    await supabase
-      .from('jobs')
+    await jobsUpdateTable()
       .update({
         status: 'assigned',
         assigned_worker_id: app.worker_id,
       })
       .eq('id', job.id)
 
-    // update application
-    await supabase
-      .from('applications')
-      .update({ status: 'hired' })
+    await applicationsUpdateTable()
+      .update({
+        status: 'hired',
+      })
       .eq('id', app.id)
 
-    load()
+    await load()
   }
 
-  if (loading) return <div className="p-6">Loading...</div>
-  if (!job) return <div className="p-6">Job not found</div>
+  if (loading) {
+    return <div className="p-6">Loading...</div>
+  }
+
+  if (!job) {
+    return <div className="p-6">Job not found</div>
+  }
 
   return (
-    <main className="p-6 max-w-5xl mx-auto space-y-6">
-
-      {/* HEADER */}
+    <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold">{job.title}</h1>
+        <h1 className="text-3xl font-bold">{job.title || 'Untitled Job'}</h1>
+
         <p className="text-gray-600">
-          {job.trade} · {job.location}
+          {[job.trade, job.location].filter(Boolean).join(' · ') ||
+            'No trade/location listed'}
         </p>
       </div>
 
-      {/* ASSIGNED WORKER */}
       {assignedWorker && (
-        <div className="bg-white border rounded-2xl p-5">
-          <h2 className="text-lg font-bold mb-3">Assigned Worker</h2>
+        <div className="rounded-2xl border bg-white p-5">
+          <h2 className="mb-3 text-lg font-bold">Assigned Worker</h2>
 
           <p className="font-semibold">
-            {assignedWorker.company_name || assignedWorker.full_name}
+            {assignedWorker.company_name || assignedWorker.full_name || 'Worker'}
           </p>
 
-          <div className="flex gap-2 mt-3 flex-wrap">
-
-            <Link href={`/messages?start=${assignedWorker.id}`} className="btn-primary">
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={`/messages?start=${assignedWorker.id}`}
+              className="btn-primary"
+            >
               Message
             </Link>
 
@@ -144,10 +255,7 @@ export default function JobDetailPage() {
             </Link>
 
             {job.payment_status !== 'paid' && (
-              <Link
-                href={`/jobs/${job.id}/pay`}
-                className="btn-secondary"
-              >
+              <Link href={`/jobs/${job.id}/pay`} className="btn-secondary">
                 Pay Worker
               </Link>
             )}
@@ -164,10 +272,9 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* APPLICANTS */}
       {!assignedWorker && (
         <div>
-          <h2 className="text-xl font-bold mb-4">
+          <h2 className="mb-4 text-xl font-bold">
             Applicants ({applicants.length})
           </h2>
 
@@ -176,19 +283,16 @@ export default function JobDetailPage() {
           ) : (
             <div className="space-y-3">
               {applicants.map((app) => (
-                <div
-                  key={app.id}
-                  className="bg-white border rounded-2xl p-4"
-                >
+                <div key={app.id} className="rounded-2xl border bg-white p-4">
                   <p className="font-semibold">
                     {app.profile?.company_name ||
                       app.profile?.full_name ||
                       'Worker'}
                   </p>
 
-                  <div className="flex gap-2 mt-3 flex-wrap">
-
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => hire(app)}
                       className="btn-secondary"
                     >
@@ -202,13 +306,9 @@ export default function JobDetailPage() {
                       Message
                     </Link>
 
-                    <Link
-                      href={`/profile/${app.worker_id}`}
-                      className="btn"
-                    >
+                    <Link href={`/profile/${app.worker_id}`} className="btn">
                       Profile
                     </Link>
-
                   </div>
                 </div>
               ))}

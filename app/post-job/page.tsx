@@ -1,108 +1,171 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+type Role = 'company' | 'worker' | null
+
 type Profile = {
-  role: string | null
+  id: string
+  role: Role
   company_name: string | null
-  verified: boolean | null
+  full_name: string | null
+}
+
+type JobInsert = {
+  company_id: string
+  title: string
+  trade: string
+  location: string
+  pay_rate: string
+  description: string
+  status: 'open'
+  payment_status: 'unpaid'
+  payout_status: 'not_released'
+  is_featured?: boolean
+  featured_until?: string | null
+}
+
+type JobRow = {
+  id: string
+}
+
+type QueryError = {
+  message: string
+}
+
+type MaybeSingleBuilder<T> = {
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type SingleBuilder<T> = {
+  single: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type SelectEqBuilder<T> = {
+  eq: (column: string, value: string) => MaybeSingleBuilder<T>
+}
+
+type InsertSelectBuilder<T> = {
+  select: (columns: string) => SingleBuilder<T>
+}
+
+type SelectTable<T> = {
+  select: (columns: string) => SelectEqBuilder<T>
+}
+
+type InsertTable<TInsert, TReturn> = {
+  insert: (value: TInsert) => InsertSelectBuilder<TReturn>
+}
+
+function profilesTable() {
+  return supabase.from('profiles') as unknown as SelectTable<Profile>
+}
+
+function jobsTable() {
+  return supabase.from('jobs') as unknown as InsertTable<JobInsert, JobRow>
 }
 
 export default function PostJobPage() {
   const router = useRouter()
 
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
   const [trade, setTrade] = useState('')
   const [location, setLocation] = useState('')
   const [payRate, setPayRate] = useState('')
-  const [startDate, setStartDate] = useState('')
+  const [description, setDescription] = useState('')
+  const [featured, setFeatured] = useState(false)
 
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-
-  const [checkingRole, setCheckingRole] = useState(true)
-  const [allowed, setAllowed] = useState(false)
-
-  const [companyName, setCompanyName] = useState('')
-  const [verified, setVerified] = useState(false)
+  const canPost = useMemo(() => {
+    return (
+      profile?.role === 'company' &&
+      title.trim().length > 1 &&
+      trade.trim().length > 1 &&
+      location.trim().length > 1 &&
+      payRate.trim().length > 0 &&
+      description.trim().length > 5
+    )
+  }, [description, location, payRate, profile?.role, title, trade])
 
   useEffect(() => {
-    checkRole()
-  }, [])
+    async function loadProfile() {
+      setLoading(true)
+      setMessage('')
 
-  async function checkRole() {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    const user = session?.user
+      if (userError || !user) {
+        router.replace('/login')
+        return
+      }
 
-    if (sessionError || !user) {
-      setMessage('You must be logged in to post a job.')
-      setCheckingRole(false)
+      const { data, error } = await profilesTable()
+        .select('id, role, company_name, full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (error) {
+        setMessage(error.message)
+        setLoading(false)
+        return
+      }
+
+      setProfile(data)
+      setLoading(false)
+    }
+
+    loadProfile()
+  }, [router])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!profile) {
+      setMessage('You need to be signed in to post a job.')
       return
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role, company_name, verified')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (error) {
-      setMessage(error.message)
-      setCheckingRole(false)
-      return
-    }
-
-    const profile = data as Profile | null
-
-    if (profile?.role !== 'company') {
+    if (profile.role !== 'company') {
       setMessage('Only company accounts can post jobs.')
-      setCheckingRole(false)
       return
     }
 
-    setCompanyName(profile?.company_name || 'Company')
-    setVerified(profile?.verified || false)
-
-    setAllowed(true)
-    setCheckingRole(false)
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+    if (!canPost) {
+      setMessage('Please fill out every required field.')
+      return
+    }
 
     setSaving(true)
-    setMessage(null)
+    setMessage('Posting job...')
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
+    const featuredUntil = new Date()
+    featuredUntil.setDate(featuredUntil.getDate() + 14)
 
-    const user = session?.user
-
-    if (sessionError || !user) {
-      setMessage('You must be logged in to post a job.')
-      setSaving(false)
-      return
-    }
-
-    const { error } = await supabase.from('jobs').insert({
-      company_id: user.id,
+    const payload: JobInsert = {
+      company_id: profile.id,
       title: title.trim(),
-      description: description.trim() || null,
       trade: trade.trim(),
       location: location.trim(),
-      pay_rate: payRate.trim() || null,
-      start_date: startDate || null,
+      pay_rate: payRate.trim(),
+      description: description.trim(),
       status: 'open',
-    })
+      payment_status: 'unpaid',
+      payout_status: 'not_released',
+      is_featured: featured,
+      featured_until: featured ? featuredUntil.toISOString() : null,
+    }
+
+    const { data, error } = await jobsTable().insert(payload).select('id').single()
 
     if (error) {
       setMessage(error.message)
@@ -110,202 +173,172 @@ export default function PostJobPage() {
       return
     }
 
-    setMessage('Job posted successfully.')
+    if (!data?.id) {
+      setMessage('Job was posted, but CrewCall could not find the new job ID.')
+      setSaving(false)
+      return
+    }
 
-    setTitle('')
-    setDescription('')
-    setTrade('')
-    setLocation('')
-    setPayRate('')
-    setStartDate('')
-
-    setSaving(false)
-
-    setTimeout(() => {
-      router.push('/my-jobs')
-    }, 1000)
+    router.push(`/my-jobs/${data.id}`)
   }
 
-  if (checkingRole) {
+  if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 p-6">
-        <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
-          <h1 className="text-4xl font-black text-slate-950">
-            Post Job
-          </h1>
-
-          <div className="mt-6 text-lg text-slate-600">
-            Checking account...
-          </div>
-        </div>
+      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+          <p className="text-sm font-bold text-cyan-200">Loading post job...</p>
+        </section>
       </main>
     )
   }
 
-  if (!allowed) {
+  if (profile?.role !== 'company') {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 p-6">
-        <div className="mx-auto max-w-5xl rounded-[2rem] border border-yellow-200 bg-yellow-50 p-8 shadow-xl">
-          <h1 className="text-4xl font-black text-yellow-900">
-            Post Job
-          </h1>
+      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+          <h1 className="text-3xl font-black">Company account required</h1>
+          <p className="mt-3 text-slate-300">
+            You need a company profile to post jobs on CrewCall.
+          </p>
 
-          <div className="mt-6 text-lg text-yellow-800">
-            {message || 'Only company accounts can post jobs.'}
+          {message ? (
+            <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+              {message}
+            </p>
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/profile"
+              className="rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950"
+            >
+              Go to Profile
+            </Link>
+            <Link
+              href="/jobs"
+              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white"
+            >
+              Browse Jobs
+            </Link>
           </div>
-        </div>
+        </section>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 p-4 md:p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-2xl shadow-slate-900/5 backdrop-blur">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
-                Company Hiring
-              </p>
-
-              <h1 className="mt-3 text-5xl font-black tracking-tight text-slate-950">
-                Post a CrewCall Job
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-lg text-slate-600">
-                Reach skilled tradespeople and hire faster.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-right shadow-sm">
-              <p className="text-xl font-black text-slate-950">
-                {companyName}
-              </p>
-
-              <div className="mt-2 flex items-center justify-end gap-2">
-                {verified && (
-                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-700">
-                    Verified
-                  </span>
-                )}
-
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
-                  Company
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
+    <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
+      <section className="mx-auto max-w-4xl">
+        <div className="rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/15 via-blue-500/10 to-white/5 p-6 shadow-2xl">
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-200">
+            CrewCall
+          </p>
+          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
+            Post a Job
+          </h1>
+          <p className="mt-3 max-w-2xl text-base font-semibold text-slate-300">
+            Add the trade, location, pay, and scope so workers can apply fast.
+          </p>
+        </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-2xl shadow-slate-900/5 backdrop-blur"
+          className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-6"
         >
-          <div className="grid gap-6">
-            <div>
-              <label className="block text-sm font-black uppercase tracking-wide text-slate-600">
-                Job Title
-              </label>
+          {message ? (
+            <div className="mb-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm font-bold text-cyan-100">
+              {message}
+            </div>
+          ) : null}
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-black text-slate-200">Job Title</span>
               <input
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Master Plumber"
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-900 outline-none transition focus:border-blue-500"
-                required
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Rough-in help needed"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-sm font-black uppercase tracking-wide text-slate-600">
-                Description
-              </label>
-
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the work..."
-                rows={6}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-900 outline-none transition focus:border-blue-500"
+            <label className="block">
+              <span className="text-sm font-black text-slate-200">Trade</span>
+              <input
+                value={trade}
+                onChange={(event) => setTrade(event.target.value)}
+                placeholder="Plumbing, HVAC, Electrical..."
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
-            </div>
+            </label>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-black uppercase tracking-wide text-slate-600">
-                  Trade
-                </label>
+            <label className="block">
+              <span className="text-sm font-black text-slate-200">Location</span>
+              <input
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                placeholder="Ankeny, IA"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
+              />
+            </label>
 
-                <input
-                  value={trade}
-                  onChange={(e) => setTrade(e.target.value)}
-                  placeholder="Plumbing"
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-900 outline-none transition focus:border-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-black uppercase tracking-wide text-slate-600">
-                  Location
-                </label>
-
-                <input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Des Moines, Iowa"
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-900 outline-none transition focus:border-blue-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-black uppercase tracking-wide text-slate-600">
-                  Pay Rate
-                </label>
-
-                <input
-                  value={payRate}
-                  onChange={(e) => setPayRate(e.target.value)}
-                  placeholder="45/hr"
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-900 outline-none transition focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-black uppercase tracking-wide text-slate-600">
-                  Start Date
-                </label>
-
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-900 outline-none transition focus:border-blue-500"
-                />
-              </div>
-            </div>
+            <label className="block">
+              <span className="text-sm font-black text-slate-200">Pay Rate</span>
+              <input
+                value={payRate}
+                onChange={(event) => setPayRate(event.target.value)}
+                placeholder="$500/day, $85/hr, $2,500 total..."
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
+              />
+            </label>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4">
+          <label className="mt-4 block">
+            <span className="text-sm font-black text-slate-200">Job Scope</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Describe the job, schedule, tools needed, expectations, and any special notes."
+              rows={7}
+              className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
+            />
+          </label>
+
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <input
+              type="checkbox"
+              checked={featured}
+              onChange={(event) => setFeatured(event.target.checked)}
+              className="mt-1 h-5 w-5 accent-cyan-300"
+            />
+            <span>
+              <span className="block text-sm font-black text-white">
+                Feature this job
+              </span>
+              <span className="mt-1 block text-sm font-semibold text-slate-400">
+                Featured jobs get highlighted for 14 days.
+              </span>
+            </span>
+          </label>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              href="/company/jobs"
+              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center text-sm font-black text-white"
+            >
+              Cancel
+            </Link>
+
             <button
               type="submit"
-              disabled={saving}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-sm font-black text-white shadow-xl shadow-blue-500/20 transition hover:scale-[1.02] disabled:opacity-50"
+              disabled={saving || !canPost}
+              className="rounded-2xl bg-cyan-300 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? 'Posting Job...' : 'Post Job'}
+              {saving ? 'Posting...' : 'Post Job'}
             </button>
-
-            {message && (
-              <div className="text-sm font-semibold text-blue-600">
-                {message}
-              </div>
-            )}
           </div>
         </form>
-      </div>
+      </section>
     </main>
   )
 }

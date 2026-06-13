@@ -1,90 +1,265 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-type Applicant = {
-  id: string
-  worker_id: string
-  status: string | null
-  created_at: string
-
-  requested_pay_rate: string | null
-  negotiation_message: string | null
-  company_counter_offer: string | null
-  negotiation_status: string | null
-
-  worker: {
-    id: string
-    full_name: string | null
-    trade: string | null
-    years_experience: string | null
-    insurance_provider: string | null
-    liability_form_signed: boolean | null
-    average_rating?: number
-    review_count?: number
-  } | null
-}
 
 type Job = {
   id: string
   title: string | null
   trade: string | null
   location: string | null
-  pay_rate: string | null
   status: string | null
+  company_id: string
   assigned_worker_id: string | null
-  company_id: string | null
+  assigned_application_id: string | null
+  payment_status: string | null
+  payout_status: string | null
 }
 
-type ReviewRow = {
-  reviewee_id: string
-  rating: number
+type WorkerProfile = {
+  id: string
+  full_name: string | null
+  company_name: string | null
+  trade: string | null
+  city: string | null
+  state: string | null
+  years_experience: string | null
+  insurance_provider: string | null
+  liability_form_signed: boolean | null
 }
 
-function renderStars(value: number) {
-  const safe = Math.max(0, Math.min(5, Math.round(value)))
-  return '★'.repeat(safe) + '☆'.repeat(5 - safe)
+type Applicant = {
+  id: string
+  job_id: string
+  worker_id: string
+  status: string | null
+  created_at: string
+  requested_rate: string | null
+  worker: WorkerProfile | null
 }
 
-function statusClass(status: string | null | undefined) {
-  const clean = status || 'open'
+type RawApplicant = Omit<Applicant, 'worker'> & {
+  worker: WorkerProfile | WorkerProfile[] | null
+}
 
-  if (clean === 'countered') return 'bg-blue-100 text-blue-700'
-  if (clean === 'accepted' || clean === 'hired') return 'bg-green-100 text-green-700'
-  if (clean === 'declined' || clean === 'rejected') return 'bg-red-100 text-red-700'
+type ProfileFile = {
+  id: string
+  user_id: string
+  category: string | null
+  file_url: string | null
+  created_at: string
+}
 
-  return 'bg-yellow-100 text-yellow-700'
+type ConversationRow = {
+  id: string
+}
+
+type JobUpdate = {
+  assigned_worker_id?: string
+  assigned_application_id?: string
+  status?: string
+  payment_status?: string
+  payout_status?: string
+}
+
+type ApplicationUpdate = {
+  status: string
+}
+
+type NotificationInsert = {
+  user_id: string
+  title: string
+  body: string
+  link_url: string
+  read: boolean
+  is_read: boolean
+}
+
+type ConversationInsert = {
+  job_id: string
+  company_id: string
+  worker_id: string
+}
+
+type QueryError = {
+  message: string
+}
+
+type MaybeSingleQuery<T> = {
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type SingleQuery<T> = {
+  single: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type SelectIdQuery<T> = {
+  select: (columns: string) => SingleQuery<T>
+}
+
+type EqMaybeQuery<T> = {
+  eq: (column: string, value: string) => MaybeSingleQuery<T>
+}
+
+type EqOrderQuery<T> = {
+  order: (
+    column: string,
+    options?: { ascending?: boolean }
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type EqFilterQuery<T> = {
+  eq: (column: string, value: string) => EqOrderQuery<T>
+}
+
+type InEqOrderQuery<T> = {
+  order: (
+    column: string,
+    options?: { ascending?: boolean }
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type InEqQuery<T> = {
+  eq: (column: string, value: string) => InEqOrderQuery<T>
+}
+
+type InQuery<T> = {
+  in: (column: string, values: string[]) => InEqQuery<T>
+}
+
+type SelectMaybeTable<T> = {
+  select: (columns: string) => EqMaybeQuery<T>
+}
+
+type SelectOrderTable<T> = {
+  select: (columns: string) => EqFilterQuery<T>
+}
+
+type SelectInTable<T> = {
+  select: (columns: string) => InQuery<T>
+}
+
+type UpdateEqQuery = {
+  eq: (
+    column: string,
+    value: string
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+type UpdateEqNeqQuery = {
+  neq: (
+    column: string,
+    value: string
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+type UpdateEqThenNeqQuery = {
+  eq: (column: string, value: string) => UpdateEqNeqQuery
+}
+
+type UpdateTable<TUpdate> = {
+  update: (value: TUpdate) => UpdateEqQuery
+}
+
+type UpdateTableWithNeq<TUpdate> = {
+  update: (value: TUpdate) => UpdateEqThenNeqQuery
+}
+
+type InsertTable<TInsert> = {
+  insert: (
+    value: TInsert
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+type InsertSelectTable<TInsert, TReturn> = {
+  insert: (value: TInsert) => SelectIdQuery<TReturn>
+}
+
+type ConversationSelectChain<T> = {
+  eq: (column: string, value: string) => ConversationSelectChain<T>
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type ConversationSelectTable<T> = {
+  select: (columns: string) => ConversationSelectChain<T>
+}
+
+function jobsSelectTable() {
+  return supabase.from('jobs') as unknown as SelectMaybeTable<Job>
+}
+
+function jobsUpdateTable() {
+  return supabase.from('jobs') as unknown as UpdateTable<JobUpdate>
+}
+
+function applicationsSelectTable() {
+  return supabase.from('applications') as unknown as SelectOrderTable<RawApplicant>
+}
+
+function applicationsUpdateTable() {
+  return supabase.from('applications') as unknown as UpdateTable<ApplicationUpdate>
+}
+
+function applicationsUpdateWithNeqTable() {
+  return supabase
+    .from('applications') as unknown as UpdateTableWithNeq<ApplicationUpdate>
+}
+
+function profileFilesTable() {
+  return supabase.from('profile_files') as unknown as SelectInTable<ProfileFile>
+}
+
+function notificationsTable() {
+  return supabase.from('notifications') as unknown as InsertTable<NotificationInsert>
+}
+
+function conversationsSelectTable() {
+  return supabase
+    .from('conversations') as unknown as ConversationSelectTable<ConversationRow>
+}
+
+function conversationsInsertTable() {
+  return supabase
+    .from('conversations') as unknown as InsertSelectTable<
+      ConversationInsert,
+      ConversationRow
+    >
+}
+
+function firstOrNull<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value
 }
 
 export default function ApplicantsPage() {
   const params = useParams()
-  const jobId = params?.id as string
+  const jobId = String(params?.id || '')
 
   const [job, setJob] = useState<Job | null>(null)
   const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
   const [loading, setLoading] = useState(true)
-  const [hiringWorkerId, setHiringWorkerId] = useState<string | null>(null)
-  const [counteringId, setCounteringId] = useState<string | null>(null)
-  const [counterOffers, setCounterOffers] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
-  const [liveMessage, setLiveMessage] = useState('')
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
-    let activeChannel: ReturnType<typeof supabase.channel> | null = null
-    let isMounted = true
+    if (!jobId) return
 
-    async function startRealtime() {
+    loadApplicants()
+
+    const refresh = async () => {
       await loadApplicants()
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+    }
 
-      if (!isMounted || !jobId) return
-
-      const channelName = `company-applicants-${jobId}-${Date.now()}`
-      activeChannel = supabase.channel(channelName)
-
-      activeChannel.on(
+    const channel = supabase
+      .channel(`applicants-live-${jobId}`)
+      .on(
         'postgres_changes',
         {
           event: '*',
@@ -92,13 +267,9 @@ export default function ApplicantsPage() {
           table: 'applications',
           filter: `job_id=eq.${jobId}`,
         },
-        async () => {
-          setLiveMessage('Applicant negotiation updated live.')
-          await loadApplicants()
-        }
+        refresh
       )
-
-      activeChannel.on(
+      .on(
         'postgres_changes',
         {
           event: '*',
@@ -106,580 +277,667 @@ export default function ApplicantsPage() {
           table: 'jobs',
           filter: `id=eq.${jobId}`,
         },
-        async () => {
-          setLiveMessage('Job assignment updated live.')
-          await loadApplicants()
-        }
+        refresh
       )
+      .subscribe()
 
-      activeChannel.subscribe()
-    }
-
-    startRealtime()
+    window.addEventListener('focus', refresh)
 
     return () => {
-      isMounted = false
-
-      if (activeChannel) {
-        supabase.removeChannel(activeChannel)
-      }
+      window.removeEventListener('focus', refresh)
+      supabase.removeChannel(channel)
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId])
+
+  const photoByUserId = useMemo(() => {
+    const map = new Map<string, string>()
+
+    profileFiles.forEach((file) => {
+      if (
+        file.user_id &&
+        file.category === 'profile_photo' &&
+        file.file_url &&
+        !map.has(file.user_id)
+      ) {
+        map.set(file.user_id, file.file_url)
+      }
+    })
+
+    return map
+  }, [profileFiles])
+
+  const sortedApplicants = useMemo(() => {
+    return [...applicants].sort((a, b) => {
+      const aAssigned =
+        a.worker_id === job?.assigned_worker_id ||
+        a.id === job?.assigned_application_id ||
+        a.status === 'accepted'
+
+      const bAssigned =
+        b.worker_id === job?.assigned_worker_id ||
+        b.id === job?.assigned_application_id ||
+        b.status === 'accepted'
+
+      if (aAssigned && !bAssigned) return -1
+      if (!aAssigned && bAssigned) return 1
+
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }, [applicants, job?.assigned_application_id, job?.assigned_worker_id])
 
   async function loadApplicants() {
     setLoading(true)
     setMessage('')
 
-    const { data: jobData, error: jobError } = await supabase
-      .from('jobs')
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage('You must be logged in to view applicants.')
+      setLoading(false)
+      return
+    }
+
+    const { data: jobData, error: jobError } = await jobsSelectTable()
       .select(
         `
         id,
         title,
         trade,
         location,
-        pay_rate,
         status,
+        company_id,
         assigned_worker_id,
-        company_id
+        assigned_application_id,
+        payment_status,
+        payout_status
       `
       )
       .eq('id', jobId)
       .maybeSingle()
 
-    if (jobError || !jobData) {
-      setMessage(jobError?.message || 'Job not found.')
-      setApplicants([])
+    if (jobError) {
+      setMessage(jobError.message)
       setLoading(false)
       return
     }
 
-    setJob(jobData as Job)
+    if (!jobData) {
+      setMessage('Job not found.')
+      setLoading(false)
+      return
+    }
 
-    const { data: applicationsData, error: applicationsError } = await supabase
-      .from('applications')
-      .select(
-        `
+    if (jobData.company_id !== user.id) {
+      setMessage('You do not have permission to view applicants for this job.')
+      setLoading(false)
+      return
+    }
+
+    setJob(jobData)
+
+    const { data: applicationData, error: applicationError } =
+      await applicationsSelectTable()
+        .select(
+          `
         id,
+        job_id,
         worker_id,
         status,
         created_at,
-        requested_pay_rate,
-        negotiation_message,
-        company_counter_offer,
-        negotiation_status
+        requested_rate,
+        worker:profiles!applications_worker_id_fkey (
+          id,
+          full_name,
+          company_name,
+          trade,
+          city,
+          state,
+          years_experience,
+          insurance_provider,
+          liability_form_signed
+        )
       `
-      )
-      .eq('job_id', jobId)
-      .order('created_at', { ascending: false })
+        )
+        .eq('job_id', jobId)
+        .order('created_at', {
+          ascending: false,
+        })
 
-    if (applicationsError) {
-      setMessage(applicationsError.message)
+    if (applicationError) {
+      setMessage(applicationError.message)
       setApplicants([])
       setLoading(false)
       return
     }
 
-    const workerIds =
-      applicationsData?.map((application) => application.worker_id).filter(Boolean) || []
+    const safeApplicants: Applicant[] = (applicationData || []).map(
+      (application) => ({
+        ...application,
+        worker: firstOrNull(application.worker),
+      })
+    )
 
-    let workersData: Applicant['worker'][] = []
+    setApplicants(safeApplicants)
+
+    const workerIds = safeApplicants
+      .map((applicant) => applicant.worker_id)
+      .filter((workerId): workerId is string => Boolean(workerId))
 
     if (workerIds.length > 0) {
-      const { data } = await supabase
-        .from('profiles')
+      const { data: files } = await profileFilesTable()
         .select(
           `
           id,
-          full_name,
-          trade,
-          years_experience,
-          insurance_provider,
-          liability_form_signed
+          user_id,
+          category,
+          file_url,
+          created_at
         `
         )
-        .in('id', workerIds)
+        .in('user_id', workerIds)
+        .eq('category', 'profile_photo')
+        .order('created_at', {
+          ascending: false,
+        })
 
-      workersData = (data || []) as Applicant['worker'][]
+      setProfileFiles(files || [])
+    } else {
+      setProfileFiles([])
     }
 
-    let reviewsData: ReviewRow[] = []
-
-    if (workerIds.length > 0) {
-      const { data } = await supabase
-        .from('reviews')
-        .select(
-          `
-          reviewee_id,
-          rating
-        `
-        )
-        .in('reviewee_id', workerIds)
-
-      reviewsData = (data || []) as ReviewRow[]
-    }
-
-    const reviewMap = new Map<string, { average: number; count: number }>()
-
-    workerIds.forEach((workerId) => {
-      const workerReviews = reviewsData.filter(
-        (review) => review.reviewee_id === workerId
-      )
-
-      const count = workerReviews.length
-
-      const average =
-        count > 0
-          ? workerReviews.reduce((sum, review) => sum + review.rating, 0) / count
-          : 0
-
-      reviewMap.set(workerId, { average, count })
-    })
-
-    const workerMap = new Map<string, Applicant['worker']>()
-
-    workersData?.forEach((worker) => {
-      if (!worker) return
-
-      const reviewStats = reviewMap.get(worker.id)
-
-      workerMap.set(worker.id, {
-        ...worker,
-        average_rating: reviewStats?.average || 0,
-        review_count: reviewStats?.count || 0,
-      })
-    })
-
-    const mergedApplicants =
-      applicationsData?.map((application) => ({
-        ...application,
-        company_counter_offer: application.company_counter_offer || null,
-        negotiation_status: application.negotiation_status || 'open',
-        worker: workerMap.get(application.worker_id) || null,
-      })) || []
-
-    setCounterOffers((prev) => {
-      const next = { ...prev }
-
-      mergedApplicants.forEach((application) => {
-        if (next[application.id] === undefined) {
-          next[application.id] = application.company_counter_offer || ''
-        }
-      })
-
-      return next
-    })
-
-    setApplicants(mergedApplicants as Applicant[])
     setLoading(false)
   }
 
-  async function sendCounterOffer(applicant: Applicant) {
-    const counterOffer = counterOffers[applicant.id]?.trim()
-
-    if (!counterOffer) {
-      setMessage('Enter a counter offer first.')
-      return
-    }
-
-    setCounteringId(applicant.id)
-    setMessage('')
-
-    const { error } = await supabase
-      .from('applications')
-      .update({
-        company_counter_offer: counterOffer,
-        negotiation_status: 'countered',
-      })
-      .eq('id', applicant.id)
-
-    if (error) {
-      setMessage(error.message)
-      setCounteringId(null)
-      return
-    }
-
-    await supabase.from('notifications').insert({
-      user_id: applicant.worker_id,
-      title: 'Counter offer received',
-      content: `A company sent a counter offer for ${job?.title || 'your application'}.`,
-      type: 'counter_offer',
-    })
-
-    setMessage('Counter offer sent.')
-    await loadApplicants()
-    setCounteringId(null)
-  }
-
-  async function hireWorker(applicant: Applicant) {
+  async function hireApplicant(applicant: Applicant) {
     if (!job) return
 
+    if (job.assigned_worker_id || job.assigned_application_id) {
+      setMessage('This job already has an assigned worker.')
+      return
+    }
+
     const confirmed = window.confirm(
-      `Assign ${applicant.worker?.full_name || 'this worker'} to this job?`
+      `Hire ${getWorkerName(applicant)} for this job?`
     )
 
     if (!confirmed) return
 
-    setHiringWorkerId(applicant.worker_id)
-    setMessage('')
+    setActionLoadingId(applicant.id)
 
-    const { error: jobError } = await supabase
-      .from('jobs')
+    const { error: jobError } = await jobsUpdateTable()
       .update({
         assigned_worker_id: applicant.worker_id,
+        assigned_application_id: applicant.id,
         status: 'assigned',
       })
       .eq('id', job.id)
 
     if (jobError) {
       setMessage(jobError.message)
-      setHiringWorkerId(null)
+      setActionLoadingId(null)
       return
     }
 
-    await supabase
-      .from('applications')
+    await applicationsUpdateTable()
       .update({
         status: 'accepted',
-        negotiation_status: 'hired',
       })
       .eq('id', applicant.id)
 
-    await supabase
-      .from('applications')
+    await applicationsUpdateWithNeqTable()
       .update({
         status: 'rejected',
-        negotiation_status: 'declined',
       })
       .eq('job_id', job.id)
       .neq('id', applicant.id)
 
-    const { data: existingConversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('job_id', job.id)
-      .eq('company_id', job.company_id)
-      .eq('worker_id', applicant.worker_id)
-      .maybeSingle()
-
-    if (!existingConversation) {
-      await supabase.from('conversations').insert({
-        job_id: job.id,
-        company_id: job.company_id,
-        worker_id: applicant.worker_id,
-      })
-    }
-
-    await supabase.from('notifications').insert({
+    await notificationsTable().insert({
       user_id: applicant.worker_id,
       title: 'You were hired',
-      content: `You were assigned to ${job.title || 'a job'}.`,
-      type: 'job_assigned',
+      body: `You were hired for ${job.title || 'a job'}.`,
+      link_url: `/jobs/${job.id}`,
+      read: false,
+      is_read: false,
     })
 
-    setMessage('Worker successfully assigned.')
+    setMessage('Worker hired successfully.')
+
     await loadApplicants()
-    setHiringWorkerId(null)
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+    setActionLoadingId(null)
+  }
+
+  async function declineApplicant(applicant: Applicant) {
+    const confirmed = window.confirm(`Decline ${getWorkerName(applicant)}?`)
+
+    if (!confirmed) return
+
+    setActionLoadingId(`decline-${applicant.id}`)
+
+    const { error } = await applicationsUpdateTable()
+      .update({
+        status: 'rejected',
+      })
+      .eq('id', applicant.id)
+
+    if (error) {
+      setMessage(error.message)
+      setActionLoadingId(null)
+      return
+    }
+
+    setMessage('Applicant declined.')
+
+    await loadApplicants()
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+    setActionLoadingId(null)
+  }
+
+  async function updateJobStatus(nextStatus: string) {
+    if (!job) return
+
+    setActionLoadingId(nextStatus)
+
+    const updates: JobUpdate = {
+      status: nextStatus,
+    }
+
+    if (nextStatus === 'paid') {
+      updates.payment_status = 'paid'
+      updates.payout_status = 'paid'
+    }
+
+    const { error } = await jobsUpdateTable().update(updates).eq('id', job.id)
+
+    if (error) {
+      setMessage(error.message)
+      setActionLoadingId(null)
+      return
+    }
+
+    setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
+
+    await loadApplicants()
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+    setActionLoadingId(null)
+  }
+
+  async function messageWorker(workerId: string) {
+    if (!job) return
+
+    setActionLoadingId(workerId)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setMessage('You must be logged in.')
+      setActionLoadingId(null)
+      return
+    }
+
+    const { data: existingConversation } = await conversationsSelectTable()
+      .select('id')
+      .eq('job_id', job.id)
+      .eq('company_id', user.id)
+      .eq('worker_id', workerId)
+      .maybeSingle()
+
+    if (existingConversation?.id) {
+      window.location.href = `/messages/${existingConversation.id}`
+      return
+    }
+
+    const { data: newConversation, error } = await conversationsInsertTable()
+      .insert({
+        job_id: job.id,
+        company_id: user.id,
+        worker_id: workerId,
+      })
+      .select('id')
+      .single()
+
+    if (error || !newConversation?.id) {
+      setMessage(error?.message || 'Could not create conversation.')
+      setActionLoadingId(null)
+      return
+    }
+
+    window.location.href = `/messages/${newConversation.id}`
+  }
+
+  function getWorkerName(applicant: Applicant) {
+    return (
+      applicant.worker?.full_name ||
+      applicant.worker?.company_name ||
+      'Worker Profile'
+    )
+  }
+
+  function getWorkerPhoto(workerId: string) {
+    return photoByUserId.get(workerId) || null
   }
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        Loading applicants...
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
+        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
+          <p className="text-lg font-black">Loading applicants...</p>
+        </div>
       </main>
     )
   }
 
+  const assignedApplicant = sortedApplicants.find(
+    (applicant) =>
+      applicant.worker_id === job?.assigned_worker_id ||
+      applicant.id === job?.assigned_application_id ||
+      applicant.status === 'accepted'
+  )
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 px-6 py-10">
-      <div className="mx-auto max-w-6xl">
-        <Link
-          href="/my-jobs"
-          className="mb-6 inline-block text-sm font-bold text-gray-600 hover:text-blue-600"
-        >
-          ← Back to My Jobs
-        </Link>
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <Link
+              href="/my-jobs"
+              className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
+            >
+              ← Back to My Jobs
+            </Link>
 
-        <div className="mb-8 rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
-                Hiring Pipeline
-              </p>
+            <h1 className="mt-4 text-5xl font-black tracking-tight text-white">
+              Applicants
+            </h1>
 
-              <h1 className="mt-3 text-5xl font-black text-slate-950">
-                Applicants
-              </h1>
-
-              <p className="mt-3 text-lg text-slate-600">
-                {job?.title} · {job?.trade} · {job?.location}
-              </p>
-
-              <p className="mt-2 text-sm font-bold text-slate-500">
-                Posted Rate: {job?.pay_rate || 'Not listed'}
-              </p>
-
-              <div className="mt-4 inline-flex rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-green-700">
-                Live updates on
-              </div>
-            </div>
-
-            <div className="rounded-full border border-blue-100 bg-blue-50 px-5 py-3 text-sm font-black uppercase tracking-wide text-blue-700">
-              Job Status: {job?.status}
-            </div>
+            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+              Hire workers, manage job status, message applicants, and move
+              projects through the CrewCall workflow.
+            </p>
           </div>
+
+          {job && (
+            <Link
+              href={`/jobs/${job.id}`}
+              className="rounded-2xl bg-white px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] hover:bg-slate-100"
+            >
+              View Job
+            </Link>
+          )}
         </div>
 
-        {liveMessage && (
-          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-700">
-            {liveMessage}
-          </div>
-        )}
-
         {message && (
-          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-700">
+          <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 px-5 py-4 text-sm font-bold text-cyan-100">
             {message}
           </div>
         )}
 
-        {applicants.length === 0 ? (
-          <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
-            <p className="font-bold text-slate-700">
-              No applicants for this job yet.
+        {job && (
+          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur">
+            <div className="bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/10 p-6 md:p-8">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200/70">
+                    Job
+                  </p>
+
+                  <h2 className="mt-2 text-3xl font-black text-white">
+                    {job.title || 'Untitled Job'}
+                  </h2>
+
+                  <p className="mt-3 text-sm font-semibold text-slate-300">
+                    {[job.trade, job.location].filter(Boolean).join(' • ') ||
+                      'No trade/location listed'}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <StatusPill value={job.status || 'open'} />
+                  <StatusPill value={job.payment_status || 'unpaid'} />
+                  <StatusPill value={job.payout_status || 'not released'} />
+                </div>
+              </div>
+
+              {assignedApplicant && (
+                <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-200">
+                    Assigned Worker
+                  </p>
+
+                  <p className="mt-3 text-3xl font-black text-white">
+                    {getWorkerName(assignedApplicant)}
+                  </p>
+
+                  <p className="mt-2 text-sm font-semibold text-emerald-100/80">
+                    This worker is now assigned to the job.
+                  </p>
+
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <LifecycleButton
+                      label="Mark In Progress"
+                      disabled={
+                        actionLoadingId === 'in_progress' ||
+                        job.status === 'in_progress' ||
+                        job.status === 'completed' ||
+                        job.status === 'paid'
+                      }
+                      onClick={() => updateJobStatus('in_progress')}
+                    />
+
+                    <LifecycleButton
+                      label="Mark Complete"
+                      disabled={
+                        actionLoadingId === 'completed' ||
+                        job.status === 'completed' ||
+                        job.status === 'paid'
+                      }
+                      onClick={() => updateJobStatus('completed')}
+                    />
+
+                    <LifecycleButton
+                      label="Mark Paid"
+                      disabled={
+                        actionLoadingId === 'paid' || job.status === 'paid'
+                      }
+                      onClick={() => updateJobStatus('paid')}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {sortedApplicants.length === 0 ? (
+          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
+            <h2 className="text-3xl font-black text-white">
+              No applicants yet
+            </h2>
+            <p className="mt-3 text-slate-300">
+              Workers will appear here once they apply.
             </p>
           </div>
         ) : (
-          <div className="space-y-5">
-            {applicants.map((applicant) => {
-              const hired = job?.assigned_worker_id === applicant.worker_id
-              const workerAcceptedCounter =
-                applicant.status === 'accepted' ||
-                applicant.negotiation_status === 'accepted' ||
-                applicant.negotiation_status === 'hired'
+          <div className="grid gap-5">
+            {sortedApplicants.map((applicant) => {
+              const worker = applicant.worker
+              const workerName = getWorkerName(applicant)
+              const workerPhoto = getWorkerPhoto(applicant.worker_id)
+
+              const isAssigned =
+                job?.assigned_worker_id === applicant.worker_id ||
+                job?.assigned_application_id === applicant.id ||
+                applicant.status === 'accepted'
+
+              const jobAlreadyAssigned = Boolean(
+                job?.assigned_worker_id || job?.assigned_application_id
+              )
+
+              const isRejected = applicant.status === 'rejected'
 
               return (
                 <div
                   key={applicant.id}
-                  className="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-xl"
+                  className={`group rounded-[2rem] border p-6 shadow-2xl backdrop-blur transition-all duration-200 hover:-translate-y-1 ${
+                    isAssigned
+                      ? 'border-emerald-400/30 bg-emerald-400/10'
+                      : isRejected
+                        ? 'border-red-400/20 bg-red-400/5 opacity-80'
+                        : 'border-white/10 bg-white/10 hover:border-cyan-300/30 hover:bg-white/15'
+                  }`}
                 >
-                  <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex-1">
-                      <div className="mb-5 flex flex-wrap items-center gap-3">
-                        <h2 className="text-3xl font-black text-slate-950">
-                          {applicant.worker?.full_name || 'Unnamed Worker'}
-                        </h2>
-
-                        {applicant.status && (
-                          <div className="rounded-full bg-green-100 px-3 py-1 text-sm font-black uppercase text-green-700">
-                            {applicant.status}
-                          </div>
-                        )}
-
-                        <div
-                          className={`rounded-full px-3 py-1 text-sm font-black uppercase ${statusClass(
-                            applicant.negotiation_status
-                          )}`}
-                        >
-                          {applicant.negotiation_status || 'open'}
-                        </div>
-
-                        {workerAcceptedCounter && !hired && (
-                          <div className="rounded-full bg-green-100 px-3 py-1 text-sm font-black uppercase text-green-700">
-                            Worker Accepted Offer
-                          </div>
-                        )}
-
-                        {hired && (
-                          <div className="rounded-full bg-blue-100 px-3 py-1 text-sm font-black uppercase text-blue-700">
-                            Worker Assigned
-                          </div>
-                        )}
-
-                        {applicant.worker?.liability_form_signed && (
-                          <div className="rounded-full bg-orange-100 px-3 py-1 text-sm font-black uppercase text-orange-700">
-                            Verified
-                          </div>
-                        )}
-                      </div>
-
-                      {workerAcceptedCounter && !hired && (
-                        <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-5">
-                          <p className="text-sm font-black uppercase tracking-wide text-green-700">
-                            Worker Accepted Your Counter Offer
-                          </p>
-
-                          <p className="mt-2 text-green-900">
-                            The worker accepted the company counter offer. Click
-                            <span className="font-black"> Finalize Hire </span>
-                            to assign them to the job.
-                          </p>
+                  <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                    <Link
+                      href={`/profile?user=${applicant.worker_id}`}
+                      className="group flex min-w-0 flex-1 gap-5"
+                    >
+                      {workerPhoto ? (
+                        <img
+                          src={workerPhoto}
+                          alt={workerName}
+                          className="h-24 w-24 shrink-0 rounded-3xl border border-white/10 object-cover shadow-xl"
+                        />
+                      ) : (
+                        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 text-4xl font-black text-white shadow-xl">
+                          {workerName.charAt(0)}
                         </div>
                       )}
 
-                      <div className="mb-6 flex flex-wrap items-center gap-5">
-                        <div>
-                          <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-                            Reputation
-                          </p>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="truncate text-3xl font-black text-white group-hover:text-cyan-200">
+                            {workerName}
+                          </h3>
 
-                          <p className="mt-1 text-lg font-black text-yellow-500">
-                            {renderStars(applicant.worker?.average_rating || 0)}
-                          </p>
+                          <StatusPill value={applicant.status || 'pending'} />
 
-                          <p className="text-sm font-semibold text-slate-600">
-                            {(applicant.worker?.average_rating || 0).toFixed(1)}{' '}
-                            ({applicant.worker?.review_count || 0} reviews)
-                          </p>
+                          {isAssigned && <StatusPill value="hired" />}
+
+                          {worker?.liability_form_signed && (
+                            <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-300/20">
+                              Liability Signed
+                            </span>
+                          )}
+
+                          {worker?.insurance_provider && (
+                            <span className="rounded-full bg-blue-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-100 ring-1 ring-blue-300/20">
+                              Insured
+                            </span>
+                          )}
                         </div>
 
-                        <div className="h-14 w-px bg-slate-200" />
+                        <p className="mt-3 text-sm font-semibold text-slate-300">
+                          {[worker?.trade, worker?.city, worker?.state]
+                            .filter(Boolean)
+                            .join(' • ') || 'No details listed'}
+                        </p>
 
-                        <div>
-                          <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-                            Applied
+                        {worker?.years_experience && (
+                          <p className="mt-4 text-sm font-bold text-slate-100">
+                            Experience: {worker.years_experience} years
                           </p>
-
-                          <p className="mt-1 text-sm font-semibold text-slate-700">
-                            {new Date(applicant.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                          <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-                            Trade
-                          </p>
-
-                          <p className="mt-2 text-lg font-bold text-slate-900">
-                            {applicant.worker?.trade || 'Not listed'}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                          <p className="text-sm font-black uppercase tracking-wide text-slate-500">
-                            Experience
-                          </p>
-
-                          <p className="mt-2 text-lg font-bold text-slate-900">
-                            {applicant.worker?.years_experience || 'Not listed'}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
-                          <p className="text-sm font-black uppercase tracking-wide text-cyan-700">
-                            Worker Requested Rate
-                          </p>
-
-                          <p className="mt-2 text-xl font-black text-cyan-900">
-                            {applicant.requested_pay_rate ||
-                              job?.pay_rate ||
-                              'Not provided'}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                          <p className="text-sm font-black uppercase tracking-wide text-blue-700">
-                            Company Counter Offer
-                          </p>
-
-                          <p className="mt-2 text-xl font-black text-blue-900">
-                            {applicant.company_counter_offer || 'No counter sent'}
-                          </p>
-                        </div>
-
-                        {applicant.negotiation_message && (
-                          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5 sm:col-span-2">
-                            <p className="text-sm font-black uppercase tracking-wide text-orange-700">
-                              Worker Negotiation Message
-                            </p>
-
-                            <p className="mt-3 whitespace-pre-wrap text-base text-orange-950">
-                              {applicant.negotiation_message}
-                            </p>
-                          </div>
                         )}
 
-                        {!hired && !workerAcceptedCounter && (
-                          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 sm:col-span-2">
-                            <p className="text-sm font-black uppercase tracking-wide text-blue-700">
-                              Send / Update Company Counter Offer
-                            </p>
-
-                            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                              <input
-                                value={
-                                  counterOffers[applicant.id] ??
-                                  applicant.company_counter_offer ??
-                                  ''
-                                }
-                                onChange={(event) =>
-                                  setCounterOffers((prev) => ({
-                                    ...prev,
-                                    [applicant.id]: event.target.value,
-                                  }))
-                                }
-                                placeholder="Example: 85/hr"
-                                className="flex-1 rounded-xl border border-blue-200 bg-white px-4 py-3 font-bold text-slate-950 outline-none focus:border-blue-500"
-                              />
-
-                              <button
-                                onClick={() => sendCounterOffer(applicant)}
-                                disabled={counteringId === applicant.id}
-                                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-60"
-                              >
-                                {counteringId === applicant.id
-                                  ? 'Sending...'
-                                  : 'Send Counter'}
-                              </button>
-                            </div>
-                          </div>
+                        {worker?.insurance_provider && (
+                          <p className="mt-2 text-sm font-semibold text-slate-300">
+                            Insurance: {worker.insurance_provider}
+                          </p>
                         )}
-                      </div>
-                    </div>
 
-                    <div className="flex w-full flex-col gap-3 lg:w-[240px]">
+                        <p className="mt-4 text-xs font-semibold text-slate-400">
+                          Applied{' '}
+                          {new Date(applicant.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </Link>
+
+                    <div className="flex shrink-0 flex-wrap gap-3 xl:w-[260px] xl:flex-col">
                       <Link
                         href={`/profile?user=${applicant.worker_id}`}
-                        className="rounded-2xl border border-blue-600 px-4 py-3 text-center text-sm font-black text-blue-600 hover:bg-blue-50"
+                        className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
                       >
                         View Profile
                       </Link>
 
-                      <button className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">
-                        Message Worker
+                      <button
+                        type="button"
+                        onClick={() => messageWorker(applicant.worker_id)}
+                        disabled={actionLoadingId === applicant.worker_id}
+                        className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-400 disabled:opacity-60"
+                      >
+                        {actionLoadingId === applicant.worker_id
+                          ? 'Opening...'
+                          : 'Message'}
                       </button>
 
-                      {hired ? (
+                      {!jobAlreadyAssigned && !isRejected && (
                         <button
-                          disabled
-                          className="cursor-not-allowed rounded-2xl bg-gray-300 px-4 py-3 text-sm font-black text-gray-600"
+                          type="button"
+                          onClick={() => hireApplicant(applicant)}
+                          disabled={actionLoadingId === applicant.id}
+                          className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-60"
                         >
-                          Worker Assigned
-                        </button>
-                      ) : workerAcceptedCounter ? (
-                        <button
-                          onClick={() => hireWorker(applicant)}
-                          disabled={hiringWorkerId === applicant.worker_id}
-                          className="rounded-2xl bg-green-600 px-4 py-3 text-sm font-black text-white hover:bg-green-700 disabled:opacity-60"
-                        >
-                          {hiringWorkerId === applicant.worker_id
-                            ? 'Finalizing...'
-                            : 'Finalize Hire'}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => hireWorker(applicant)}
-                          disabled={hiringWorkerId === applicant.worker_id}
-                          className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-60"
-                        >
-                          {hiringWorkerId === applicant.worker_id
-                            ? 'Assigning...'
+                          {actionLoadingId === applicant.id
+                            ? 'Hiring...'
                             : 'Hire Worker'}
                         </button>
                       )}
+
+                      {!isAssigned && !isRejected && (
+                        <button
+                          type="button"
+                          onClick={() => declineApplicant(applicant)}
+                          disabled={
+                            actionLoadingId === `decline-${applicant.id}`
+                          }
+                          className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-400 disabled:opacity-60"
+                        >
+                          {actionLoadingId === `decline-${applicant.id}`
+                            ? 'Declining...'
+                            : 'Decline'}
+                        </button>
+                      )}
+
+                      {isAssigned && (
+                        <div className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-black text-white">
+                          Assigned
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        Worker Compliance
+                      </p>
+
+                      <p className="mt-3 text-sm font-bold text-white">
+                        {worker?.liability_form_signed
+                          ? 'Compliance started'
+                          : 'Compliance pending'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-5">
+                      <p className="text-xs font-black uppercase tracking-wide text-orange-200">
+                        Requested Rate
+                      </p>
+
+                      <p className="mt-3 text-2xl font-black text-orange-50">
+                        {applicant.requested_rate || 'Not listed'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -689,5 +947,54 @@ export default function ApplicantsPage() {
         )}
       </div>
     </main>
+  )
+}
+
+function cleanStatus(value: string) {
+  return value.replaceAll('_', ' ')
+}
+
+function StatusPill({ value }: { value: string }) {
+  const lowered = value.toLowerCase()
+
+  const classes =
+    lowered.includes('paid') ||
+    lowered.includes('accepted') ||
+    lowered.includes('assigned') ||
+    lowered.includes('hired')
+      ? 'bg-emerald-400/20 text-emerald-100 ring-emerald-300/20'
+      : lowered.includes('rejected') || lowered.includes('declined')
+        ? 'bg-red-400/20 text-red-100 ring-red-300/20'
+        : lowered.includes('progress') || lowered.includes('pending')
+          ? 'bg-orange-400/20 text-orange-100 ring-orange-300/20'
+          : 'bg-cyan-400/20 text-cyan-100 ring-cyan-300/20'
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ring-1 ${classes}`}
+    >
+      {cleanStatus(value)}
+    </span>
+  )
+}
+
+function LifecycleButton({
+  label,
+  disabled,
+  onClick,
+}: {
+  label: string
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {label}
+    </button>
   )
 }

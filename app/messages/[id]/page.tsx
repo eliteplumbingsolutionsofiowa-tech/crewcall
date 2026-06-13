@@ -1,564 +1,747 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Profile = {
   id: string
   full_name: string | null
   company_name: string | null
-  role: string | null
-}
-
-type Job = {
-  id: string
-  title: string | null
-  location: string | null
-  trade: string | null
-  pay_rate: string | null
+  role: 'company' | 'worker' | null
+  is_online: boolean | null
+  last_seen: string | null
 }
 
 type Conversation = {
   id: string
-  worker_id: string
-  company_id: string
+  company_id: string | null
+  worker_id: string | null
   job_id: string | null
-  jobs: Job | null
+  created_at: string
+  job: {
+    id: string
+    title: string | null
+  } | null
+}
+
+type ConversationRow = {
+  id: string
+  company_id: string | null
+  worker_id: string | null
+  job_id: string | null
+  created_at: string
+  job:
+    | {
+        id: string
+        title: string | null
+      }
+    | {
+        id: string
+        title: string | null
+      }[]
+    | null
 }
 
 type Message = {
   id: string
   conversation_id: string
   sender_id: string
-  body: string
+  recipient_id: string | null
+  body: string | null
+  file_url: string | null
+  file_name: string | null
+  file_type: string | null
+  is_read: boolean | null
   created_at: string
 }
 
-export default function ChatPage() {
+export default function MessageThreadPage() {
   const params = useParams()
   const router = useRouter()
+  const conversationId = String(params?.id || '')
+
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const conversationId = String(params.id || '')
-
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [conversation, setConversation] = useState<Conversation | null>(null)
+  const [otherProfile, setOtherProfile] = useState<Profile | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [body, setBody] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [deletingThread, setDeletingThread] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [liveMessage, setLiveMessage] = useState('')
-
-  const [currentUser, setCurrentUser] = useState<Profile | null>(null)
-  const [otherUser, setOtherUser] = useState<Profile | null>(null)
-  const [conversation, setConversation] = useState<Conversation | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
+  const [otherTyping, setOtherTyping] = useState(false)
 
   useEffect(() => {
-    loadChat()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId])
+    loadThread()
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    const messageChannel = supabase
+      .channel(`messages-thread-polished-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        async () => {
+          await loadMessagesOnly()
+          window.dispatchEvent(new Event('crewcall-refresh-nav'))
+        }
+      )
+      .subscribe()
 
-  useEffect(() => {
-    if (!conversationId) return
+    const typingChannel = supabase.channel(`typing-polished-${conversationId}`)
 
-    const channelName = `messages-${conversationId}-${Date.now()}`
-    const channel = supabase.channel(channelName)
+    typingChannel
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.userId !== currentUserId) {
+          setOtherTyping(true)
 
-    channel.on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload) => {
-        const incoming = payload.new as Message
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current)
+          }
 
-        setMessages((prev) => {
-          if (prev.some((message) => message.id === incoming.id)) return prev
-          return [...prev, incoming]
-        })
-
-        setLiveMessage('New message received.')
-      }
-    )
-
-    channel.on(
-      'postgres_changes',
-      {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload) => {
-        const deleted = payload.old as Message
-
-        setMessages((prev) =>
-          prev.filter((message) => message.id !== deleted.id)
-        )
-
-        setLiveMessage('Message deleted.')
-      }
-    )
-
-    channel.subscribe()
+          typingTimeoutRef.current = setTimeout(() => {
+            setOtherTyping(false)
+          }, 1800)
+        }
+      })
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [conversationId])
+      supabase.removeChannel(messageChannel)
+      supabase.removeChannel(typingChannel)
 
-  async function loadChat() {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, currentUserId])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages.length, otherTyping])
+
+  async function loadThread() {
     setLoading(true)
     setErrorMessage(null)
-    setLiveMessage('')
 
     const {
       data: { user },
-      error: userError,
     } = await supabase.auth.getUser()
 
-    if (userError || !user) {
-      setErrorMessage('You must be logged in to view this conversation.')
-      setLoading(false)
+    if (!user) {
+      router.replace('/login')
       return
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, full_name, company_name, role')
-      .eq('id', user.id)
+    setCurrentUserId(user.id)
+
+    const { data: convo, error: convoError } = await supabase
+      .from('conversations')
+      .select(
+        `
+        id,
+        company_id,
+        worker_id,
+        job_id,
+        created_at,
+        job:jobs (
+          id,
+          title
+        )
+      `
+      )
+      .eq('id', conversationId)
+      .returns<ConversationRow[]>()
       .maybeSingle()
 
-    if (profileError || !profileData) {
-      setErrorMessage(profileError?.message || 'Profile not found.')
+    if (convoError || !convo) {
+      setErrorMessage(convoError?.message || 'Conversation not found.')
       setLoading(false)
       return
     }
 
-    setCurrentUser(profileData as Profile)
-
-    const { data: conversationData, error: conversationError } =
-      await supabase
-        .from('conversations')
-        .select(
-          `
-          id,
-          worker_id,
-          company_id,
-          job_id,
-          jobs (
-            id,
-            title,
-            location,
-            trade,
-            pay_rate
-          )
-        `
-        )
-        .eq('id', conversationId)
-        .maybeSingle()
-
-    if (conversationError || !conversationData) {
-      setErrorMessage(conversationError?.message || 'Conversation not found.')
-      setLoading(false)
-      return
+    const normalizedConvo: Conversation = {
+      id: convo.id,
+      company_id: convo.company_id,
+      worker_id: convo.worker_id,
+      job_id: convo.job_id,
+      created_at: convo.created_at,
+      job: Array.isArray(convo.job) ? convo.job[0] ?? null : convo.job,
     }
 
-    const normalizedConversation = {
-      ...conversationData,
-      jobs: Array.isArray((conversationData as any).jobs)
-        ? (conversationData as any).jobs[0]
-        : (conversationData as any).jobs,
-    } as Conversation
-
-    const allowed =
-      normalizedConversation.worker_id === user.id ||
-      normalizedConversation.company_id === user.id
-
-    if (!allowed) {
-      setErrorMessage('You do not have access to this conversation.')
-      setLoading(false)
-      return
-    }
-
-    setConversation(normalizedConversation)
+    setConversation(normalizedConvo)
 
     const otherUserId =
-      normalizedConversation.worker_id === user.id
-        ? normalizedConversation.company_id
-        : normalizedConversation.worker_id
+      normalizedConvo.company_id === user.id
+        ? normalizedConvo.worker_id
+        : normalizedConvo.company_id
 
-    const { data: otherProfileData } = await supabase
-      .from('profiles')
-      .select('id, full_name, company_name, role')
-      .eq('id', otherUserId)
-      .maybeSingle()
+    if (otherUserId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, full_name, company_name, role, is_online, last_seen')
+        .eq('id', otherUserId)
+        .returns<Profile[]>()
+        .maybeSingle()
 
-    setOtherUser((otherProfileData as Profile) || null)
-
-    const { data: messageRows, error: messageError } = await supabase
-      .from('messages')
-      .select('id, conversation_id, sender_id, body, created_at')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-
-    if (messageError) {
-      setErrorMessage(messageError.message)
-      setLoading(false)
-      return
+      setOtherProfile(profile ?? null)
     }
 
-    setMessages((messageRows || []) as Message[])
+    await loadMessagesOnly(user.id)
     setLoading(false)
   }
 
-  async function sendMessage() {
-    const body = newMessage.trim()
+  async function loadMessagesOnly(userIdOverride?: string) {
+    const userId = userIdOverride ?? currentUserId
 
-    if (!body || !currentUser || !conversation) return
-
-    setSending(true)
-    setErrorMessage(null)
-    setLiveMessage('')
-
-    const { error: messageError } = await supabase.from('messages').insert({
-      conversation_id: conversation.id,
-      sender_id: currentUser.id,
-      body,
-    })
-
-    if (messageError) {
-      setErrorMessage(messageError.message)
-      setSending(false)
-      return
-    }
-
-    const recipientId =
-      currentUser.id === conversation.worker_id
-        ? conversation.company_id
-        : conversation.worker_id
-
-    const senderName =
-      currentUser.full_name ||
-      currentUser.company_name ||
-      'CrewCall User'
-
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: recipientId,
-        type: 'message',
-        title: 'New Message',
-        body: `${senderName}: ${body.slice(0, 80)}`,
-        is_read: false,
-        link_url: `/messages/${conversation.id}`,
-      })
-
-    if (notificationError) {
-      console.error('Notification insert error:', notificationError.message)
-    }
-
-    setNewMessage('')
-    setSending(false)
-  }
-
-  async function deleteMessage(messageId: string) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
-      .delete()
-      .eq('id', messageId)
+      .select(
+        'id, conversation_id, sender_id, recipient_id, body, file_url, file_name, file_type, is_read, created_at'
+      )
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
 
     if (error) {
       setErrorMessage(error.message)
       return
     }
 
-    setMessages((prev) => prev.filter((message) => message.id !== messageId))
+    const loadedMessages = (data as Message[]) || []
+    setMessages(loadedMessages)
+
+    if (!userId) return
+
+    const unreadIncomingIds = loadedMessages
+      .filter(
+        (message) =>
+          message.recipient_id === userId && message.is_read === false
+      )
+      .map((message) => message.id)
+
+    if (unreadIncomingIds.length > 0) {
+      const { error: readError } = await supabase
+        .from('messages')
+        .update({ is_read: true } as never)
+        .in('id', unreadIncomingIds)
+
+      if (!readError) {
+        setMessages((prev) =>
+          prev.map((message) =>
+            unreadIncomingIds.includes(message.id)
+              ? { ...message, is_read: true }
+              : message
+          )
+        )
+      }
+    }
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
   }
 
-  async function deleteThread() {
-    if (!conversation) return
+  async function sendTypingSignal() {
+    if (!currentUserId) return
 
-    const confirmDelete = window.confirm(
-      'Delete this entire conversation? This will remove all messages in this chat.'
-    )
+    await supabase.channel(`typing-polished-${conversationId}`).send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: {
+        userId: currentUserId,
+      },
+    })
+  }
 
-    if (!confirmDelete) return
+  async function uploadSelectedFile() {
+    if (!selectedFile || !currentUserId) {
+      return {
+        fileUrl: null,
+        fileName: null,
+        fileType: null,
+      }
+    }
 
-    setDeletingThread(true)
+    setUploading(true)
+
+    const fileExt = selectedFile.name.split('.').pop()
+    const cleanName = selectedFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '-')
+    const filePath = `${conversationId}/${currentUserId}/${Date.now()}-${cleanName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('message-files')
+      .upload(filePath, selectedFile, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: selectedFile.type || undefined,
+      })
+
+    if (uploadError) {
+      setUploading(false)
+      throw new Error(uploadError.message)
+    }
+
+    const { data } = supabase.storage
+      .from('message-files')
+      .getPublicUrl(filePath)
+
+    setUploading(false)
+
+    return {
+      fileUrl: data.publicUrl,
+      fileName: selectedFile.name,
+      fileType: selectedFile.type || fileExt || 'file',
+    }
+  }
+
+  async function sendMessage() {
+    if ((!body.trim() && !selectedFile) || !currentUserId || !conversation) {
+      return
+    }
+
+    const recipientId =
+      conversation.company_id === currentUserId
+        ? conversation.worker_id
+        : conversation.company_id
+
+    if (!recipientId) {
+      setErrorMessage('Could not find the other user for this conversation.')
+      return
+    }
+
+    setSending(true)
     setErrorMessage(null)
 
-    const { error: messageDeleteError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', conversation.id)
+    try {
+      const uploaded = await uploadSelectedFile()
 
-    if (messageDeleteError) {
-      setErrorMessage(messageDeleteError.message)
-      setDeletingThread(false)
-      return
+      const { error } = await supabase.from('messages').insert({
+        conversation_id: conversation.id,
+        sender_id: currentUserId,
+        recipient_id: recipientId,
+        body: body.trim() || null,
+        file_url: uploaded.fileUrl,
+        file_name: uploaded.fileName,
+        file_type: uploaded.fileType,
+        is_read: false,
+      } as never)
+
+      if (error) {
+        setErrorMessage(error.message)
+        setSending(false)
+        setUploading(false)
+        return
+      }
+
+      setBody('')
+      setSelectedFile(null)
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+
+      await loadMessagesOnly()
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+    } catch (error: any) {
+      setErrorMessage(error?.message || 'File upload failed.')
     }
 
-    const { error: conversationDeleteError } = await supabase
-      .from('conversations')
-      .delete()
-      .eq('id', conversation.id)
+    setSending(false)
+    setUploading(false)
+  }
 
-    if (conversationDeleteError) {
-      setErrorMessage(conversationDeleteError.message)
-      setDeletingThread(false)
-      return
-    }
+  function scrollToBottom() {
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+      })
+    }, 50)
+  }
 
-    router.push('/messages')
+  function isImageMessage(message: Message) {
+    return Boolean(message.file_type?.startsWith('image/'))
   }
 
   const otherName =
-    otherUser?.full_name || otherUser?.company_name || 'Conversation'
+    otherProfile?.company_name || otherProfile?.full_name || 'Conversation'
+
+  const online = isActuallyOnline(otherProfile)
+
+  const groupedMessages = useMemo(() => {
+    return messages.map((message, index) => {
+      const previous = messages[index - 1]
+      const currentDate = dateLabel(message.created_at)
+      const previousDate = previous ? dateLabel(previous.created_at) : null
+      const showDate = currentDate !== previousDate
+
+      const sameSenderAsPrevious =
+        previous &&
+        previous.sender_id === message.sender_id &&
+        minutesBetween(previous.created_at, message.created_at) < 5
+
+      return {
+        message,
+        showDate,
+        compact: Boolean(sameSenderAsPrevious && !showDate),
+      }
+    })
+  }, [messages])
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 px-4 py-6 sm:px-6 sm:py-10">
-        <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl">
-          <p className="font-bold text-slate-600">Loading chat...</p>
-        </div>
-      </main>
-    )
-  }
-
-  if (errorMessage && !conversation) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 px-4 py-6 sm:px-6 sm:py-10">
-        <div className="mx-auto max-w-5xl rounded-[2rem] border border-red-200 bg-white p-8 shadow-xl">
-          <p className="font-bold text-red-600">{errorMessage}</p>
-
-          <Link
-            href="/messages"
-            className="mt-5 inline-flex rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700"
-          >
-            Back to Messages
-          </Link>
+      <main className="min-h-screen px-4 py-8 text-white md:px-6 md:py-10">
+        <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
+          <p className="text-lg font-black text-white">
+            Loading conversation...
+          </p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 px-3 py-4 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-6xl">
-        <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-2xl">
-          <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-orange-500 px-5 py-6 text-white sm:px-8 sm:py-7">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <Link
-                  href="/messages"
-                  className="text-sm font-black text-blue-100 hover:text-white"
-                >
-                  ← Back to Messages
-                </Link>
+    <main className="min-h-screen px-3 py-4 pb-36 text-white sm:px-4 sm:py-8 md:pb-10">
+      <div className="mx-auto max-w-5xl space-y-4">
+        <section className="sticky top-[88px] z-30 rounded-[2rem] border border-white/10 bg-slate-950/90 p-4 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <Link
+                href="/messages"
+                className="text-xs font-black uppercase tracking-wide !text-cyan-300 no-underline hover:!text-cyan-200"
+              >
+                ← Back to messages
+              </Link>
 
-                <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                  {otherName}
-                </h1>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-xl font-black text-white shadow-lg">
+                  {otherName.charAt(0)}
+                  <span
+                    className={`absolute -right-1 -top-1 h-4 w-4 rounded-full border-4 border-slate-950 ${
+                      online ? 'bg-lime-400' : 'bg-slate-500'
+                    }`}
+                  />
+                </div>
 
-                <p className="mt-2 text-sm font-semibold text-blue-100">
-                  {conversation?.jobs?.title || 'General conversation'}
-                  {conversation?.jobs?.location
-                    ? ` • ${conversation.jobs.location}`
-                    : ''}
-                </p>
+                <div className="min-w-0">
+                  <h1 className="truncate text-2xl font-black tracking-tight text-white">
+                    {otherName}
+                  </h1>
 
-                <div className="mt-4 inline-flex rounded-full border border-white/30 bg-white/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
-                  Live chat
+                  <p className="truncate text-xs font-bold text-slate-400">
+                    {online
+                      ? 'Online now'
+                      : otherProfile?.last_seen
+                        ? `Last seen ${formatRelativeTime(
+                            otherProfile.last_seen
+                          )}`
+                        : 'Offline'}
+                    {conversation?.job?.title
+                      ? ` • Job: ${conversation.job.title}`
+                      : ''}
+                  </p>
                 </div>
               </div>
-
-              <button
-                onClick={deleteThread}
-                disabled={deletingThread}
-                className="rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20 disabled:opacity-60"
-              >
-                {deletingThread ? 'Deleting...' : 'Delete Chat'}
-              </button>
             </div>
+
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="hidden rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/15 sm:inline-flex"
+            >
+              Bottom
+            </button>
           </div>
+        </section>
 
-          {errorMessage && (
-            <div className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 sm:px-8">
-              {errorMessage}
-            </div>
-          )}
+        {errorMessage && (
+          <div className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm font-bold text-red-100">
+            {errorMessage}
+          </div>
+        )}
 
-          {liveMessage && (
-            <div className="border-b border-green-200 bg-green-50 px-5 py-3 text-sm font-bold text-green-700 sm:px-8">
-              {liveMessage}
-            </div>
-          )}
-
-          <div className="grid gap-0 lg:grid-cols-[1fr_300px]">
-            <section className="flex min-h-[calc(100vh-260px)] flex-col border-slate-200 lg:min-h-[680px] lg:border-r">
-              <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-                {messages.length === 0 ? (
-                  <div className="rounded-[2rem] border border-dashed border-slate-300 bg-slate-50 p-8 text-center sm:p-10">
-                    <h2 className="text-xl font-black text-slate-900">
-                      No messages yet
-                    </h2>
-
-                    <p className="mt-2 text-sm text-slate-600">
-                      Send the first message to start the conversation.
-                    </p>
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur">
+          <div className="max-h-[68vh] min-h-[460px] space-y-2 overflow-y-auto bg-slate-950/45 p-4 md:p-5">
+            {messages.length === 0 ? (
+              <div className="flex min-h-[420px] items-center justify-center rounded-[2rem] border border-dashed border-white/15 bg-slate-950/55 p-8 text-center">
+                <div>
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-cyan-400/15 text-3xl">
+                    ✉
                   </div>
-                ) : (
-                  messages.map((message) => {
-                    const mine = message.sender_id === currentUser?.id
 
-                    return (
+                  <p className="mt-5 text-2xl font-black text-white">
+                    No messages yet.
+                  </p>
+
+                  <p className="mt-2 text-sm font-bold text-slate-400">
+                    Start the conversation below.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              groupedMessages.map(({ message, showDate, compact }) => {
+                const mine = message.sender_id === currentUserId
+
+                return (
+                  <div key={message.id}>
+                    {showDate && (
+                      <div className="my-5 flex justify-center">
+                        <span className="rounded-full border border-white/10 bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-300">
+                          {dateLabel(message.created_at)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div
+                      className={`flex ${
+                        mine ? 'justify-end' : 'justify-start'
+                      } ${compact ? 'mt-1' : 'mt-4'}`}
+                    >
                       <div
-                        key={message.id}
-                        className={`flex ${
-                          mine ? 'justify-end' : 'justify-start'
-                        }`}
+                        className={`max-w-[86%] rounded-3xl px-4 py-3 shadow-lg transition-all md:max-w-[72%] ${
+                          mine
+                            ? 'bg-cyan-400 text-slate-950 shadow-cyan-500/10'
+                            : 'border border-white/10 bg-slate-900 text-white'
+                        } ${compact ? 'rounded-t-2xl' : ''}`}
                       >
-                        <div
-                          className={`max-w-[88%] rounded-[1.5rem] px-4 py-3 shadow-sm sm:max-w-[78%] ${
-                            mine
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-slate-200 bg-white text-slate-900'
-                          }`}
-                        >
-                          <div
-                            className={`mb-1 text-xs font-black ${
-                              mine ? 'text-blue-100' : 'text-slate-500'
-                            }`}
-                          >
-                            {mine ? 'You' : otherName}
-                          </div>
-
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                        {message.body && (
+                          <p className="whitespace-pre-wrap text-sm font-bold leading-relaxed">
                             {message.body}
                           </p>
+                        )}
 
-                          <div className="mt-2 flex items-center justify-between gap-3">
-                            <span
-                              className={`text-[11px] ${
-                                mine ? 'text-blue-100' : 'text-slate-400'
-                              }`}
-                            >
-                              {formatDateTime(message.created_at)}
-                            </span>
-
-                            {mine && (
+                        {message.file_url && (
+                          <div className={message.body ? 'mt-3' : ''}>
+                            {isImageMessage(message) ? (
                               <button
-                                onClick={() => deleteMessage(message.id)}
-                                className="text-[11px] font-black text-blue-100 hover:text-white"
+                                type="button"
+                                onClick={() => setPreviewImage(message.file_url)}
+                                className="block overflow-hidden rounded-2xl border border-white/20 bg-white/10"
                               >
-                                Delete
+                                <img
+                                  src={message.file_url}
+                                  alt={
+                                    message.file_name || 'Message attachment'
+                                  }
+                                  className="max-h-80 w-full object-cover"
+                                />
                               </button>
+                            ) : (
+                              <a
+                                href={message.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-black no-underline transition ${
+                                  mine
+                                    ? 'border-slate-950/10 bg-slate-950/10 !text-slate-950 hover:bg-slate-950/15'
+                                    : 'border-white/10 bg-white/10 !text-white hover:bg-white/15'
+                                }`}
+                              >
+                                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
+                                  📎
+                                </span>
+
+                                <span className="min-w-0 truncate">
+                                  {message.file_name || 'Open attachment'}
+                                </span>
+                              </a>
                             )}
                           </div>
+                        )}
+
+                        <div
+                          className={`mt-2 flex items-center gap-2 text-[11px] font-black ${
+                            mine ? 'text-slate-800' : 'text-slate-500'
+                          }`}
+                        >
+                          <span>{formatTime(message.created_at)}</span>
+
+                          {mine && (
+                            <span>{message.is_read ? 'Read' : 'Sent'}</span>
+                          )}
                         </div>
                       </div>
-                    )
-                  })
-                )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
 
-                <div ref={bottomRef} />
-              </div>
-
-              <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <textarea
-                    value={newMessage}
-                    onChange={(event) => setNewMessage(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault()
-                        sendMessage()
-                      }
-                    }}
-                    placeholder="Type your message..."
-                    className="min-h-[56px] flex-1 resize-none rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-
-                  <button
-                    onClick={sendMessage}
-                    disabled={sending || !newMessage.trim()}
-                    className="rounded-2xl bg-blue-600 px-6 py-3 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                  >
-                    {sending ? 'Sending...' : 'Send'}
-                  </button>
+            {otherTyping && (
+              <div className="mt-4 flex justify-start">
+                <div className="rounded-3xl border border-white/10 bg-slate-900 px-5 py-4 shadow-sm">
+                  <div className="flex items-center gap-1">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:120ms]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:240ms]" />
+                  </div>
                 </div>
               </div>
-            </section>
+            )}
 
-            <aside className="space-y-4 bg-slate-50 p-5 sm:p-6">
-              <InfoBox label="Chat With" value={otherName} />
-              <InfoBox label="Role" value={otherUser?.role || 'Not listed'} />
-              <InfoBox
-                label="Job"
-                value={conversation?.jobs?.title || 'General conversation'}
-              />
-              <InfoBox
-                label="Trade"
-                value={conversation?.jobs?.trade || 'Not listed'}
-              />
-              <InfoBox
-                label="Location"
-                value={conversation?.jobs?.location || 'Not listed'}
-              />
-              <InfoBox
-                label="Pay"
-                value={conversation?.jobs?.pay_rate || 'Not listed'}
-              />
+            <div ref={bottomRef} />
+          </div>
 
-              {conversation?.jobs?.id && (
-                <Link
-                  href={`/jobs/${conversation.jobs.id}`}
-                  className="block rounded-2xl border border-blue-600 bg-white px-4 py-3 text-center text-sm font-black text-blue-600 transition hover:bg-blue-50"
+          <div className="sticky bottom-0 border-t border-white/10 bg-slate-950/95 p-4 backdrop-blur-xl">
+            {selectedFile && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-400/25 bg-orange-400/10 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wide text-orange-200">
+                    Attachment Ready
+                  </p>
+
+                  <p className="truncate text-sm font-bold text-white">
+                    {selectedFile.name}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null)
+                    if (fileInputRef.current) fileInputRef.current.value = ''
+                  }}
+                  className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-white/15"
                 >
-                  View Job
-                </Link>
-              )}
-            </aside>
+                  Remove
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <textarea
+                value={body}
+                onChange={(event) => {
+                  setBody(event.target.value)
+                  sendTypingSignal()
+                }}
+                placeholder="Type your message..."
+                rows={2}
+                className="min-h-20 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-4 focus:ring-cyan-400/10"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    sendMessage()
+                  }
+                }}
+              />
+
+              <div className="flex items-end gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null
+                    setSelectedFile(file)
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-white/15"
+                >
+                  Attach
+                </button>
+
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={
+                    sending || uploading || (!body.trim() && !selectedFile)
+                  }
+                  className="rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {sending || uploading ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       </div>
+
+      {previewImage && (
+        <button
+          type="button"
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+        >
+          <img
+            src={previewImage}
+            alt="Message preview"
+            className="max-h-[90vh] max-w-full rounded-3xl object-contain shadow-2xl"
+          />
+        </button>
+      )}
     </main>
   )
 }
 
-function InfoBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-black uppercase tracking-wide text-slate-500">
-        {label}
-      </div>
-
-      <div className="mt-1 break-words text-sm font-black text-slate-900">
-        {value}
-      </div>
-    </div>
-  )
+function isActuallyOnline(profile: Profile | null) {
+  if (!profile?.is_online || !profile.last_seen) return false
+  return Date.now() - new Date(profile.last_seen).getTime() < 90_000
 }
 
-function formatDateTime(value: string) {
+function formatRelativeTime(value: string) {
   const date = new Date(value)
+  const diff = Date.now() - date.getTime()
 
-  if (Number.isNaN(date.getTime())) return value
+  if (Number.isNaN(date.getTime())) return 'recently'
 
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (seconds < 60) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+
+  return `${days}d ago`
+}
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+function dateLabel(value: string) {
+  const date = new Date(value)
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+
+  if (sameDay(date, today)) return 'Today'
+  if (sameDay(date, yesterday)) return 'Yesterday'
+
+  return date.toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+function minutesBetween(a: string, b: string) {
+  return Math.abs(new Date(b).getTime() - new Date(a).getTime()) / 60000
 }

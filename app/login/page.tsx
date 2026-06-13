@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
+type LoginProfile = {
+  id: string
+  role: string | null
+}
+
 export default function LoginPage() {
   const router = useRouter()
 
@@ -39,6 +44,7 @@ export default function LoginPage() {
       .from('profiles')
       .select('id, role')
       .eq('id', data.user.id)
+      .returns<LoginProfile[]>()
       .maybeSingle()
 
     if (profileError) {
@@ -96,11 +102,11 @@ export default function LoginPage() {
             />
           </div>
 
-          {message && (
+          {message ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {message}
             </div>
-          )}
+          ) : null}
 
           <button
             type="submit"

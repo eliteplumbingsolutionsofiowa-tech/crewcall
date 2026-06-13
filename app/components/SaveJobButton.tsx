@@ -3,124 +3,142 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export default function SaveJobButton({ jobId }: { jobId: string }) {
+type Props = {
+  jobId: string
+}
+
+type ProfileRole = {
+  role: 'company' | 'worker' | null
+}
+
+type SavedJobRow = {
+  id: string
+}
+
+type SavedJobInsert = {
+  job_id: string
+  worker_id: string
+}
+
+export default function SaveJobButton({ jobId }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [isWorker, setIsWorker] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isSaved, setIsSaved] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadState() {
+    let isMounted = true
+
+    async function loadSavedStatus() {
       setLoading(true)
-      setError(null)
 
       const {
         data: { user },
-        error: authError,
       } = await supabase.auth.getUser()
 
-      if (authError || !user) {
+      if (!isMounted) return
+
+      if (!user) {
+        setUserId(null)
+        setIsWorker(false)
+        setIsSaved(false)
         setLoading(false)
         return
       }
+
+      setUserId(user.id)
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .maybeSingle()
+        .maybeSingle<ProfileRole>()
+
+      if (!isMounted) return
 
       if (profile?.role !== 'worker') {
         setIsWorker(false)
+        setIsSaved(false)
         setLoading(false)
         return
       }
 
       setIsWorker(true)
 
-      const { data: existing } = await supabase
+      const { data: savedJob } = await supabase
         .from('saved_jobs')
         .select('id')
-        .eq('worker_id', user.id)
-        .eq('job_id', jobId)
-        .maybeSingle()
+        .match({
+          job_id: jobId,
+          worker_id: user.id,
+        })
+        .maybeSingle<SavedJobRow>()
 
-      setSaved(!!existing)
+      if (!isMounted) return
+
+      setIsSaved(Boolean(savedJob))
       setLoading(false)
     }
 
-    loadState()
+    loadSavedStatus()
+
+    return () => {
+      isMounted = false
+    }
   }, [jobId])
 
-  async function handleToggle() {
+  async function toggleSaved() {
+    if (!userId || saving) return
+
     setSaving(true)
-    setError(null)
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    try {
+      if (isSaved) {
+        const { error } = await supabase
+          .from('saved_jobs')
+          .delete()
+          .match({
+            job_id: jobId,
+            worker_id: userId,
+          })
 
-    if (authError || !user) {
-      setError('You must be logged in.')
-      setSaving(false)
-      return
-    }
+        if (!error) {
+          setIsSaved(false)
+        }
 
-    if (saved) {
-      const { error: deleteError } = await supabase
-        .from('saved_jobs')
-        .delete()
-        .eq('worker_id', user.id)
-        .eq('job_id', jobId)
-
-      if (deleteError) {
-        setError(deleteError.message)
-        setSaving(false)
         return
       }
 
-      setSaved(false)
-      setSaving(false)
-      return
-    }
-
-    const { error: insertError } = await supabase
-      .from('saved_jobs')
-      .insert({
-        worker_id: user.id,
+      const payload: SavedJobInsert = {
         job_id: jobId,
-      })
+        worker_id: userId,
+      }
 
-    if (insertError) {
-      setError(insertError.message)
+      const { error } = await supabase.from('saved_jobs').insert(payload)
+
+      if (!error) {
+        setIsSaved(true)
+      }
+    } finally {
       setSaving(false)
-      return
     }
-
-    setSaved(true)
-    setSaving(false)
   }
 
   if (loading || !isWorker) return null
 
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={handleToggle}
-        disabled={saving}
-        className={`rounded-2xl px-5 py-3 text-sm font-medium disabled:opacity-60 ${
-          saved
-            ? 'border bg-white hover:bg-gray-50'
-            : 'border bg-white hover:bg-gray-50'
-        }`}
-      >
-        {saving ? 'Working...' : saved ? 'Saved' : 'Save Job'}
-      </button>
-
-      {error && <div className="text-sm text-red-600">{error}</div>}
-    </div>
+    <button
+      type="button"
+      onClick={toggleSaved}
+      disabled={saving}
+      className={`rounded-2xl px-4 py-2 text-sm font-black shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        isSaved
+          ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      }`}
+    >
+      {saving ? 'Saving...' : isSaved ? 'Saved' : 'Save Job'}
+    </button>
   )
 }

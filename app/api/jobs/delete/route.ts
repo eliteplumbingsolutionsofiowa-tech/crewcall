@@ -1,16 +1,26 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export async function POST(req: Request) {
+const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey)
+    : null
+
+export async function POST(request: Request) {
   try {
-    const body = await req.json()
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Missing Supabase server environment variables.' },
+        { status: 500 }
+      )
+    }
 
-    const { jobId, companyId } = body
+    const body = await request.json()
+    const jobId = body?.jobId
+    const companyId = body?.companyId
 
     if (!jobId || !companyId) {
       return NextResponse.json(
@@ -21,61 +31,45 @@ export async function POST(req: Request) {
 
     const { data: job, error: jobError } = await supabaseAdmin
       .from('jobs')
-      .select('id, company_id, status, payment_status')
+      .select('id, company_id')
       .eq('id', jobId)
       .maybeSingle()
 
-    if (jobError || !job) {
-      return NextResponse.json(
-        { error: 'Job not found.' },
-        { status: 404 }
-      )
+    if (jobError) {
+      return NextResponse.json({ error: jobError.message }, { status: 400 })
+    }
+
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found.' }, { status: 404 })
     }
 
     if (job.company_id !== companyId) {
       return NextResponse.json(
-        { error: 'Unauthorized.' },
+        { error: 'You do not own this job.' },
         { status: 403 }
       )
     }
 
-    if (
-      job.status !== 'open' ||
-      job.payment_status === 'paid'
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Only unpaid open jobs can be deleted.',
-        },
-        { status: 400 }
-      )
-    }
+    await supabaseAdmin.from('notifications').delete().eq('link_url', `/jobs/${jobId}`)
+    await supabaseAdmin.from('messages').delete().eq('job_id', jobId)
+    await supabaseAdmin.from('conversations').delete().eq('job_id', jobId)
+    await supabaseAdmin.from('applications').delete().eq('job_id', jobId)
+    await supabaseAdmin.from('job_files').delete().eq('job_id', jobId)
 
-    await supabaseAdmin
-      .from('applications')
-      .delete()
-      .eq('job_id', jobId)
-
-    await supabaseAdmin
-      .from('conversations')
-      .delete()
-      .eq('job_id', jobId)
-
-    await supabaseAdmin
+    const { error: deleteError } = await supabaseAdmin
       .from('jobs')
       .delete()
       .eq('id', jobId)
+      .eq('company_id', companyId)
 
-    return NextResponse.json({
-      success: true,
-    })
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json(
-      {
-        error:
-          error?.message || 'Delete failed.',
-      },
+      { error: error?.message || 'Failed to delete job.' },
       { status: 500 }
     )
   }

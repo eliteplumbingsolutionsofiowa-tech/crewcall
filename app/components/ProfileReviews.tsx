@@ -21,33 +21,64 @@ type RawReview = {
   comment: string | null
   created_at: string | null
   reviewer_id: string | null
-  reviewer:
-    | {
-        full_name: string | null
-        company_name: string | null
-        role: string | null
-      }
-    | {
-        full_name: string | null
-        company_name: string | null
-        role: string | null
-      }[]
-    | null
-  job:
-    | {
-        title: string | null
-      }
-    | {
-        title: string | null
-      }[]
-    | null
+  job_id: string | null
 }
 
-export default function ProfileReviews({
-  profileId,
-}: {
-  profileId?: string
-}) {
+type ProfileRow = {
+  id: string
+  full_name: string | null
+  company_name: string | null
+  role: string | null
+}
+
+type JobRow = {
+  id: string
+  title: string | null
+}
+
+type QueryError = {
+  message: string
+}
+
+type OrderedQuery<T> = {
+  order: (
+    column: string,
+    options?: { ascending?: boolean }
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type EqOrderQuery<T> = {
+  eq: (column: string, value: string) => OrderedQuery<T>
+}
+
+type InQuery<T> = {
+  in: (
+    column: string,
+    values: string[]
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type SelectEqOrderTable<T> = {
+  select: (columns: string) => EqOrderQuery<T>
+}
+
+type SelectInTable<T> = {
+  select: (columns: string) => InQuery<T>
+}
+
+function reviewsTable() {
+  return supabase.from('reviews') as unknown as SelectEqOrderTable<RawReview>
+}
+
+function profilesTable() {
+  return supabase.from('profiles') as unknown as SelectInTable<ProfileRow>
+}
+
+function jobsTable() {
+  return supabase.from('jobs') as unknown as SelectInTable<JobRow>
+}
+
+export default function ProfileReviews({ profileId }: { profileId?: string }) {
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -72,23 +103,8 @@ export default function ProfileReviews({
       return
     }
 
-    const { data, error } = await supabase
-      .from('reviews')
-      .select(`
-        id,
-        rating,
-        comment,
-        created_at,
-        reviewer_id,
-        reviewer:reviewer_id (
-          full_name,
-          company_name,
-          role
-        ),
-        job:job_id (
-          title
-        )
-      `)
+    const { data, error } = await reviewsTable()
+      .select('id, rating, comment, created_at, reviewer_id, job_id')
       .eq('reviewee_id', targetId)
       .order('created_at', { ascending: false })
 
@@ -99,14 +115,51 @@ export default function ProfileReviews({
       return
     }
 
-    const cleanedReviews = ((data || []) as RawReview[]).map((review) => {
-      const reviewer = Array.isArray(review.reviewer)
-        ? review.reviewer[0]
-        : review.reviewer
+    const rawReviews = data || []
 
-      const job = Array.isArray(review.job)
-        ? review.job[0]
-        : review.job
+    const reviewerIds = Array.from(
+      new Set(
+        rawReviews
+          .map((review) => review.reviewer_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    )
+
+    const jobIds = Array.from(
+      new Set(
+        rawReviews
+          .map((review) => review.job_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    )
+
+    let profileMap = new Map<string, ProfileRow>()
+    let jobMap = new Map<string, JobRow>()
+
+    if (reviewerIds.length > 0) {
+      const { data: profilesData } = await profilesTable()
+        .select('id, full_name, company_name, role')
+        .in('id', reviewerIds)
+
+      const profiles = profilesData || []
+      profileMap = new Map(profiles.map((profile) => [profile.id, profile]))
+    }
+
+    if (jobIds.length > 0) {
+      const { data: jobsData } = await jobsTable()
+        .select('id, title')
+        .in('id', jobIds)
+
+      const jobs = jobsData || []
+      jobMap = new Map(jobs.map((job) => [job.id, job]))
+    }
+
+    const cleanedReviews: Review[] = rawReviews.map((review) => {
+      const reviewer = review.reviewer_id
+        ? profileMap.get(review.reviewer_id)
+        : null
+
+      const job = review.job_id ? jobMap.get(review.job_id) : null
 
       return {
         id: review.id,
@@ -115,9 +168,7 @@ export default function ProfileReviews({
         created_at: review.created_at,
         reviewer_id: review.reviewer_id,
         reviewer_name:
-          reviewer?.company_name ||
-          reviewer?.full_name ||
-          'CrewCall User',
+          reviewer?.company_name || reviewer?.full_name || 'CrewCall User',
         reviewer_role: reviewer?.role || null,
         job_title: job?.title || null,
       }
@@ -131,14 +182,11 @@ export default function ProfileReviews({
     if (reviews.length === 0) return 0
 
     return (
-      reviews.reduce((sum, review) => sum + review.rating, 0) /
-      reviews.length
+      reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
     )
   }, [reviews])
 
-  const fiveStarCount = reviews.filter(
-    (review) => review.rating === 5
-  ).length
+  const fiveStarCount = reviews.filter((review) => review.rating === 5).length
 
   function renderStars(value: number) {
     const rounded = Math.max(0, Math.min(5, Math.round(value)))
@@ -209,9 +257,7 @@ export default function ProfileReviews({
           </p>
 
           <p className="mt-3 text-sm font-bold uppercase tracking-widest text-slate-400">
-            {reviews.length === 1
-              ? '1 Review'
-              : `${reviews.length} Reviews`}
+            {reviews.length === 1 ? '1 Review' : `${reviews.length} Reviews`}
           </p>
         </div>
       </div>

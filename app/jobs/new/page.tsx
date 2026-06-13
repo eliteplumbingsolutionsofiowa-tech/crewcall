@@ -7,6 +7,11 @@ import { CrewButton } from '@/app/components/CrewButton'
 import { CrewCard } from '@/app/components/CrewCard'
 import { CrewInput } from '@/app/components/CrewInput'
 
+type Profile = {
+  id: string
+  role: string | null
+}
+
 const trades = [
   'Plumbing',
   'Electrical',
@@ -49,8 +54,9 @@ export default function NewJobPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('id, role')
       .eq('id', user.id)
+      .returns<Profile[]>()
       .maybeSingle()
 
     if (profile?.role !== 'company') {
@@ -69,7 +75,7 @@ export default function NewJobPage() {
       description,
       status: 'open',
       payment_status: 'unpaid',
-    })
+    } as never)
 
     if (error) {
       setMessage(error.message)
@@ -109,6 +115,7 @@ export default function NewJobPage() {
               <label className="text-sm font-medium text-gray-700">
                 Trade
               </label>
+
               <select
                 value={trade}
                 onChange={(e) => setTrade(e.target.value)}
@@ -149,6 +156,7 @@ export default function NewJobPage() {
               <label className="text-sm font-medium text-gray-700">
                 Job Description
               </label>
+
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -159,11 +167,11 @@ export default function NewJobPage() {
               />
             </div>
 
-            {message && (
+            {message ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {message}
               </div>
-            )}
+            ) : null}
 
             <div className="flex flex-wrap gap-3">
               <CrewButton type="submit" disabled={loading}>

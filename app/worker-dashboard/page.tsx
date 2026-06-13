@@ -24,12 +24,55 @@ type Stats = {
   unpaid: number
 }
 
+type JobUpdate = {
+  status: string
+}
+
+type QueryError = {
+  message: string
+}
+
+type OrderedQuery<T> = {
+  order: (
+    column: string,
+    options?: { ascending?: boolean }
+  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+}
+
+type EqOrderQuery<T> = {
+  eq: (column: string, value: string) => OrderedQuery<T>
+}
+
+type SelectTable<T> = {
+  select: (columns: string) => EqOrderQuery<T>
+}
+
+type UpdateEqQuery = {
+  eq: (
+    column: string,
+    value: string
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+type UpdateTable<TUpdate> = {
+  update: (value: TUpdate) => UpdateEqQuery
+}
+
+function jobsSelectTable() {
+  return supabase.from('jobs') as unknown as SelectTable<Job>
+}
+
+function jobsUpdateTable() {
+  return supabase.from('jobs') as unknown as UpdateTable<JobUpdate>
+}
+
 function normalize(value: string | null) {
   return String(value || '').toLowerCase().trim()
 }
 
 function formatDate(value: string | null) {
   if (!value) return 'Not scheduled'
+
   return new Date(value).toLocaleDateString()
 }
 
@@ -41,6 +84,7 @@ export default function WorkerDashboard() {
     paid: 0,
     unpaid: 0,
   })
+
   const [loading, setLoading] = useState(true)
   const [busyJobId, setBusyJobId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -63,10 +107,20 @@ export default function WorkerDashboard() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('jobs')
+    const { data, error } = await jobsSelectTable()
       .select(
-        'id, title, trade, location, pay_rate, start_date, status, payment_status, paid_at, company_id'
+        `
+        id,
+        title,
+        trade,
+        location,
+        pay_rate,
+        start_date,
+        status,
+        payment_status,
+        paid_at,
+        company_id
+      `
       )
       .eq('assigned_worker_id', user.id)
       .order('created_at', { ascending: false })
@@ -78,28 +132,39 @@ export default function WorkerDashboard() {
       return
     }
 
-    const jobList = (data || []) as Job[]
+    const jobList = (data || []).filter(Boolean)
+
     setJobs(jobList)
 
     setStats({
-      assigned: jobList.filter((j) => normalize(j.status) !== 'completed').length,
-      completed: jobList.filter((j) => normalize(j.status) === 'completed').length,
-      paid: jobList.filter((j) => normalize(j.payment_status) === 'paid').length,
-      unpaid: jobList.filter((j) => normalize(j.payment_status) !== 'paid').length,
+      assigned: jobList.filter((j) => normalize(j.status) !== 'completed')
+        .length,
+
+      completed: jobList.filter((j) => normalize(j.status) === 'completed')
+        .length,
+
+      paid: jobList.filter((j) => normalize(j.payment_status) === 'paid')
+        .length,
+
+      unpaid: jobList.filter((j) => normalize(j.payment_status) !== 'paid')
+        .length,
     })
 
     setLoading(false)
   }
 
   async function markComplete(jobId: string) {
-    if (!confirm('Mark this job as completed?')) return
+    const confirmed = window.confirm('Mark this job as completed?')
+
+    if (!confirmed) return
 
     setBusyJobId(jobId)
     setMessage(null)
 
-    const { error } = await supabase
-      .from('jobs')
-      .update({ status: 'completed' })
+    const { error } = await jobsUpdateTable()
+      .update({
+        status: 'completed',
+      })
       .eq('id', jobId)
 
     if (error) {
@@ -109,6 +174,7 @@ export default function WorkerDashboard() {
     }
 
     await loadJobs()
+
     setBusyJobId(null)
   }
 
@@ -129,6 +195,7 @@ export default function WorkerDashboard() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold">Worker Dashboard</h1>
+
               <p className="mt-2 text-gray-600">
                 Track assigned jobs, completed work, and payment status.
               </p>
@@ -155,6 +222,7 @@ export default function WorkerDashboard() {
               className="rounded-2xl border bg-white p-6 text-center shadow-sm"
             >
               <p className="text-sm text-gray-500">{s.label}</p>
+
               <p className="mt-2 text-2xl font-bold">{s.value}</p>
             </div>
           ))}
@@ -215,7 +283,8 @@ export default function WorkerDashboard() {
 
                       {payStatus === 'paid' && (
                         <p className="mt-2 text-sm font-semibold text-green-700">
-                          Paid {job.paid_at ? `on ${formatDate(job.paid_at)}` : ''}
+                          Paid{' '}
+                          {job.paid_at ? `on ${formatDate(job.paid_at)}` : ''}
                         </p>
                       )}
 
@@ -243,11 +312,14 @@ export default function WorkerDashboard() {
 
                       {canMarkComplete && (
                         <button
+                          type="button"
                           onClick={() => markComplete(job.id)}
                           disabled={busyJobId === job.id}
                           className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
                         >
-                          {busyJobId === job.id ? 'Completing...' : 'Mark Complete'}
+                          {busyJobId === job.id
+                            ? 'Completing...'
+                            : 'Mark Complete'}
                         </button>
                       )}
 
@@ -274,7 +346,9 @@ export default function WorkerDashboard() {
 function statusClass(isCompleted: boolean) {
   const base = 'rounded-full px-3 py-1 text-xs font-semibold capitalize '
 
-  if (isCompleted) return base + 'bg-green-100 text-green-700'
+  if (isCompleted) {
+    return base + 'bg-green-100 text-green-700'
+  }
 
   return base + 'bg-blue-100 text-blue-700'
 }
@@ -282,8 +356,13 @@ function statusClass(isCompleted: boolean) {
 function paymentClass(status: string) {
   const base = 'rounded-full px-3 py-1 text-xs font-semibold capitalize '
 
-  if (status === 'paid') return base + 'bg-green-100 text-green-700'
-  if (status === 'pending') return base + 'bg-yellow-100 text-yellow-700'
+  if (status === 'paid') {
+    return base + 'bg-green-100 text-green-700'
+  }
+
+  if (status === 'pending') {
+    return base + 'bg-yellow-100 text-yellow-700'
+  }
 
   return base + 'bg-gray-100 text-gray-700'
 }

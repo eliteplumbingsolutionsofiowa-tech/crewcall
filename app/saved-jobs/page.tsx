@@ -1,8 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+
+type Company = {
+  company_name: string | null
+  full_name: string | null
+  insurance_status: string | null
+  liability_status: string | null
+}
 
 type Job = {
   id: string
@@ -13,12 +20,28 @@ type Job = {
   pay_rate: string | null
   status: string
   company_id: string
-  company: {
-    company_name: string | null
-    full_name: string | null
-    insurance_status: string | null
-    liability_status: string | null
-  } | null
+  company: Company | null
+}
+
+type RawJob = Omit<Job, 'company'> & {
+  company: Company | Company[] | null
+}
+
+type SavedJobRow = {
+  job_id: string
+}
+
+type SavedJobInsert = {
+  worker_id: string
+  job_id: string
+}
+
+function firstOrNull<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value
 }
 
 export default function JobsPage() {
@@ -32,11 +55,7 @@ export default function JobsPage() {
   const [verifiedOnly, setVerifiedOnly] = useState(false)
   const [openOnly, setOpenOnly] = useState(false)
 
-  useEffect(() => {
-    loadJobs()
-  }, [])
-
-  async function loadJobs() {
+  const loadJobs = useCallback(async () => {
     setLoading(true)
 
     const {
@@ -47,7 +66,8 @@ export default function JobsPage() {
 
     const { data } = await supabase
       .from('jobs')
-      .select(`
+      .select(
+        `
         *,
         company:company_id (
           company_name,
@@ -55,22 +75,36 @@ export default function JobsPage() {
           insurance_status,
           liability_status
         )
-      `)
+      `
+      )
       .order('created_at', { ascending: false })
+      .returns<RawJob[]>()
 
-    setJobs((data as Job[]) || [])
+    const cleanedJobs: Job[] = (data ?? []).map((job) => ({
+      ...job,
+      company: firstOrNull(job.company),
+    }))
+
+    setJobs(cleanedJobs)
 
     if (user) {
       const { data: savedData } = await supabase
         .from('saved_jobs')
         .select('job_id')
         .eq('worker_id', user.id)
+        .returns<SavedJobRow[]>()
 
-      setSavedJobIds(savedData?.map((item) => item.job_id) || [])
+      setSavedJobIds((savedData ?? []).map((item) => item.job_id).filter(Boolean))
+    } else {
+      setSavedJobIds([])
     }
 
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    void loadJobs()
+  }, [loadJobs])
 
   async function toggleSaveJob(jobId: string) {
     if (!userId) {
@@ -84,18 +118,23 @@ export default function JobsPage() {
       await supabase
         .from('saved_jobs')
         .delete()
-        .eq('worker_id', userId)
-        .eq('job_id', jobId)
+        .match({
+          worker_id: userId,
+          job_id: jobId,
+        })
 
       setSavedJobIds((prev) => prev.filter((id) => id !== jobId))
-    } else {
-      await supabase.from('saved_jobs').insert({
-        worker_id: userId,
-        job_id: jobId,
-      })
-
-      setSavedJobIds((prev) => [...prev, jobId])
+      return
     }
+
+    const payload: SavedJobInsert = {
+      worker_id: userId,
+      job_id: jobId,
+    }
+
+    await supabase.from('saved_jobs').insert(payload)
+
+    setSavedJobIds((prev) => [...prev, jobId])
   }
 
   const filteredJobs = useMemo(() => {
@@ -111,18 +150,28 @@ export default function JobsPage() {
         job.company?.liability_status === 'verified'
 
       const matchesVerified = verifiedOnly ? isVerified : true
+
       const matchesOpen = openOnly ? job.status === 'open' : true
 
       return matchesSearch && matchesTrade && matchesVerified && matchesOpen
     })
   }, [jobs, search, trade, verifiedOnly, openOnly])
 
-  if (loading) return <div className="p-6">Loading jobs...</div>
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-50 p-6">
+        <div className="rounded-3xl border bg-white p-6 shadow-sm">
+          Loading jobs...
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 space-y-6">
+    <main className="min-h-screen space-y-6 bg-slate-50 p-6">
       <div className="rounded-3xl border bg-white p-6 shadow-sm">
         <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
+
         <p className="mt-2 text-slate-600">
           Search, filter, apply, and save jobs for later.
         </p>
@@ -132,13 +181,13 @@ export default function JobsPage() {
         <input
           placeholder="Search location..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           className="rounded-xl border px-3 py-2"
         />
 
         <select
           value={trade}
-          onChange={(e) => setTrade(e.target.value)}
+          onChange={(event) => setTrade(event.target.value)}
           className="rounded-xl border px-3 py-2"
         >
           <option value="">All Trades</option>
@@ -153,7 +202,7 @@ export default function JobsPage() {
           <input
             type="checkbox"
             checked={verifiedOnly}
-            onChange={() => setVerifiedOnly(!verifiedOnly)}
+            onChange={() => setVerifiedOnly((current) => !current)}
           />
           Verified Only
         </label>
@@ -162,7 +211,7 @@ export default function JobsPage() {
           <input
             type="checkbox"
             checked={openOnly}
-            onChange={() => setOpenOnly(!openOnly)}
+            onChange={() => setOpenOnly((current) => !current)}
           />
           Open Jobs Only
         </label>
@@ -178,9 +227,7 @@ export default function JobsPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         {filteredJobs.map((job) => {
           const companyName =
-            job.company?.company_name ||
-            job.company?.full_name ||
-            'Company'
+            job.company?.company_name || job.company?.full_name || 'Company'
 
           const verified =
             job.company?.insurance_status === 'verified' &&
@@ -198,6 +245,7 @@ export default function JobsPage() {
                   <h2 className="text-xl font-bold text-slate-900">
                     {job.title}
                   </h2>
+
                   <p className="mt-1 text-sm text-slate-500">{companyName}</p>
                 </div>
 
@@ -235,7 +283,8 @@ export default function JobsPage() {
                 </Link>
 
                 <button
-                  onClick={() => toggleSaveJob(job.id)}
+                  type="button"
+                  onClick={() => void toggleSaveJob(job.id)}
                   className={
                     saved
                       ? 'rounded-xl bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-200'

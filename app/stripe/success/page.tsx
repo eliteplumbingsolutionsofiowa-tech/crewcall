@@ -13,6 +13,49 @@ type Job = {
   status: string | null
 }
 
+type JobPaymentUpdate = {
+  payment_status: string
+  payout_status: string
+  status: string
+  paid_at: string
+  payout_released_at: string
+}
+
+type QueryError = {
+  message: string
+}
+
+type MaybeSingleQuery<T> = {
+  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+}
+
+type EqMaybeQuery<T> = {
+  eq: (column: string, value: string) => MaybeSingleQuery<T>
+}
+
+type SelectTable<T> = {
+  select: (columns: string) => EqMaybeQuery<T>
+}
+
+type UpdateEqQuery = {
+  eq: (
+    column: string,
+    value: string
+  ) => Promise<{ data: null; error: QueryError | null }>
+}
+
+type UpdateTable<TUpdate> = {
+  update: (value: TUpdate) => UpdateEqQuery
+}
+
+function jobsSelectTable() {
+  return supabase.from('jobs') as unknown as SelectTable<Job>
+}
+
+function jobsUpdateTable() {
+  return supabase.from('jobs') as unknown as UpdateTable<JobPaymentUpdate>
+}
+
 function StripeSuccessContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
@@ -37,15 +80,16 @@ function StripeSuccessContent() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .select(`
+    const { data, error } = await jobsSelectTable()
+      .select(
+        `
         id,
         title,
         payment_status,
         payout_status,
         status
-      `)
+      `
+      )
       .eq('stripe_checkout_session_id', sessionId)
       .maybeSingle()
 
@@ -59,34 +103,35 @@ function StripeSuccessContent() {
       setMessage(
         'Payment finished, but CrewCall could not find the matching job.'
       )
+
       setLoading(false)
       return
     }
 
-    const foundJob = data as Job
+    const foundJob = data
+
     setJob(foundJob)
 
     if (
       foundJob.payment_status === 'paid' &&
       foundJob.payout_status === 'released'
     ) {
-      setMessage(
-        'Payment and worker payout already completed successfully.'
-      )
+      setMessage('Payment and worker payout already completed successfully.')
 
       setSuccess(true)
       setLoading(false)
       return
     }
 
-    const { error: updateError } = await supabase
-      .from('jobs')
+    const now = new Date().toISOString()
+
+    const { error: updateError } = await jobsUpdateTable()
       .update({
         payment_status: 'paid',
         payout_status: 'released',
         status: 'completed',
-        paid_at: new Date().toISOString(),
-        payout_released_at: new Date().toISOString(),
+        paid_at: now,
+        payout_released_at: now,
       })
       .eq('id', foundJob.id)
 
@@ -116,7 +161,9 @@ function StripeSuccessContent() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-100 px-4 py-10">
       <div className="absolute left-[-80px] top-32 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl" />
+
       <div className="absolute right-[-80px] top-20 h-72 w-72 rounded-full bg-orange-300/40 blur-3xl" />
+
       <div className="absolute bottom-[-100px] left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-purple-300/30 blur-3xl" />
 
       <div className="relative mx-auto flex min-h-[75vh] max-w-4xl items-center justify-center">
@@ -187,7 +234,7 @@ function StripeSuccessContent() {
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {job?.id && (
               <Link
-                href={`/jobs/${job.id}/review`}
+                href={`/reviews/new?jobId=${job.id}`}
                 className="rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-4 text-center text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:scale-[1.02]"
               >
                 ★ Leave Review
@@ -252,9 +299,7 @@ export default function StripeSuccessPage() {
               Loading payment...
             </h1>
 
-            <p className="mt-3 text-gray-600">
-              Confirming Stripe payment.
-            </p>
+            <p className="mt-3 text-gray-600">Confirming Stripe payment.</p>
           </div>
         </main>
       }

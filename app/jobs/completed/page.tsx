@@ -47,9 +47,10 @@ export default function CompletedJobsPage() {
       .from('profiles')
       .select('id, role')
       .eq('id', user.id)
+      .returns<Profile[]>()
       .maybeSingle()
 
-    setProfile(profileData as Profile | null)
+    setProfile(profileData || null)
 
     let query = supabase
       .from('jobs')
@@ -130,11 +131,11 @@ export default function CompletedJobsPage() {
                 </div>
               </div>
 
-              {job.paid_at && (
+              {job.paid_at ? (
                 <p className="mt-4 text-sm text-gray-500">
                   Paid on {new Date(job.paid_at).toLocaleDateString()}
                 </p>
-              )}
+              ) : null}
             </Link>
           ))}
         </div>

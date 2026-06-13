@@ -63,6 +63,7 @@ function ReviewContent() {
       .from('jobs')
       .select('id, title, company_id, assigned_worker_id')
       .eq('id', jobId)
+      .returns<Job[]>()
       .maybeSingle()
 
     if (jobError || !jobData) {
@@ -88,15 +89,16 @@ function ReviewContent() {
       return
     }
 
-    setJob(jobData as Job)
+    setJob(jobData)
 
     const { data: profileData } = await supabase
       .from('profiles')
       .select('id, full_name, company_name')
       .eq('id', toUserId)
+      .returns<Profile[]>()
       .maybeSingle()
 
-    setReviewee((profileData as Profile) || null)
+    setReviewee(profileData || null)
     setLoading(false)
   }
 
@@ -123,7 +125,7 @@ function ReviewContent() {
       reviewee_id: toUserId,
       rating,
       comment: comment.trim() || null,
-    })
+    } as never)
 
     if (error) {
       setMessage(error.message)
@@ -147,6 +149,12 @@ function ReviewContent() {
   const revieweeName =
     reviewee?.company_name || reviewee?.full_name || 'CrewCall user'
 
+  const showReviewForm =
+    !message.includes('Missing') &&
+    !message.includes('Invalid') &&
+    !message.includes('only review') &&
+    !message.includes('logged in')
+
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-10">
       <div className="mx-auto max-w-xl rounded-2xl bg-white p-8 shadow">
@@ -158,60 +166,58 @@ function ReviewContent() {
           Review {revieweeName}
         </h1>
 
-        {job?.title && (
+        {job?.title ? (
           <p className="mt-2 text-gray-600">
             Job: <span className="font-semibold">{job.title}</span>
           </p>
-        )}
+        ) : null}
 
-        {message && (
+        {message ? (
           <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
             {message}
           </div>
-        )}
+        ) : null}
 
-        {!message.includes('Missing') &&
-          !message.includes('Invalid') &&
-          !message.includes('only review') &&
-          !message.includes('logged in') && (
-            <div className="mt-6">
-              <label className="block text-sm font-bold text-gray-800">
-                Rating
-              </label>
+        {showReviewForm ? (
+          <div className="mt-6">
+            <label className="block text-sm font-bold text-gray-800">
+              Rating
+            </label>
 
-              <select
-                value={rating}
-                onChange={(e) => setRating(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-blue-500"
-              >
-                {[5, 4, 3, 2, 1].map((number) => (
-                  <option key={number} value={number}>
-                    {number} Stars
-                  </option>
-                ))}
-              </select>
+            <select
+              value={rating}
+              onChange={(event) => setRating(Number(event.target.value))}
+              className="mt-2 w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-blue-500"
+            >
+              {[5, 4, 3, 2, 1].map((number) => (
+                <option key={number} value={number}>
+                  {number} Stars
+                </option>
+              ))}
+            </select>
 
-              <label className="mt-5 block text-sm font-bold text-gray-800">
-                Comment
-              </label>
+            <label className="mt-5 block text-sm font-bold text-gray-800">
+              Comment
+            </label>
 
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={5}
-                className="mt-2 w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-blue-500"
-                placeholder="How did the job go?"
-              />
+            <textarea
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              rows={5}
+              className="mt-2 w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-blue-500"
+              placeholder="How did the job go?"
+            />
 
-              <button
-                onClick={submitReview}
-                disabled={saving}
-                className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
-              >
-                {saving ? 'Submitting...' : 'Submit Review'}
-              </button>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={submitReview}
+              disabled={saving}
+              className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {saving ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </div>
+        ) : null}
 
         <div className="mt-6">
           <Link

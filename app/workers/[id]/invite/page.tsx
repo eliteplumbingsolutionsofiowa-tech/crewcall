@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { CrewButton } from '@/app/components/CrewButton'
@@ -20,10 +20,15 @@ type Worker = {
   trade: string | null
 }
 
+type ExistingInvite = {
+  id: string
+}
+
 export default function InviteWorkerPage() {
   const params = useParams()
   const router = useRouter()
-  const workerId = String(params.id || '')
+
+  const workerId = String(params?.id || '')
 
   const [worker, setWorker] = useState<Worker | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
@@ -33,12 +38,9 @@ export default function InviteWorkerPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    loadPage()
-  }, [])
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     setLoading(true)
+    setMessage(null)
 
     const {
       data: { user },
@@ -50,28 +52,43 @@ export default function InviteWorkerPage() {
       return
     }
 
-    const { data: workerData } = await supabase
+    const { data: workerData, error: workerError } = await supabase
       .from('profiles')
       .select('id, full_name, trade')
       .eq('id', workerId)
-      .maybeSingle()
+      .maybeSingle<Worker>()
 
-    const { data: jobData } = await supabase
+    if (workerError) {
+      setMessage(workerError.message)
+      setLoading(false)
+      return
+    }
+
+    const { data: jobData, error: jobsError } = await supabase
       .from('jobs')
       .select('id, title, trade, location, status')
       .eq('company_id', user.id)
-      .in('status', ['open', 'assigned'])
+      .in('status', ['open', 'assigned', 'in_progress'])
       .order('created_at', { ascending: false })
+      .returns<Job[]>()
 
-    setWorker((workerData as Worker) || null)
-    setJobs((jobData as Job[]) || [])
-
-    if (jobData && jobData.length > 0) {
-      setSelectedJobId(jobData[0].id)
+    if (jobsError) {
+      setMessage(jobsError.message)
+      setLoading(false)
+      return
     }
 
+    const safeJobs = jobData || []
+
+    setWorker(workerData || null)
+    setJobs(safeJobs)
+    setSelectedJobId(safeJobs[0]?.id || '')
     setLoading(false)
-  }
+  }, [workerId])
+
+  useEffect(() => {
+    loadPage()
+  }, [loadPage])
 
   async function sendInvite() {
     setSending(true)
@@ -94,13 +111,18 @@ export default function InviteWorkerPage() {
       return
     }
 
-    // 🔥 PREVENT DUPLICATE INVITES
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('job_invites')
       .select('id')
       .eq('job_id', selectedJobId)
       .eq('worker_id', workerId)
-      .maybeSingle()
+      .maybeSingle<ExistingInvite>()
+
+    if (existingError) {
+      setMessage(existingError.message)
+      setSending(false)
+      return
+    }
 
     if (existing) {
       setMessage('You already invited this worker to that job.')
@@ -108,79 +130,88 @@ export default function InviteWorkerPage() {
       return
     }
 
-    const { error } = await supabase.from('job_invites').insert({
+    const { error: inviteError } = await supabase.from('job_invites').insert({
       job_id: selectedJobId,
       worker_id: workerId,
       company_id: user.id,
       status: 'pending',
+      company_seen: true,
+      worker_seen: false,
     })
 
-    if (error) {
-      setMessage(error.message)
+    if (inviteError) {
+      setMessage(inviteError.message)
       setSending(false)
       return
     }
 
+    await supabase.from('notifications').insert({
+      user_id: workerId,
+      type: 'invite',
+      title: 'New job invite',
+      body: 'A company invited you to a job.',
+      link_url: '/worker/invites',
+      is_read: false,
+      read: false,
+    })
+
     setSuccess(true)
     setSending(false)
 
-    // optional redirect delay
-    setTimeout(() => {
-      router.push('/invites')
-    }, 1200)
+    router.push('/company/invites')
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 px-6 py-8">
-        <p className="text-gray-600">Loading invite page...</p>
+      <main className="min-h-screen bg-slate-950 px-6 py-8 text-white">
+        <p className="text-slate-300">Loading invite page...</p>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-8">
+    <main className="min-h-screen bg-slate-950 px-6 py-8 text-white">
       <div className="mx-auto max-w-3xl space-y-6">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+          <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
             CrewCall
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-gray-900">
+          <h1 className="mt-2 text-3xl font-black tracking-tight">
             Invite Worker
           </h1>
 
-          <p className="mt-2 text-gray-600">
-            Invite{' '}
-            <b>{worker?.full_name || 'this worker'}</b> to one of your jobs.
+          <p className="mt-2 text-slate-300">
+            Invite <b>{worker?.full_name || 'this worker'}</b> to one of your
+            jobs.
           </p>
         </div>
 
         <CrewCard className="space-y-5">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-black text-white">
               {worker?.full_name || 'Worker'}
             </h2>
 
-            <p className="text-sm text-blue-600">
+            <p className="text-sm font-bold text-cyan-300">
               {worker?.trade || 'Trade not listed'}
             </p>
           </div>
 
           {jobs.length === 0 ? (
-            <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+            <div className="rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-4 text-sm font-bold text-yellow-100">
               You do not have any open jobs to invite this worker to.
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-black text-slate-200">
                 Select Job
               </label>
 
               <select
                 value={selectedJobId}
                 onChange={(e) => setSelectedJobId(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
               >
                 {jobs.map((job) => (
                   <option key={job.id} value={job.id}>
@@ -193,14 +224,14 @@ export default function InviteWorkerPage() {
           )}
 
           {message && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-100">
               {message}
             </div>
           )}
 
           {success && (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-              Invite sent successfully
+            <div className="rounded-2xl border border-green-400/30 bg-green-500/10 p-4 text-sm font-bold text-green-100">
+              Invite sent successfully.
             </div>
           )}
 
