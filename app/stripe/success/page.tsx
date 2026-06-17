@@ -11,6 +11,8 @@ type Job = {
   payment_status: string | null
   payout_status: string | null
   status: string | null
+  company_id: string | null
+  assigned_worker_id: string | null
 }
 
 type JobPaymentUpdate = {
@@ -64,6 +66,7 @@ function StripeSuccessContent() {
   const [message, setMessage] = useState('Confirming payment...')
   const [success, setSuccess] = useState(false)
   const [job, setJob] = useState<Job | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     confirmPayment()
@@ -73,6 +76,12 @@ function StripeSuccessContent() {
   async function confirmPayment() {
     setLoading(true)
     setSuccess(false)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    setCurrentUserId(user?.id || null)
 
     if (!sessionId) {
       setMessage('Missing Stripe session ID.')
@@ -87,7 +96,9 @@ function StripeSuccessContent() {
         title,
         payment_status,
         payout_status,
-        status
+        status,
+        company_id,
+        assigned_worker_id
       `
       )
       .eq('stripe_checkout_session_id', sessionId)
@@ -103,13 +114,11 @@ function StripeSuccessContent() {
       setMessage(
         'Payment finished, but CrewCall could not find the matching job.'
       )
-
       setLoading(false)
       return
     }
 
     const foundJob = data
-
     setJob(foundJob)
 
     if (
@@ -117,7 +126,6 @@ function StripeSuccessContent() {
       foundJob.payout_status === 'released'
     ) {
       setMessage('Payment and worker payout already completed successfully.')
-
       setSuccess(true)
       setLoading(false)
       return
@@ -154,16 +162,27 @@ function StripeSuccessContent() {
 
     setSuccess(true)
     setLoading(false)
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
   }
 
   const icon = success ? '✓' : loading ? '…' : '!'
 
+  const reviewTargetId =
+    currentUserId && job
+      ? currentUserId === job.company_id
+        ? job.assigned_worker_id
+        : currentUserId === job.assigned_worker_id
+          ? job.company_id
+          : null
+      : job?.assigned_worker_id || null
+
+  const canLeaveReview = Boolean(job?.id && reviewTargetId)
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-100 px-4 py-10">
       <div className="absolute left-[-80px] top-32 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl" />
-
       <div className="absolute right-[-80px] top-20 h-72 w-72 rounded-full bg-orange-300/40 blur-3xl" />
-
       <div className="absolute bottom-[-100px] left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-purple-300/30 blur-3xl" />
 
       <div className="relative mx-auto flex min-h-[75vh] max-w-4xl items-center justify-center">
@@ -232,9 +251,9 @@ function StripeSuccessContent() {
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {job?.id && (
+            {canLeaveReview && (
               <Link
-                href={`/reviews/new?jobId=${job.id}`}
+                href={`/jobs/${job?.id}/review?to=${reviewTargetId}`}
                 className="rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-4 text-center text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:scale-[1.02]"
               >
                 ★ Leave Review
@@ -262,6 +281,13 @@ function StripeSuccessContent() {
               Dashboard
             </Link>
           </div>
+
+          {!canLeaveReview && job?.id && (
+            <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm font-bold text-orange-800">
+              Review is not available yet because CrewCall could not determine
+              the other user on this job.
+            </div>
+          )}
 
           <div className="mt-8 rounded-3xl bg-gradient-to-r from-blue-600 via-purple-600 to-orange-500 p-5 text-white shadow-xl">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
