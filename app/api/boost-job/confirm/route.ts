@@ -2,31 +2,68 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+export const dynamic = 'force-dynamic'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+type BoostConfirmBody = {
+  sessionId?: string
+}
+
+function getStripeClient() {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+
+  if (!stripeSecretKey) {
+    throw new Error('Missing STRIPE_SECRET_KEY environment variable.')
+  }
+
+  return new Stripe(stripeSecretKey)
+}
+
+function getSupabaseAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable.')
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable.')
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey)
+}
 
 export async function POST(request: Request) {
   try {
-    const { sessionId } = await request.json()
+    const body = (await request.json()) as BoostConfirmBody
+    const sessionId = body.sessionId
 
     if (!sessionId) {
-      return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Missing sessionId' },
+        { status: 400 }
+      )
     }
+
+    const stripe = getStripeClient()
+    const supabaseAdmin = getSupabaseAdminClient()
 
     const session = await stripe.checkout.sessions.retrieve(sessionId)
 
     if (session.payment_status !== 'paid') {
-      return NextResponse.json({ error: 'Payment not completed' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Payment not completed' },
+        { status: 400 }
+      )
     }
 
     const jobId = session.metadata?.jobId
 
     if (!jobId) {
-      return NextResponse.json({ error: 'Missing jobId' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Missing jobId' },
+        { status: 400 }
+      )
     }
 
     const featuredUntil = new Date(
@@ -42,13 +79,25 @@ export async function POST(request: Request) {
       .eq('id', jobId)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true, jobId })
-  } catch (error: any) {
+    return NextResponse.json({
+      success: true,
+      jobId,
+      featured_until: featuredUntil,
+    })
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Could not confirm boost'
+
     return NextResponse.json(
-      { error: error.message || 'Could not confirm boost' },
+      { error: message },
       { status: 500 }
     )
   }
