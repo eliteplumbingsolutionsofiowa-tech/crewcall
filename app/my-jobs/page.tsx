@@ -7,7 +7,6 @@ import {
   useMemo,
   useState,
 } from 'react'
-
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -21,6 +20,7 @@ type Job = {
   start_date: string | null
   status: string | null
   payment_status: string | null
+  payout_status: string | null
   company_id: string
   assigned_worker_id: string | null
   created_at: string
@@ -33,6 +33,8 @@ type Filter =
   | 'assigned'
   | 'completed'
   | 'paid'
+  | 'unpaid'
+  | 'not_released'
 
 function formatDate(value: string | null) {
   if (!value) return 'Not set'
@@ -78,6 +80,20 @@ function paymentClasses(status: string | null) {
   return 'border-slate-300/20 bg-slate-400/10 text-slate-200'
 }
 
+function payoutClasses(status: string | null) {
+  const value = status || 'not_released'
+
+  if (value === 'released') {
+    return 'border-emerald-300/20 bg-emerald-400/15 text-emerald-100'
+  }
+
+  if (value === 'pending') {
+    return 'border-orange-300/20 bg-orange-400/15 text-orange-100'
+  }
+
+  return 'border-blue-300/20 bg-blue-400/15 text-blue-100'
+}
+
 export default function MyJobsPage() {
   const router = useRouter()
 
@@ -87,8 +103,7 @@ export default function MyJobsPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const [search, setSearch] = useState('')
-  const [filter, setFilter] =
-    useState<Filter>('all')
+  const [filter, setFilter] = useState<Filter>('all')
 
   const loadJobs = useCallback(async () => {
     setRefreshing(true)
@@ -104,10 +119,7 @@ export default function MyJobsPage() {
       return
     }
 
-    const {
-      data: jobsData,
-      error: jobsError,
-    } = await supabase
+    const { data: jobsData, error: jobsError } = await supabase
       .from('jobs')
       .select(
         `
@@ -120,6 +132,7 @@ export default function MyJobsPage() {
         start_date,
         status,
         payment_status,
+        payout_status,
         company_id,
         assigned_worker_id,
         created_at
@@ -138,53 +151,32 @@ export default function MyJobsPage() {
       return
     }
 
-    const cleanJobs = (
-      jobsData || []
-    ) as Omit<Job, 'applicant_count'>[]
-
-    const jobIds = cleanJobs.map(
-      (job) => job.id
-    )
-
-    let countMap = new Map<
-      string,
-      number
-    >()
+    const cleanJobs = (jobsData || []) as Omit<Job, 'applicant_count'>[]
+    const jobIds = cleanJobs.map((job) => job.id)
+    const countMap = new Map<string, number>()
 
     if (jobIds.length > 0) {
-      const {
-        data: applicationsData,
-      } = await supabase
+      const { data: applicationsData } = await supabase
         .from('applications')
         .select('id, job_id')
         .in('job_id', jobIds)
 
-      ;(
-        applicationsData || []
-      ).forEach((app: any) => {
-        countMap.set(
-          app.job_id,
-          (countMap.get(app.job_id) ||
-            0) + 1
-        )
+      ;(applicationsData || []).forEach((app: any) => {
+        countMap.set(app.job_id, (countMap.get(app.job_id) || 0) + 1)
       })
     }
 
-    const mergedJobs: Job[] =
-      cleanJobs.map((job) => ({
-        ...job,
-        applicant_count:
-          countMap.get(job.id) || 0,
-      }))
+    const mergedJobs: Job[] = cleanJobs.map((job) => ({
+      ...job,
+      payout_status: job.payout_status || 'not_released',
+      applicant_count: countMap.get(job.id) || 0,
+    }))
 
     setJobs(mergedJobs)
-
     setLoading(false)
     setRefreshing(false)
 
-    window.dispatchEvent(
-      new Event('crewcall-refresh-nav')
-    )
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
   }, [router])
 
   useEffect(() => {
@@ -199,37 +191,20 @@ export default function MyJobsPage() {
 
     const refresh = async () => {
       if (!mounted) return
-
       await loadJobs()
-
-      window.dispatchEvent(
-        new Event('crewcall-refresh-nav')
-      )
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
     }
 
-    window.addEventListener(
-      'focus',
-      refresh
-    )
-
-    window.addEventListener(
-      'pageshow',
-      refresh
-    )
+    window.addEventListener('focus', refresh)
+    window.addEventListener('pageshow', refresh)
 
     const handleVisibility = () => {
-      if (
-        document.visibilityState ===
-        'visible'
-      ) {
+      if (document.visibilityState === 'visible') {
         refresh()
       }
     }
 
-    document.addEventListener(
-      'visibilitychange',
-      handleVisibility
-    )
+    document.addEventListener('visibilitychange', handleVisibility)
 
     const jobsChannel = supabase
       .channel('my-jobs-live-sync-upgraded')
@@ -244,47 +219,28 @@ export default function MyJobsPage() {
       )
       .subscribe()
 
-    const applicationsChannel =
-      supabase
-        .channel(
-          'my-jobs-applications-sync-upgraded'
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'applications',
-          },
-          refresh
-        )
-        .subscribe()
+    const applicationsChannel = supabase
+      .channel('my-jobs-applications-sync-upgraded')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'applications',
+        },
+        refresh
+      )
+      .subscribe()
 
     return () => {
       mounted = false
 
-      window.removeEventListener(
-        'focus',
-        refresh
-      )
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('pageshow', refresh)
+      document.removeEventListener('visibilitychange', handleVisibility)
 
-      window.removeEventListener(
-        'pageshow',
-        refresh
-      )
-
-      document.removeEventListener(
-        'visibilitychange',
-        handleVisibility
-      )
-
-      supabase.removeChannel(
-        jobsChannel
-      )
-
-      supabase.removeChannel(
-        applicationsChannel
-      )
+      supabase.removeChannel(jobsChannel)
+      supabase.removeChannel(applicationsChannel)
     }
   }, [loadJobs])
 
@@ -292,28 +248,25 @@ export default function MyJobsPage() {
     const seen = new Set<string>()
 
     return jobs.filter((job) => {
-      if (seen.has(job.id)) {
-        return false
-      }
-
+      if (seen.has(job.id)) return false
       seen.add(job.id)
-
       return true
     })
   }, [jobs])
 
   const filteredJobs = useMemo(() => {
-    const term = search
-      .trim()
-      .toLowerCase()
+    const term = search.trim().toLowerCase()
 
     return dedupedJobs.filter((job) => {
       const matchesFilter =
         filter === 'all' ||
         job.status === filter ||
-        (filter === 'paid' &&
-          job.payment_status ===
-            'paid')
+        (filter === 'paid' && job.payment_status === 'paid') ||
+        (filter === 'unpaid' && job.payment_status !== 'paid') ||
+        (filter === 'not_released' &&
+          job.status === 'completed' &&
+          job.payment_status === 'paid' &&
+          job.payout_status !== 'released')
 
       const haystack = [
         job.title,
@@ -323,51 +276,30 @@ export default function MyJobsPage() {
         job.pay_rate,
         job.status,
         job.payment_status,
+        job.payout_status,
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
 
-      const matchesSearch =
-        !term ||
-        haystack.includes(term)
+      const matchesSearch = !term || haystack.includes(term)
 
-      return (
-        matchesFilter &&
-        matchesSearch
-      )
+      return matchesFilter && matchesSearch
     })
-  }, [
-    dedupedJobs,
-    filter,
-    search,
-  ])
+  }, [dedupedJobs, filter, search])
 
   const stats = useMemo(() => {
     return {
       total: dedupedJobs.length,
-
-      open: dedupedJobs.filter(
+      open: dedupedJobs.filter((job) => job.status === 'open').length,
+      assigned: dedupedJobs.filter((job) => job.status === 'assigned').length,
+      completed: dedupedJobs.filter((job) => job.status === 'completed').length,
+      paid: dedupedJobs.filter((job) => job.payment_status === 'paid').length,
+      needsPayout: dedupedJobs.filter(
         (job) =>
-          job.status === 'open'
-      ).length,
-
-      assigned: dedupedJobs.filter(
-        (job) =>
-          job.status === 'assigned'
-      ).length,
-
-      completed:
-        dedupedJobs.filter(
-          (job) =>
-            job.status ===
-            'completed'
-        ).length,
-
-      paid: dedupedJobs.filter(
-        (job) =>
-          job.payment_status ===
-          'paid'
+          job.status === 'completed' &&
+          job.payment_status === 'paid' &&
+          job.payout_status !== 'released'
       ).length,
     }
   }, [dedupedJobs])
@@ -381,9 +313,7 @@ export default function MyJobsPage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">
-            Loading your jobs...
-          </p>
+          <p className="text-lg font-black">Loading your jobs...</p>
         </div>
       </main>
     )
@@ -405,10 +335,8 @@ export default function MyJobsPage() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Manage active jobs,
-                  applicants, hires,
-                  payments, completed work,
-                  and worker communication.
+                  Manage active jobs, applicants, hires, payments, completed
+                  work, and worker communication.
                 </p>
               </div>
 
@@ -429,35 +357,13 @@ export default function MyJobsPage() {
               </div>
             </div>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <StatCard
-                label="Total"
-                value={String(stats.total)}
-              />
-
-              <StatCard
-                label="Open"
-                value={String(stats.open)}
-              />
-
-              <StatCard
-                label="Assigned"
-                value={String(
-                  stats.assigned
-                )}
-              />
-
-              <StatCard
-                label="Completed"
-                value={String(
-                  stats.completed
-                )}
-              />
-
-              <StatCard
-                label="Paid"
-                value={String(stats.paid)}
-              />
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+              <StatCard label="Total" value={String(stats.total)} />
+              <StatCard label="Open" value={String(stats.open)} />
+              <StatCard label="Assigned" value={String(stats.assigned)} />
+              <StatCard label="Completed" value={String(stats.completed)} />
+              <StatCard label="Paid" value={String(stats.paid)} />
+              <StatCard label="Needs Payout" value={String(stats.needsPayout)} />
             </div>
           </div>
         </section>
@@ -471,11 +377,7 @@ export default function MyJobsPage() {
 
               <input
                 value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search title, trade, location..."
                 className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
               />
@@ -488,33 +390,16 @@ export default function MyJobsPage() {
 
               <select
                 value={filter}
-                onChange={(event) =>
-                  setFilter(
-                    event.target
-                      .value as Filter
-                  )
-                }
+                onChange={(event) => setFilter(event.target.value as Filter)}
                 className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none"
               >
-                <option value="all">
-                  All
-                </option>
-
-                <option value="open">
-                  Open
-                </option>
-
-                <option value="assigned">
-                  Assigned
-                </option>
-
-                <option value="completed">
-                  Completed
-                </option>
-
-                <option value="paid">
-                  Paid
-                </option>
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="assigned">Assigned</option>
+                <option value="completed">Completed</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="not_released">Needs Payout</option>
               </select>
             </div>
 
@@ -531,9 +416,7 @@ export default function MyJobsPage() {
               onClick={loadJobs}
               className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
             >
-              {refreshing
-                ? 'Refreshing...'
-                : 'Refresh'}
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </section>
@@ -546,13 +429,10 @@ export default function MyJobsPage() {
 
         {filteredJobs.length === 0 && (
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
-            <h2 className="text-3xl font-black text-white">
-              No jobs found
-            </h2>
+            <h2 className="text-3xl font-black text-white">No jobs found</h2>
 
             <p className="mt-3 text-slate-300">
-              Post your first job to
-              start finding workers.
+              Post your first job to start finding workers.
             </p>
 
             <Link
@@ -565,143 +445,136 @@ export default function MyJobsPage() {
         )}
 
         <div className="grid gap-5">
-          {filteredJobs.map((job) => (
-            <div
-              key={job.id}
-              className="group rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:border-cyan-300/20"
-            >
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-2xl font-black text-white">
-                        {job.title ||
-                          'Untitled Job'}
-                      </h2>
+          {filteredJobs.map((job) => {
+            const isPaid = job.payment_status === 'paid'
+            const isCompleted = job.status === 'completed'
+            const payoutReleased = job.payout_status === 'released'
+            const canPay = !isPaid && Boolean(job.assigned_worker_id)
+            const canReleasePayout = isPaid && isCompleted && !payoutReleased
+            const canReview = isCompleted && Boolean(job.assigned_worker_id)
 
-                      <Badge
-                        value={
-                          job.status ||
-                          'open'
-                        }
-                        payment={false}
-                      />
+            return (
+              <div
+                key={job.id}
+                className="group rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:border-cyan-300/20"
+              >
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-2xl font-black text-white">
+                          {job.title || 'Untitled Job'}
+                        </h2>
 
-                      <Badge
-                        value={
-                          job.payment_status ||
-                          'unpaid'
-                        }
-                        payment
-                      />
+                        <Badge value={job.status || 'open'} type="status" />
+
+                        <Badge
+                          value={job.payment_status || 'unpaid'}
+                          type="payment"
+                        />
+
+                        {isCompleted && (
+                          <Badge
+                            value={job.payout_status || 'not_released'}
+                            type="payout"
+                          />
+                        )}
+                      </div>
+
+                      <p className="mt-2 text-sm font-semibold text-slate-400">
+                        {job.trade || 'Trade not set'} •{' '}
+                        {job.location || 'Location not set'}
+                      </p>
                     </div>
 
-                    <p className="mt-2 text-sm font-semibold text-slate-400">
-                      {job.trade ||
-                        'Trade not set'}{' '}
-                      •{' '}
-                      {job.location ||
-                        'Location not set'}
-                    </p>
+                    {job.description && (
+                      <p className="max-w-3xl text-sm leading-6 text-slate-300">
+                        {job.description}
+                      </p>
+                    )}
+
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                      <Info label="Pay" value={job.pay_rate || 'Not set'} />
+
+                      <Info label="Start" value={formatDate(job.start_date)} />
+
+                      <Info
+                        label="Applicants"
+                        value={String(job.applicant_count)}
+                      />
+
+                      <Info label="Posted" value={formatDate(job.created_at)} />
+                    </div>
                   </div>
 
-                  {job.description && (
-                    <p className="max-w-3xl text-sm leading-6 text-slate-300">
-                      {job.description}
-                    </p>
-                  )}
+                  <div className="flex flex-wrap gap-3 lg:w-[260px] lg:flex-col">
+                    {!isCompleted && (
+                      <Link
+                        href={`/my-jobs/${job.id}/applicants`}
+                        className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+                      >
+                        View Applicants
+                      </Link>
+                    )}
 
-                  <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
-                    <Info
-                      label="Pay"
-                      value={
-                        job.pay_rate ||
-                        'Not set'
-                      }
-                    />
-
-                    <Info
-                      label="Start"
-                      value={formatDate(
-                        job.start_date
-                      )}
-                    />
-
-                    <Info
-                      label="Applicants"
-                      value={String(
-                        job.applicant_count
-                      )}
-                    />
-
-                    <Info
-                      label="Posted"
-                      value={formatDate(
-                        job.created_at
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-3 lg:w-[260px] lg:flex-col">
-                  {job.status !==
-                    'completed' && (
                     <Link
-                      href={`/my-jobs/${job.id}/applicants`}
+                      href={`/jobs/${job.id}`}
                       className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
                     >
-                      View Applicants
+                      View Job
                     </Link>
-                  )}
 
-                  <Link
-                    href={`/jobs/${job.id}`}
-                    className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
-                  >
-                    View Job
-                  </Link>
-
-                  {job.status ===
-                    'assigned' && (
-                    <Link
-                      href={`/jobs/${job.id}/pay`}
-                      className="rounded-2xl bg-green-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-green-500"
-                    >
-                      Pay Worker
-                    </Link>
-                  )}
-
-                  {job.status ===
-                    'completed' && (
-                    <>
+                    {canPay && (
                       <Link
-                        href="/completed-jobs"
-                        className="rounded-2xl bg-purple-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-purple-500"
+                        href={`/jobs/${job.id}/pay`}
+                        className="rounded-2xl bg-green-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-green-500"
                       >
-                        View Completed
+                        Pay Worker
                       </Link>
+                    )}
 
+                    {canReleasePayout && (
                       <Link
-                        href={`/jobs/${job.id}/review`}
-                        className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-orange-400"
+                        href={`/jobs/${job.id}/release-payout`}
+                        className="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-500"
                       >
-                        Leave Review
+                        Release Payout
                       </Link>
-                    </>
-                  )}
+                    )}
 
-                  {job.assigned_worker_id && (
-                    <Link
-                      href={`/messages?workerId=${job.assigned_worker_id}&jobId=${job.id}`}
-                      className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-blue-400"
-                    >
-                      Message Worker
-                    </Link>
-                  )}
+                    {isCompleted && (
+                      <>
+                        <Link
+                          href="/completed-jobs"
+                          className="rounded-2xl bg-purple-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-purple-500"
+                        >
+                          View Completed
+                        </Link>
+
+                        {canReview && (
+                          <Link
+                            href={`/jobs/${job.id}/review?to=${job.assigned_worker_id}`}
+                            className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-orange-400"
+                          >
+                            Leave Review
+                          </Link>
+                        )}
+                      </>
+                    )}
+
+                    {job.assigned_worker_id && (
+                      <Link
+                        href={`/messages?workerId=${job.assigned_worker_id}&jobId=${job.id}`}
+                        className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-blue-400"
+                      >
+                        Message Worker
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </main>
@@ -730,14 +603,17 @@ function StatCard({
 
 function Badge({
   value,
-  payment,
+  type,
 }: {
   value: string
-  payment?: boolean
+  type: 'status' | 'payment' | 'payout'
 }) {
-  const classes = payment
-    ? paymentClasses(value)
-    : statusClasses(value)
+  const classes =
+    type === 'payment'
+      ? paymentClasses(value)
+      : type === 'payout'
+        ? payoutClasses(value)
+        : statusClasses(value)
 
   return (
     <span
@@ -761,9 +637,7 @@ function Info({
         {label}
       </p>
 
-      <p className="mt-2 text-sm font-bold text-white">
-        {value}
-      </p>
+      <p className="mt-2 text-sm font-bold text-white">{value}</p>
     </div>
   )
 }
