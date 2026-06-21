@@ -1,73 +1,69 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type AdminProfile = {
+type Profile = {
   id: string
-  role: 'company' | 'worker' | null
   full_name: string | null
+  email: string | null
+  role: string | null
   company_name: string | null
-  is_admin: boolean | null
+  company_verified: boolean | null
+  insurance_verified: boolean | null
+  liability_form_verified: boolean | null
+  created_at: string | null
 }
 
-type CountState = {
-  companies: number
-  workers: number
-  jobs: number
-  openJobs: number
-  completedJobs: number
-  applications: number
-  invites: number
-  messages: number
-  notifications: number
-}
-
-type RecentJob = {
+type Job = {
   id: string
   title: string | null
   trade: string | null
   location: string | null
   status: string | null
+  payment_status: string | null
+  payout_status: string | null
+  pay_rate: string | null
+  company_id: string | null
+  assigned_worker_id: string | null
   created_at: string | null
 }
 
-type RecentProfile = {
+type Application = {
   id: string
-  role: 'company' | 'worker' | null
-  full_name: string | null
-  company_name: string | null
+  status: string | null
+  job_id: string | null
+  worker_id: string | null
+  requested_pay_rate: string | null
   created_at: string | null
 }
 
-const emptyCounts: CountState = {
-  companies: 0,
-  workers: 0,
-  jobs: 0,
-  openJobs: 0,
-  completedJobs: 0,
-  applications: 0,
-  invites: 0,
-  messages: 0,
-  notifications: 0,
+type Invite = {
+  id: string
+  status: string | null
+  job_id: string | null
+  worker_id: string | null
+  company_id: string | null
+  created_at: string | null
 }
 
-export default function AdminDashboardPage() {
-  const [profile, setProfile] = useState<AdminProfile | null>(null)
-  const [counts, setCounts] = useState<CountState>(emptyCounts)
-  const [recentJobs, setRecentJobs] = useState<RecentJob[]>([])
-  const [recentProfiles, setRecentProfiles] = useState<RecentProfile[]>([])
+export default function AdminPage() {
+  const db = supabase as any
+
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [message, setMessage] = useState('')
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
+  const [invites, setInvites] = useState<Invite[]>([])
 
-  const adminName = useMemo(() => {
-    return profile?.company_name || profile?.full_name || 'CrewCall Admin'
-  }, [profile])
+  useEffect(() => {
+    loadAdminData()
+  }, [])
 
-  const loadAdminDashboard = useCallback(async () => {
-    setRefreshing(true)
+  async function loadAdminData() {
+    setLoading(true)
     setMessage('')
 
     const {
@@ -76,285 +72,339 @@ export default function AdminDashboardPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setProfile(null)
-      setMessage('You must be logged in to access admin.')
+      setMessage('You must be logged in.')
       setLoading(false)
-      setRefreshing(false)
       return
     }
 
-    const { data: profileData, error: profileError } = await supabase
+    const { data: myProfile } = await db
       .from('profiles')
-      .select('id, role, full_name, company_name, is_admin')
+      .select('role')
       .eq('id', user.id)
-      .maybeSingle<AdminProfile>()
+      .maybeSingle()
 
-    if (profileError) {
-      setMessage(profileError.message)
+    if (myProfile?.role !== 'admin') {
+      setMessage('Admin access only.')
       setLoading(false)
-      setRefreshing(false)
       return
     }
 
-    if (!profileData?.is_admin) {
-      setProfile(profileData || null)
-      setMessage('You do not have admin access.')
-      setLoading(false)
-      setRefreshing(false)
-      return
-    }
+    const [profilesRes, jobsRes, applicationsRes, invitesRes] =
+      await Promise.all([
+        db
+          .from('profiles')
+          .select(
+            'id, full_name, email, role, company_name, company_verified, insurance_verified, liability_form_verified, created_at'
+          )
+          .order('created_at', { ascending: false }),
 
-    setProfile(profileData)
+        db
+          .from('jobs')
+          .select(
+            'id, title, trade, location, status, payment_status, payout_status, pay_rate, company_id, assigned_worker_id, created_at'
+          )
+          .order('created_at', { ascending: false }),
 
-    const [
-      companiesCount,
-      workersCount,
-      jobsCount,
-      openJobsCount,
-      completedJobsCount,
-      applicationsCount,
-      invitesCount,
-      messagesCount,
-      notificationsCount,
-      jobsResult,
-      profilesResult,
-    ] = await Promise.all([
-      getCount('profiles', { column: 'role', value: 'company' }),
-      getCount('profiles', { column: 'role', value: 'worker' }),
-      getCount('jobs'),
-      getCount('jobs', { column: 'status', value: 'open' }),
-      getCount('jobs', { column: 'status', value: 'completed' }),
-      getCount('applications'),
-      getCount('job_invites'),
-      getCount('messages'),
-      getCount('notifications'),
-      supabase
-        .from('jobs')
-        .select('id, title, trade, location, status, created_at')
-        .order('created_at', { ascending: false })
-        .limit(8)
-        .returns<RecentJob[]>(),
-      supabase
-        .from('profiles')
-        .select('id, role, full_name, company_name, created_at')
-        .order('created_at', { ascending: false })
-        .limit(8)
-        .returns<RecentProfile[]>(),
-    ])
+        db
+          .from('applications')
+          .select(
+            'id, status, job_id, worker_id, requested_pay_rate, created_at'
+          )
+          .order('created_at', { ascending: false }),
 
-    setCounts({
-      companies: companiesCount,
-      workers: workersCount,
-      jobs: jobsCount,
-      openJobs: openJobsCount,
-      completedJobs: completedJobsCount,
-      applications: applicationsCount,
-      invites: invitesCount,
-      messages: messagesCount,
-      notifications: notificationsCount,
-    })
+        db
+          .from('job_invites')
+          .select(
+            'id, status, job_id, worker_id, company_id, created_at'
+          )
+          .order('created_at', { ascending: false }),
+      ])
 
-    if (!jobsResult.error) {
-      setRecentJobs(jobsResult.data ?? [])
-    }
+    if (profilesRes.error) setMessage(profilesRes.error.message)
+    if (jobsRes.error) setMessage(jobsRes.error.message)
+    if (applicationsRes.error) setMessage(applicationsRes.error.message)
+    if (invitesRes.error) setMessage(invitesRes.error.message)
 
-    if (!profilesResult.error) {
-      setRecentProfiles(profilesResult.data ?? [])
-    }
-
+    setProfiles(profilesRes.data || [])
+    setJobs(jobsRes.data || [])
+    setApplications(applicationsRes.data || [])
+    setInvites(invitesRes.data || [])
     setLoading(false)
-    setRefreshing(false)
-  }, [])
+  }
 
-  useEffect(() => {
-    void loadAdminDashboard()
-  }, [loadAdminDashboard])
+  const stats = useMemo(() => {
+    return {
+      users: profiles.length,
+      workers: profiles.filter((p) => p.role === 'worker').length,
+      companies: profiles.filter((p) => p.role === 'company').length,
+      openJobs: jobs.filter((j) => j.status === 'open').length,
+      assignedJobs: jobs.filter((j) => j.status === 'assigned').length,
+      completedJobs: jobs.filter((j) => j.status === 'completed').length,
+      paidJobs: jobs.filter((j) => j.payment_status === 'paid').length,
+      unpaidJobs: jobs.filter((j) => j.payment_status !== 'paid').length,
+      pendingApplications: applications.filter((a) => a.status === 'pending')
+        .length,
+      pendingInvites: invites.filter((i) => i.status === 'pending').length,
+      verifiedCompanies: profiles.filter((p) => p.company_verified).length,
+      verifiedInsurance: profiles.filter((p) => p.insurance_verified).length,
+    }
+  }, [profiles, jobs, applications, invites])
+
+  async function toggleProfileFlag(
+    profileId: string,
+    field:
+      | 'company_verified'
+      | 'insurance_verified'
+      | 'liability_form_verified',
+    currentValue: boolean | null
+  ) {
+    const { error } = await db
+      .from('profiles')
+      .update({ [field]: !currentValue })
+      .eq('id', profileId)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    await loadAdminData()
+  }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
-        <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
-            CrewCall Admin
-          </p>
-          <h1 className="mt-3 text-3xl font-black">Loading admin...</h1>
-        </div>
-      </main>
-    )
-  }
-
-  if (!profile?.is_admin) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
-        <div className="mx-auto max-w-3xl rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 shadow-2xl shadow-black/20">
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-red-300">
-            Access denied
-          </p>
-          <h1 className="mt-3 text-3xl font-black text-white">
-            Admin access required
-          </h1>
-          <p className="mt-3 text-sm font-semibold leading-6 text-red-100/80">
-            {message || 'This page is only available to CrewCall admins.'}
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
-          >
-            Back to CrewCall
-          </Link>
+      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-slate-300">Loading admin dashboard...</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl shadow-black/20 backdrop-blur">
-          <div className="bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/15 p-6 md:p-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  CrewCall Admin
-                </p>
-                <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Business Dashboard
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Welcome back, {adminName}. Monitor users, jobs, messages, and
-                  system activity from one control center.
-                </p>
-              </div>
+    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+      <div className="mx-auto max-w-7xl space-y-8">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">
+                CrewCall Admin
+              </p>
+              <h1 className="mt-2 text-3xl font-black md:text-5xl">
+                Control Center
+              </h1>
+              <p className="mt-3 max-w-2xl text-slate-300">
+                Monitor users, jobs, payments, payouts, applications, invites,
+                and verification status.
+              </p>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => void loadAdminDashboard()}
-                disabled={refreshing}
-                className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {refreshing ? 'Refreshing...' : 'Refresh Dashboard'}
-              </button>
+            <button
+              onClick={loadAdminData}
+              className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {message && (
+            <div className="mt-5 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+              {message}
+            </div>
+          )}
+        </div>
+
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Stat label="Total Users" value={stats.users} />
+          <Stat label="Workers" value={stats.workers} />
+          <Stat label="Companies" value={stats.companies} />
+          <Stat label="Open Jobs" value={stats.openJobs} />
+          <Stat label="Assigned Jobs" value={stats.assignedJobs} />
+          <Stat label="Completed Jobs" value={stats.completedJobs} />
+          <Stat label="Paid Jobs" value={stats.paidJobs} />
+          <Stat label="Unpaid Jobs" value={stats.unpaidJobs} />
+          <Stat label="Pending Applications" value={stats.pendingApplications} />
+          <Stat label="Pending Invites" value={stats.pendingInvites} />
+          <Stat label="Verified Companies" value={stats.verifiedCompanies} />
+          <Stat label="Insurance Verified" value={stats.verifiedInsurance} />
+        </section>
+
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+          <h2 className="text-xl font-black">Recent Jobs</h2>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="py-3">Job</th>
+                  <th>Trade</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Payment</th>
+                  <th>Payout</th>
+                  <th>Pay</th>
+                  <th>Open</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.slice(0, 20).map((job) => (
+                  <tr key={job.id} className="border-t border-white/10">
+                    <td className="py-3 font-bold">{job.title || 'Untitled'}</td>
+                    <td>{job.trade || '-'}</td>
+                    <td>{job.location || '-'}</td>
+                    <td>{job.status || '-'}</td>
+                    <td>{job.payment_status || '-'}</td>
+                    <td>{job.payout_status || '-'}</td>
+                    <td>{job.pay_rate || '-'}</td>
+                    <td>
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className="font-bold text-cyan-300 hover:text-cyan-200"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+          <h2 className="text-xl font-black">Users / Verification</h2>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[1000px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="py-3">Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Company</th>
+                  <th>Company Verified</th>
+                  <th>Insurance Verified</th>
+                  <th>Liability Verified</th>
+                  <th>Profile</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profiles.slice(0, 40).map((profile) => (
+                  <tr key={profile.id} className="border-t border-white/10">
+                    <td className="py-3 font-bold">
+                      {profile.full_name || 'Unnamed'}
+                    </td>
+                    <td>{profile.email || '-'}</td>
+                    <td>{profile.role || '-'}</td>
+                    <td>{profile.company_name || '-'}</td>
+                    <td>
+                      <VerifyButton
+                        active={profile.company_verified}
+                        onClick={() =>
+                          toggleProfileFlag(
+                            profile.id,
+                            'company_verified',
+                            profile.company_verified
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <VerifyButton
+                        active={profile.insurance_verified}
+                        onClick={() =>
+                          toggleProfileFlag(
+                            profile.id,
+                            'insurance_verified',
+                            profile.insurance_verified
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <VerifyButton
+                        active={profile.liability_form_verified}
+                        onClick={() =>
+                          toggleProfileFlag(
+                            profile.id,
+                            'liability_form_verified',
+                            profile.liability_form_verified
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <Link
+                        href={`/profile/${profile.id}`}
+                        className="font-bold text-cyan-300 hover:text-cyan-200"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <h2 className="text-xl font-black">Recent Applications</h2>
+
+            <div className="mt-4 space-y-3">
+              {applications.slice(0, 12).map((app) => (
+                <div
+                  key={app.id}
+                  className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-bold">Application</p>
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">
+                      {app.status || 'unknown'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-300">
+                    Requested Pay: {app.requested_pay_rate || '-'}
+                  </p>
+                  {app.job_id && (
+                    <Link
+                      href={`/jobs/${app.job_id}`}
+                      className="mt-3 inline-block text-sm font-bold text-cyan-300"
+                    >
+                      Open Job
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-6 p-6 md:p-8">
-            {message && (
-              <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-4 text-sm font-bold text-cyan-100">
-                {message}
-              </div>
-            )}
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <h2 className="text-xl font-black">Recent Invites</h2>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <AdminStatCard label="Companies" value={counts.companies} />
-              <AdminStatCard label="Workers" value={counts.workers} />
-              <AdminStatCard label="Total Jobs" value={counts.jobs} />
-              <AdminStatCard label="Open Jobs" value={counts.openJobs} />
-              <AdminStatCard
-                label="Completed Jobs"
-                value={counts.completedJobs}
-              />
-              <AdminStatCard label="Applications" value={counts.applications} />
-              <AdminStatCard label="Invites" value={counts.invites} />
-              <AdminStatCard label="Messages" value={counts.messages} />
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-3">
-              <AdminActionCard
-                title="Users"
-                description="Search companies and workers, review profiles, and manage account status."
-                href="/admin/users"
-              />
-              <AdminActionCard
-                title="Jobs"
-                description="Review posted jobs, close spam, feature jobs, and monitor hiring activity."
-                href="/admin/jobs"
-              />
-              <AdminActionCard
-                title="Payments"
-                description="Monitor Stripe payments, payouts, failed charges, and subscription health."
-                href="/admin/payments"
-              />
-              <AdminActionCard
-                title="Analytics"
-                description="Track signups, jobs posted, applications, active users, and revenue trends."
-                href="/admin/analytics"
-              />
-              <AdminActionCard
-                title="Support"
-                description="Handle reported users, jobs, messages, reviews, and customer issues."
-                href="/admin/support"
-              />
-              <AdminActionCard
-                title="Settings"
-                description="Manage admin tools, verification options, pricing, and platform settings."
-                href="/admin/settings"
-              />
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-2">
-              <RecentPanel title="Recent Jobs">
-                {recentJobs.length === 0 ? (
-                  <EmptyPanelText>No recent jobs found.</EmptyPanelText>
-                ) : (
-                  <div className="space-y-3">
-                    {recentJobs.map((job) => (
-                      <div
-                        key={job.id}
-                        className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-black text-white">
-                              {job.title || 'Untitled Job'}
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-400">
-                              {job.trade || 'Trade not listed'} •{' '}
-                              {job.location || 'Location not listed'}
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase text-cyan-100">
-                            {job.status || 'open'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+            <div className="mt-4 space-y-3">
+              {invites.slice(0, 12).map((invite) => (
+                <div
+                  key={invite.id}
+                  className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-bold">Invite</p>
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">
+                      {invite.status || 'unknown'}
+                    </span>
                   </div>
-                )}
-              </RecentPanel>
-
-              <RecentPanel title="Recent Users">
-                {recentProfiles.length === 0 ? (
-                  <EmptyPanelText>No recent users found.</EmptyPanelText>
-                ) : (
-                  <div className="space-y-3">
-                    {recentProfiles.map((user) => (
-                      <div
-                        key={user.id}
-                        className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-black text-white">
-                              {user.company_name ||
-                                user.full_name ||
-                                'Unnamed User'}
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-400">
-                              {user.role || 'Role missing'}
-                            </p>
-                          </div>
-                          <Link
-                            href={`/profile?user=${user.id}`}
-                            className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15"
-                          >
-                            View
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </RecentPanel>
+                  {invite.job_id && (
+                    <Link
+                      href={`/jobs/${invite.job_id}`}
+                      className="mt-3 inline-block text-sm font-bold text-cyan-300"
+                    >
+                      Open Job
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -363,82 +413,34 @@ export default function AdminDashboardPage() {
   )
 }
 
-async function getCount(
-  table:
-    | 'profiles'
-    | 'jobs'
-    | 'applications'
-    | 'job_invites'
-    | 'messages'
-    | 'notifications',
-  filter?: { column: string; value: string }
-) {
-  let query = supabase.from(table).select('id', {
-    count: 'exact',
-    head: true,
-  })
-
-  if (filter) {
-    query = query.eq(filter.column, filter.value)
-  }
-
-  const { count } = await query
-
-  return count ?? 0
-}
-
-function AdminStatCard({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/50 p-5">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <p className="text-sm font-bold uppercase tracking-wider text-slate-400">
         {label}
       </p>
-      <p className="mt-3 text-4xl font-black text-white">{value}</p>
+      <p className="mt-2 text-4xl font-black text-white">{value}</p>
     </div>
   )
 }
 
-function AdminActionCard({
-  title,
-  description,
-  href,
+function VerifyButton({
+  active,
+  onClick,
 }: {
-  title: string
-  description: string
-  href: string
+  active: boolean | null
+  onClick: () => void
 }) {
   return (
-    <Link
-      href={href}
-      className="rounded-3xl border border-white/10 bg-slate-950/50 p-6 transition hover:border-cyan-300/40 hover:bg-slate-950/70"
+    <button
+      onClick={onClick}
+      className={
+        active
+          ? 'rounded-full bg-green-400 px-3 py-1 text-xs font-black text-slate-950'
+          : 'rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white hover:bg-white/20'
+      }
     >
-      <p className="text-xl font-black text-white">{title}</p>
-      <p className="mt-3 text-sm font-semibold leading-6 text-slate-400">
-        {description}
-      </p>
-    </Link>
-  )
-}
-
-function RecentPanel({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
-      <h2 className="text-xl font-black text-white">{title}</h2>
-      <div className="mt-5">{children}</div>
-    </section>
-  )
-}
-
-function EmptyPanelText({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm font-bold text-slate-400">
-      {children}
-    </p>
+      {active ? 'Verified' : 'Verify'}
+    </button>
   )
 }
