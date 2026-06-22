@@ -286,18 +286,9 @@ export default function JobDetailsPage() {
     setWorkingId(nextStatus)
     setMessage(null)
 
-    const updates: Partial<Job> = {
-      status: nextStatus,
-    }
-
-    if (nextStatus === 'paid') {
-      updates.payment_status = 'paid'
-      updates.payout_status = 'paid'
-    }
-
     const { error } = await supabase
       .from('jobs')
-      .update(updates as never)
+      .update({ status: nextStatus } as never)
       .eq('id', job.id)
       .eq('company_id', profile.id)
 
@@ -310,6 +301,37 @@ export default function JobDetailsPage() {
     setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
     await loadPage()
     setWorkingId(null)
+  }
+
+  async function payWorker() {
+    if (!job) return
+
+    setWorkingId('pay')
+    setMessage(null)
+
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      })
+
+      const data = (await response.json()) as {
+        url?: string
+        error?: string
+      }
+
+      if (!response.ok || !data.url) {
+        setMessage(data.error || 'Unable to start Stripe Checkout.')
+        setWorkingId(null)
+        return
+      }
+
+      window.location.href = data.url
+    } catch {
+      setMessage('Unable to start Stripe Checkout.')
+      setWorkingId(null)
+    }
   }
 
   async function deleteJob() {
@@ -337,8 +359,8 @@ export default function JobDetailsPage() {
       }
 
       router.push('/my-jobs')
-    } catch (error: any) {
-      setMessage(error.message || 'Something went wrong.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Something went wrong.')
       setWorkingId(null)
     }
   }
@@ -346,6 +368,16 @@ export default function JobDetailsPage() {
   function getPhoto(userId: string | null | undefined) {
     if (!userId) return null
     return photoByUserId.get(userId) || null
+  }
+
+  function isStepActive(step: string, index: number) {
+    if (!job) return false
+
+    if (step === 'paid') {
+      return job.payment_status === 'paid'
+    }
+
+    return index <= Math.max(0, FLOW_STEPS.indexOf(job.status || 'open'))
   }
 
   if (loading) {
@@ -373,7 +405,7 @@ export default function JobDetailsPage() {
   const currentStatus = job.status || 'open'
   const isAssigned = Boolean(job.assigned_worker_id)
   const assignedPhoto = getPhoto(assignedWorker?.id)
-  const currentStepIndex = Math.max(0, FLOW_STEPS.indexOf(currentStatus))
+  const paymentPaid = job.payment_status === 'paid'
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
@@ -435,20 +467,24 @@ export default function JobDetailsPage() {
             </div>
 
             <div className="mt-8 grid gap-3 md:grid-cols-5">
-              {FLOW_STEPS.map((step, index) => (
-                <div
-                  key={step}
-                  className={`rounded-2xl border p-4 ${
-                    index <= currentStepIndex
-                      ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-100'
-                      : 'border-white/10 bg-slate-950/30 text-slate-500'
-                  }`}
-                >
-                  <p className="text-xs font-black uppercase tracking-wide">
-                    {cleanStatus(step)}
-                  </p>
-                </div>
-              ))}
+              {FLOW_STEPS.map((step, index) => {
+                const active = isStepActive(step, index)
+
+                return (
+                  <div
+                    key={step}
+                    className={`rounded-2xl border p-4 ${
+                      active
+                        ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-100'
+                        : 'border-white/10 bg-slate-950/30 text-slate-500'
+                    }`}
+                  >
+                    <p className="text-xs font-black uppercase tracking-wide">
+                      {cleanStatus(step)}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -469,27 +505,24 @@ export default function JobDetailsPage() {
                     disabled={
                       workingId === 'in_progress' ||
                       currentStatus === 'in_progress' ||
-                      currentStatus === 'completed' ||
-                      currentStatus === 'paid'
+                      currentStatus === 'completed'
                     }
                     onClick={() => updateJobStatus('in_progress')}
                   />
 
                   <ActionButton
                     label="Mark Complete"
-                    disabled={
-                      workingId === 'completed' ||
-                      currentStatus === 'completed' ||
-                      currentStatus === 'paid'
-                    }
+                    disabled={workingId === 'completed' || currentStatus === 'completed'}
                     onClick={() => updateJobStatus('completed')}
                   />
 
-                  <ActionButton
-                    label="Mark Paid"
-                    disabled={workingId === 'paid' || currentStatus === 'paid'}
-                    onClick={() => updateJobStatus('paid')}
-                  />
+                  {!paymentPaid && (
+                    <ActionButton
+                      label={workingId === 'pay' ? 'Opening Stripe...' : 'Pay Worker'}
+                      disabled={workingId === 'pay'}
+                      onClick={payWorker}
+                    />
+                  )}
                 </div>
               </section>
             )}
@@ -755,22 +788,14 @@ function StatusPill({ value }: { value: string }) {
   )
 }
 
-function InfoBox({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function InfoBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-5">
       <p className="text-xs font-black uppercase tracking-widest text-slate-500">
         {label}
       </p>
 
-      <p className="mt-2 text-lg font-black capitalize text-white">
-        {value}
-      </p>
+      <p className="mt-2 text-lg font-black capitalize text-white">{value}</p>
     </div>
   )
 }
@@ -795,9 +820,7 @@ function RateBox({
         {label}
       </p>
 
-      <p className="mt-2 text-xl font-black">
-        {value}
-      </p>
+      <p className="mt-2 text-xl font-black">{value}</p>
     </div>
   )
 }

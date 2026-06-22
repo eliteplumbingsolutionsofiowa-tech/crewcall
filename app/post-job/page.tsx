@@ -23,9 +23,6 @@ type JobInsert = {
   description: string
   status: 'open'
   payment_status: 'unpaid'
-  payout_status: 'not_released'
-  is_featured?: boolean
-  featured_until?: string | null
 }
 
 type JobRow = {
@@ -81,7 +78,6 @@ export default function PostJobPage() {
   const [location, setLocation] = useState('')
   const [payRate, setPayRate] = useState('')
   const [description, setDescription] = useState('')
-  const [featured, setFeatured] = useState(false)
 
   const canPost = useMemo(() => {
     return (
@@ -130,6 +126,8 @@ export default function PostJobPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
+    if (saving) return
+
     if (!profile) {
       setMessage('You need to be signed in to post a job.')
       return
@@ -148,38 +146,42 @@ export default function PostJobPage() {
     setSaving(true)
     setMessage('Posting job...')
 
-    const featuredUntil = new Date()
-    featuredUntil.setDate(featuredUntil.getDate() + 14)
+    try {
+      const payload: JobInsert = {
+        company_id: profile.id,
+        title: title.trim(),
+        trade: trade.trim(),
+        location: location.trim(),
+        pay_rate: payRate.trim(),
+        description: description.trim(),
+        status: 'open',
+        payment_status: 'unpaid',
+      }
 
-    const payload: JobInsert = {
-      company_id: profile.id,
-      title: title.trim(),
-      trade: trade.trim(),
-      location: location.trim(),
-      pay_rate: payRate.trim(),
-      description: description.trim(),
-      status: 'open',
-      payment_status: 'unpaid',
-      payout_status: 'not_released',
-      is_featured: featured,
-      featured_until: featured ? featuredUntil.toISOString() : null,
-    }
+      const { data, error } = await jobsTable()
+        .insert(payload)
+        .select('id')
+        .single()
 
-    const { data, error } = await jobsTable().insert(payload).select('id').single()
+      if (error) {
+        setMessage(error.message)
+        setSaving(false)
+        return
+      }
 
-    if (error) {
-      setMessage(error.message)
+      if (!data?.id) {
+        setMessage('Job was posted, but CrewCall could not find the new job ID.')
+        setSaving(false)
+        return
+      }
+
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+      router.replace(`/my-jobs/${data.id}`)
+      router.refresh()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to post job.')
       setSaving(false)
-      return
     }
-
-    if (!data?.id) {
-      setMessage('Job was posted, but CrewCall could not find the new job ID.')
-      setSaving(false)
-      return
-    }
-
-    router.push(`/my-jobs/${data.id}`)
   }
 
   if (loading) {
@@ -197,6 +199,7 @@ export default function PostJobPage() {
       <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
         <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
           <h1 className="text-3xl font-black">Company account required</h1>
+
           <p className="mt-3 text-slate-300">
             You need a company profile to post jobs on CrewCall.
           </p>
@@ -214,6 +217,7 @@ export default function PostJobPage() {
             >
               Go to Profile
             </Link>
+
             <Link
               href="/jobs"
               className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white"
@@ -233,9 +237,11 @@ export default function PostJobPage() {
           <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-200">
             CrewCall
           </p>
+
           <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
             Post a Job
           </h1>
+
           <p className="mt-3 max-w-2xl text-base font-semibold text-slate-300">
             Add the trade, location, pay, and scope so workers can apply fast.
           </p>
@@ -253,7 +259,9 @@ export default function PostJobPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-black text-slate-200">Job Title</span>
+              <span className="text-sm font-black text-slate-200">
+                Job Title
+              </span>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -273,7 +281,9 @@ export default function PostJobPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-black text-slate-200">Location</span>
+              <span className="text-sm font-black text-slate-200">
+                Location
+              </span>
               <input
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
@@ -283,7 +293,9 @@ export default function PostJobPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-black text-slate-200">Pay Rate</span>
+              <span className="text-sm font-black text-slate-200">
+                Pay Rate
+              </span>
               <input
                 value={payRate}
                 onChange={(event) => setPayRate(event.target.value)}
@@ -294,7 +306,9 @@ export default function PostJobPage() {
           </div>
 
           <label className="mt-4 block">
-            <span className="text-sm font-black text-slate-200">Job Scope</span>
+            <span className="text-sm font-black text-slate-200">
+              Job Scope
+            </span>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -302,23 +316,6 @@ export default function PostJobPage() {
               rows={7}
               className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
             />
-          </label>
-
-          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <input
-              type="checkbox"
-              checked={featured}
-              onChange={(event) => setFeatured(event.target.checked)}
-              className="mt-1 h-5 w-5 accent-cyan-300"
-            />
-            <span>
-              <span className="block text-sm font-black text-white">
-                Feature this job
-              </span>
-              <span className="mt-1 block text-sm font-semibold text-slate-400">
-                Featured jobs get highlighted for 14 days.
-              </span>
-            </span>
           </label>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
