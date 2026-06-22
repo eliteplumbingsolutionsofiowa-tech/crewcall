@@ -105,7 +105,10 @@ function emptyProfile(id: string): Profile {
 
 function safeString(value: unknown): string {
   if (typeof value === 'string') return value
-  if (value === null || value === undefined) return ''
+
+  if (value === null || value === undefined) {
+    return ''
+  }
 
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value)
@@ -179,6 +182,14 @@ function ProfilePageInner() {
     profile?.role === 'worker'
 
   const isWorkerProfile = profile?.role === 'worker'
+
+  const stripeConnected = Boolean(
+    profile?.stripe_charges_enabled && profile?.stripe_payouts_enabled
+  )
+
+  const stripeOnboardingComplete = Boolean(
+    profile?.stripe_onboarding_complete || stripeConnected
+  )
 
   const profilePhoto = useMemo(
     () => profileFiles.find((file) => file.category === 'profile_photo'),
@@ -1008,14 +1019,22 @@ function ProfilePageInner() {
                   </p>
 
                   <div className="mt-5 space-y-3">
+                    {stripeConnected && (
+                      <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-center">
+                        <div className="text-lg font-black text-emerald-700">
+                          ✅ Stripe Connected
+                        </div>
+
+                        <div className="mt-1 text-sm font-semibold text-emerald-600">
+                          Your account is ready to receive payouts.
+                        </div>
+                      </div>
+                    )}
+
                     <StatusRow
                       label="Onboarding"
-                      value={
-                        profile.stripe_onboarding_complete
-                          ? 'Complete'
-                          : 'Not complete'
-                      }
-                      active={Boolean(profile.stripe_onboarding_complete)}
+                      value={stripeOnboardingComplete ? 'Complete' : 'Not complete'}
+                      active={stripeOnboardingComplete}
                     />
 
                     <StatusRow
@@ -1039,7 +1058,11 @@ function ProfilePageInner() {
                       disabled={stripeLoading}
                       fullWidth
                     >
-                      {stripeLoading ? 'Opening Stripe...' : 'Set Up Stripe'}
+                      {stripeLoading
+                        ? 'Opening Stripe...'
+                        : stripeConnected
+                          ? 'Manage Stripe Account'
+                          : 'Set Up Stripe'}
                     </CrewButton>
                   </div>
                 </CrewCard>
