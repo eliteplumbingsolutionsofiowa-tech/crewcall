@@ -3,43 +3,20 @@
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type PresenceUpdate = {
-  is_online: boolean
-  last_seen: string
-}
-
-type QueryError = {
-  message: string
-}
-
-type UpdateEqQuery = {
-  eq: (
-    column: string,
-    value: string
-  ) => Promise<{ data: null; error: QueryError | null }>
-}
-
-type UpdateTable<TUpdate> = {
-  update: (value: TUpdate) => UpdateEqQuery
-}
-
-function profilesTable() {
-  return supabase.from('profiles') as unknown as UpdateTable<PresenceUpdate>
-}
-
 export default function CrewCallPresence() {
   useEffect(() => {
     let mounted = true
     let intervalId: ReturnType<typeof setInterval> | null = null
 
-    async function updatePresence(isOnline: boolean) {
+    async function setPresence(isOnline: boolean) {
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user || !mounted) return
 
-      await profilesTable()
+      await supabase
+        .from('profiles')
         .update({
           is_online: isOnline,
           last_seen: new Date().toISOString(),
@@ -47,30 +24,62 @@ export default function CrewCallPresence() {
         .eq('id', user.id)
     }
 
-    updatePresence(true)
+    // -----------------------------
+    // INITIAL ONLINE STATUS
+    // -----------------------------
+    setPresence(true)
 
+    // -----------------------------
+    // HEARTBEAT (keeps user alive)
+    // -----------------------------
     intervalId = setInterval(() => {
-      updatePresence(true)
+      if (!document.hidden) {
+        setPresence(true)
+      }
     }, 30000)
 
+    // -----------------------------
+    // TAB VISIBILITY HANDLER
+    // -----------------------------
     function handleVisibilityChange() {
-      updatePresence(!document.hidden)
+      setPresence(!document.hidden)
     }
 
+    // -----------------------------
+    // LEAVE PAGE HANDLER
+    // -----------------------------
     function handleBeforeUnload() {
-      updatePresence(false)
+      setPresence(false)
     }
 
-    document.addEventListener(
-      'visibilitychange',
-      handleVisibilityChange
-    )
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
 
-    window.addEventListener(
-      'beforeunload',
-      handleBeforeUnload
-    )
+    // -----------------------------
+    // REAL-TIME NOTIFICATIONS
+    // -----------------------------
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+        },
+        (payload) => {
+          window.dispatchEvent(
+            new CustomEvent('new-notification', {
+              detail: payload.new,
+            })
+          )
+        }
+      )
+      .subscribe()
 
+    // -----------------------------
+    // CLEANUP
+    // -----------------------------
     return () => {
       mounted = false
 
@@ -78,7 +87,7 @@ export default function CrewCallPresence() {
         clearInterval(intervalId)
       }
 
-      updatePresence(false)
+      setPresence(false)
 
       document.removeEventListener(
         'visibilitychange',
@@ -89,6 +98,8 @@ export default function CrewCallPresence() {
         'beforeunload',
         handleBeforeUnload
       )
+
+      supabase.removeChannel(channel)
     }
   }, [])
 

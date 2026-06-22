@@ -36,7 +36,7 @@ type Applicant = {
   worker_id: string
   status: string | null
   created_at: string
-  requested_rate: string | null
+  requested_pay: string | null
   worker: WorkerProfile | null
 }
 
@@ -229,11 +229,12 @@ function conversationsInsertTable() {
 }
 
 function firstOrNull<T>(value: T | T[] | null): T | null {
-  if (Array.isArray(value)) {
-    return value[0] ?? null
-  }
-
+  if (Array.isArray(value)) return value[0] ?? null
   return value
+}
+
+function cleanStatus(value: string) {
+  return value.replaceAll('_', ' ')
 }
 
 export default function ApplicantsPage() {
@@ -311,12 +312,14 @@ export default function ApplicantsPage() {
       const aAssigned =
         a.worker_id === job?.assigned_worker_id ||
         a.id === job?.assigned_application_id ||
-        a.status === 'accepted'
+        a.status === 'accepted' ||
+        a.status === 'hired'
 
       const bAssigned =
         b.worker_id === job?.assigned_worker_id ||
         b.id === job?.assigned_application_id ||
-        b.status === 'accepted'
+        b.status === 'accepted' ||
+        b.status === 'hired'
 
       if (aAssigned && !bAssigned) return -1
       if (!aAssigned && bAssigned) return 1
@@ -324,6 +327,14 @@ export default function ApplicantsPage() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
   }, [applicants, job?.assigned_application_id, job?.assigned_worker_id])
+
+  const assignedApplicant = sortedApplicants.find(
+    (applicant) =>
+      applicant.worker_id === job?.assigned_worker_id ||
+      applicant.id === job?.assigned_application_id ||
+      applicant.status === 'accepted' ||
+      applicant.status === 'hired'
+  )
 
   async function loadApplicants() {
     setLoading(true)
@@ -382,24 +393,24 @@ export default function ApplicantsPage() {
       await applicationsSelectTable()
         .select(
           `
-        id,
-        job_id,
-        worker_id,
-        status,
-        created_at,
-        requested_rate,
-        worker:profiles!applications_worker_id_fkey (
           id,
-          full_name,
-          company_name,
-          trade,
-          city,
-          state,
-          years_experience,
-          insurance_provider,
-          liability_form_signed
-        )
-      `
+          job_id,
+          worker_id,
+          status,
+          created_at,
+          requested_pay,
+          worker:profiles!applications_worker_id_fkey (
+            id,
+            full_name,
+            company_name,
+            trade,
+            city,
+            state,
+            years_experience,
+            insurance_provider,
+            liability_form_signed
+          )
+        `
         )
         .eq('job_id', jobId)
         .order('created_at', {
@@ -409,6 +420,7 @@ export default function ApplicantsPage() {
     if (applicationError) {
       setMessage(applicationError.message)
       setApplicants([])
+      setProfileFiles([])
       setLoading(false)
       return
     }
@@ -416,15 +428,20 @@ export default function ApplicantsPage() {
     const safeApplicants: Applicant[] = (applicationData || []).map(
       (application) => ({
         ...application,
+        requested_pay: application.requested_pay || null,
         worker: firstOrNull(application.worker),
       })
     )
 
     setApplicants(safeApplicants)
 
-    const workerIds = safeApplicants
-      .map((applicant) => applicant.worker_id)
-      .filter((workerId): workerId is string => Boolean(workerId))
+    const workerIds = Array.from(
+      new Set(
+        safeApplicants
+          .map((applicant) => applicant.worker_id)
+          .filter((workerId): workerId is string => Boolean(workerId))
+      )
+    )
 
     if (workerIds.length > 0) {
       const { data: files } = await profileFilesTable()
@@ -459,13 +476,12 @@ export default function ApplicantsPage() {
       return
     }
 
-    const confirmed = window.confirm(
-      `Hire ${getWorkerName(applicant)} for this job?`
-    )
+    const confirmed = window.confirm(`Hire ${getWorkerName(applicant)}?`)
 
     if (!confirmed) return
 
     setActionLoadingId(applicant.id)
+    setMessage('')
 
     const { error: jobError } = await jobsUpdateTable()
       .update({
@@ -481,11 +497,17 @@ export default function ApplicantsPage() {
       return
     }
 
-    await applicationsUpdateTable()
+    const { error: acceptedError } = await applicationsUpdateTable()
       .update({
         status: 'accepted',
       })
       .eq('id', applicant.id)
+
+    if (acceptedError) {
+      setMessage(acceptedError.message)
+      setActionLoadingId(null)
+      return
+    }
 
     await applicationsUpdateWithNeqTable()
       .update({
@@ -518,6 +540,7 @@ export default function ApplicantsPage() {
     if (!confirmed) return
 
     setActionLoadingId(`decline-${applicant.id}`)
+    setMessage('')
 
     const { error } = await applicationsUpdateTable()
       .update({
@@ -544,17 +567,13 @@ export default function ApplicantsPage() {
     if (!job) return
 
     setActionLoadingId(nextStatus)
+    setMessage('')
 
-    const updates: JobUpdate = {
-      status: nextStatus,
-    }
-
-    if (nextStatus === 'paid') {
-      updates.payment_status = 'paid'
-      updates.payout_status = 'paid'
-    }
-
-    const { error } = await jobsUpdateTable().update(updates).eq('id', job.id)
+    const { error } = await jobsUpdateTable()
+      .update({
+        status: nextStatus,
+      })
+      .eq('id', job.id)
 
     if (error) {
       setMessage(error.message)
@@ -575,6 +594,7 @@ export default function ApplicantsPage() {
     if (!job) return
 
     setActionLoadingId(workerId)
+    setMessage('')
 
     const {
       data: { user },
@@ -628,6 +648,14 @@ export default function ApplicantsPage() {
     return photoByUserId.get(workerId) || null
   }
 
+  const canPayWorker =
+    Boolean(job?.assigned_worker_id) && job?.payment_status !== 'paid'
+
+  const canReleasePayout =
+    job?.status === 'completed' &&
+    job?.payment_status === 'paid' &&
+    job?.payout_status !== 'released'
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
@@ -637,13 +665,6 @@ export default function ApplicantsPage() {
       </main>
     )
   }
-
-  const assignedApplicant = sortedApplicants.find(
-    (applicant) =>
-      applicant.worker_id === job?.assigned_worker_id ||
-      applicant.id === job?.assigned_application_id ||
-      applicant.status === 'accepted'
-  )
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
@@ -662,18 +683,38 @@ export default function ApplicantsPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-              Hire workers, manage job status, message applicants, and move
-              projects through the CrewCall workflow.
+              Hire workers, decline applicants, message workers, and move the
+              job through the CrewCall workflow.
             </p>
           </div>
 
           {job && (
-            <Link
-              href={`/jobs/${job.id}`}
-              className="rounded-2xl bg-white px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] hover:bg-slate-100"
-            >
-              View Job
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href={`/jobs/${job.id}`}
+                className="rounded-2xl bg-white px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] hover:bg-slate-100"
+              >
+                View Job
+              </Link>
+
+              {canPayWorker && (
+                <Link
+                  href={`/jobs/${job.id}/pay`}
+                  className="rounded-2xl bg-green-600 px-6 py-4 text-sm font-black text-white shadow-xl transition hover:scale-[1.02] hover:bg-green-500"
+                >
+                  Pay Worker
+                </Link>
+              )}
+
+              {canReleasePayout && (
+                <Link
+                  href={`/jobs/${job.id}/release-payout`}
+                  className="rounded-2xl bg-emerald-600 px-6 py-4 text-sm font-black text-white shadow-xl transition hover:scale-[1.02] hover:bg-emerald-500"
+                >
+                  Release Payout
+                </Link>
+              )}
+            </div>
           )}
         </div>
 
@@ -705,7 +746,7 @@ export default function ApplicantsPage() {
                 <div className="flex flex-wrap gap-3">
                   <StatusPill value={job.status || 'open'} />
                   <StatusPill value={job.payment_status || 'unpaid'} />
-                  <StatusPill value={job.payout_status || 'not released'} />
+                  <StatusPill value={job.payout_status || 'not_released'} />
                 </div>
               </div>
 
@@ -720,7 +761,7 @@ export default function ApplicantsPage() {
                   </p>
 
                   <p className="mt-2 text-sm font-semibold text-emerald-100/80">
-                    This worker is now assigned to the job.
+                    This worker is assigned to the job.
                   </p>
 
                   <div className="mt-6 flex flex-wrap gap-3">
@@ -729,8 +770,7 @@ export default function ApplicantsPage() {
                       disabled={
                         actionLoadingId === 'in_progress' ||
                         job.status === 'in_progress' ||
-                        job.status === 'completed' ||
-                        job.status === 'paid'
+                        job.status === 'completed'
                       }
                       onClick={() => updateJobStatus('in_progress')}
                     />
@@ -739,19 +779,28 @@ export default function ApplicantsPage() {
                       label="Mark Complete"
                       disabled={
                         actionLoadingId === 'completed' ||
-                        job.status === 'completed' ||
-                        job.status === 'paid'
+                        job.status === 'completed'
                       }
                       onClick={() => updateJobStatus('completed')}
                     />
 
-                    <LifecycleButton
-                      label="Mark Paid"
-                      disabled={
-                        actionLoadingId === 'paid' || job.status === 'paid'
-                      }
-                      onClick={() => updateJobStatus('paid')}
-                    />
+                    {canPayWorker && (
+                      <Link
+                        href={`/jobs/${job.id}/pay`}
+                        className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-black text-white transition hover:bg-green-500"
+                      >
+                        Pay Worker
+                      </Link>
+                    )}
+
+                    {canReleasePayout && (
+                      <Link
+                        href={`/jobs/${job.id}/release-payout`}
+                        className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500"
+                      >
+                        Release Payout
+                      </Link>
+                    )}
                   </div>
                 </div>
               )}
@@ -764,6 +813,7 @@ export default function ApplicantsPage() {
             <h2 className="text-3xl font-black text-white">
               No applicants yet
             </h2>
+
             <p className="mt-3 text-slate-300">
               Workers will appear here once they apply.
             </p>
@@ -778,13 +828,16 @@ export default function ApplicantsPage() {
               const isAssigned =
                 job?.assigned_worker_id === applicant.worker_id ||
                 job?.assigned_application_id === applicant.id ||
-                applicant.status === 'accepted'
+                applicant.status === 'accepted' ||
+                applicant.status === 'hired'
 
               const jobAlreadyAssigned = Boolean(
                 job?.assigned_worker_id || job?.assigned_application_id
               )
 
-              const isRejected = applicant.status === 'rejected'
+              const isRejected =
+                applicant.status === 'rejected' ||
+                applicant.status === 'declined'
 
               return (
                 <div
@@ -932,11 +985,11 @@ export default function ApplicantsPage() {
 
                     <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-5">
                       <p className="text-xs font-black uppercase tracking-wide text-orange-200">
-                        Requested Rate
+                        Requested Pay
                       </p>
 
                       <p className="mt-3 text-2xl font-black text-orange-50">
-                        {applicant.requested_rate || 'Not listed'}
+                        {applicant.requested_pay || 'Not listed'}
                       </p>
                     </div>
                   </div>
@@ -950,10 +1003,6 @@ export default function ApplicantsPage() {
   )
 }
 
-function cleanStatus(value: string) {
-  return value.replaceAll('_', ' ')
-}
-
 function StatusPill({ value }: { value: string }) {
   const lowered = value.toLowerCase()
 
@@ -961,7 +1010,9 @@ function StatusPill({ value }: { value: string }) {
     lowered.includes('paid') ||
     lowered.includes('accepted') ||
     lowered.includes('assigned') ||
-    lowered.includes('hired')
+    lowered.includes('hired') ||
+    lowered.includes('completed') ||
+    lowered.includes('released')
       ? 'bg-emerald-400/20 text-emerald-100 ring-emerald-300/20'
       : lowered.includes('rejected') || lowered.includes('declined')
         ? 'bg-red-400/20 text-red-100 ring-red-300/20'
