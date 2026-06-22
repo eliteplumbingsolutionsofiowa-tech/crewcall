@@ -590,10 +590,28 @@ export default function MessageThreadPage() {
         is_read: false,
       }
 
-      const { error } = await supabase.from('messages').insert(insertValue)
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: conversation.id,
+          senderId: currentUserId,
+          recipientId,
+          body: insertValue.body,
+          fileUrl: insertValue.file_url,
+          fileName: insertValue.file_name,
+          fileType: insertValue.file_type,
+        }),
+      })
 
-      if (error) {
-        throw new Error(error.message)
+      const result = (await response.json()) as {
+        error?: string
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Unable to send message.')
       }
 
       setMessages((previous) =>
