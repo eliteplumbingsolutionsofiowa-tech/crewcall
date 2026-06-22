@@ -340,7 +340,7 @@ export default function JobDetailPage() {
           )}
         </div>
 
-        {assignedWorker && (
+        {assignedWorker ? (
           <div className="rounded-[2rem] border border-emerald-400/20 bg-emerald-400/10 p-6 shadow-2xl">
             <h2 className="text-xl font-black text-white">Assigned Worker</h2>
 
@@ -386,9 +386,7 @@ export default function JobDetailPage() {
               )}
             </div>
           </div>
-        )}
-
-        {!assignedWorker && (
+        ) : (
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl">
             <h2 className="text-2xl font-black text-white">
               Applicants ({applicants.length})
@@ -443,4 +441,4 @@ export default function JobDetailPage() {
       </section>
     </main>
   )
-}}
+}
