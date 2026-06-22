@@ -103,21 +103,54 @@ function emptyProfile(id: string): Profile {
   }
 }
 
-function textValue(value: string | null | undefined) {
-  return value && value.trim().length > 0 ? value : 'Not added yet'
+function safeString(value: unknown) {
+  if (typeof value === 'string') return value
+  if (value === null || value === undefined) return ''
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => safeString(item))
+      .filter(Boolean)
+      .join(', ')
+  }
+
+  return ''
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return 'Not set'
-  const date = new Date(value)
+function textValue(value: unknown) {
+  const clean = safeString(value).trim()
+  return clean.length > 0 ? clean : 'Not added yet'
+}
+
+function inputValue(value: unknown) {
+  return safeString(value)
+}
+
+function formatDate(value: unknown) {
+  const clean = safeString(value).trim()
+
+  if (!clean) return 'Not set'
+
+  const date = new Date(clean)
+
   if (Number.isNaN(date.getTime())) return 'Not set'
+
   return date.toLocaleDateString()
 }
 
-function isRecentlyOnline(value: string | null | undefined) {
-  if (!value) return false
-  const lastSeen = new Date(value).getTime()
+function isRecentlyOnline(value: unknown) {
+  const clean = safeString(value).trim()
+
+  if (!clean) return false
+
+  const lastSeen = new Date(clean).getTime()
+
   if (Number.isNaN(lastSeen)) return false
+
   return Date.now() - lastSeen < 1000 * 60 * 2
 }
 
@@ -260,6 +293,7 @@ function ProfilePageInner() {
       .maybeSingle()
 
     const current = (currentProfileData as Profile | null) || null
+
     setCurrentProfile(current)
 
     const profileId = viewedUserId || user.id
@@ -272,7 +306,10 @@ function ProfilePageInner() {
 
     if (error) setMessage(error.message)
 
-    setProfile((data as Profile | null) || (profileId === user.id ? emptyProfile(user.id) : null))
+    setProfile(
+      (data as Profile | null) ||
+        (profileId === user.id ? emptyProfile(user.id) : null)
+    )
 
     const { data: files } = await supabaseAny
       .from('profile_files')
@@ -291,6 +328,7 @@ function ProfilePageInner() {
         .order('created_at', { ascending: false })
 
       const loadedJobs = (jobs as CompanyJob[]) || []
+
       setCompanyJobs(loadedJobs)
       setSelectedInviteJobId((previous) => previous || loadedJobs[0]?.id || '')
     } else {
@@ -355,7 +393,9 @@ function ProfilePageInner() {
   }, [currentUserId, loadProfile, updateOnlineStatus])
 
   function updateField(field: keyof Profile, value: string | boolean | null) {
-    setProfile((previous) => (previous ? { ...previous, [field]: value } : previous))
+    setProfile((previous) =>
+      previous ? { ...previous, [field]: value } : previous
+    )
   }
 
   async function saveProfile() {
@@ -368,19 +408,20 @@ function ProfilePageInner() {
       {
         id: currentUserId,
         role: profile.role,
-        full_name: profile.full_name || null,
-        company_name: profile.company_name || null,
-        phone: profile.phone || null,
-        city: profile.city || null,
-        state: profile.state || null,
-        trade: profile.trade || null,
-        years_experience: profile.years_experience || null,
-        insurance_provider: profile.insurance_provider || null,
-        job_experience: profile.job_experience || null,
+        full_name: inputValue(profile.full_name).trim() || null,
+        company_name: inputValue(profile.company_name).trim() || null,
+        phone: inputValue(profile.phone).trim() || null,
+        city: inputValue(profile.city).trim() || null,
+        state: inputValue(profile.state).trim() || null,
+        trade: inputValue(profile.trade).trim() || null,
+        years_experience: inputValue(profile.years_experience).trim() || null,
+        insurance_provider:
+          inputValue(profile.insurance_provider).trim() || null,
+        job_experience: inputValue(profile.job_experience).trim() || null,
         liability_form_signed: Boolean(profile.liability_form_signed),
         available_for_work: Boolean(profile.available_for_work),
         currently_working: Boolean(profile.currently_working),
-        booked_until: profile.booked_until || null,
+        booked_until: inputValue(profile.booked_until).trim() || null,
         is_online: true,
         last_seen: new Date().toISOString(),
       },
@@ -430,7 +471,9 @@ function ProfilePageInner() {
     if (error) {
       setMessage(error.message)
     } else {
-      const selectedJob = companyJobs.find((job) => job.id === selectedInviteJobId)
+      const selectedJob = companyJobs.find(
+        (job) => job.id === selectedInviteJobId
+      )
 
       await supabaseAny.from('notifications').insert({
         user_id: profile.id,
@@ -477,7 +520,9 @@ function ProfilePageInner() {
 
       setMessage('Stripe did not return an onboarding link.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Stripe onboarding failed.')
+      setMessage(
+        error instanceof Error ? error.message : 'Stripe onboarding failed.'
+      )
     }
 
     setStripeLoading(false)
@@ -487,7 +532,9 @@ function ProfilePageInner() {
     return (
       <main className="min-h-screen bg-slate-50 px-4 py-8">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-xl">
-          <p className="text-lg font-black text-slate-700">Loading profile...</p>
+          <p className="text-lg font-black text-slate-700">
+            Loading profile...
+          </p>
         </div>
       </main>
     )
@@ -519,7 +566,7 @@ function ProfilePageInner() {
                     />
                   ) : (
                     <span className="text-4xl font-black">
-                      {(profile.full_name || profile.company_name || 'C')
+                      {textValue(profile.full_name || profile.company_name)
                         .slice(0, 1)
                         .toUpperCase()}
                     </span>
@@ -548,13 +595,15 @@ function ProfilePageInner() {
                   </div>
 
                   <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
-                    {profile.company_name || profile.full_name || 'CrewCall Profile'}
+                    {textValue(profile.company_name || profile.full_name)}
                   </h1>
 
                   <p className="mt-3 max-w-2xl text-sm font-semibold text-slate-200 sm:text-base">
-                    {profile.trade || 'Trade not added yet'} ·{' '}
-                    {[profile.city, profile.state].filter(Boolean).join(', ') ||
-                      'Location not added yet'}
+                    {textValue(profile.trade)} ·{' '}
+                    {[profile.city, profile.state]
+                      .map((item) => inputValue(item).trim())
+                      .filter(Boolean)
+                      .join(', ') || 'Location not added yet'}
                   </p>
                 </div>
               </div>
@@ -562,8 +611,14 @@ function ProfilePageInner() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
                 <StatCard label="Complete" value={`${completionScore}%`} />
                 <StatCard label="Files" value={String(profileFiles.length)} />
-                <StatCard label="Certs" value={String(certificationFiles.length)} />
-                <StatCard label="Licenses" value={String(licenseFiles.length)} />
+                <StatCard
+                  label="Certs"
+                  value={String(certificationFiles.length)}
+                />
+                <StatCard
+                  label="Licenses"
+                  value={String(licenseFiles.length)}
+                />
               </div>
             </div>
           </div>
@@ -582,8 +637,10 @@ function ProfilePageInner() {
                     <h2 className="text-2xl font-black text-slate-950">
                       {isOwnProfile ? 'Edit Profile' : 'Profile Details'}
                     </h2>
+
                     <p className="text-sm font-semibold text-slate-500">
-                      Keep your CrewCall profile clean, verified, and ready for jobs.
+                      Keep your CrewCall profile clean, verified, and ready for
+                      jobs.
                     </p>
                   </div>
 
@@ -616,8 +673,10 @@ function ProfilePageInner() {
                   <FieldBlock label="Full Name">
                     {isOwnProfile ? (
                       <input
-                        value={profile.full_name || ''}
-                        onChange={(event) => updateField('full_name', event.target.value)}
+                        value={inputValue(profile.full_name)}
+                        onChange={(event) =>
+                          updateField('full_name', event.target.value)
+                        }
                         className="input"
                         placeholder="Your name"
                       />
@@ -629,7 +688,7 @@ function ProfilePageInner() {
                   <FieldBlock label="Company Name">
                     {isOwnProfile ? (
                       <input
-                        value={profile.company_name || ''}
+                        value={inputValue(profile.company_name)}
                         onChange={(event) =>
                           updateField('company_name', event.target.value)
                         }
@@ -644,8 +703,10 @@ function ProfilePageInner() {
                   <FieldBlock label="Phone">
                     {isOwnProfile ? (
                       <input
-                        value={profile.phone || ''}
-                        onChange={(event) => updateField('phone', event.target.value)}
+                        value={inputValue(profile.phone)}
+                        onChange={(event) =>
+                          updateField('phone', event.target.value)
+                        }
                         className="input"
                         placeholder="Phone number"
                       />
@@ -657,8 +718,10 @@ function ProfilePageInner() {
                   <FieldBlock label="City">
                     {isOwnProfile ? (
                       <input
-                        value={profile.city || ''}
-                        onChange={(event) => updateField('city', event.target.value)}
+                        value={inputValue(profile.city)}
+                        onChange={(event) =>
+                          updateField('city', event.target.value)
+                        }
                         className="input"
                         placeholder="City"
                       />
@@ -670,8 +733,10 @@ function ProfilePageInner() {
                   <FieldBlock label="State">
                     {isOwnProfile ? (
                       <input
-                        value={profile.state || ''}
-                        onChange={(event) => updateField('state', event.target.value)}
+                        value={inputValue(profile.state)}
+                        onChange={(event) =>
+                          updateField('state', event.target.value)
+                        }
                         className="input"
                         placeholder="State"
                       />
@@ -683,8 +748,10 @@ function ProfilePageInner() {
                   <FieldBlock label="Trade">
                     {isOwnProfile ? (
                       <input
-                        value={profile.trade || ''}
-                        onChange={(event) => updateField('trade', event.target.value)}
+                        value={inputValue(profile.trade)}
+                        onChange={(event) =>
+                          updateField('trade', event.target.value)
+                        }
                         className="input"
                         placeholder="Plumbing, electrical, HVAC..."
                       />
@@ -696,7 +763,7 @@ function ProfilePageInner() {
                   <FieldBlock label="Years Experience">
                     {isOwnProfile ? (
                       <input
-                        value={profile.years_experience || ''}
+                        value={inputValue(profile.years_experience)}
                         onChange={(event) =>
                           updateField('years_experience', event.target.value)
                         }
@@ -704,14 +771,16 @@ function ProfilePageInner() {
                         placeholder="Example: 8 years"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.years_experience)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.years_experience)}
+                      />
                     )}
                   </FieldBlock>
 
                   <FieldBlock label="Insurance Provider">
                     {isOwnProfile ? (
                       <input
-                        value={profile.insurance_provider || ''}
+                        value={inputValue(profile.insurance_provider)}
                         onChange={(event) =>
                           updateField('insurance_provider', event.target.value)
                         }
@@ -719,7 +788,9 @@ function ProfilePageInner() {
                         placeholder="Insurance provider"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.insurance_provider)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.insurance_provider)}
+                      />
                     )}
                   </FieldBlock>
 
@@ -727,9 +798,12 @@ function ProfilePageInner() {
                     {isOwnProfile ? (
                       <input
                         type="date"
-                        value={profile.booked_until || ''}
+                        value={inputValue(profile.booked_until)}
                         onChange={(event) =>
-                          updateField('booked_until', event.target.value || null)
+                          updateField(
+                            'booked_until',
+                            event.target.value || null
+                          )
                         }
                         className="input"
                       />
@@ -743,7 +817,7 @@ function ProfilePageInner() {
                   <FieldBlock label="Job Experience">
                     {isOwnProfile ? (
                       <textarea
-                        value={profile.job_experience || ''}
+                        value={inputValue(profile.job_experience)}
                         onChange={(event) =>
                           updateField('job_experience', event.target.value)
                         }
@@ -765,7 +839,10 @@ function ProfilePageInner() {
                         type="checkbox"
                         checked={Boolean(profile.liability_form_signed)}
                         onChange={(event) =>
-                          updateField('liability_form_signed', event.target.checked)
+                          updateField(
+                            'liability_form_signed',
+                            event.target.checked
+                          )
                         }
                       />
                       Liability signed
@@ -776,7 +853,10 @@ function ProfilePageInner() {
                         type="checkbox"
                         checked={Boolean(profile.available_for_work)}
                         onChange={(event) =>
-                          updateField('available_for_work', event.target.checked)
+                          updateField(
+                            'available_for_work',
+                            event.target.checked
+                          )
                         }
                       />
                       Available
@@ -787,7 +867,10 @@ function ProfilePageInner() {
                         type="checkbox"
                         checked={Boolean(profile.currently_working)}
                         onChange={(event) =>
-                          updateField('currently_working', event.target.checked)
+                          updateField(
+                            'currently_working',
+                            event.target.checked
+                          )
                         }
                       />
                       Currently working
@@ -802,8 +885,10 @@ function ProfilePageInner() {
                     <h2 className="text-2xl font-black text-slate-950">
                       Profile Files
                     </h2>
+
                     <p className="text-sm font-semibold text-slate-500">
-                      Upload your photo, licenses, certifications, and insurance.
+                      Upload your photo, licenses, certifications, and
+                      insurance.
                     </p>
                   </div>
 
@@ -852,6 +937,7 @@ function ProfilePageInner() {
                   <h2 className="text-2xl font-black text-slate-950">
                     Uploaded Documents
                   </h2>
+
                   <p className="text-sm font-semibold text-slate-500">
                     Licenses, insurance, certifications, and profile documents.
                   </p>
@@ -875,6 +961,7 @@ function ProfilePageInner() {
                   <h2 className="text-2xl font-black text-slate-950">
                     Invite Worker
                   </h2>
+
                   <p className="mt-2 text-sm font-semibold text-slate-500">
                     Send this worker an invite to one of your open jobs.
                   </p>
@@ -882,7 +969,9 @@ function ProfilePageInner() {
                   <div className="mt-5 space-y-3">
                     <select
                       value={selectedInviteJobId}
-                      onChange={(event) => setSelectedInviteJobId(event.target.value)}
+                      onChange={(event) =>
+                        setSelectedInviteJobId(event.target.value)
+                      }
                       className="input"
                     >
                       {companyJobs.length === 0 && (
@@ -891,7 +980,8 @@ function ProfilePageInner() {
 
                       {companyJobs.map((job) => (
                         <option key={job.id} value={job.id}>
-                          {job.title || 'Untitled job'} · {job.location || 'No location'}
+                          {job.title || 'Untitled job'} ·{' '}
+                          {job.location || 'No location'}
                         </option>
                       ))}
                     </select>
@@ -912,6 +1002,7 @@ function ProfilePageInner() {
                   <h2 className="text-2xl font-black text-slate-950">
                     Stripe Payouts
                   </h2>
+
                   <p className="mt-2 text-sm font-semibold text-slate-500">
                     Connect Stripe so companies can pay you through CrewCall.
                   </p>
@@ -929,13 +1020,17 @@ function ProfilePageInner() {
 
                     <StatusRow
                       label="Charges"
-                      value={profile.stripe_charges_enabled ? 'Enabled' : 'Disabled'}
+                      value={
+                        profile.stripe_charges_enabled ? 'Enabled' : 'Disabled'
+                      }
                       active={Boolean(profile.stripe_charges_enabled)}
                     />
 
                     <StatusRow
                       label="Payouts"
-                      value={profile.stripe_payouts_enabled ? 'Enabled' : 'Disabled'}
+                      value={
+                        profile.stripe_payouts_enabled ? 'Enabled' : 'Disabled'
+                      }
                       active={Boolean(profile.stripe_payouts_enabled)}
                     />
 
@@ -951,7 +1046,10 @@ function ProfilePageInner() {
               )}
 
               <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">Trust Score</h2>
+                <h2 className="text-2xl font-black text-slate-950">
+                  Trust Score
+                </h2>
+
                 <p className="mt-2 text-sm font-semibold text-slate-500">
                   Higher trust makes workers and companies easier to hire.
                 </p>
@@ -961,6 +1059,7 @@ function ProfilePageInner() {
                     <span>{completionScore}% complete</span>
                     <span>{completionScore >= 80 ? 'Strong' : 'Needs work'}</span>
                   </div>
+
                   <div className="h-4 overflow-hidden rounded-full bg-slate-200">
                     <div
                       className="h-full rounded-full bg-blue-600 transition-all"
@@ -1009,7 +1108,7 @@ function ProfilePageInner() {
                     label="Last Seen"
                     value={
                       profile.last_seen
-                        ? new Date(profile.last_seen).toLocaleString()
+                        ? new Date(inputValue(profile.last_seen)).toLocaleString()
                         : 'Not available'
                     }
                     active={onlineNow}
@@ -1029,9 +1128,15 @@ function ProfilePageInner() {
                   <InfoLine label="Trade" value={profile.trade} />
                   <InfoLine
                     label="Location"
-                    value={[profile.city, profile.state].filter(Boolean).join(', ')}
+                    value={[profile.city, profile.state]
+                      .map((item) => inputValue(item).trim())
+                      .filter(Boolean)
+                      .join(', ')}
                   />
-                  <InfoLine label="Experience" value={profile.years_experience} />
+                  <InfoLine
+                    label="Experience"
+                    value={profile.years_experience}
+                  />
                 </div>
               </CrewCard>
             </aside>
@@ -1048,6 +1153,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-black uppercase tracking-wide text-slate-300">
         {label}
       </p>
+
       <p className="mt-1 text-2xl font-black">{value}</p>
     </div>
   )
@@ -1062,7 +1168,10 @@ function FieldBlock({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-slate-700">{label}</span>
+      <span className="mb-2 block text-sm font-black text-slate-700">
+        {label}
+      </span>
+
       {children}
     </label>
   )
@@ -1089,6 +1198,7 @@ function StatusRow({
     <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div>
         <p className="text-sm font-black text-slate-900">{label}</p>
+
         <p className="text-xs font-bold text-slate-500">{value}</p>
       </div>
 
@@ -1106,14 +1216,17 @@ function InfoLine({
   value,
 }: {
   label: string
-  value: string | null | undefined
+  value: unknown
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-black uppercase tracking-wide text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-slate-900">{textValue(value)}</p>
+
+      <p className="mt-1 text-sm font-black text-slate-900">
+        {textValue(value)}
+      </p>
     </div>
   )
 }
@@ -1124,7 +1237,9 @@ export default function ProfilePage() {
       fallback={
         <main className="min-h-screen bg-slate-50 px-4 py-8">
           <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-xl">
-            <p className="text-lg font-black text-slate-700">Loading profile...</p>
+            <p className="text-lg font-black text-slate-700">
+              Loading profile...
+            </p>
           </div>
         </main>
       }
