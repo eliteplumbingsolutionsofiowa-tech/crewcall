@@ -401,11 +401,13 @@ export default function JobDetailsPage() {
   }
 
   const isCompany = profile.role === 'company'
+  const isWorker = profile.role === 'worker'
   const isOwner = job.company_id === profile.id
   const currentStatus = job.status || 'open'
   const isAssigned = Boolean(job.assigned_worker_id)
   const assignedPhoto = getPhoto(assignedWorker?.id)
   const paymentPaid = job.payment_status === 'paid'
+  const canApply = isWorker && currentStatus === 'open' && !isAssigned
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
@@ -451,6 +453,17 @@ export default function JobDetailsPage() {
                 <p className="mt-5 text-3xl font-black text-cyan-300">
                   {job.pay_rate || 'Pay not listed'}
                 </p>
+
+                {canApply && (
+                  <div className="mt-6">
+                    <Link
+                      href={`/jobs/${job.id}/apply`}
+                      className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] sm:w-auto"
+                    >
+                      Apply Job
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3 lg:w-[360px] lg:grid-cols-1">
@@ -489,6 +502,34 @@ export default function JobDetailsPage() {
           </div>
 
           <div className="space-y-8 p-6 md:p-8">
+            {canApply && (
+              <section className="rounded-3xl border border-cyan-400/30 bg-cyan-400/10 p-5">
+                <h2 className="text-xl font-black text-white">
+                  Interested in this job?
+                </h2>
+
+                <p className="mt-1 text-sm font-semibold text-cyan-100/80">
+                  Apply now and send your rate or message to the company.
+                </p>
+
+                <Link
+                  href={`/jobs/${job.id}/apply`}
+                  className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] sm:w-auto"
+                >
+                  Apply Job
+                </Link>
+              </section>
+            )}
+
+            {isWorker && currentStatus !== 'open' && (
+              <section className="rounded-3xl border border-white/10 bg-slate-950/50 p-5">
+                <p className="text-sm font-bold text-slate-300">
+                  This job is currently {cleanStatus(currentStatus)} and is not
+                  accepting new applications.
+                </p>
+              </section>
+            )}
+
             {isCompany && isOwner && isAssigned && (
               <section className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5">
                 <h2 className="text-xl font-black text-white">
