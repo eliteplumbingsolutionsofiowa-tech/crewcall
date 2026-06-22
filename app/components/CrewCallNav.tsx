@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -13,12 +13,15 @@ type Profile = {
 
 export default function CrewCallNav() {
   const pathname = usePathname()
+  const router = useRouter()
 
+  const [userId, setUserId] = useState<string | null>(null)
   const [role, setRole] = useState<Role>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [savedWorkers, setSavedWorkers] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const loadNavCounts = useCallback(async () => {
     const {
@@ -26,6 +29,7 @@ export default function CrewCallNav() {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      setUserId(null)
       setRole(null)
       setUnreadMessages(0)
       setUnreadNotifications(0)
@@ -33,6 +37,8 @@ export default function CrewCallNav() {
       setLoading(false)
       return
     }
+
+    setUserId(user.id)
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -141,13 +147,30 @@ export default function CrewCallNav() {
     }
   }, [loadNavCounts])
 
+  async function handleLogout() {
+    setLoggingOut(true)
+
+    await supabase.auth.signOut()
+
+    setUserId(null)
+    setRole(null)
+    setUnreadMessages(0)
+    setUnreadNotifications(0)
+    setSavedWorkers(0)
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+    router.push('/login')
+    router.refresh()
+  }
+
   const alertTotal = unreadMessages + unreadNotifications
 
   return (
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/95 shadow-2xl shadow-black/30 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <Link
-          href="/dashboard"
+          href={userId ? '/dashboard' : '/'}
           className="group flex items-center gap-3 no-underline"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-cyan-400 to-blue-500 text-lg font-black !text-slate-950 shadow-xl shadow-cyan-500/25 transition group-hover:scale-[1.04]">
@@ -166,9 +189,11 @@ export default function CrewCallNav() {
         </Link>
 
         <div className="flex max-w-full flex-wrap items-center gap-2 text-sm font-black">
-          <NavLink href="/dashboard" active={pathname === '/dashboard'}>
-            Dashboard
-          </NavLink>
+          {userId && (
+            <NavLink href="/dashboard" active={pathname === '/dashboard'}>
+              Dashboard
+            </NavLink>
+          )}
 
           {role === 'company' && (
             <>
@@ -239,27 +264,56 @@ export default function CrewCallNav() {
             </>
           )}
 
-          <NavLink
-            href="/messages"
-            count={unreadMessages}
-            active={pathname.startsWith('/messages')}
-          >
-            Messages
-          </NavLink>
+          {userId && (
+            <>
+              <NavLink
+                href="/messages"
+                count={unreadMessages}
+                active={pathname.startsWith('/messages')}
+              >
+                Messages
+              </NavLink>
 
-          <NavLink
-            href="/notifications"
-            count={alertTotal}
-            active={pathname.startsWith('/notifications')}
-          >
-            Alerts
-          </NavLink>
+              <NavLink
+                href="/notifications"
+                count={alertTotal}
+                active={pathname.startsWith('/notifications')}
+              >
+                Alerts
+              </NavLink>
 
-          <NavLink href="/profile" active={pathname.startsWith('/profile')}>
-            Profile
-          </NavLink>
+              <NavLink href="/profile" active={pathname.startsWith('/profile')}>
+                Profile
+              </NavLink>
 
-          {!loading && !role && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="
+                  inline-flex items-center justify-center
+                  rounded-2xl
+                  border border-red-400/30
+                  bg-red-500/15
+                  px-4 py-2
+                  text-sm font-black
+                  !text-red-100
+                  shadow-md shadow-black/20
+                  transition-all duration-200
+                  hover:border-red-300/60
+                  hover:bg-red-500/25
+                  hover:!text-white
+                  active:scale-[0.98]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                "
+              >
+                {loggingOut ? 'Logging Out...' : 'Log Out'}
+              </button>
+            </>
+          )}
+
+          {!loading && !userId && (
             <NavLink href="/login" active={pathname.startsWith('/login')}>
               Login
             </NavLink>
