@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -13,10 +13,13 @@ type Profile = {
 
 export default function MobileTabBar() {
   const pathname = usePathname()
+  const router = useRouter()
 
+  const [userId, setUserId] = useState<string | null>(null)
   const [role, setRole] = useState<Role>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const loadCounts = useCallback(async () => {
     const {
@@ -24,11 +27,14 @@ export default function MobileTabBar() {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      setUserId(null)
       setRole(null)
       setUnreadMessages(0)
       setUnreadNotifications(0)
       return
     }
+
+    setUserId(user.id)
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -100,6 +106,22 @@ export default function MobileTabBar() {
     }
   }, [loadCounts])
 
+  async function handleLogout() {
+    setLoggingOut(true)
+
+    await supabase.auth.signOut()
+
+    setUserId(null)
+    setRole(null)
+    setUnreadMessages(0)
+    setUnreadNotifications(0)
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+    router.push('/login')
+    router.refresh()
+  }
+
   const jobsHref = useMemo(() => {
     if (role === 'company') return '/my-jobs'
     return '/jobs'
@@ -107,9 +129,31 @@ export default function MobileTabBar() {
 
   const alertsCount = unreadMessages + unreadNotifications
 
+  if (!userId) {
+    return (
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/90 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-2xl shadow-black/40 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-2 gap-2 rounded-[2rem] border border-white/10 bg-white/10 p-2">
+          <TabItem
+            href="/"
+            label="Home"
+            icon="⌂"
+            active={pathname === '/'}
+          />
+
+          <TabItem
+            href="/login"
+            label="Login"
+            icon="→"
+            active={pathname.startsWith('/login')}
+          />
+        </div>
+      </nav>
+    )
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/90 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-2xl shadow-black/40 backdrop-blur-xl lg:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-2 rounded-[2rem] border border-white/10 bg-white/10 p-2">
+      <div className="mx-auto grid max-w-md grid-cols-6 gap-2 rounded-[2rem] border border-white/10 bg-white/10 p-2">
         <TabItem
           href="/dashboard"
           label="Home"
@@ -150,6 +194,29 @@ export default function MobileTabBar() {
           icon="●"
           active={pathname.startsWith('/profile')}
         />
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="
+            relative flex flex-col items-center justify-center
+            rounded-2xl
+            px-2 py-2
+            text-xs font-black
+            text-red-200
+            transition
+            hover:bg-red-500/20
+            hover:text-white
+            disabled:cursor-not-allowed
+            disabled:opacity-60
+          "
+        >
+          <span className="text-lg leading-none">×</span>
+          <span className="mt-1 leading-none">
+            {loggingOut ? 'Out...' : 'Logout'}
+          </span>
+        </button>
       </div>
     </nav>
   )
