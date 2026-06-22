@@ -23,59 +23,68 @@ export default function CrewCallNav() {
   const [loading, setLoading] = useState(true)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const loadNavCounts = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      setUserId(null)
-      setRole(null)
-      setUnreadMessages(0)
-      setUnreadNotifications(0)
-      setSavedWorkers(0)
-      setLoading(false)
-      return
-    }
-
-    setUserId(user.id)
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle<Profile>()
-
-    const userRole = profile?.role ?? null
-    setRole(userRole)
-
-    const { count: messageCount } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', user.id)
-      .eq('is_read', false)
-
-    const { count: notificationCount } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .or('is_read.eq.false,read.eq.false')
-
-    if (userRole === 'company') {
-      const { count: savedWorkerCount } = await supabase
-        .from('saved_workers')
-        .select('id', { count: 'exact', head: true })
-        .eq('company_id', user.id)
-
-      setSavedWorkers(savedWorkerCount ?? 0)
-    } else {
-      setSavedWorkers(0)
-    }
-
-    setUnreadMessages(messageCount ?? 0)
-    setUnreadNotifications(notificationCount ?? 0)
-    setLoading(false)
+  const resetNavState = useCallback(() => {
+    setUserId(null)
+    setRole(null)
+    setUnreadMessages(0)
+    setUnreadNotifications(0)
+    setSavedWorkers(0)
   }, [])
+
+  const loadNavCounts = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        resetNavState()
+        setLoading(false)
+        return
+      }
+
+      setUserId(user.id)
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle<Profile>()
+
+      const userRole = profile?.role ?? null
+      setRole(userRole)
+
+      const { count: messageCount } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', user.id)
+        .eq('is_read', false)
+
+      const { count: notificationCount } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .or('is_read.eq.false,read.eq.false')
+
+      if (userRole === 'company') {
+        const { count: savedWorkerCount } = await supabase
+          .from('saved_workers')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', user.id)
+
+        setSavedWorkers(savedWorkerCount ?? 0)
+      } else {
+        setSavedWorkers(0)
+      }
+
+      setUnreadMessages(messageCount ?? 0)
+      setUnreadNotifications(notificationCount ?? 0)
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to load nav counts:', error)
+      setLoading(false)
+    }
+  }, [resetNavState])
 
   useEffect(() => {
     loadNavCounts()
@@ -148,20 +157,27 @@ export default function CrewCallNav() {
   }, [loadNavCounts])
 
   async function handleLogout() {
-    setLoggingOut(true)
+    if (loggingOut) return
 
-    await supabase.auth.signOut()
+    try {
+      setLoggingOut(true)
 
-    setUserId(null)
-    setRole(null)
-    setUnreadMessages(0)
-    setUnreadNotifications(0)
-    setSavedWorkers(0)
+      const { error } = await supabase.auth.signOut()
 
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+      if (error) {
+        throw error
+      }
 
-    router.push('/login')
-    router.refresh()
+      resetNavState()
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+      router.replace('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Logout failed:', error)
+      alert('Unable to log out. Please try again.')
+      setLoggingOut(false)
+    }
   }
 
   const alertTotal = unreadMessages + unreadNotifications
@@ -255,10 +271,7 @@ export default function CrewCallNav() {
                 Applications
               </NavLink>
 
-              <NavLink
-                href="/my-work"
-                active={pathname.startsWith('/my-work')}
-              >
+              <NavLink href="/my-work" active={pathname.startsWith('/my-work')}>
                 My Work
               </NavLink>
             </>
