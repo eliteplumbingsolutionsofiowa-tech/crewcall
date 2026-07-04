@@ -34,6 +34,22 @@ type Profile = {
   stripe_onboarding_complete?: boolean | null
   stripe_charges_enabled?: boolean | null
   stripe_payouts_enabled?: boolean | null
+
+  bio: string | null
+  availability_status: string | null
+  travel_radius: number | null
+  expected_pay_min: number | null
+  expected_pay_max: number | null
+  crewcall_score: number | null
+  skills: string[] | null
+  osha10: boolean | null
+  osha30: boolean | null
+  med_gas: boolean | null
+  background_verified: boolean | null
+  drug_tested: boolean | null
+  license_number: string | null
+  preferred_work: string[] | null
+  willing_to_travel: boolean | null
 }
 
 type ProfileFile = {
@@ -74,8 +90,34 @@ const profileSelect = `
   stripe_account_id,
   stripe_onboarding_complete,
   stripe_charges_enabled,
-  stripe_payouts_enabled
+  stripe_payouts_enabled,
+  bio,
+  availability_status,
+  travel_radius,
+  expected_pay_min,
+  expected_pay_max,
+  crewcall_score,
+  skills,
+  osha10,
+  osha30,
+  med_gas,
+  background_verified,
+  drug_tested,
+  license_number,
+  preferred_work,
+  willing_to_travel
 `
+
+const DEFAULT_SCORE = 80
+
+const availabilityOptions = [
+  'available',
+  'available_today',
+  'available_tomorrow',
+  'weekends_only',
+  'busy',
+  'not_available',
+]
 
 function emptyProfile(id: string): Profile {
   return {
@@ -100,28 +142,38 @@ function emptyProfile(id: string): Profile {
     stripe_onboarding_complete: false,
     stripe_charges_enabled: false,
     stripe_payouts_enabled: false,
+    bio: '',
+    availability_status: 'available',
+    travel_radius: 25,
+    expected_pay_min: null,
+    expected_pay_max: null,
+    crewcall_score: DEFAULT_SCORE,
+    skills: [],
+    osha10: false,
+    osha30: false,
+    med_gas: false,
+    background_verified: false,
+    drug_tested: false,
+    license_number: '',
+    preferred_work: [],
+    willing_to_travel: false,
   }
 }
 
 function safeString(value: unknown): string {
   if (typeof value === 'string') return value
-
-  if (value === null || value === undefined) {
-    return ''
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value)
-  }
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
 
   if (Array.isArray(value)) {
-    return value
-      .map((item) => safeString(item))
-      .filter(Boolean)
-      .join(', ')
+    return value.map((item) => safeString(item)).filter(Boolean).join(', ')
   }
 
   return ''
+}
+
+function inputValue(value: unknown) {
+  return safeString(value)
 }
 
 function textValue(value: unknown) {
@@ -129,8 +181,35 @@ function textValue(value: unknown) {
   return clean.length > 0 ? clean : 'Not added yet'
 }
 
-function inputValue(value: unknown) {
-  return safeString(value)
+function numberInputValue(value: number | null | undefined) {
+  return value === null || value === undefined ? '' : String(value)
+}
+
+function parseNumber(value: string) {
+  const clean = value.trim()
+
+  if (!clean) return null
+
+  const parsed = Number(clean)
+
+  if (Number.isNaN(parsed)) return null
+
+  return parsed
+}
+
+function arrayToInput(value: string[] | null | undefined) {
+  return Array.isArray(value) ? value.join(', ') : ''
+}
+
+function inputToArray(value: string) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function cleanStatus(value: string | null | undefined) {
+  return safeString(value || 'available').replaceAll('_', ' ')
 }
 
 function formatDate(value: unknown) {
@@ -175,13 +254,12 @@ function ProfilePageInner() {
   const [message, setMessage] = useState('')
 
   const isOwnProfile = !viewedUserId || viewedUserId === currentUserId
+  const isWorkerProfile = profile?.role === 'worker'
 
   const canInviteWorker =
     !isOwnProfile &&
     currentProfile?.role === 'company' &&
     profile?.role === 'worker'
-
-  const isWorkerProfile = profile?.role === 'worker'
 
   const stripeConnected = Boolean(
     profile?.stripe_charges_enabled && profile?.stripe_payouts_enabled
@@ -222,52 +300,100 @@ function ProfilePageInner() {
       Boolean(profile.state),
       Boolean(profile.trade),
       Boolean(profile.years_experience),
-      Boolean(profile.insurance_provider),
-      Boolean(profile.job_experience),
+      Boolean(profile.bio || profile.job_experience),
+      Boolean(profile.skills?.length),
+      Boolean(profile.availability_status),
+      Boolean(profile.travel_radius),
+      Boolean(profile.expected_pay_min || profile.expected_pay_max),
+      Boolean(profile.insurance_provider || insuranceFiles.length > 0),
       Boolean(profile.liability_form_signed),
       profileFiles.length > 0,
     ]
 
     return Math.round((checks.filter(Boolean).length / checks.length) * 100)
-  }, [profile, profileFiles.length])
+  }, [profile, profileFiles.length, insuranceFiles.length])
+
+  const crewcallScore = useMemo(() => {
+    const base = profile?.crewcall_score || DEFAULT_SCORE
+    const profileBonus = Math.round(completionScore * 0.12)
+    const fileBonus = Math.min(profileFiles.length * 2, 8)
+    const verifiedBonus =
+      Number(Boolean(profile?.osha10)) +
+      Number(Boolean(profile?.osha30)) +
+      Number(Boolean(profile?.med_gas)) +
+      Number(Boolean(profile?.background_verified)) +
+      Number(Boolean(profile?.drug_tested)) +
+      Number(Boolean(profile?.liability_form_signed))
+
+    return Math.min(100, Math.max(0, base + profileBonus + fileBonus + verifiedBonus))
+  }, [
+    completionScore,
+    profile?.background_verified,
+    profile?.crewcall_score,
+    profile?.drug_tested,
+    profile?.liability_form_signed,
+    profile?.med_gas,
+    profile?.osha10,
+    profile?.osha30,
+    profileFiles.length,
+  ])
 
   const onlineNow = useMemo(() => {
     return Boolean(profile?.is_online) || isRecentlyOnline(profile?.last_seen)
   }, [profile?.is_online, profile?.last_seen])
 
-  const trustBadges = useMemo(() => {
+  const verificationBadges = useMemo(() => {
     return [
       {
-        label: 'Profile',
-        active: completionScore >= 80,
-        detail: `${completionScore}% complete`,
+        label: 'Licensed',
+        active: Boolean(profile?.license_number) || licenseFiles.length > 0,
       },
       {
-        label: 'Insurance',
+        label: 'Insured',
         active: Boolean(profile?.insurance_provider) || insuranceFiles.length > 0,
-        detail:
-          profile?.insurance_provider || insuranceFiles.length > 0
-            ? 'Added'
-            : 'Missing',
+      },
+      {
+        label: 'OSHA 10',
+        active: Boolean(profile?.osha10),
+      },
+      {
+        label: 'OSHA 30',
+        active: Boolean(profile?.osha30),
+      },
+      {
+        label: 'Med Gas',
+        active: Boolean(profile?.med_gas),
+      },
+      {
+        label: 'Background',
+        active: Boolean(profile?.background_verified),
+      },
+      {
+        label: 'Drug Tested',
+        active: Boolean(profile?.drug_tested),
       },
       {
         label: 'Liability',
         active: Boolean(profile?.liability_form_signed),
-        detail: profile?.liability_form_signed ? 'Signed' : 'Not signed',
-      },
-      {
-        label: 'Files',
-        active: profileFiles.length > 0,
-        detail: `${profileFiles.length} uploaded`,
       },
     ]
   }, [
-    completionScore,
     insuranceFiles.length,
+    licenseFiles.length,
+    profile?.background_verified,
+    profile?.drug_tested,
     profile?.insurance_provider,
     profile?.liability_form_signed,
-    profileFiles.length,
+    profile?.license_number,
+    profile?.med_gas,
+    profile?.osha10,
+    profile?.osha30,
   ])
+
+  const displayName = textValue(profile?.company_name || profile?.full_name)
+  const displayBio = textValue(profile?.bio || profile?.job_experience)
+  const skills = profile?.skills || []
+  const preferredWork = profile?.preferred_work || []
 
   const loadProfile = useCallback(async () => {
     setLoading(true)
@@ -304,7 +430,6 @@ function ProfilePageInner() {
       .maybeSingle()
 
     const current = (currentProfileData as Profile | null) || null
-
     setCurrentProfile(current)
 
     const profileId = viewedUserId || user.id
@@ -403,7 +528,10 @@ function ProfilePageInner() {
     }
   }, [currentUserId, loadProfile, updateOnlineStatus])
 
-  function updateField(field: keyof Profile, value: string | boolean | null) {
+  function updateField(
+    field: keyof Profile,
+    value: string | boolean | null | number | string[]
+  ) {
     setProfile((previous) =>
       previous ? { ...previous, [field]: value } : previous
     )
@@ -435,6 +563,22 @@ function ProfilePageInner() {
         booked_until: inputValue(profile.booked_until).trim() || null,
         is_online: true,
         last_seen: new Date().toISOString(),
+
+        bio: inputValue(profile.bio).trim() || null,
+        availability_status: inputValue(profile.availability_status).trim() || 'available',
+        travel_radius: profile.travel_radius || null,
+        expected_pay_min: profile.expected_pay_min || null,
+        expected_pay_max: profile.expected_pay_max || null,
+        crewcall_score: profile.crewcall_score || DEFAULT_SCORE,
+        skills: profile.skills || [],
+        osha10: Boolean(profile.osha10),
+        osha30: Boolean(profile.osha30),
+        med_gas: Boolean(profile.med_gas),
+        background_verified: Boolean(profile.background_verified),
+        drug_tested: Boolean(profile.drug_tested),
+        license_number: inputValue(profile.license_number).trim() || null,
+        preferred_work: profile.preferred_work || [],
+        willing_to_travel: Boolean(profile.willing_to_travel),
       },
       { onConflict: 'id' }
     )
@@ -577,9 +721,7 @@ function ProfilePageInner() {
                     />
                   ) : (
                     <span className="text-4xl font-black">
-                      {textValue(profile.full_name || profile.company_name)
-                        .slice(0, 1)
-                        .toUpperCase()}
+                      {displayName.slice(0, 1).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -600,13 +742,19 @@ function ProfilePageInner() {
                       {profile.role === 'company'
                         ? 'Company'
                         : profile.role === 'worker'
-                          ? 'Worker'
+                          ? 'Worker Passport'
                           : 'Role not set'}
                     </span>
+
+                    {isWorkerProfile && (
+                      <span className="rounded-full bg-cyan-400 px-3 py-1 text-xs font-black text-slate-950">
+                        CrewCall Score {crewcallScore}
+                      </span>
+                    )}
                   </div>
 
                   <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
-                    {textValue(profile.company_name || profile.full_name)}
+                    {displayName}
                   </h1>
 
                   <p className="mt-3 max-w-2xl text-sm font-semibold text-slate-200 sm:text-base">
@@ -616,19 +764,38 @@ function ProfilePageInner() {
                       .filter(Boolean)
                       .join(', ') || 'Location not added yet'}
                   </p>
+
+                  {isWorkerProfile && (
+                    <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-300">
+                      {displayBio}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
-                <StatCard label="Complete" value={`${completionScore}%`} />
-                <StatCard label="Files" value={String(profileFiles.length)} />
+                <StatCard label="Score" value={String(crewcallScore)} />
                 <StatCard
-                  label="Certs"
-                  value={String(certificationFiles.length)}
+                  label="Experience"
+                  value={textValue(profile.years_experience)}
                 />
                 <StatCard
-                  label="Licenses"
-                  value={String(licenseFiles.length)}
+                  label="Travel"
+                  value={
+                    profile.travel_radius
+                      ? `${profile.travel_radius} mi`
+                      : 'Not set'
+                  }
+                />
+                <StatCard
+                  label="Rate"
+                  value={
+                    profile.expected_pay_min || profile.expected_pay_max
+                      ? `$${profile.expected_pay_min || '?'}-${
+                          profile.expected_pay_max || '?'
+                        }`
+                      : 'Not set'
+                  }
                 />
               </div>
             </div>
@@ -646,12 +813,11 @@ function ProfilePageInner() {
                 <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-2xl font-black text-slate-950">
-                      {isOwnProfile ? 'Edit Profile' : 'Profile Details'}
+                      {isOwnProfile ? 'Edit Worker Passport' : 'Worker Passport'}
                     </h2>
 
                     <p className="text-sm font-semibold text-slate-500">
-                      Keep your CrewCall profile clean, verified, and ready for
-                      jobs.
+                      Build a profile companies can trust in 30 seconds.
                     </p>
                   </div>
 
@@ -788,6 +954,115 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
+                  <FieldBlock label="Availability">
+                    {isOwnProfile ? (
+                      <select
+                        value={profile.availability_status || 'available'}
+                        onChange={(event) =>
+                          updateField('availability_status', event.target.value)
+                        }
+                        className="input"
+                      >
+                        {availabilityOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {cleanStatus(option)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <ReadOnlyValue
+                        value={cleanStatus(profile.availability_status)}
+                      />
+                    )}
+                  </FieldBlock>
+
+                  <FieldBlock label="Travel Radius">
+                    {isOwnProfile ? (
+                      <input
+                        type="number"
+                        value={numberInputValue(profile.travel_radius)}
+                        onChange={(event) =>
+                          updateField('travel_radius', parseNumber(event.target.value))
+                        }
+                        className="input"
+                        placeholder="25"
+                      />
+                    ) : (
+                      <ReadOnlyValue
+                        value={
+                          profile.travel_radius
+                            ? `${profile.travel_radius} miles`
+                            : 'Not added yet'
+                        }
+                      />
+                    )}
+                  </FieldBlock>
+
+                  <FieldBlock label="Expected Pay Min">
+                    {isOwnProfile ? (
+                      <input
+                        type="number"
+                        value={numberInputValue(profile.expected_pay_min)}
+                        onChange={(event) =>
+                          updateField(
+                            'expected_pay_min',
+                            parseNumber(event.target.value)
+                          )
+                        }
+                        className="input"
+                        placeholder="40"
+                      />
+                    ) : (
+                      <ReadOnlyValue
+                        value={
+                          profile.expected_pay_min
+                            ? `$${profile.expected_pay_min}/hr`
+                            : 'Not added yet'
+                        }
+                      />
+                    )}
+                  </FieldBlock>
+
+                  <FieldBlock label="Expected Pay Max">
+                    {isOwnProfile ? (
+                      <input
+                        type="number"
+                        value={numberInputValue(profile.expected_pay_max)}
+                        onChange={(event) =>
+                          updateField(
+                            'expected_pay_max',
+                            parseNumber(event.target.value)
+                          )
+                        }
+                        className="input"
+                        placeholder="55"
+                      />
+                    ) : (
+                      <ReadOnlyValue
+                        value={
+                          profile.expected_pay_max
+                            ? `$${profile.expected_pay_max}/hr`
+                            : 'Not added yet'
+                        }
+                      />
+                    )}
+                  </FieldBlock>
+
+                  <FieldBlock label="License Number">
+                    {isOwnProfile ? (
+                      <input
+                        value={inputValue(profile.license_number)}
+                        onChange={(event) =>
+                          updateField('license_number', event.target.value)
+                        }
+                        className="input"
+                        placeholder="License number"
+                      />
+                    ) : (
+                      <ReadOnlyValue value={textValue(profile.license_number)} />
+                    )}
+                  </FieldBlock>
+
                   <FieldBlock label="Insurance Provider">
                     {isOwnProfile ? (
                       <input
@@ -804,90 +1079,156 @@ function ProfilePageInner() {
                       />
                     )}
                   </FieldBlock>
-
-                  <FieldBlock label="Booked Until">
-                    {isOwnProfile ? (
-                      <input
-                        type="date"
-                        value={inputValue(profile.booked_until)}
-                        onChange={(event) =>
-                          updateField(
-                            'booked_until',
-                            event.target.value || null
-                          )
-                        }
-                        className="input"
-                      />
-                    ) : (
-                      <ReadOnlyValue value={formatDate(profile.booked_until)} />
-                    )}
-                  </FieldBlock>
                 </div>
 
                 <div className="mt-4">
-                  <FieldBlock label="Job Experience">
+                  <FieldBlock label="About Me">
                     {isOwnProfile ? (
                       <textarea
-                        value={inputValue(profile.job_experience)}
-                        onChange={(event) =>
+                        value={inputValue(profile.bio || profile.job_experience)}
+                        onChange={(event) => {
+                          updateField('bio', event.target.value)
                           updateField('job_experience', event.target.value)
-                        }
+                        }}
                         className="input min-h-32"
-                        placeholder="Tell companies what kind of work you do best."
+                        placeholder="Example: Licensed journeyman plumber specializing in commercial rough-ins, service work, hospitals, schools, and tenant improvements."
                       />
                     ) : (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-700">
-                        {textValue(profile.job_experience)}
+                        {displayBio}
                       </div>
                     )}
                   </FieldBlock>
                 </div>
 
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <FieldBlock label="Skills">
+                    {isOwnProfile ? (
+                      <textarea
+                        value={arrayToInput(profile.skills)}
+                        onChange={(event) =>
+                          updateField('skills', inputToArray(event.target.value))
+                        }
+                        className="input min-h-24"
+                        placeholder="Commercial, Service, Underground, Copper, Cast Iron"
+                      />
+                    ) : (
+                      <ChipList items={skills} empty="No skills added yet" />
+                    )}
+                  </FieldBlock>
+
+                  <FieldBlock label="Preferred Work">
+                    {isOwnProfile ? (
+                      <textarea
+                        value={arrayToInput(profile.preferred_work)}
+                        onChange={(event) =>
+                          updateField(
+                            'preferred_work',
+                            inputToArray(event.target.value)
+                          )
+                        }
+                        className="input min-h-24"
+                        placeholder="Commercial, Piece work, Emergency, Travel, Shutdowns"
+                      />
+                    ) : (
+                      <ChipList
+                        items={preferredWork}
+                        empty="No preferred work added yet"
+                      />
+                    )}
+                  </FieldBlock>
+                </div>
+
                 {isOwnProfile && (
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.liability_form_signed)}
-                        onChange={(event) =>
-                          updateField(
-                            'liability_form_signed',
-                            event.target.checked
-                          )
-                        }
-                      />
-                      Liability signed
-                    </label>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <CheckBoxField
+                      label="Liability signed"
+                      checked={Boolean(profile.liability_form_signed)}
+                      onChange={(checked) =>
+                        updateField('liability_form_signed', checked)
+                      }
+                    />
 
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.available_for_work)}
-                        onChange={(event) =>
-                          updateField(
-                            'available_for_work',
-                            event.target.checked
-                          )
-                        }
-                      />
-                      Available
-                    </label>
+                    <CheckBoxField
+                      label="Available"
+                      checked={Boolean(profile.available_for_work)}
+                      onChange={(checked) =>
+                        updateField('available_for_work', checked)
+                      }
+                    />
 
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.currently_working)}
-                        onChange={(event) =>
-                          updateField(
-                            'currently_working',
-                            event.target.checked
-                          )
-                        }
-                      />
-                      Currently working
-                    </label>
+                    <CheckBoxField
+                      label="Currently working"
+                      checked={Boolean(profile.currently_working)}
+                      onChange={(checked) =>
+                        updateField('currently_working', checked)
+                      }
+                    />
+
+                    <CheckBoxField
+                      label="Willing to travel"
+                      checked={Boolean(profile.willing_to_travel)}
+                      onChange={(checked) =>
+                        updateField('willing_to_travel', checked)
+                      }
+                    />
+
+                    <CheckBoxField
+                      label="OSHA 10"
+                      checked={Boolean(profile.osha10)}
+                      onChange={(checked) => updateField('osha10', checked)}
+                    />
+
+                    <CheckBoxField
+                      label="OSHA 30"
+                      checked={Boolean(profile.osha30)}
+                      onChange={(checked) => updateField('osha30', checked)}
+                    />
+
+                    <CheckBoxField
+                      label="Med Gas"
+                      checked={Boolean(profile.med_gas)}
+                      onChange={(checked) => updateField('med_gas', checked)}
+                    />
+
+                    <CheckBoxField
+                      label="Drug Tested"
+                      checked={Boolean(profile.drug_tested)}
+                      onChange={(checked) => updateField('drug_tested', checked)}
+                    />
                   </div>
                 )}
+              </CrewCard>
+
+              <CrewCard>
+                <div className="mb-5">
+                  <h2 className="text-2xl font-black text-slate-950">
+                    Skills & Preferred Work
+                  </h2>
+
+                  <p className="text-sm font-semibold text-slate-500">
+                    Companies can quickly see what kind of work fits you best.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <p className="mb-3 text-sm font-black text-slate-700">
+                      Skills
+                    </p>
+                    <ChipList items={skills} empty="No skills added yet" />
+                  </div>
+
+                  <div>
+                    <p className="mb-3 text-sm font-black text-slate-700">
+                      Preferred Work
+                    </p>
+                    <ChipList
+                      items={preferredWork}
+                      empty="No preferred work added yet"
+                    />
+                  </div>
+                </div>
               </CrewCard>
 
               {isOwnProfile && (
@@ -898,8 +1239,7 @@ function ProfilePageInner() {
                     </h2>
 
                     <p className="text-sm font-semibold text-slate-500">
-                      Upload your photo, licenses, certifications, and
-                      insurance.
+                      Upload your photo, licenses, certifications, and insurance.
                     </p>
                   </div>
 
@@ -1070,17 +1410,24 @@ function ProfilePageInner() {
 
               <CrewCard>
                 <h2 className="text-2xl font-black text-slate-950">
-                  Trust Score
+                  CrewCall Score
                 </h2>
 
                 <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Higher trust makes workers and companies easier to hire.
+                  Early trust score based on profile strength and verification.
                 </p>
+
+                <div className="mt-5 rounded-[2rem] bg-gradient-to-br from-slate-950 to-blue-950 p-6 text-center text-white">
+                  <div className="text-6xl font-black">{crewcallScore}</div>
+                  <div className="mt-2 text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
+                    Professional Score
+                  </div>
+                </div>
 
                 <div className="mt-5">
                   <div className="mb-2 flex items-center justify-between text-sm font-black">
                     <span>{completionScore}% complete</span>
-                    <span>{completionScore >= 80 ? 'Strong' : 'Needs work'}</span>
+                    <span>{crewcallScore >= 90 ? 'Strong' : 'Building'}</span>
                   </div>
 
                   <div className="h-4 overflow-hidden rounded-full bg-slate-200">
@@ -1090,13 +1437,19 @@ function ProfilePageInner() {
                     />
                   </div>
                 </div>
+              </CrewCard>
 
-                <div className="mt-5 space-y-3">
-                  {trustBadges.map((badge) => (
+              <CrewCard>
+                <h2 className="text-2xl font-black text-slate-950">
+                  Verification
+                </h2>
+
+                <div className="mt-5 grid gap-3">
+                  {verificationBadges.map((badge) => (
                     <StatusRow
                       key={badge.label}
                       label={badge.label}
-                      value={badge.detail}
+                      value={badge.active ? 'Added' : 'Missing'}
                       active={badge.active}
                     />
                   ))}
@@ -1110,8 +1463,8 @@ function ProfilePageInner() {
 
                 <div className="mt-5 space-y-3">
                   <StatusRow
-                    label="Available"
-                    value={profile.available_for_work ? 'Yes' : 'No'}
+                    label="Availability"
+                    value={cleanStatus(profile.availability_status)}
                     active={Boolean(profile.available_for_work)}
                   />
 
@@ -1119,6 +1472,12 @@ function ProfilePageInner() {
                     label="Currently Working"
                     value={profile.currently_working ? 'Yes' : 'No'}
                     active={Boolean(profile.currently_working)}
+                  />
+
+                  <StatusRow
+                    label="Willing to Travel"
+                    value={profile.willing_to_travel ? 'Yes' : 'No'}
+                    active={Boolean(profile.willing_to_travel)}
                   />
 
                   <StatusRow
@@ -1159,6 +1518,24 @@ function ProfilePageInner() {
                   <InfoLine
                     label="Experience"
                     value={profile.years_experience}
+                  />
+                  <InfoLine
+                    label="Expected Pay"
+                    value={
+                      profile.expected_pay_min || profile.expected_pay_max
+                        ? `$${profile.expected_pay_min || '?'}-${
+                            profile.expected_pay_max || '?'
+                          }/hr`
+                        : ''
+                    }
+                  />
+                  <InfoLine
+                    label="Travel Radius"
+                    value={
+                      profile.travel_radius
+                        ? `${profile.travel_radius} miles`
+                        : ''
+                    }
                   />
                 </div>
               </CrewCard>
@@ -1234,13 +1611,7 @@ function StatusRow({
   )
 }
 
-function InfoLine({
-  label,
-  value,
-}: {
-  label: string
-  value: unknown
-}) {
+function InfoLine({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-black uppercase tracking-wide text-slate-500">
@@ -1251,6 +1622,50 @@ function InfoLine({
         {textValue(value)}
       </p>
     </div>
+  )
+}
+
+function ChipList({ items, empty }: { items: string[]; empty: string }) {
+  if (!items.length) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-500">
+        {empty}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <span
+          key={item}
+          className="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700"
+        >
+          {item}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function CheckBoxField({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      {label}
+    </label>
   )
 }
 
