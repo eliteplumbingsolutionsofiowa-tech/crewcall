@@ -13,23 +13,30 @@ type Profile = {
 
 export default function Navbar() {
   const [role, setRole] = useState<UserRole>(null)
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [signedIn, setSignedIn] = useState(false)
 
-  const fetchUnreadCount = useCallback(async (userId: string) => {
-    const { count, error } = await supabase
-      .from('messages')
-      .select('id', {
-        count: 'exact',
-        head: true,
-      })
-      .match({
-        recipient_id: userId,
-        is_read: false,
-      })
+  const fetchCounts = useCallback(async (userId: string) => {
+    const [messagesRes, notificationsRes] = await Promise.all([
+      supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .match({
+          recipient_id: userId,
+          is_read: false,
+        }),
 
-    if (!error) {
-      setUnreadCount(count ?? 0)
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .or('is_read.eq.false,read.eq.false'),
+    ])
+
+    if (!messagesRes.error) setUnreadMessages(messagesRes.count ?? 0)
+    if (!notificationsRes.error) {
+      setUnreadNotifications(notificationsRes.count ?? 0)
     }
   }, [])
 
@@ -41,7 +48,8 @@ export default function Navbar() {
     if (!user) {
       setSignedIn(false)
       setRole(null)
-      setUnreadCount(0)
+      setUnreadMessages(0)
+      setUnreadNotifications(0)
       return
     }
 
@@ -51,14 +59,15 @@ export default function Navbar() {
       .from('profiles')
       .select('id, role')
       .eq('id', user.id)
-      .maybeSingle<Profile>()
+      .returns<Profile[]>()
+      .maybeSingle()
 
     if (!profileError && profileData) {
       setRole(profileData.role || null)
     }
 
-    await fetchUnreadCount(user.id)
-  }, [fetchUnreadCount])
+    await fetchCounts(user.id)
+  }, [fetchCounts])
 
   useEffect(() => {
     let isMounted = true
@@ -72,9 +81,14 @@ export default function Navbar() {
 
     const intervalId = window.setInterval(safeLoadNav, 30000)
 
+    window.addEventListener('crewcall-refresh-nav', safeLoadNav)
+    window.addEventListener('focus', safeLoadNav)
+
     return () => {
       isMounted = false
       window.clearInterval(intervalId)
+      window.removeEventListener('crewcall-refresh-nav', safeLoadNav)
+      window.removeEventListener('focus', safeLoadNav)
     }
   }, [loadNav])
 
@@ -82,6 +96,13 @@ export default function Navbar() {
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
+
+  const dashboardHref =
+    role === 'company'
+      ? '/company/dashboard'
+      : role === 'worker'
+        ? '/worker/dashboard'
+        : '/jobs'
 
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:px-8">
@@ -106,6 +127,13 @@ export default function Navbar() {
           {signedIn ? (
             <>
               <Link
+                href={dashboardHref}
+                className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+              >
+                Dashboard
+              </Link>
+
+              <Link
                 href="/jobs"
                 className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
               >
@@ -129,6 +157,13 @@ export default function Navbar() {
                   </Link>
 
                   <Link
+                    href="/company/analytics"
+                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                  >
+                    Analytics
+                  </Link>
+
+                  <Link
                     href="/saved-workers"
                     className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
                   >
@@ -147,13 +182,26 @@ export default function Navbar() {
                   </Link>
 
                   <Link
-                    href="/worker/dashboard"
+                    href="/saved-jobs"
                     className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
                   >
-                    Dashboard
+                    Saved Jobs
                   </Link>
                 </>
               )}
+
+              <Link
+                href="/notifications"
+                className="relative rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+              >
+                Alerts
+
+                {unreadNotifications > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-black text-white">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </Link>
 
               <Link
                 href="/messages"
@@ -161,9 +209,9 @@ export default function Navbar() {
               >
                 Messages
 
-                {unreadCount > 0 && (
+                {unreadMessages > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-black text-white">
-                    {unreadCount}
+                    {unreadMessages}
                   </span>
                 )}
               </Link>
@@ -204,25 +252,40 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2 md:hidden">
           {signedIn && (
-            <Link
-              href="/messages"
-              className="relative rounded-2xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-900"
-            >
-              Msg
+            <>
+              <Link
+                href="/notifications"
+                className="relative rounded-2xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-900"
+              >
+                Alerts
 
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-black text-white">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
+                {unreadNotifications > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-black text-white">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </Link>
+
+              <Link
+                href="/messages"
+                className="relative rounded-2xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-900"
+              >
+                Msg
+
+                {unreadMessages > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-black text-white">
+                    {unreadMessages}
+                  </span>
+                )}
+              </Link>
+            </>
           )}
 
           <Link
-            href={signedIn ? '/profile' : '/login'}
+            href={signedIn ? dashboardHref : '/login'}
             className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white"
           >
-            {signedIn ? 'Profile' : 'Login'}
+            {signedIn ? 'Dash' : 'Login'}
           </Link>
         </div>
       </div>
