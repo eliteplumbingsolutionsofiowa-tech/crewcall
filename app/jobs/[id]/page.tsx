@@ -62,6 +62,13 @@ type ProfileFile = {
   created_at: string
 }
 
+type JobView = {
+  id: string
+  job_id: string
+  viewer_id: string
+  created_at: string
+}
+
 const FLOW_STEPS = ['open', 'assigned', 'in_progress', 'completed', 'paid']
 
 export default function JobDetailsPage() {
@@ -75,6 +82,7 @@ export default function JobDetailsPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [jobFiles, setJobFiles] = useState<JobFile[]>([])
   const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
+  const [jobViews, setJobViews] = useState<JobView[]>([])
   const [loading, setLoading] = useState(true)
   const [workingId, setWorkingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -97,7 +105,7 @@ export default function JobDetailsPage() {
           table: 'jobs',
           filter: `id=eq.${jobId}`,
         },
-        refresh
+        refresh,
       )
       .on(
         'postgres_changes',
@@ -107,7 +115,17 @@ export default function JobDetailsPage() {
           table: 'applications',
           filter: `job_id=eq.${jobId}`,
         },
-        refresh
+        refresh,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_views',
+          filter: `job_id=eq.${jobId}`,
+        },
+        refresh,
       )
       .subscribe()
 
@@ -155,6 +173,31 @@ export default function JobDetailsPage() {
     })
   }, [applicants, job?.assigned_application_id, job?.assigned_worker_id])
 
+  async function recordJobView(currentJobId: string, viewerId: string) {
+    const { data: existingView, error: existingError } = await supabase
+      .from('job_views')
+      .select('id')
+      .eq('job_id', currentJobId)
+      .eq('viewer_id', viewerId)
+      .maybeSingle()
+
+    if (existingError) {
+      console.error(existingError)
+      return
+    }
+
+    if (existingView) return
+
+    const { error: insertError } = await supabase.from('job_views').insert({
+      job_id: currentJobId,
+      viewer_id: viewerId,
+    } as never)
+
+    if (insertError) {
+      console.error(insertError)
+    }
+  }
+
   async function loadPage() {
     setLoading(true)
     setMessage(null)
@@ -186,7 +229,7 @@ export default function JobDetailsPage() {
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
       .select(
-        'id, title, description, trade, location, pay_rate, status, payment_status, payout_status, company_id, assigned_worker_id, assigned_application_id'
+        'id, title, description, trade, location, pay_rate, status, payment_status, payout_status, company_id, assigned_worker_id, assigned_application_id',
       )
       .eq('id', jobId)
       .returns<Job[]>()
@@ -199,6 +242,18 @@ export default function JobDetailsPage() {
     }
 
     setJob(jobData)
+
+    if (profileData.role === 'worker' && jobData.company_id !== user.id) {
+      await recordJobView(jobData.id, user.id)
+    }
+
+    const { data: viewData } = await supabase
+      .from('job_views')
+      .select('id, job_id, viewer_id, created_at')
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: false })
+
+    setJobViews((viewData as JobView[]) || [])
 
     const userIdsToLoad: string[] = []
 
@@ -408,6 +463,7 @@ export default function JobDetailsPage() {
   const assignedPhoto = getPhoto(assignedWorker?.id)
   const paymentPaid = job.payment_status === 'paid'
   const canApply = isWorker && currentStatus === 'open' && !isAssigned
+  const canSeeViews = isCompany && isOwner
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
@@ -448,6 +504,12 @@ export default function JobDetailsPage() {
                   <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-200">
                     {job.location || 'Location not listed'}
                   </span>
+
+                  {canSeeViews && (
+                    <span className="rounded-full border border-purple-400/20 bg-purple-400/10 px-4 py-2 text-sm font-black text-purple-100">
+                      {jobViews.length} views
+                    </span>
+                  )}
                 </div>
 
                 <p className="mt-5 text-3xl font-black text-cyan-300">
@@ -476,6 +538,10 @@ export default function JobDetailsPage() {
                   label="Payout"
                   value={cleanStatus(job.payout_status || 'not released')}
                 />
+
+                {canSeeViews && (
+                  <InfoBox label="Views" value={String(jobViews.length)} />
+                )}
               </div>
             </div>
 
@@ -553,13 +619,17 @@ export default function JobDetailsPage() {
 
                   <ActionButton
                     label="Mark Complete"
-                    disabled={workingId === 'completed' || currentStatus === 'completed'}
+                    disabled={
+                      workingId === 'completed' || currentStatus === 'completed'
+                    }
                     onClick={() => updateJobStatus('completed')}
                   />
 
                   {!paymentPaid && (
                     <ActionButton
-                      label={workingId === 'pay' ? 'Opening Stripe...' : 'Pay Worker'}
+                      label={
+                        workingId === 'pay' ? 'Opening Stripe...' : 'Pay Worker'
+                      }
                       disabled={workingId === 'pay'}
                       onClick={payWorker}
                     />
