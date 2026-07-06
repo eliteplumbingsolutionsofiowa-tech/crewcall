@@ -33,13 +33,6 @@ type Profile = {
   available_for_work: boolean | null
   is_online: boolean | null
   last_seen: string | null
-  crewcall_score: number | null
-  osha10: boolean | null
-  osha30: boolean | null
-  med_gas: boolean | null
-  background_verified: boolean | null
-  drug_tested: boolean | null
-  license_number: string | null
 }
 
 type ApplicationRow = {
@@ -90,11 +83,10 @@ function workerName(profile: Profile | null) {
 }
 
 function locationText(profile: Profile | null) {
-  return [profile?.city, profile?.state].filter(Boolean).join(', ') || 'Location not listed'
-}
-
-function formatAvailability(value: string | null | undefined) {
-  return cleanStatus(value || 'available')
+  return (
+    [profile?.city, profile?.state].filter(Boolean).join(', ') ||
+    'Location not listed'
+  )
 }
 
 function isActuallyOnline(profile: Profile | null) {
@@ -185,13 +177,7 @@ function SmallStat({
   )
 }
 
-function CheckBadge({
-  label,
-  active,
-}: {
-  label: string
-  active: boolean
-}) {
+function CheckBadge({ label, active }: { label: string; active: boolean }) {
   return (
     <span
       className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${
@@ -303,7 +289,7 @@ export default function JobDetailPage() {
 
     const apps = (rawApps || []) as ApplicationRow[]
 
-    const { data: rawMatches, error: matchesError } = await supabase
+    const { data: rawMatches, error: matchesError } = await (supabase as any)
       .from('job_matches')
       .select(
         `
@@ -360,14 +346,7 @@ export default function JobDetailPage() {
           availability_status,
           available_for_work,
           is_online,
-          last_seen,
-          crewcall_score,
-          osha10,
-          osha30,
-          med_gas,
-          background_verified,
-          drug_tested,
-          license_number
+          last_seen
         `
         )
         .in('id', workerIds)
@@ -376,7 +355,7 @@ export default function JobDetailPage() {
         setMessage(profilesError.message)
       }
 
-      profiles = (rawProfiles || []) as Profile[]
+      profiles = (rawProfiles || []) as unknown as Profile[]
     }
 
     const mergedApps: Applicant[] = apps.map((app) => ({
@@ -706,7 +685,7 @@ export default function JobDetailPage() {
 
                   <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-orange-100/80">
                     Ranked by trade fit, location, availability, credentials,
-                    online status, pay fit, and CrewCall score.
+                    online status, pay fit, and match score.
                   </p>
                 </div>
 
@@ -767,24 +746,16 @@ export default function JobDetailPage() {
 
                             <div className="flex flex-wrap gap-2">
                               <CheckBadge
-                                label="Licensed"
-                                active={Boolean(match.profile?.license_number)}
-                              />
-                              <CheckBadge
                                 label="Insured"
                                 active={Boolean(match.profile?.insurance_provider)}
                               />
                               <CheckBadge
-                                label="OSHA 10"
-                                active={Boolean(match.profile?.osha10)}
+                                label="Liability"
+                                active={Boolean(match.profile?.liability_form_signed)}
                               />
                               <CheckBadge
-                                label="OSHA 30"
-                                active={Boolean(match.profile?.osha30)}
-                              />
-                              <CheckBadge
-                                label="Med Gas"
-                                active={Boolean(match.profile?.med_gas)}
+                                label="Available"
+                                active={Boolean(match.profile?.available_for_work)}
                               />
                             </div>
                           </div>
