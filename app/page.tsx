@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+const CREWCALL_VIDEO_URL =
+  'https://uwegfsuzbnryxxygghiz.supabase.co/storage/v1/object/public/videos/crewcall-launch.mp4'
+
 type Profile = {
   id: string
   full_name: string | null
@@ -89,13 +92,9 @@ export default function HomePage() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'completed'),
 
-      supabase
-        .from('applications')
-        .select('*', { count: 'exact', head: true }),
+      supabase.from('applications').select('*', { count: 'exact', head: true }),
 
-      supabase
-        .from('reviews')
-        .select('*', { count: 'exact', head: true }),
+      supabase.from('reviews').select('*', { count: 'exact', head: true }),
 
       supabase
         .from('jobs')
@@ -193,7 +192,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
             <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-200">
               🚀 Public beta now open in Iowa
@@ -277,6 +276,28 @@ export default function HomePage() {
                 <StatCard label="My Posted Jobs" value={myJobsCount} />
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-7xl">
+          <div className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-black shadow-2xl shadow-cyan-500/20">
+            <div className="border-b border-white/10 bg-slate-950/80 px-5 py-4">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
+                Watch CrewCall in Action
+              </p>
+            </div>
+
+            <video
+              className="aspect-video w-full bg-black object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="auto"
+            >
+              <source src={CREWCALL_VIDEO_URL} type="video/mp4" />
+            </video>
           </div>
         </div>
       </section>
@@ -549,6 +570,7 @@ export default function HomePage() {
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
             <Link href="/pricing">Pricing</Link>
+            <Link href="/faq">FAQ</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/jobs">Jobs</Link>
