@@ -1,48 +1,84 @@
 export default function TermsPage() {
   return (
-    <main className="mx-auto max-w-4xl p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Terms of Service</h1>
+    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white md:px-6">
+      <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/10 bg-white/5 p-8">
+        <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
+          Terms of Service
+        </p>
 
-      <p>
-        By using CrewCall, you agree to the following terms and conditions.
-      </p>
+        <h1 className="mt-4 text-4xl font-black">Terms of Service</h1>
 
-      <Section title="Platform Role">
-        CrewCall is a marketplace that connects workers and companies. We do not employ workers or act as a contractor.
-      </Section>
+        <p className="mt-4 text-sm font-bold text-slate-400">
+          Last updated: July 2026
+        </p>
 
-      <Section title="User Responsibility">
-        Users are responsible for verifying licenses, insurance, and qualifications before entering into any agreement.
-      </Section>
+        <div className="mt-8 space-y-8 text-slate-300">
+          <Section title="Use of CrewCall">
+            CrewCall is a platform that helps companies and skilled trades
+            workers connect. Users are responsible for the accuracy of the
+            information they provide and for complying with all applicable laws.
+          </Section>
 
-      <Section title="Payments">
-        Any payments made between users are outside of CrewCall unless otherwise specified. CrewCall is not responsible for disputes.
-      </Section>
+          <Section title="Accounts">
+            You are responsible for maintaining the security of your account and
+            for all activity under your account.
+          </Section>
 
-      <Section title="Liability">
-        CrewCall is not liable for damages, injuries, or losses resulting from work arranged through the platform.
-      </Section>
+          <Section title="Jobs and Applications">
+            Companies are responsible for job postings, hiring decisions, jobsite
+            requirements, pay terms, and compliance with employment and
+            contractor laws. Workers are responsible for accurately representing
+            their skills, experience, licenses, and availability.
+          </Section>
 
-      <Section title="Account Use">
-        You agree not to misuse the platform, post false jobs, or provide misleading information.
-      </Section>
+          <Section title="Payments">
+            Paid features, subscriptions, job payments, and add-ons may be
+            processed through third-party payment providers. Fees, subscriptions,
+            and add-on purchases are subject to the terms shown at checkout.
+          </Section>
 
-      <Section title="Termination">
-        We reserve the right to suspend or terminate accounts that violate these terms.
-      </Section>
+          <Section title="User Content">
+            Users may post jobs, profiles, messages, reviews, and upload files.
+            You are responsible for your content and agree not to upload false,
+            illegal, harmful, or infringing material.
+          </Section>
 
-      <p className="text-sm text-gray-500">
-        Last updated: {new Date().toLocaleDateString()}
-      </p>
+          <Section title="No Guarantee">
+            CrewCall does not guarantee that a company will find workers, that a
+            worker will be hired, or that any job relationship will be successful.
+          </Section>
+
+          <Section title="Reviews">
+            Reviews should be honest and based on real interactions. CrewCall may
+            remove reviews or content that appears abusive, false, or violates
+            platform rules.
+          </Section>
+
+          <Section title="Termination">
+            CrewCall may suspend or remove accounts that misuse the platform,
+            violate these terms, or create risk for other users.
+          </Section>
+
+          <Section title="Contact">
+            Questions about these Terms can be sent to support@crewcall.app.
+          </Section>
+        </div>
+      </div>
     </main>
   )
 }
 
-function Section({ title, children }: any) {
+function Section({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
   return (
-    <div>
-      <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-gray-700">{children}</p>
-    </div>
+    <section>
+      <h2 className="text-2xl font-black text-white">{title}</h2>
+      <p className="mt-3 leading-8">{children}</p>
+    </section>
   )
 }
