@@ -123,6 +123,26 @@ export default function PostJobPage() {
     loadProfile()
   }, [router])
 
+  async function createJobMatches(jobId: string) {
+    try {
+      const response = await fetch('/api/jobs/match', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId }),
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        console.warn('CrewCall matching failed:', result?.error)
+      }
+    } catch (error) {
+      console.warn('CrewCall matching failed:', error)
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -174,6 +194,10 @@ export default function PostJobPage() {
         setSaving(false)
         return
       }
+
+      setMessage('Job posted. Finding best worker matches...')
+
+      await createJobMatches(data.id)
 
       window.dispatchEvent(new Event('crewcall-refresh-nav'))
       router.replace(`/my-jobs/${data.id}`)
@@ -243,7 +267,8 @@ export default function PostJobPage() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-base font-semibold text-slate-300">
-            Add the trade, location, pay, and scope so workers can apply fast.
+            Add the trade, location, pay, and scope. CrewCall will automatically
+            find matching workers after the job is posted.
           </p>
         </div>
 
@@ -318,6 +343,13 @@ export default function PostJobPage() {
             />
           </label>
 
+          <div className="mt-5 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
+            <p className="text-sm font-black text-orange-100">
+              After posting, CrewCall will rank matching workers by trade,
+              location, availability, credentials, online status, and pay fit.
+            </p>
+          </div>
+
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Link
               href="/company/jobs"
@@ -331,7 +363,7 @@ export default function PostJobPage() {
               disabled={saving || !canPost}
               className="rounded-2xl bg-cyan-300 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? 'Posting...' : 'Post Job'}
+              {saving ? 'Posting + Matching...' : 'Post Job + Find Matches'}
             </button>
           </div>
         </form>
