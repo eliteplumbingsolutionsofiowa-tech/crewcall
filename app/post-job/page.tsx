@@ -123,7 +123,7 @@ export default function PostJobPage() {
     loadProfile()
   }, [router])
 
-  async function createJobMatches(jobId: string) {
+  async function generateMatches(jobId: string) {
     try {
       const response = await fetch('/api/jobs/match', {
         method: 'POST',
@@ -137,7 +137,10 @@ export default function PostJobPage() {
 
       if (!response.ok) {
         console.warn('CrewCall matching failed:', result?.error)
+        return
       }
+
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
     } catch (error) {
       console.warn('CrewCall matching failed:', error)
     }
@@ -197,7 +200,7 @@ export default function PostJobPage() {
 
       setMessage('Job posted. Finding best worker matches...')
 
-      await createJobMatches(data.id)
+      await generateMatches(data.id)
 
       window.dispatchEvent(new Event('crewcall-refresh-nav'))
       router.replace(`/my-jobs/${data.id}`)
@@ -268,7 +271,7 @@ export default function PostJobPage() {
 
           <p className="mt-3 max-w-2xl text-base font-semibold text-slate-300">
             Add the trade, location, pay, and scope. CrewCall will automatically
-            find matching workers after the job is posted.
+            find and rank matching workers after the job is posted.
           </p>
         </div>
 
@@ -345,8 +348,9 @@ export default function PostJobPage() {
 
           <div className="mt-5 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
             <p className="text-sm font-black text-orange-100">
-              After posting, CrewCall will rank matching workers by trade,
-              location, availability, credentials, online status, and pay fit.
+              After posting, CrewCall will run the matching engine and rank
+              workers by trade fit, location, availability, credentials, online
+              status, and pay fit.
             </p>
           </div>
 
