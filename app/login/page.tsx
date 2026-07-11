@@ -59,7 +59,7 @@ export default function LoginPage() {
     }
 
     if (profile.role === 'company') {
-      router.push('/company')
+      router.push('/dashboard')
       return
     }
 
