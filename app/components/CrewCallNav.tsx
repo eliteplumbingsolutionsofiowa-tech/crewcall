@@ -242,8 +242,8 @@ export default function CrewCallNav() {
               </NavLink>
 
               <NavLink
-                href="/find-workers"
-                active={pathname.startsWith('/find-workers')}
+                href="/workers"
+                active={pathname.startsWith('/workers')}
               >
                 Find Workers
               </NavLink>
