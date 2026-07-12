@@ -360,7 +360,7 @@ export default function SavedWorkersPage() {
 
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Link
-                    href="/find-workers"
+                    href="/company/worker-map"
                     className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100"
                   >
                     Find More Workers
@@ -494,7 +494,7 @@ export default function SavedWorkersPage() {
                 </p>
 
                 <Link
-                  href="/find-workers"
+                  href="/company/worker-map"
                   className="mt-5 inline-flex rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-400"
                 >
                   Find Workers

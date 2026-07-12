@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import WorkerLocationPresence from '@/app/components/WorkerLocationPresence'
 import { supabase } from '@/lib/supabase'
 
 type Job = {
@@ -36,7 +37,10 @@ type OrderedQuery<T> = {
   order: (
     column: string,
     options?: { ascending?: boolean }
-  ) => Promise<{ data: T[] | null; error: QueryError | null }>
+  ) => Promise<{
+    data: T[] | null
+    error: QueryError | null
+  }>
 }
 
 type EqOrderQuery<T> = {
@@ -51,7 +55,10 @@ type UpdateEqQuery = {
   eq: (
     column: string,
     value: string
-  ) => Promise<{ data: null; error: QueryError | null }>
+  ) => Promise<{
+    data: null
+    error: QueryError | null
+  }>
 }
 
 type UpdateTable<TUpdate> = {
@@ -71,9 +78,17 @@ function normalize(value: string | null) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) return 'Not scheduled'
+  if (!value) {
+    return 'Not scheduled'
+  }
 
-  return new Date(value).toLocaleDateString()
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not scheduled'
+  }
+
+  return date.toLocaleDateString()
 }
 
 export default function WorkerDashboard() {
@@ -90,7 +105,7 @@ export default function WorkerDashboard() {
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    loadJobs()
+    void loadJobs()
   }, [])
 
   async function loadJobs() {
@@ -99,9 +114,10 @@ export default function WorkerDashboard() {
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (userError || !user) {
       setMessage('You need to log in as a worker to view this page.')
       setLoading(false)
       return
@@ -137,17 +153,21 @@ export default function WorkerDashboard() {
     setJobs(jobList)
 
     setStats({
-      assigned: jobList.filter((j) => normalize(j.status) !== 'completed')
-        .length,
+      assigned: jobList.filter(
+        (job) => normalize(job.status) !== 'completed'
+      ).length,
 
-      completed: jobList.filter((j) => normalize(j.status) === 'completed')
-        .length,
+      completed: jobList.filter(
+        (job) => normalize(job.status) === 'completed'
+      ).length,
 
-      paid: jobList.filter((j) => normalize(j.payment_status) === 'paid')
-        .length,
+      paid: jobList.filter(
+        (job) => normalize(job.payment_status) === 'paid'
+      ).length,
 
-      unpaid: jobList.filter((j) => normalize(j.payment_status) !== 'paid')
-        .length,
+      unpaid: jobList.filter(
+        (job) => normalize(job.payment_status) !== 'paid'
+      ).length,
     })
 
     setLoading(false)
@@ -156,7 +176,9 @@ export default function WorkerDashboard() {
   async function markComplete(jobId: string) {
     const confirmed = window.confirm('Mark this job as completed?')
 
-    if (!confirmed) return
+    if (!confirmed) {
+      return
+    }
 
     setBusyJobId(jobId)
     setMessage(null)
@@ -174,7 +196,6 @@ export default function WorkerDashboard() {
     }
 
     await loadJobs()
-
     setBusyJobId(null)
   }
 
@@ -194,21 +215,37 @@ export default function WorkerDashboard() {
         <section className="mb-8 rounded-2xl border bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Worker Dashboard</h1>
+              <h1 className="text-3xl font-bold text-slate-950">
+                Worker Dashboard
+              </h1>
 
               <p className="mt-2 text-gray-600">
-                Track assigned jobs, completed work, and payment status.
+                Track assigned jobs, completed work, payments, and your live
+                availability.
               </p>
             </div>
 
-            <Link
-              href="/invites"
-              className="w-fit rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              View Invites
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/jobs"
+                className="w-fit rounded-xl border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+              >
+                Browse Jobs
+              </Link>
+
+              <Link
+                href="/invites"
+                className="w-fit rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                View Invites
+              </Link>
+            </div>
           </div>
         </section>
+
+        <div className="mb-8">
+          <WorkerLocationPresence />
+        </div>
 
         <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
@@ -216,39 +253,49 @@ export default function WorkerDashboard() {
             { label: 'Completed', value: stats.completed },
             { label: 'Paid', value: stats.paid },
             { label: 'Unpaid', value: stats.unpaid },
-          ].map((s) => (
+          ].map((stat) => (
             <div
-              key={s.label}
+              key={stat.label}
               className="rounded-2xl border bg-white p-6 text-center shadow-sm"
             >
-              <p className="text-sm text-gray-500">{s.label}</p>
+              <p className="text-sm text-gray-500">{stat.label}</p>
 
-              <p className="mt-2 text-2xl font-bold">{s.value}</p>
+              <p className="mt-2 text-2xl font-bold text-slate-950">
+                {stat.value}
+              </p>
             </div>
           ))}
         </div>
 
-        {message && (
+        {message ? (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
             {message}
           </div>
-        )}
+        ) : null}
 
         {jobs.length === 0 ? (
           <div className="rounded-2xl border bg-white p-8 text-center text-gray-500 shadow-sm">
-            No assigned work yet.
+            <p className="font-semibold text-slate-700">
+              No assigned work yet.
+            </p>
+
+            <Link
+              href="/jobs"
+              className="mt-4 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Find Work
+            </Link>
           </div>
         ) : (
           <div className="space-y-6">
             {jobs.map((job) => {
               const jobStatus = normalize(job.status)
               const payStatus = normalize(job.payment_status)
-
               const isCompleted = jobStatus === 'completed'
               const canMarkComplete = !isCompleted
 
               return (
-                <div
+                <article
                   key={job.id}
                   className="rounded-2xl border bg-white p-6 shadow-sm"
                 >
@@ -264,7 +311,7 @@ export default function WorkerDashboard() {
                         </span>
                       </div>
 
-                      <h2 className="text-xl font-bold">
+                      <h2 className="text-xl font-bold text-slate-950">
                         {job.title || 'Untitled Job'}
                       </h2>
 
@@ -273,26 +320,28 @@ export default function WorkerDashboard() {
                         {job.location || 'Location not set'}
                       </p>
 
-                      <p className="mt-2 text-sm">
+                      <p className="mt-2 text-sm text-slate-700">
                         Pay: {job.pay_rate || 'Not set'}
                       </p>
 
-                      <p className="text-sm">
+                      <p className="text-sm text-slate-700">
                         Start: {formatDate(job.start_date)}
                       </p>
 
-                      {payStatus === 'paid' && (
+                      {payStatus === 'paid' ? (
                         <p className="mt-2 text-sm font-semibold text-green-700">
-                          Paid{' '}
-                          {job.paid_at ? `on ${formatDate(job.paid_at)}` : ''}
+                          Paid
+                          {job.paid_at
+                            ? ` on ${formatDate(job.paid_at)}`
+                            : ''}
                         </p>
-                      )}
+                      ) : null}
 
-                      {isCompleted && payStatus !== 'paid' && (
+                      {isCompleted && payStatus !== 'paid' ? (
                         <p className="mt-2 text-sm font-semibold text-yellow-700">
                           Completed — waiting for company payment.
                         </p>
-                      )}
+                      ) : null}
                     </div>
 
                     <div className="flex flex-wrap gap-3 md:justify-end">
@@ -303,37 +352,39 @@ export default function WorkerDashboard() {
                         View Job
                       </Link>
 
-                      <Link
-                        href={`/messages?start=${job.company_id}`}
-                        className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                      >
-                        Message Company
-                      </Link>
+                      {job.company_id ? (
+                        <Link
+                          href={`/messages?start=${job.company_id}`}
+                          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                        >
+                          Message Company
+                        </Link>
+                      ) : null}
 
-                      {canMarkComplete && (
+                      {canMarkComplete ? (
                         <button
                           type="button"
-                          onClick={() => markComplete(job.id)}
+                          onClick={() => void markComplete(job.id)}
                           disabled={busyJobId === job.id}
-                          className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
+                          className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busyJobId === job.id
                             ? 'Completing...'
                             : 'Mark Complete'}
                         </button>
-                      )}
+                      ) : null}
 
-                      {isCompleted && job.company_id && (
+                      {isCompleted && job.company_id ? (
                         <Link
                           href={`/reviews/new?jobId=${job.id}&revieweeId=${job.company_id}`}
                           className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
                         >
                           Leave Review
                         </Link>
-                      )}
+                      ) : null}
                     </div>
                   </div>
-                </div>
+                </article>
               )
             })}
           </div>
@@ -344,7 +395,8 @@ export default function WorkerDashboard() {
 }
 
 function statusClass(isCompleted: boolean) {
-  const base = 'rounded-full px-3 py-1 text-xs font-semibold capitalize '
+  const base =
+    'rounded-full px-3 py-1 text-xs font-semibold capitalize '
 
   if (isCompleted) {
     return base + 'bg-green-100 text-green-700'
@@ -354,7 +406,8 @@ function statusClass(isCompleted: boolean) {
 }
 
 function paymentClass(status: string) {
-  const base = 'rounded-full px-3 py-1 text-xs font-semibold capitalize '
+  const base =
+    'rounded-full px-3 py-1 text-xs font-semibold capitalize '
 
   if (status === 'paid') {
     return base + 'bg-green-100 text-green-700'

@@ -370,7 +370,7 @@ export default function CompanyDashboardPage() {
                 </Link>
 
                 <Link
-                  href="/find-workers"
+                  href="/company/worker-map"
                   className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-6 py-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20"
                 >
                   Find Workers
@@ -447,7 +447,7 @@ export default function CompanyDashboardPage() {
           />
 
           <QuickActionCard
-            href="/find-workers"
+            href="/company/worker-map"
             title="Find Workers"
             description="Browse skilled tradespeople by trade, location, and experience."
             tone="cyan"
@@ -873,7 +873,7 @@ function EmptyJobs() {
         </Link>
 
         <Link
-          href="/find-workers"
+          href="/company/worker-map"
           className="inline-flex rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-6 py-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20"
         >
           Browse Workers

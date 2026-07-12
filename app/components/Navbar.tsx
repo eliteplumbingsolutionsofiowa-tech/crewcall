@@ -34,7 +34,10 @@ export default function Navbar() {
         .or('is_read.eq.false,read.eq.false'),
     ])
 
-    if (!messagesRes.error) setUnreadMessages(messagesRes.count ?? 0)
+    if (!messagesRes.error) {
+      setUnreadMessages(messagesRes.count ?? 0)
+    }
+
     if (!notificationsRes.error) {
       setUnreadNotifications(notificationsRes.count ?? 0)
     }
@@ -73,13 +76,18 @@ export default function Navbar() {
     let isMounted = true
 
     async function safeLoadNav() {
-      if (!isMounted) return
+      if (!isMounted) {
+        return
+      }
+
       await loadNav()
     }
 
-    safeLoadNav()
+    void safeLoadNav()
 
-    const intervalId = window.setInterval(safeLoadNav, 30000)
+    const intervalId = window.setInterval(() => {
+      void safeLoadNav()
+    }, 30000)
 
     window.addEventListener('crewcall-refresh-nav', safeLoadNav)
     window.addEventListener('focus', safeLoadNav)
@@ -107,7 +115,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white">
             C
           </div>
@@ -123,110 +131,119 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-1 xl:flex">
           {signedIn ? (
             <>
               <Link
                 href={dashboardHref}
-                className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Dashboard
               </Link>
 
               <Link
                 href="/jobs"
-                className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Jobs
               </Link>
 
-              {role === 'company' && (
+              {role === 'company' ? (
                 <>
                   <Link
                     href="/post-job"
-                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
                     Post Job
                   </Link>
 
                   <Link
                     href="/company/jobs"
-                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
                     My Jobs
                   </Link>
 
                   <Link
+                    href="/company/worker-map"
+                    className="rounded-2xl bg-cyan-50 px-3 py-2 text-sm font-black text-cyan-700 transition hover:bg-cyan-100"
+                  >
+                    Worker Map
+                  </Link>
+
+                  <Link
                     href="/company/analytics"
-                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
                     Analytics
                   </Link>
 
                   <Link
                     href="/saved-workers"
-                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
                     Saved Workers
                   </Link>
                 </>
-              )}
+              ) : null}
 
-              {role === 'worker' && (
+              {role === 'worker' ? (
                 <>
                   <Link
                     href="/applications"
-                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
                     Applications
                   </Link>
 
                   <Link
                     href="/saved-jobs"
-                    className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
                     Saved Jobs
                   </Link>
                 </>
-              )}
+              ) : null}
 
               <Link
                 href="/notifications"
-                className="relative rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                className="relative rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Alerts
 
-                {unreadNotifications > 0 && (
+                {unreadNotifications > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-black text-white">
-                    {unreadNotifications}
+                    {unreadNotifications > 99
+                      ? '99+'
+                      : unreadNotifications}
                   </span>
-                )}
+                ) : null}
               </Link>
 
               <Link
                 href="/messages"
-                className="relative rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                className="relative rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Messages
 
-                {unreadMessages > 0 && (
+                {unreadMessages > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-black text-white">
-                    {unreadMessages}
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
-                )}
+                ) : null}
               </Link>
 
               <Link
                 href="/profile"
-                className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Profile
               </Link>
 
               <button
                 type="button"
-                onClick={signOut}
-                className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-black text-white hover:bg-slate-800"
+                onClick={() => void signOut()}
+                className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800"
               >
                 Sign Out
               </button>
@@ -235,14 +252,14 @@ export default function Navbar() {
             <>
               <Link
                 href="/login"
-                className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100"
+                className="rounded-2xl px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Login
               </Link>
 
               <Link
                 href="/signup"
-                className="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-black text-white hover:bg-orange-400"
+                className="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-black text-white transition hover:bg-orange-400"
               >
                 Sign Up
               </Link>
@@ -250,36 +267,47 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
-          {signedIn && (
+        <div className="flex items-center gap-2 xl:hidden">
+          {signedIn ? (
             <>
+              {role === 'company' ? (
+                <Link
+                  href="/company/worker-map"
+                  className="rounded-2xl bg-cyan-100 px-3 py-2 text-sm font-black text-cyan-800"
+                >
+                  Map
+                </Link>
+              ) : null}
+
               <Link
                 href="/notifications"
-                className="relative rounded-2xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-900"
+                className="relative rounded-2xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-900"
               >
                 Alerts
 
-                {unreadNotifications > 0 && (
+                {unreadNotifications > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-black text-white">
-                    {unreadNotifications}
+                    {unreadNotifications > 99
+                      ? '99+'
+                      : unreadNotifications}
                   </span>
-                )}
+                ) : null}
               </Link>
 
               <Link
                 href="/messages"
-                className="relative rounded-2xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-900"
+                className="relative rounded-2xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-900"
               >
                 Msg
 
-                {unreadMessages > 0 && (
+                {unreadMessages > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-black text-white">
-                    {unreadMessages}
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
-                )}
+                ) : null}
               </Link>
             </>
-          )}
+          ) : null}
 
           <Link
             href={signedIn ? dashboardHref : '/login'}
