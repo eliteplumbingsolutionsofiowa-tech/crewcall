@@ -1,10 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+type Role = 'company' | 'worker' | null
 type JobStatus = 'open' | 'active' | 'completed' | 'cancelled'
+
+type Profile = {
+  id: string
+  role: Role
+}
 
 type Job = {
   id: string
@@ -22,6 +29,8 @@ type Job = {
 }
 
 export default function CompanyJobsPage() {
+  const router = useRouter()
+
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
@@ -37,9 +46,30 @@ export default function CompanyJobsPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('Please log in to view your company jobs.')
+      router.replace('/login')
+      return
+    }
+
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', user.id)
+      .maybeSingle<Profile>()
+
+    if (profileError) {
+      setMessage(profileError.message)
       setJobs([])
       setLoading(false)
+      return
+    }
+
+    if (!profileData) {
+      router.replace('/profile')
+      return
+    }
+
+    if (profileData.role !== 'company') {
+      router.replace('/worker-dashboard')
       return
     }
 
@@ -74,10 +104,10 @@ export default function CompanyJobsPage() {
 
     setJobs(data ?? [])
     setLoading(false)
-  }, [])
+  }, [router])
 
   useEffect(() => {
-    loadJobs()
+    void loadJobs()
   }, [loadJobs])
 
   const groupedJobs = useMemo(() => {
@@ -89,15 +119,22 @@ export default function CompanyJobsPage() {
     }
   }, [jobs])
 
+  const totals = useMemo(() => {
+    return {
+      all: jobs.length,
+      open: groupedJobs.open.length,
+      active: groupedJobs.active.length,
+      completed: groupedJobs.completed.length,
+    }
+  }, [groupedJobs, jobs.length])
+
   async function updateJobStatus(jobId: string, status: JobStatus) {
     setUpdatingId(jobId)
     setMessage(null)
 
     const { error } = await supabase
       .from('jobs')
-      .update({
-        status,
-      })
+      .update({ status })
       .eq('id', jobId)
 
     if (error) {
@@ -125,7 +162,9 @@ export default function CompanyJobsPage() {
       'Delete this job? This cannot be undone.'
     )
 
-    if (!confirmed) return
+    if (!confirmed) {
+      return
+    }
 
     setUpdatingId(jobId)
     setMessage(null)
@@ -143,11 +182,15 @@ export default function CompanyJobsPage() {
   }
 
   function formatDate(value: string | null) {
-    if (!value) return 'No start date'
+    if (!value) {
+      return 'No start date'
+    }
 
     const date = new Date(value)
 
-    if (Number.isNaN(date.getTime())) return value
+    if (Number.isNaN(date.getTime())) {
+      return value
+    }
 
     return date.toLocaleDateString(undefined, {
       month: 'short',
@@ -171,66 +214,63 @@ export default function CompanyJobsPage() {
 
   function JobCard({ job }: { job: Job }) {
     const status = getSafeStatus(job)
+    const isUpdating = updatingId === job.id
 
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
+      <article className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-700">
+              <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black uppercase tracking-wider text-cyan-200">
                 {job.trade || 'Trade not set'}
               </span>
 
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-slate-700">
-                {status}
-              </span>
+              <span className={statusBadgeClass(status)}>{status}</span>
 
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
+              <span className={paymentBadgeClass(job.payment_status)}>
                 {job.payment_status || 'payment pending'}
               </span>
             </div>
 
-            <h2 className="text-xl font-black text-slate-950">
+            <h2 className="mt-4 text-2xl font-black text-white">
               {job.title || 'Untitled job'}
             </h2>
 
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
               {job.description || 'No description added yet.'}
             </p>
 
-            <div className="flex flex-wrap gap-3 text-sm font-bold text-slate-700">
-              <span>{job.location || 'No location'}</span>
-              <span>•</span>
-              <span>{job.pay_rate || 'No pay rate'}</span>
-              <span>•</span>
-              <span>{formatDate(job.start_date)}</span>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <Info label="Location" value={job.location || 'No location'} />
+              <Info label="Pay" value={job.pay_rate || 'No pay rate'} />
+              <Info label="Start" value={formatDate(job.start_date)} />
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+          <div className="flex shrink-0 flex-col gap-3 lg:w-48">
             <Link
               href={`/jobs/${job.id}`}
-              className="rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-slate-800"
+              className="rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-cyan-300"
             >
               View Job
             </Link>
 
             <Link
               href={`/my-jobs/${job.id}/applicants`}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-black text-slate-900 transition hover:bg-slate-50"
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
             >
               Applicants
             </Link>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
           {status !== 'open' && (
             <button
               type="button"
-              onClick={() => updateJobStatus(job.id, 'open')}
-              disabled={updatingId === job.id}
-              className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              onClick={() => void updateJobStatus(job.id, 'open')}
+              disabled={isUpdating}
+              className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Mark Open
             </button>
@@ -239,9 +279,9 @@ export default function CompanyJobsPage() {
           {status !== 'active' && (
             <button
               type="button"
-              onClick={() => updateJobStatus(job.id, 'active')}
-              disabled={updatingId === job.id}
-              className="rounded-2xl bg-orange-500 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              onClick={() => void updateJobStatus(job.id, 'active')}
+              disabled={isUpdating}
+              className="rounded-2xl border border-orange-300/30 bg-orange-400/10 px-4 py-2 text-sm font-black text-orange-100 transition hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Mark Active
             </button>
@@ -250,9 +290,9 @@ export default function CompanyJobsPage() {
           {status !== 'completed' && (
             <button
               type="button"
-              onClick={() => updateJobStatus(job.id, 'completed')}
-              disabled={updatingId === job.id}
-              className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              onClick={() => void updateJobStatus(job.id, 'completed')}
+              disabled={isUpdating}
+              className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-100 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Complete
             </button>
@@ -261,9 +301,9 @@ export default function CompanyJobsPage() {
           {status !== 'cancelled' && (
             <button
               type="button"
-              onClick={() => updateJobStatus(job.id, 'cancelled')}
-              disabled={updatingId === job.id}
-              className="rounded-2xl bg-slate-200 px-4 py-2 text-sm font-black text-slate-900 disabled:opacity-50"
+              onClick={() => void updateJobStatus(job.id, 'cancelled')}
+              disabled={isUpdating}
+              className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -271,30 +311,41 @@ export default function CompanyJobsPage() {
 
           <button
             type="button"
-            onClick={() => deleteJob(job.id)}
-            disabled={updatingId === job.id}
-            className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+            onClick={() => void deleteJob(job.id)}
+            disabled={isUpdating}
+            className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Delete
+            {isUpdating ? 'Updating...' : 'Delete'}
           </button>
         </div>
-      </div>
+      </article>
     )
   }
 
-  function JobSection({ title, jobs }: { title: string; jobs: Job[] }) {
+  function JobSection({
+    title,
+    description,
+    jobs,
+  }: {
+    title: string
+    description: string
+    jobs: Job[]
+  }) {
     return (
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-950">{title}</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-white">{title}</h2>
+            <p className="mt-1 text-sm text-slate-400">{description}</p>
+          </div>
 
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+          <span className="w-fit rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black text-slate-200">
             {jobs.length}
           </span>
         </div>
 
         {jobs.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-sm font-bold text-slate-500">
+          <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] p-6 text-sm font-bold text-slate-400">
             No jobs in this section.
           </div>
         ) : (
@@ -309,67 +360,164 @@ export default function CompanyJobsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
       <div className="mx-auto max-w-6xl space-y-8">
-        <div className="flex flex-col gap-4 rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-300">
-              Company
-            </p>
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
+                CrewCall Company
+              </p>
 
-            <h1 className="mt-2 text-3xl font-black tracking-tight">
-              My Company Jobs
-            </h1>
+              <h1 className="mt-2 text-3xl font-black tracking-tight md:text-5xl">
+                My Company Jobs
+              </h1>
 
-            <p className="mt-2 max-w-2xl text-sm font-medium text-slate-300">
-              Manage posted jobs, applicants, job status, and completed work.
-            </p>
+              <p className="mt-3 max-w-2xl text-slate-300">
+                Manage posted jobs, applicants, job status, and completed work.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void loadJobs()}
+                className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
+              >
+                Refresh
+              </button>
+
+              <Link
+                href="/post-job"
+                className="rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-cyan-300"
+              >
+                Post New Job
+              </Link>
+            </div>
           </div>
 
-          <Link
-            href="/post-job"
-            className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-orange-400"
-          >
-            Post New Job
-          </Link>
-        </div>
+          {message && (
+            <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm font-bold text-red-100">
+              {message}
+            </div>
+          )}
+        </section>
 
-        {message && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-            {message}
-          </div>
-        )}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="All Jobs" value={totals.all} />
+          <StatCard label="Open" value={totals.open} />
+          <StatCard label="Active" value={totals.active} />
+          <StatCard label="Completed" value={totals.completed} />
+        </section>
 
         {loading ? (
-          <div className="rounded-3xl bg-white p-8 text-center text-sm font-black text-slate-500 shadow-sm">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-sm font-black text-slate-300 shadow-xl">
             Loading company jobs...
           </div>
         ) : jobs.length === 0 ? (
-          <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
-            <h2 className="text-xl font-black text-slate-950">
-              No jobs posted yet.
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center shadow-xl">
+            <h2 className="text-2xl font-black text-white">
+              No jobs posted yet
             </h2>
 
-            <p className="mt-2 text-sm font-bold text-slate-500">
-              Create your first job and start getting workers.
+            <p className="mt-2 text-slate-300">
+              Create your first job and start getting matched with workers.
             </p>
 
             <Link
               href="/post-job"
-              className="mt-5 inline-flex rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-500"
+              className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
             >
               Post a Job
             </Link>
           </div>
         ) : (
-          <div className="space-y-8">
-            <JobSection title="Open Jobs" jobs={groupedJobs.open} />
-            <JobSection title="Active Jobs" jobs={groupedJobs.active} />
-            <JobSection title="Completed Jobs" jobs={groupedJobs.completed} />
-            <JobSection title="Cancelled Jobs" jobs={groupedJobs.cancelled} />
+          <div className="space-y-10">
+            <JobSection
+              title="Open Jobs"
+              description="Jobs currently accepting workers and applications."
+              jobs={groupedJobs.open}
+            />
+
+            <JobSection
+              title="Active Jobs"
+              description="Jobs that are currently underway."
+              jobs={groupedJobs.active}
+            />
+
+            <JobSection
+              title="Completed Jobs"
+              description="Finished jobs and completed work history."
+              jobs={groupedJobs.completed}
+            />
+
+            <JobSection
+              title="Cancelled Jobs"
+              description="Jobs that were closed without completion."
+              jobs={groupedJobs.cancelled}
+            />
           </div>
         )}
       </div>
     </main>
   )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl">
+      <p className="text-sm font-bold uppercase tracking-wider text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-2 text-4xl font-black text-white">{value}</p>
+    </div>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-1 font-bold text-white">{value}</p>
+    </div>
+  )
+}
+
+function statusBadgeClass(status: JobStatus) {
+  const base =
+    'rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider '
+
+  if (status === 'completed') {
+    return base + 'bg-emerald-400/15 text-emerald-200'
+  }
+
+  if (status === 'active') {
+    return base + 'bg-orange-400/15 text-orange-200'
+  }
+
+  if (status === 'cancelled') {
+    return base + 'bg-white/10 text-slate-300'
+  }
+
+  return base + 'bg-cyan-400/15 text-cyan-200'
+}
+
+function paymentBadgeClass(status: string | null) {
+  const normalized = String(status || '').toLowerCase().trim()
+  const base =
+    'rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider '
+
+  if (normalized === 'paid') {
+    return base + 'bg-emerald-400/15 text-emerald-200'
+  }
+
+  if (normalized === 'pending') {
+    return base + 'bg-amber-400/15 text-amber-200'
+  }
+
+  return base + 'bg-white/10 text-slate-300'
 }

@@ -7,7 +7,7 @@ import JobFileList from '@/app/components/JobFileList'
 import JobFileUpload from '@/app/components/JobFileUpload'
 import { supabase } from '@/lib/supabase'
 
-type UserRole = 'worker' | 'company'
+type UserRole = 'worker' | 'company' | 'admin'
 
 type Job = {
   id: string
@@ -628,7 +628,9 @@ export default function JobDetailsPage() {
     )
   }
 
-  const isCompany = profile.role === 'company'
+  const isCompany =
+  profile.role === 'company' ||
+  profile.role === 'admin'
   const isWorker = profile.role === 'worker'
   const isOwner = job.company_id === profile.id
 

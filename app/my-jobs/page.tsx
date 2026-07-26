@@ -25,6 +25,7 @@ type Job = {
   assigned_worker_id: string | null
   created_at: string
   applicant_count: number
+  view_count: number
 }
 
 type Filter =
@@ -151,9 +152,13 @@ export default function MyJobsPage() {
       return
     }
 
-    const cleanJobs = (jobsData || []) as Omit<Job, 'applicant_count'>[]
+    const cleanJobs = (jobsData || []) as Omit<
+      Job,
+      'applicant_count' | 'view_count'
+    >[]
     const jobIds = cleanJobs.map((job) => job.id)
     const countMap = new Map<string, number>()
+    const viewMap = new Map<string, number>()
 
     if (jobIds.length > 0) {
       const { data: applicationsData } = await supabase
@@ -164,12 +169,25 @@ export default function MyJobsPage() {
       ;(applicationsData || []).forEach((app: any) => {
         countMap.set(app.job_id, (countMap.get(app.job_id) || 0) + 1)
       })
+
+      const { data: viewsData } = await supabase
+        .from('job_views')
+        .select('job_id')
+        .in('job_id', jobIds)
+
+      ;(viewsData || []).forEach((view: any) => {
+        viewMap.set(
+          view.job_id,
+          (viewMap.get(view.job_id) || 0) + 1
+        )
+      })
     }
 
     const mergedJobs: Job[] = cleanJobs.map((job) => ({
       ...job,
       payout_status: job.payout_status || 'not_released',
       applicant_count: countMap.get(job.id) || 0,
+      view_count: viewMap.get(job.id) || 0,
     }))
 
     setJobs(mergedJobs)
@@ -289,6 +307,26 @@ export default function MyJobsPage() {
   }, [dedupedJobs, filter, search])
 
   const stats = useMemo(() => {
+    const totalViews = dedupedJobs.reduce(
+      (total, job) => total + job.view_count,
+      0
+    )
+
+    const totalApplicants = dedupedJobs.reduce(
+      (total, job) => total + job.applicant_count,
+      0
+    )
+
+    const averageViews =
+      dedupedJobs.length > 0
+        ? totalViews / dedupedJobs.length
+        : 0
+
+    const conversionRate =
+      totalViews > 0
+        ? (totalApplicants / totalViews) * 100
+        : 0
+
     return {
       total: dedupedJobs.length,
       open: dedupedJobs.filter((job) => job.status === 'open').length,
@@ -301,6 +339,10 @@ export default function MyJobsPage() {
           job.payment_status === 'paid' &&
           job.payout_status !== 'released'
       ).length,
+      totalViews,
+      totalApplicants,
+      averageViews,
+      conversionRate,
     }
   }, [dedupedJobs])
 
@@ -364,6 +406,32 @@ export default function MyJobsPage() {
               <StatCard label="Completed" value={String(stats.completed)} />
               <StatCard label="Paid" value={String(stats.paid)} />
               <StatCard label="Needs Payout" value={String(stats.needsPayout)} />
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <AnalyticsCard
+                label="Total Views"
+                value={String(stats.totalViews)}
+                helper="Across all posted jobs"
+              />
+
+              <AnalyticsCard
+                label="Total Applicants"
+                value={String(stats.totalApplicants)}
+                helper="Across all posted jobs"
+              />
+
+              <AnalyticsCard
+                label="Average Views"
+                value={stats.averageViews.toFixed(1)}
+                helper="Average views per job"
+              />
+
+              <AnalyticsCard
+                label="Conversion Rate"
+                value={`${stats.conversionRate.toFixed(1)}%`}
+                helper="Applicants divided by views"
+              />
             </div>
           </div>
         </section>
@@ -493,7 +561,7 @@ export default function MyJobsPage() {
                       </p>
                     )}
 
-                    <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
                       <Info label="Pay" value={job.pay_rate || 'Not set'} />
 
                       <Info label="Start" value={formatDate(job.start_date)} />
@@ -501,6 +569,11 @@ export default function MyJobsPage() {
                       <Info
                         label="Applicants"
                         value={String(job.applicant_count)}
+                      />
+
+                      <Info
+                        label="Views"
+                        value={String(job.view_count)}
                       />
 
                       <Info label="Posted" value={formatDate(job.created_at)} />
@@ -596,6 +669,32 @@ function StatCard({
 
       <p className="mt-3 text-4xl font-black tracking-tight text-white">
         {value}
+      </p>
+    </div>
+  )
+}
+
+function AnalyticsCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string
+  value: string
+  helper: string
+}) {
+  return (
+    <div className="rounded-3xl border border-cyan-300/10 bg-cyan-400/5 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-cyan-200">
+        {label}
+      </p>
+
+      <p className="mt-3 text-3xl font-black tracking-tight text-white">
+        {value}
+      </p>
+
+      <p className="mt-2 text-xs font-semibold text-slate-400">
+        {helper}
       </p>
     </div>
   )

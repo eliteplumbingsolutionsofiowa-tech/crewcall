@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: string | null
+          id: string
+          metadata: Json
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          metadata?: Json
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          metadata?: Json
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_audit_logs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           company_counter_offer: string | null
@@ -63,6 +108,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -127,6 +179,13 @@ export type Database = {
             foreignKeyName: "conversations_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -162,6 +221,13 @@ export type Database = {
           worker_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_applications_job_id_fkey"
             columns: ["job_id"]
@@ -207,6 +273,13 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_files_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_files_job_id_fkey"
             columns: ["job_id"]
@@ -266,11 +339,85 @@ export type Database = {
             foreignKeyName: "job_invites_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_invites_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "job_invites_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_matches: {
+        Row: {
+          availability_score: number
+          certification_score: number
+          created_at: string | null
+          id: string
+          job_id: string
+          location_score: number
+          match_score: number
+          online_score: number
+          pay_score: number
+          reason: string | null
+          trade_score: number
+          worker_id: string
+        }
+        Insert: {
+          availability_score?: number
+          certification_score?: number
+          created_at?: string | null
+          id?: string
+          job_id: string
+          location_score?: number
+          match_score?: number
+          online_score?: number
+          pay_score?: number
+          reason?: string | null
+          trade_score?: number
+          worker_id: string
+        }
+        Update: {
+          availability_score?: number
+          certification_score?: number
+          created_at?: string | null
+          id?: string
+          job_id?: string
+          location_score?: number
+          match_score?: number
+          online_score?: number
+          pay_score?: number
+          reason?: string | null
+          trade_score?: number
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_matches_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_matches_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_matches_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -302,6 +449,13 @@ export type Database = {
             foreignKeyName: "job_views_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_views_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -319,12 +473,14 @@ export type Database = {
           assigned_application_id: string | null
           assigned_to: string | null
           assigned_worker_id: string | null
+          boost_expires_at: string | null
           company_id: string
           completed_at: string | null
           created_at: string | null
           description: string | null
           escrow_amount_cents: number | null
           escrow_status: string | null
+          featured_level: string | null
           featured_until: string | null
           hired_worker_id: string | null
           id: string
@@ -351,6 +507,8 @@ export type Database = {
           stripe_transfer_id: string | null
           title: string
           trade: string
+          urgent: boolean | null
+          urgent_until: string | null
           worker_id: string | null
           worker_payout_amount: number | null
           worker_payout_cents: number | null
@@ -359,12 +517,14 @@ export type Database = {
           assigned_application_id?: string | null
           assigned_to?: string | null
           assigned_worker_id?: string | null
+          boost_expires_at?: string | null
           company_id: string
           completed_at?: string | null
           created_at?: string | null
           description?: string | null
           escrow_amount_cents?: number | null
           escrow_status?: string | null
+          featured_level?: string | null
           featured_until?: string | null
           hired_worker_id?: string | null
           id?: string
@@ -391,6 +551,8 @@ export type Database = {
           stripe_transfer_id?: string | null
           title: string
           trade: string
+          urgent?: boolean | null
+          urgent_until?: string | null
           worker_id?: string | null
           worker_payout_amount?: number | null
           worker_payout_cents?: number | null
@@ -399,12 +561,14 @@ export type Database = {
           assigned_application_id?: string | null
           assigned_to?: string | null
           assigned_worker_id?: string | null
+          boost_expires_at?: string | null
           company_id?: string
           completed_at?: string | null
           created_at?: string | null
           description?: string | null
           escrow_amount_cents?: number | null
           escrow_status?: string | null
+          featured_level?: string | null
           featured_until?: string | null
           hired_worker_id?: string | null
           id?: string
@@ -431,6 +595,8 @@ export type Database = {
           stripe_transfer_id?: string | null
           title?: string
           trade?: string
+          urgent?: boolean | null
+          urgent_until?: string | null
           worker_id?: string | null
           worker_payout_amount?: number | null
           worker_payout_cents?: number | null
@@ -528,6 +694,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -644,6 +817,7 @@ export type Database = {
           availability_status: string | null
           available_for_work: boolean | null
           avatar_url: string | null
+          background_verified: boolean | null
           bio: string | null
           booked_until: string | null
           certifications: string | null
@@ -651,8 +825,13 @@ export type Database = {
           company_name: string | null
           company_verified: boolean | null
           created_at: string | null
+          crewcall_score: number | null
           currently_working: boolean | null
           description: string | null
+          drug_tested: boolean | null
+          expected_pay_max: number | null
+          expected_pay_min: number | null
+          featured_worker: boolean | null
           full_name: string | null
           id: string
           insurance_company: string | null
@@ -666,9 +845,11 @@ export type Database = {
           insured: boolean | null
           is_admin: boolean | null
           is_online: boolean | null
+          is_suspended: boolean | null
           job_experience: string | null
           last_seen: string | null
           lat: number | null
+          latitude: number | null
           liability_file_path: string | null
           liability_form_signed: boolean | null
           liability_form_url: string | null
@@ -677,22 +858,47 @@ export type Database = {
           license_number: string | null
           license_url: string | null
           lng: number | null
+          location_updated_at: string | null
+          location_visible: boolean | null
+          longitude: number | null
+          map_visibility: boolean
+          med_gas: boolean | null
+          osha10: boolean | null
+          osha30: boolean | null
           phone: string | null
+          preferred_work: string[] | null
           primary_trade: string | null
+          pro_worker: boolean | null
+          push_enabled: boolean | null
           rating_average: number | null
           rating_count: number | null
+          referral_code: string | null
+          referral_credits: number | null
+          referred_by: string | null
           role: string
+          skills: string[] | null
+          sms_enabled: boolean | null
           state: string | null
           stripe_account_id: string | null
           stripe_charges_enabled: boolean | null
+          stripe_customer_id: string | null
           stripe_details_submitted: boolean | null
           stripe_onboarded: boolean | null
           stripe_onboarding_complete: boolean | null
           stripe_payouts_enabled: boolean | null
+          stripe_subscription_id: string | null
+          subscription_plan: string | null
+          subscription_renewal: string | null
+          subscription_status: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
           trade: string | null
           trades: string[] | null
           trades_hiring: string | null
+          travel_radius: number | null
           verified: boolean
+          willing_to_travel: boolean | null
           years_experience: number | null
         }
         Insert: {
@@ -700,6 +906,7 @@ export type Database = {
           availability_status?: string | null
           available_for_work?: boolean | null
           avatar_url?: string | null
+          background_verified?: boolean | null
           bio?: string | null
           booked_until?: string | null
           certifications?: string | null
@@ -707,8 +914,13 @@ export type Database = {
           company_name?: string | null
           company_verified?: boolean | null
           created_at?: string | null
+          crewcall_score?: number | null
           currently_working?: boolean | null
           description?: string | null
+          drug_tested?: boolean | null
+          expected_pay_max?: number | null
+          expected_pay_min?: number | null
+          featured_worker?: boolean | null
           full_name?: string | null
           id: string
           insurance_company?: string | null
@@ -722,9 +934,11 @@ export type Database = {
           insured?: boolean | null
           is_admin?: boolean | null
           is_online?: boolean | null
+          is_suspended?: boolean | null
           job_experience?: string | null
           last_seen?: string | null
           lat?: number | null
+          latitude?: number | null
           liability_file_path?: string | null
           liability_form_signed?: boolean | null
           liability_form_url?: string | null
@@ -733,22 +947,47 @@ export type Database = {
           license_number?: string | null
           license_url?: string | null
           lng?: number | null
+          location_updated_at?: string | null
+          location_visible?: boolean | null
+          longitude?: number | null
+          map_visibility?: boolean
+          med_gas?: boolean | null
+          osha10?: boolean | null
+          osha30?: boolean | null
           phone?: string | null
+          preferred_work?: string[] | null
           primary_trade?: string | null
+          pro_worker?: boolean | null
+          push_enabled?: boolean | null
           rating_average?: number | null
           rating_count?: number | null
+          referral_code?: string | null
+          referral_credits?: number | null
+          referred_by?: string | null
           role: string
+          skills?: string[] | null
+          sms_enabled?: boolean | null
           state?: string | null
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean | null
+          stripe_customer_id?: string | null
           stripe_details_submitted?: boolean | null
           stripe_onboarded?: boolean | null
           stripe_onboarding_complete?: boolean | null
           stripe_payouts_enabled?: boolean | null
+          stripe_subscription_id?: string | null
+          subscription_plan?: string | null
+          subscription_renewal?: string | null
+          subscription_status?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
           trade?: string | null
           trades?: string[] | null
           trades_hiring?: string | null
+          travel_radius?: number | null
           verified?: boolean
+          willing_to_travel?: boolean | null
           years_experience?: number | null
         }
         Update: {
@@ -756,6 +995,7 @@ export type Database = {
           availability_status?: string | null
           available_for_work?: boolean | null
           avatar_url?: string | null
+          background_verified?: boolean | null
           bio?: string | null
           booked_until?: string | null
           certifications?: string | null
@@ -763,8 +1003,13 @@ export type Database = {
           company_name?: string | null
           company_verified?: boolean | null
           created_at?: string | null
+          crewcall_score?: number | null
           currently_working?: boolean | null
           description?: string | null
+          drug_tested?: boolean | null
+          expected_pay_max?: number | null
+          expected_pay_min?: number | null
+          featured_worker?: boolean | null
           full_name?: string | null
           id?: string
           insurance_company?: string | null
@@ -778,9 +1023,11 @@ export type Database = {
           insured?: boolean | null
           is_admin?: boolean | null
           is_online?: boolean | null
+          is_suspended?: boolean | null
           job_experience?: string | null
           last_seen?: string | null
           lat?: number | null
+          latitude?: number | null
           liability_file_path?: string | null
           liability_form_signed?: boolean | null
           liability_form_url?: string | null
@@ -789,25 +1036,134 @@ export type Database = {
           license_number?: string | null
           license_url?: string | null
           lng?: number | null
+          location_updated_at?: string | null
+          location_visible?: boolean | null
+          longitude?: number | null
+          map_visibility?: boolean
+          med_gas?: boolean | null
+          osha10?: boolean | null
+          osha30?: boolean | null
           phone?: string | null
+          preferred_work?: string[] | null
           primary_trade?: string | null
+          pro_worker?: boolean | null
+          push_enabled?: boolean | null
           rating_average?: number | null
           rating_count?: number | null
+          referral_code?: string | null
+          referral_credits?: number | null
+          referred_by?: string | null
           role?: string
+          skills?: string[] | null
+          sms_enabled?: boolean | null
           state?: string | null
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean | null
+          stripe_customer_id?: string | null
           stripe_details_submitted?: boolean | null
           stripe_onboarded?: boolean | null
           stripe_onboarding_complete?: boolean | null
           stripe_payouts_enabled?: boolean | null
+          stripe_subscription_id?: string | null
+          subscription_plan?: string | null
+          subscription_renewal?: string | null
+          subscription_status?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
           trade?: string | null
           trades?: string[] | null
           trades_hiring?: string | null
+          travel_radius?: number | null
           verified?: boolean
+          willing_to_travel?: boolean | null
           years_experience?: number | null
         }
         Relationships: []
+      }
+      reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          report_type: string
+          reported_job_id: string | null
+          reported_user_id: string | null
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          report_type?: string
+          reported_job_id?: string | null
+          reported_user_id?: string | null
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          report_type?: string
+          reported_job_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reported_job_id_fkey"
+            columns: ["reported_job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reported_job_id_fkey"
+            columns: ["reported_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -846,6 +1202,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -891,6 +1254,13 @@ export type Database = {
           worker_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "saved_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "saved_jobs_job_id_fkey"
             columns: ["job_id"]
@@ -942,6 +1312,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          created_at: string
+          current_period_ends_at: string | null
+          current_period_starts_at: string | null
+          id: string
+          plan: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          trial_ends_at: string | null
+          trial_starts_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          current_period_ends_at?: string | null
+          current_period_starts_at?: string | null
+          id?: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          trial_starts_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          current_period_ends_at?: string | null
+          current_period_starts_at?: string | null
+          id?: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          trial_starts_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       typing_status: {
         Row: {
@@ -1007,10 +1431,180 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_urgent_jobs: {
+        Row: {
+          assigned_application_id: string | null
+          assigned_to: string | null
+          assigned_worker_id: string | null
+          boost_expires_at: string | null
+          company_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          escrow_amount_cents: number | null
+          escrow_status: string | null
+          featured_level: string | null
+          featured_until: string | null
+          hired_worker_id: string | null
+          id: string | null
+          is_featured: boolean | null
+          lat: number | null
+          lng: number | null
+          location: string | null
+          paid: boolean | null
+          paid_at: string | null
+          paid_to_worker_at: string | null
+          pay_rate: string | null
+          payment_status: string | null
+          payout_released_at: string | null
+          payout_status: string | null
+          platform_fee_amount: number | null
+          platform_fee_cents: number | null
+          platform_fee_percent: number | null
+          price_cents: number | null
+          start_date: string | null
+          status: string | null
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          stripe_transfer_id: string | null
+          title: string | null
+          trade: string | null
+          urgent: boolean | null
+          urgent_until: string | null
+          worker_id: string | null
+          worker_payout_amount: number | null
+          worker_payout_cents: number | null
+        }
+        Insert: {
+          assigned_application_id?: string | null
+          assigned_to?: string | null
+          assigned_worker_id?: string | null
+          boost_expires_at?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          escrow_amount_cents?: number | null
+          escrow_status?: string | null
+          featured_level?: string | null
+          featured_until?: string | null
+          hired_worker_id?: string | null
+          id?: string | null
+          is_featured?: boolean | null
+          lat?: number | null
+          lng?: number | null
+          location?: string | null
+          paid?: boolean | null
+          paid_at?: string | null
+          paid_to_worker_at?: string | null
+          pay_rate?: string | null
+          payment_status?: string | null
+          payout_released_at?: string | null
+          payout_status?: string | null
+          platform_fee_amount?: number | null
+          platform_fee_cents?: number | null
+          platform_fee_percent?: number | null
+          price_cents?: number | null
+          start_date?: string | null
+          status?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          stripe_transfer_id?: string | null
+          title?: string | null
+          trade?: string | null
+          urgent?: boolean | null
+          urgent_until?: string | null
+          worker_id?: string | null
+          worker_payout_amount?: number | null
+          worker_payout_cents?: number | null
+        }
+        Update: {
+          assigned_application_id?: string | null
+          assigned_to?: string | null
+          assigned_worker_id?: string | null
+          boost_expires_at?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          escrow_amount_cents?: number | null
+          escrow_status?: string | null
+          featured_level?: string | null
+          featured_until?: string | null
+          hired_worker_id?: string | null
+          id?: string | null
+          is_featured?: boolean | null
+          lat?: number | null
+          lng?: number | null
+          location?: string | null
+          paid?: boolean | null
+          paid_at?: string | null
+          paid_to_worker_at?: string | null
+          pay_rate?: string | null
+          payment_status?: string | null
+          payout_released_at?: string | null
+          payout_status?: string | null
+          platform_fee_amount?: number | null
+          platform_fee_cents?: number | null
+          platform_fee_percent?: number | null
+          price_cents?: number | null
+          start_date?: string | null
+          status?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          stripe_transfer_id?: string | null
+          title?: string | null
+          trade?: string | null
+          urgent?: boolean | null
+          urgent_until?: string | null
+          worker_id?: string | null
+          worker_payout_amount?: number | null
+          worker_payout_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_assigned_application_id_fkey"
+            columns: ["assigned_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_assigned_worker_id_fkey"
+            columns: ["assigned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_hired_worker_id_fkey"
+            columns: ["hired_worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

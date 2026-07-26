@@ -34,6 +34,7 @@ export default function WorkerLocationPresence() {
   const [locationVisible, setLocationVisible] = useState(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [isWorker, setIsWorker] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const mountedRef = useRef(true)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -106,9 +107,11 @@ export default function WorkerLocationPresence() {
       }
 
       try {
+        setSaving(true)
+
         if (showRequestMessage) {
           setStatus('requesting')
-          setMessage('Requesting your location…')
+          setMessage('Requesting your current location...')
         }
 
         const coordinates = await getBrowserCoordinates()
@@ -125,7 +128,9 @@ export default function WorkerLocationPresence() {
 
         setLocationVisibility(true)
         setStatus('active')
-        setMessage('Your location is visible to nearby companies.')
+        setMessage(
+          'Your location is visible to nearby companies on the CrewCall worker map.'
+        )
 
         return true
       } catch (error) {
@@ -141,7 +146,7 @@ export default function WorkerLocationPresence() {
         if (locationError.code === 1) {
           setStatus('denied')
           setMessage(
-            'Location access was denied. Allow location access in your browser settings to appear on the worker map.'
+            'Location access was denied. Allow location access in your browser settings and try again.'
           )
           return false
         }
@@ -157,12 +162,10 @@ export default function WorkerLocationPresence() {
         if (locationError.code === 3) {
           setStatus('unavailable')
           setMessage(
-            'The location request timed out. Move somewhere with a stronger GPS or network signal and try again.'
+            'The location request timed out. Check your signal and try again.'
           )
           return false
         }
-
-        console.error('Worker location update failed:', error)
 
         setStatus('error')
         setMessage(
@@ -170,6 +173,10 @@ export default function WorkerLocationPresence() {
         )
 
         return false
+      } finally {
+        if (mountedRef.current) {
+          setSaving(false)
+        }
       }
     },
     [getBrowserCoordinates, saveCoordinates, setLocationVisibility]
@@ -186,25 +193,37 @@ export default function WorkerLocationPresence() {
   const disableLocationSharing = useCallback(async () => {
     const workerId = workerIdRef.current
 
-    clearLocationInterval()
-
-    if (!workerId) {
+    if (!workerId || saving) {
       return
     }
+
+    const confirmed = window.confirm(
+      'Hide your location from nearby companies?'
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    clearLocationInterval()
+    setSaving(true)
+    setMessage('Hiding your location...')
 
     const { error } = await db
       .from('profiles')
       .update({
         location_visible: false,
+        latitude: null,
+        longitude: null,
+        location_updated_at: null,
       })
       .eq('id', workerId)
 
     if (error) {
-      console.error('Unable to disable location sharing:', error)
-
       if (mountedRef.current) {
         setStatus('error')
         setMessage('Location sharing could not be turned off.')
+        setSaving(false)
       }
 
       return
@@ -213,9 +232,12 @@ export default function WorkerLocationPresence() {
     if (mountedRef.current) {
       setLocationVisibility(false)
       setStatus('idle')
-      setMessage('Your location is hidden from companies.')
+      setMessage(
+        'Your location is hidden. Companies cannot see you on the worker map.'
+      )
+      setSaving(false)
     }
-  }, [clearLocationInterval, setLocationVisibility])
+  }, [clearLocationInterval, saving, setLocationVisibility])
 
   const enableLocationSharing = useCallback(async () => {
     const locationSaved = await updateWorkerLocation(true)
@@ -236,17 +258,7 @@ export default function WorkerLocationPresence() {
         error: userError,
       } = await supabase.auth.getUser()
 
-      if (userError) {
-        console.error('Unable to load location user:', userError)
-
-        if (mountedRef.current) {
-          setProfileLoaded(true)
-        }
-
-        return
-      }
-
-      if (!user || !mountedRef.current) {
+      if (userError || !user) {
         if (mountedRef.current) {
           setProfileLoaded(true)
         }
@@ -261,8 +273,6 @@ export default function WorkerLocationPresence() {
         .maybeSingle()
 
       if (error) {
-        console.error('Unable to load worker location profile:', error)
-
         if (mountedRef.current) {
           setProfileLoaded(true)
         }
@@ -284,6 +294,18 @@ export default function WorkerLocationPresence() {
       setIsWorker(true)
       setLocationVisibility(profile.location_visible === true)
       setProfileLoaded(true)
+
+      if (profile.location_visible === true) {
+        setStatus('active')
+        setMessage(
+          'Your location is visible to nearby companies on the CrewCall worker map.'
+        )
+      } else {
+        setStatus('idle')
+        setMessage(
+          'Your location is hidden. Share it when you want nearby companies to find you.'
+        )
+      }
 
       if (
         profile.is_online === true &&
@@ -331,88 +353,100 @@ export default function WorkerLocationPresence() {
     return null
   }
 
-  return (
-    <section className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`h-3 w-3 rounded-full ${
-                locationVisible
-                  ? 'bg-emerald-400 shadow-lg shadow-emerald-400/40'
-                  : 'bg-slate-500'
-              }`}
-            />
+  const statusMessageClass =
+    status === 'active'
+      ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200'
+      : status === 'denied' ||
+          status === 'unavailable' ||
+          status === 'error'
+        ? 'border-amber-400/25 bg-amber-400/10 text-amber-200'
+        : status === 'requesting'
+          ? 'border-cyan-400/25 bg-cyan-400/10 text-cyan-200'
+          : 'border-white/10 bg-slate-950/60 text-slate-300'
 
-            <h2 className="text-lg font-semibold text-white">
-              Worker location
-            </h2>
+  return (
+    <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl">
+      <div className="border-b border-white/10 bg-gradient-to-r from-cyan-400/10 via-white/[0.03] to-blue-400/10 px-6 py-5">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`h-3 w-3 rounded-full ${
+                  locationVisible
+                    ? 'bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.75)]'
+                    : 'bg-slate-500'
+                }`}
+              />
+
+              <h2 className="text-xl font-black text-white">
+                Worker Location
+              </h2>
+            </div>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+              Share your current location so nearby companies can see you on
+              the CrewCall map and invite you to work.
+            </p>
           </div>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-            Share your current location so nearby companies can find and
-            invite you to work.
-          </p>
+          <span
+            className={`w-fit rounded-full px-4 py-2 text-sm font-black ${
+              locationVisible
+                ? 'border border-emerald-400/25 bg-emerald-400/15 text-emerald-200'
+                : 'border border-white/10 bg-white/10 text-slate-300'
+            }`}
+          >
+            {locationVisible ? 'Location On' : 'Location Off'}
+          </span>
+        </div>
+      </div>
 
-          {message ? (
-            <p
-              className={`mt-3 text-sm ${
-                status === 'active'
-                  ? 'text-emerald-300'
-                  : status === 'denied' ||
-                      status === 'unavailable' ||
-                      status === 'error'
-                    ? 'text-amber-300'
-                    : 'text-slate-300'
-              }`}
-            >
-              {message}
-            </p>
-          ) : null}
+      <div className="p-6">
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${statusMessageClass}`}
+        >
+          {message}
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-3">
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           {locationVisible ? (
             <>
               <button
                 type="button"
                 onClick={() => void updateWorkerLocation(true)}
-                disabled={status === 'requesting'}
-                className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={saving}
+                className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {status === 'requesting'
-                  ? 'Updating…'
-                  : 'Update location'}
+                {saving ? 'Updating...' : 'Update Location'}
               </button>
 
               <button
                 type="button"
                 onClick={() => void disableLocationSharing()}
-                className="rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                disabled={saving}
+                className="rounded-2xl border border-red-400/30 bg-red-400/10 px-5 py-3 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Hide location
+                Hide My Location
               </button>
             </>
           ) : (
             <button
               type="button"
               onClick={() => void enableLocationSharing()}
-              disabled={status === 'requesting'}
-              className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={saving}
+              className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {status === 'requesting'
-                ? 'Requesting location…'
-                : 'Share my location'}
+              {saving ? 'Requesting Location...' : 'Share My Location'}
             </button>
           )}
         </div>
-      </div>
 
-      <div className="mt-4 rounded-xl border border-cyan-400/15 bg-cyan-400/5 px-4 py-3">
-        <p className="text-xs leading-5 text-slate-300">
-          CrewCall only stores your most recently reported location. You
-          can hide your location at any time.
-        </p>
+        <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3">
+          <p className="text-xs leading-5 text-cyan-100">
+            Turning location off removes your coordinates from CrewCall and
+            removes your marker from company maps.
+          </p>
+        </div>
       </div>
     </section>
   )

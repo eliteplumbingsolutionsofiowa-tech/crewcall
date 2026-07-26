@@ -190,7 +190,7 @@ export default function AdminPage() {
   const [jobFilter, setJobFilter] =
     useState<JobFilter>('all')
 
-  const [workingVerification, setWorkingVerification] =
+  const [workingProfileId, setWorkingProfileId] =
     useState<string | null>(null)
 
   const [accessDenied, setAccessDenied] = useState(false)
@@ -337,7 +337,7 @@ export default function AdminPage() {
           (invitesResponse.data as Invite[]) || []
         )
 
-        if (backgroundRefresh) {
+    if (backgroundRefresh) {
           setMessage('Admin data refreshed.')
           setMessageTone('success')
         }
@@ -351,7 +351,7 @@ export default function AdminPage() {
         )
 
         setMessageTone('error')
-      } finally {
+    } finally {
         setLoading(false)
         setRefreshing(false)
       }
@@ -620,70 +620,42 @@ export default function AdminPage() {
     field: VerificationField,
     currentValue: boolean | null
   ) {
-    const workingKey = `${profileId}:${field}`
-    const nextValue = !Boolean(currentValue)
-
-    setWorkingVerification(workingKey)
+    setWorkingProfileId(profileId)
     setMessage('')
 
-    try {
-      const { data, error } = await db
-        .from('profiles')
-        .update({
-          [field]: nextValue,
-        })
-        .eq('id', profileId)
-        .select(
-          `
-          id,
-          full_name,
-          role,
-          company_name,
-          company_verified,
-          insurance_verified,
-          liability_form_verified,
-          created_at
-        `
-        )
-        .single()
+    const { error } = await db
+      .from('profiles')
+      .update({
+        [field]: !currentValue,
+      })
+      .eq('id', profileId)
 
-      if (error) {
-        throw error
-      }
-
-      setProfiles((current) =>
-        current.map((profile) =>
-          profile.id === profileId
-            ? (data as Profile)
-            : profile
-        )
-      )
-
-      const label =
-        field === 'company_verified'
-          ? 'Company'
-          : field === 'insurance_verified'
-            ? 'Insurance'
-            : 'Liability'
-
-      setMessage(
-        nextValue
-          ? `${label} verification approved.`
-          : `${label} verification removed.`
-      )
-      setMessageTone('success')
-    } catch (error) {
-      console.error('Verification update error:', error)
-
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : JSON.stringify(error)
-      )
+    if (error) {
+      setMessage(error.message)
       setMessageTone('error')
-    } finally {
-      setWorkingVerification(null)
+      setWorkingProfileId(null)
+      return
     }
+
+    setProfiles((current) =>
+      current.map((profile) =>
+        profile.id === profileId
+          ? {
+              ...profile,
+              [field]: !currentValue,
+            }
+          : profile
+      )
+    )
+
+    setMessage(
+      !currentValue
+        ? 'Verification approved.'
+        : 'Verification removed.'
+    )
+
+    setMessageTone('success')
+    setWorkingProfileId(null)
   }
 
   if (loading) {
@@ -1244,17 +1216,9 @@ export default function AdminPage() {
                       const verificationCount =
                         getVerificationCount(profile)
 
-                      const companyWorking =
-                        workingVerification ===
-                        `${profile.id}:company_verified`
-
-                      const insuranceWorking =
-                        workingVerification ===
-                        `${profile.id}:insurance_verified`
-
-                      const liabilityWorking =
-                        workingVerification ===
-                        `${profile.id}:liability_form_verified`
+                      const working =
+                        workingProfileId ===
+                        profile.id
 
                       return (
                         <tr
@@ -1275,7 +1239,7 @@ export default function AdminPage() {
                                 </p>
 
                                 <p className="mt-1 truncate text-xs font-semibold text-slate-500">
-                                  {profile.id}
+                                {profile.id}
                                 </p>
                               </div>
                             </div>
@@ -1298,7 +1262,7 @@ export default function AdminPage() {
                               active={
                                 profile.company_verified
                               }
-                              working={companyWorking}
+                              working={working}
                               onClick={() =>
                                 void toggleProfileFlag(
                                   profile.id,
@@ -1315,7 +1279,7 @@ export default function AdminPage() {
                               active={
                                 profile.insurance_verified
                               }
-                              working={insuranceWorking}
+                              working={working}
                               onClick={() =>
                                 void toggleProfileFlag(
                                   profile.id,
@@ -1332,7 +1296,7 @@ export default function AdminPage() {
                               active={
                                 profile.liability_form_verified
                               }
-                              working={liabilityWorking}
+                              working={working}
                               onClick={() =>
                                 void toggleProfileFlag(
                                   profile.id,

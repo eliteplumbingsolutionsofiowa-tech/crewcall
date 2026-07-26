@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type Role = 'company' | 'worker' | null
+type Role = 'company' | 'worker' | 'admin' | null
 
 type Profile = {
   id: string
@@ -34,11 +34,17 @@ type QueryError = {
 }
 
 type MaybeSingleBuilder<T> = {
-  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
+  maybeSingle: () => Promise<{
+    data: T | null
+    error: QueryError | null
+  }>
 }
 
 type SingleBuilder<T> = {
-  single: () => Promise<{ data: T | null; error: QueryError | null }>
+  single: () => Promise<{
+    data: T | null
+    error: QueryError | null
+  }>
 }
 
 type SelectEqBuilder<T> = {
@@ -81,7 +87,7 @@ export default function PostJobPage() {
 
   const canPost = useMemo(() => {
     return (
-      profile?.role === 'company' &&
+      (profile?.role === 'company' || profile?.role === 'admin') &&
       title.trim().length > 1 &&
       trade.trim().length > 1 &&
       location.trim().length > 1 &&
@@ -91,6 +97,8 @@ export default function PostJobPage() {
   }, [description, location, payRate, profile?.role, title, trade])
 
   useEffect(() => {
+    let active = true
+
     async function loadProfile() {
       setLoading(true)
       setMessage('')
@@ -99,6 +107,10 @@ export default function PostJobPage() {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser()
+
+      if (!active) {
+        return
+      }
 
       if (userError || !user) {
         router.replace('/login')
@@ -110,9 +122,23 @@ export default function PostJobPage() {
         .eq('id', user.id)
         .maybeSingle()
 
+      if (!active) {
+        return
+      }
+
       if (error) {
         setMessage(error.message)
         setLoading(false)
+        return
+      }
+
+      if (!data) {
+        router.replace('/profile')
+        return
+      }
+
+      if (data.role !== 'company' && data.role !== 'admin') {
+        router.replace('/worker-dashboard')
         return
       }
 
@@ -120,7 +146,11 @@ export default function PostJobPage() {
       setLoading(false)
     }
 
-    loadProfile()
+    void loadProfile()
+
+    return () => {
+      active = false
+    }
   }, [router])
 
   async function generateMatches(jobId: string) {
@@ -149,15 +179,17 @@ export default function PostJobPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (saving) return
-
-    if (!profile) {
-      setMessage('You need to be signed in to post a job.')
+    if (saving) {
       return
     }
 
-    if (profile.role !== 'company') {
-      setMessage('Only company accounts can post jobs.')
+    if (!profile) {
+      setMessage('Your company profile could not be loaded.')
+      return
+    }
+
+    if (profile.role !== 'company' && profile.role !== 'admin') {
+      router.replace('/worker-dashboard')
       return
     }
 
@@ -203,6 +235,7 @@ export default function PostJobPage() {
       await generateMatches(data.id)
 
       window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
       router.replace(`/my-jobs/${data.id}`)
       router.refresh()
     } catch (error) {
@@ -211,58 +244,36 @@ export default function PostJobPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !profile) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
-        <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
-          <p className="text-sm font-bold text-cyan-200">Loading post job...</p>
-        </section>
-      </main>
-    )
-  }
+      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <section className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+          <p className="text-sm font-bold uppercase tracking-[0.3em] text-cyan-300">
+            CrewCall
+          </p>
 
-  if (profile?.role !== 'company') {
-    return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
-        <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
-          <h1 className="text-3xl font-black">Company account required</h1>
+          <h1 className="mt-3 text-3xl font-black">Loading Post Job</h1>
 
           <p className="mt-3 text-slate-300">
-            You need a company profile to post jobs on CrewCall.
+            Checking your company account...
           </p>
 
           {message ? (
-            <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+            <div className="mt-5 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm font-bold text-red-100">
               {message}
-            </p>
+            </div>
           ) : null}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/profile"
-              className="rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950"
-            >
-              Go to Profile
-            </Link>
-
-            <Link
-              href="/jobs"
-              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white"
-            >
-              Browse Jobs
-            </Link>
-          </div>
         </section>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
-      <section className="mx-auto max-w-4xl">
+    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+      <section className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/15 via-blue-500/10 to-white/5 p-6 shadow-2xl">
           <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-200">
-            CrewCall
+            CrewCall Company
           </p>
 
           <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
@@ -273,11 +284,15 @@ export default function PostJobPage() {
             Add the trade, location, pay, and scope. CrewCall will automatically
             find and rank matching workers after the job is posted.
           </p>
+
+          <div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-bold text-slate-200">
+            Posting as {profile.company_name || profile.full_name || 'Company'}
+          </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-6"
+          className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-6"
         >
           {message ? (
             <div className="mb-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm font-bold text-cyan-100">
@@ -290,20 +305,24 @@ export default function PostJobPage() {
               <span className="text-sm font-black text-slate-200">
                 Job Title
               </span>
+
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Rough-in help needed"
+                autoComplete="off"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
             </label>
 
             <label className="block">
               <span className="text-sm font-black text-slate-200">Trade</span>
+
               <input
                 value={trade}
                 onChange={(event) => setTrade(event.target.value)}
                 placeholder="Plumbing, HVAC, Electrical..."
+                autoComplete="off"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
             </label>
@@ -312,10 +331,12 @@ export default function PostJobPage() {
               <span className="text-sm font-black text-slate-200">
                 Location
               </span>
+
               <input
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
                 placeholder="Ankeny, IA"
+                autoComplete="street-address"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
             </label>
@@ -324,10 +345,12 @@ export default function PostJobPage() {
               <span className="text-sm font-black text-slate-200">
                 Pay Rate
               </span>
+
               <input
                 value={payRate}
                 onChange={(event) => setPayRate(event.target.value)}
                 placeholder="$500/day, $85/hr, $2,500 total..."
+                autoComplete="off"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
             </label>
@@ -337,6 +360,7 @@ export default function PostJobPage() {
             <span className="text-sm font-black text-slate-200">
               Job Scope
             </span>
+
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
@@ -357,7 +381,7 @@ export default function PostJobPage() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Link
               href="/company/jobs"
-              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center text-sm font-black text-white"
+              className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
             >
               Cancel
             </Link>
@@ -365,7 +389,7 @@ export default function PostJobPage() {
             <button
               type="submit"
               disabled={saving || !canPost}
-              className="rounded-2xl bg-cyan-300 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl bg-cyan-300 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 transition hover:bg-cyan-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? 'Posting + Matching...' : 'Post Job + Find Matches'}
             </button>

@@ -1,14 +1,20 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { CrewCard } from '@/app/components/CrewCard'
-import { CrewButton } from '@/app/components/CrewButton'
 import ProfileReviews from '@/app/components/ProfileReviews'
 import ProfileFileUpload from '@/app/components/ProfileFileUpload'
 import ProfileFileList from '@/app/components/ProfileFileList'
+import ReportModal from '@/app/components/ReportModal'
 
 type Role = 'company' | 'worker' | null
 
@@ -52,6 +58,8 @@ type CompanyJob = {
   location: string | null
   status: string | null
 }
+
+type NoticeTone = 'error' | 'success' | 'info'
 
 const profileSelect = `
   id,
@@ -103,42 +111,105 @@ function emptyProfile(id: string): Profile {
   }
 }
 
-function textValue(value: string | null | undefined) {
-  return value && value.trim().length > 0 ? value : 'Not added yet'
+function textValue(value: unknown) {
+  if (typeof value !== 'string') {
+    return 'Not added yet'
+  }
+
+  const trimmed = value.trim()
+
+  return trimmed.length > 0
+    ? trimmed
+    : 'Not added yet'
 }
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return 'Not set'
+  if (!value) {
+    return 'Not set'
+  }
+
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Not set'
-  return date.toLocaleDateString()
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not set'
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return 'Not available'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not available'
+  }
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
 function isRecentlyOnline(value: string | null | undefined) {
-  if (!value) return false
+  if (!value) {
+    return false
+  }
+
   const lastSeen = new Date(value).getTime()
-  if (Number.isNaN(lastSeen)) return false
+
+  if (Number.isNaN(lastSeen)) {
+    return false
+  }
+
   return Date.now() - lastSeen < 1000 * 60 * 2
+}
+
+function getInitial(value: string | null | undefined) {
+  return String(value || 'C').charAt(0).toUpperCase()
 }
 
 function ProfilePageInner() {
   const searchParams = useSearchParams()
   const viewedUserId = searchParams.get('user')
+
   const supabaseAny = supabase as any
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null)
+  const [currentUserId, setCurrentUserId] =
+    useState<string | null>(null)
+
+  const [currentProfile, setCurrentProfile] =
+    useState<Profile | null>(null)
+
   const [profile, setProfile] = useState<Profile | null>(null)
   const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
   const [companyJobs, setCompanyJobs] = useState<CompanyJob[]>([])
-  const [selectedInviteJobId, setSelectedInviteJobId] = useState('')
+
+  const [selectedInviteJobId, setSelectedInviteJobId] =
+    useState('')
+
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [stripeLoading, setStripeLoading] = useState(false)
-  const [message, setMessage] = useState('')
 
-  const isOwnProfile = !viewedUserId || viewedUserId === currentUserId
+  const [message, setMessage] = useState('')
+  const [messageTone, setMessageTone] =
+    useState<NoticeTone>('info')
+
+  const isOwnProfile =
+    !viewedUserId || viewedUserId === currentUserId
 
   const canInviteWorker =
     !isOwnProfile &&
@@ -148,27 +219,41 @@ function ProfilePageInner() {
   const isWorkerProfile = profile?.role === 'worker'
 
   const profilePhoto = useMemo(
-    () => profileFiles.find((file) => file.category === 'profile_photo'),
+    () =>
+      profileFiles.find(
+        (file) => file.category === 'profile_photo'
+      ),
     [profileFiles]
   )
 
   const certificationFiles = useMemo(
-    () => profileFiles.filter((file) => file.category === 'certification'),
+    () =>
+      profileFiles.filter(
+        (file) => file.category === 'certification'
+      ),
     [profileFiles]
   )
 
   const licenseFiles = useMemo(
-    () => profileFiles.filter((file) => file.category === 'license'),
+    () =>
+      profileFiles.filter(
+        (file) => file.category === 'license'
+      ),
     [profileFiles]
   )
 
   const insuranceFiles = useMemo(
-    () => profileFiles.filter((file) => file.category === 'insurance'),
+    () =>
+      profileFiles.filter(
+        (file) => file.category === 'insurance'
+      ),
     [profileFiles]
   )
 
   const completionScore = useMemo(() => {
-    if (!profile) return 0
+    if (!profile) {
+      return 0
+    }
 
     const checks = [
       Boolean(profile.role),
@@ -184,11 +269,16 @@ function ProfilePageInner() {
       profileFiles.length > 0,
     ]
 
-    return Math.round((checks.filter(Boolean).length / checks.length) * 100)
+    return Math.round(
+      (checks.filter(Boolean).length / checks.length) * 100
+    )
   }, [profile, profileFiles.length])
 
   const onlineNow = useMemo(() => {
-    return Boolean(profile?.is_online) || isRecentlyOnline(profile?.last_seen)
+    return (
+      Boolean(profile?.is_online) ||
+      isRecentlyOnline(profile?.last_seen)
+    )
   }, [profile?.is_online, profile?.last_seen])
 
   const trustBadges = useMemo(() => {
@@ -200,16 +290,21 @@ function ProfilePageInner() {
       },
       {
         label: 'Insurance',
-        active: Boolean(profile?.insurance_provider) || insuranceFiles.length > 0,
+        active:
+          Boolean(profile?.insurance_provider) ||
+          insuranceFiles.length > 0,
         detail:
-          profile?.insurance_provider || insuranceFiles.length > 0
+          profile?.insurance_provider ||
+          insuranceFiles.length > 0
             ? 'Added'
             : 'Missing',
       },
       {
         label: 'Liability',
         active: Boolean(profile?.liability_form_signed),
-        detail: profile?.liability_form_signed ? 'Signed' : 'Not signed',
+        detail: profile?.liability_form_signed
+          ? 'Signed'
+          : 'Not signed',
       },
       {
         label: 'Files',
@@ -225,85 +320,153 @@ function ProfilePageInner() {
     profileFiles.length,
   ])
 
-  const loadProfile = useCallback(async () => {
-    setLoading(true)
-    setMessage('')
+  const displayName =
+    profile?.company_name ||
+    profile?.full_name ||
+    'CrewCall Profile'
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+  const profileLocation =
+    [profile?.city, profile?.state].filter(Boolean).join(', ') ||
+    'Location not added yet'
 
-    if (userError || !user) {
-      setCurrentUserId(null)
-      setCurrentProfile(null)
-      setProfile(null)
-      setMessage('Please log in to view profiles.')
+  const loadProfile = useCallback(
+    async (backgroundRefresh = false) => {
+      if (backgroundRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      if (!backgroundRefresh) {
+        setMessage('')
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        setCurrentUserId(null)
+        setCurrentProfile(null)
+        setProfile(null)
+        setMessage('Please log in to view profiles.')
+        setMessageTone('error')
+        setLoading(false)
+        setRefreshing(false)
+        return
+      }
+
+      setCurrentUserId(user.id)
+
+      await supabaseAny
+        .from('profiles')
+        .update({
+          is_online: true,
+          last_seen: new Date().toISOString(),
+        })
+        .eq('id', user.id)
+
+      const { data: currentProfileData } = await supabaseAny
+        .from('profiles')
+        .select(profileSelect)
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const current =
+        (currentProfileData as Profile | null) || null
+
+      setCurrentProfile(current)
+
+      const profileId = viewedUserId || user.id
+
+      const { data, error } = await supabaseAny
+        .from('profiles')
+        .select(profileSelect)
+        .eq('id', profileId)
+        .maybeSingle()
+
+      if (error) {
+        setMessage(error.message)
+        setMessageTone('error')
+      }
+
+      setProfile(
+        (data as Profile | null) ||
+          (profileId === user.id
+            ? emptyProfile(user.id)
+            : null)
+      )
+
+      const { data: files, error: fileError } =
+        await supabaseAny
+          .from('profile_files')
+          .select(
+            'id,file_name,file_url,file_type,category,created_at'
+          )
+          .eq('user_id', profileId)
+          .order('created_at', {
+            ascending: false,
+          })
+
+      if (fileError) {
+        setMessage(fileError.message)
+        setMessageTone('error')
+      }
+
+      setProfileFiles((files as ProfileFile[]) || [])
+
+      if (current?.role === 'company') {
+        const { data: jobs, error: jobError } =
+          await supabaseAny
+            .from('jobs')
+            .select('id,title,trade,location,status')
+            .eq('company_id', user.id)
+            .in('status', ['open', 'assigned'])
+            .order('created_at', {
+              ascending: false,
+            })
+
+        if (jobError) {
+          setMessage(jobError.message)
+          setMessageTone('error')
+        }
+
+        const loadedJobs = (jobs as CompanyJob[]) || []
+
+        setCompanyJobs(loadedJobs)
+
+        setSelectedInviteJobId((previous) => {
+          if (
+            previous &&
+            loadedJobs.some((job) => job.id === previous)
+          ) {
+            return previous
+          }
+
+          return loadedJobs[0]?.id || ''
+        })
+      } else {
+        setCompanyJobs([])
+        setSelectedInviteJobId('')
+      }
+
+      if (backgroundRefresh) {
+        setMessage('Profile refreshed.')
+        setMessageTone('success')
+      }
+
       setLoading(false)
-      return
-    }
-
-    setCurrentUserId(user.id)
-
-    await supabaseAny
-      .from('profiles')
-      .update({
-        is_online: true,
-        last_seen: new Date().toISOString(),
-      })
-      .eq('id', user.id)
-
-    const { data: currentProfileData } = await supabaseAny
-      .from('profiles')
-      .select(profileSelect)
-      .eq('id', user.id)
-      .maybeSingle()
-
-    const current = (currentProfileData as Profile | null) || null
-    setCurrentProfile(current)
-
-    const profileId = viewedUserId || user.id
-
-    const { data, error } = await supabaseAny
-      .from('profiles')
-      .select(profileSelect)
-      .eq('id', profileId)
-      .maybeSingle()
-
-    if (error) setMessage(error.message)
-
-    setProfile((data as Profile | null) || (profileId === user.id ? emptyProfile(user.id) : null))
-
-    const { data: files } = await supabaseAny
-      .from('profile_files')
-      .select('id,file_name,file_url,file_type,category,created_at')
-      .eq('user_id', profileId)
-      .order('created_at', { ascending: false })
-
-    setProfileFiles((files as ProfileFile[]) || [])
-
-    if (current?.role === 'company') {
-      const { data: jobs } = await supabaseAny
-        .from('jobs')
-        .select('id,title,trade,location,status')
-        .eq('company_id', user.id)
-        .in('status', ['open', 'assigned'])
-        .order('created_at', { ascending: false })
-
-      const loadedJobs = (jobs as CompanyJob[]) || []
-      setCompanyJobs(loadedJobs)
-      setSelectedInviteJobId((previous) => previous || loadedJobs[0]?.id || '')
-    } else {
-      setCompanyJobs([])
-      setSelectedInviteJobId('')
-    }
-
-    setLoading(false)
-  }, [supabaseAny, viewedUserId])
+      setRefreshing(false)
+    },
+    [supabaseAny, viewedUserId]
+  )
 
   const updateOnlineStatus = useCallback(
     async (isOnline: boolean) => {
-      if (!currentUserId) return
+      if (!currentUserId) {
+        return
+      }
 
       await supabaseAny
         .from('profiles')
@@ -317,139 +480,213 @@ function ProfilePageInner() {
   )
 
   useEffect(() => {
-    loadProfile()
+    void loadProfile()
   }, [loadProfile])
 
   useEffect(() => {
-    if (!currentUserId) return
+    if (!currentUserId) {
+      return
+    }
 
-    updateOnlineStatus(true)
+    void updateOnlineStatus(true)
 
     const interval = window.setInterval(() => {
-      updateOnlineStatus(true)
+      void updateOnlineStatus(true)
     }, 30000)
 
     const handleFocus = () => {
-      updateOnlineStatus(true)
-      loadProfile()
+      void updateOnlineStatus(true)
+      void loadProfile(true)
     }
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        updateOnlineStatus(true)
-        loadProfile()
+        void updateOnlineStatus(true)
+        void loadProfile(true)
       } else {
-        updateOnlineStatus(false)
+        void updateOnlineStatus(false)
       }
     }
 
     window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange
+    )
 
     return () => {
       window.clearInterval(interval)
       window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      updateOnlineStatus(false)
+
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange
+      )
+
+      void updateOnlineStatus(false)
     }
   }, [currentUserId, loadProfile, updateOnlineStatus])
 
-  function updateField(field: keyof Profile, value: string | boolean | null) {
-    setProfile((previous) => (previous ? { ...previous, [field]: value } : previous))
+  function updateField(
+    field: keyof Profile,
+    value: string | boolean | null
+  ) {
+    setProfile((previous) =>
+      previous
+        ? {
+            ...previous,
+            [field]: value,
+          }
+        : previous
+    )
   }
 
   async function saveProfile() {
-    if (!profile || !currentUserId || !isOwnProfile) return
+    if (!profile || !currentUserId || !isOwnProfile) {
+      return
+    }
 
     setSaving(true)
     setMessage('')
 
-    const { error } = await supabaseAny.from('profiles').upsert(
-      {
-        id: currentUserId,
-        role: profile.role,
-        full_name: profile.full_name || null,
-        company_name: profile.company_name || null,
-        phone: profile.phone || null,
-        city: profile.city || null,
-        state: profile.state || null,
-        trade: profile.trade || null,
-        years_experience: profile.years_experience || null,
-        insurance_provider: profile.insurance_provider || null,
-        job_experience: profile.job_experience || null,
-        liability_form_signed: Boolean(profile.liability_form_signed),
-        available_for_work: Boolean(profile.available_for_work),
-        currently_working: Boolean(profile.currently_working),
-        booked_until: profile.booked_until || null,
-        is_online: true,
-        last_seen: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    )
+    const { error } = await supabaseAny
+      .from('profiles')
+      .upsert(
+        {
+          id: currentUserId,
+          role: profile.role,
+          full_name: profile.full_name || null,
+          company_name: profile.company_name || null,
+          phone: profile.phone || null,
+          city: profile.city || null,
+          state: profile.state || null,
+          trade: profile.trade || null,
+          years_experience:
+            profile.years_experience || null,
+          insurance_provider:
+            profile.insurance_provider || null,
+          job_experience: profile.job_experience || null,
+          liability_form_signed: Boolean(
+            profile.liability_form_signed
+          ),
+          available_for_work: Boolean(
+            profile.available_for_work
+          ),
+          currently_working: Boolean(
+            profile.currently_working
+          ),
+          booked_until: profile.booked_until || null,
+          is_online: true,
+          last_seen: new Date().toISOString(),
+        },
+        {
+          onConflict: 'id',
+        }
+      )
 
     if (error) {
       setMessage(error.message)
+      setMessageTone('error')
     } else {
       setMessage('Profile saved successfully.')
+      setMessageTone('success')
       await loadProfile()
-      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
     }
 
     setSaving(false)
   }
 
   async function inviteWorker() {
-    if (!profile || !currentUserId || !selectedInviteJobId) return
+    if (
+      !profile ||
+      !currentUserId ||
+      !selectedInviteJobId
+    ) {
+      return
+    }
 
     setInviting(true)
     setMessage('')
 
-    const { data: existingInvite } = await supabaseAny
-      .from('job_invites')
-      .select('id,status')
-      .eq('company_id', currentUserId)
-      .eq('worker_id', profile.id)
-      .eq('job_id', selectedInviteJobId)
-      .maybeSingle()
+    const { data: existingInvite, error: existingError } =
+      await supabaseAny
+        .from('job_invites')
+        .select('id,status')
+        .eq('company_id', currentUserId)
+        .eq('worker_id', profile.id)
+        .eq('job_id', selectedInviteJobId)
+        .maybeSingle()
 
-    if (existingInvite) {
-      setMessage('This worker already has an invite for that job.')
+    if (existingError) {
+      setMessage(existingError.message)
+      setMessageTone('error')
       setInviting(false)
       return
     }
 
-    const { error } = await supabaseAny.from('job_invites').insert({
-      company_id: currentUserId,
-      worker_id: profile.id,
-      job_id: selectedInviteJobId,
-      status: 'pending',
-      company_seen: true,
-      worker_seen: false,
-    })
+    if (existingInvite) {
+      setMessage(
+        'This worker already has an invite for that job.'
+      )
+      setMessageTone('info')
+      setInviting(false)
+      return
+    }
+
+    const { error } = await supabaseAny
+      .from('job_invites')
+      .insert({
+        company_id: currentUserId,
+        worker_id: profile.id,
+        job_id: selectedInviteJobId,
+        status: 'pending',
+        company_seen: true,
+        worker_seen: false,
+      })
 
     if (error) {
       setMessage(error.message)
+      setMessageTone('error')
     } else {
-      const selectedJob = companyJobs.find((job) => job.id === selectedInviteJobId)
+      const selectedJob = companyJobs.find(
+        (job) => job.id === selectedInviteJobId
+      )
 
-      await supabaseAny.from('notifications').insert({
-        user_id: profile.id,
-        title: 'New job invite',
-        body: `You were invited to ${selectedJob?.title || 'a job'}.`,
-        link_url: '/invites',
-        read: false,
-        is_read: false,
-      })
+      const { error: notificationError } =
+        await supabaseAny.from('notifications').insert({
+          user_id: profile.id,
+          title: 'New job invite',
+          body: `You were invited to ${
+            selectedJob?.title || 'a job'
+          }.`,
+          link_url: '/invites',
+          read: false,
+          is_read: false,
+        })
+
+      if (notificationError) {
+        console.error(notificationError)
+      }
 
       setMessage('Invite sent successfully.')
-      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+      setMessageTone('success')
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
     }
 
     setInviting(false)
   }
 
   async function startStripeOnboarding() {
-    if (!currentUserId || !isOwnProfile) return
+    if (!currentUserId || !isOwnProfile) {
+      return
+    }
 
     setStripeLoading(true)
     setMessage('')
@@ -462,154 +699,294 @@ function ProfilePageInner() {
         },
       })
 
-      const result = await response.json()
+      const result = (await response.json()) as {
+        url?: string
+        error?: string
+      }
 
       if (!response.ok) {
-        setMessage(result?.error || 'Stripe onboarding could not be started.')
+        setMessage(
+          result.error ||
+            'Stripe onboarding could not be started.'
+        )
+        setMessageTone('error')
         setStripeLoading(false)
         return
       }
 
-      if (result?.url) {
+      if (result.url) {
         window.location.href = result.url
         return
       }
 
-      setMessage('Stripe did not return an onboarding link.')
+      setMessage(
+        'Stripe did not return an onboarding link.'
+      )
+      setMessageTone('error')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Stripe onboarding failed.')
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Stripe onboarding failed.'
+      )
+      setMessageTone('error')
     }
 
     setStripeLoading(false)
   }
 
   if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 px-4 py-8">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-xl">
-          <p className="text-lg font-black text-slate-700">Loading profile...</p>
-        </div>
-      </main>
-    )
+    return <LoadingState />
   }
 
   if (!profile) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-8">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-red-200 bg-red-50 p-8 text-sm font-bold text-red-700 shadow-xl">
-          {message || 'Profile not found.'}
+      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 text-red-200">
+            <p className="text-lg font-black">
+              {message || 'Profile not found.'}
+            </p>
+
+            <Link
+              href="/jobs"
+              className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
+            >
+              Back to Jobs
+            </Link>
+          </div>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl">
-          <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white sm:px-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 shadow-2xl">
-                  {profilePhoto?.file_url ? (
-                    <img
-                      src={profilePhoto.file_url}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-4xl font-black">
-                      {(profile.full_name || profile.company_name || 'C')
-                        .slice(0, 1)
-                        .toUpperCase()}
-                    </span>
-                  )}
-                </div>
+    <main className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6 sm:py-8 lg:px-8">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-48 top-10 h-96 w-96 rounded-full bg-cyan-500/10 blur-[120px]" />
 
-                <div>
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${
-                        onlineNow
-                          ? 'bg-emerald-400 text-emerald-950'
-                          : 'bg-slate-700 text-slate-100'
-                      }`}
-                    >
-                      {onlineNow ? 'Online now' : 'Offline'}
-                    </span>
+        <div className="absolute -right-48 top-56 h-96 w-96 rounded-full bg-blue-500/10 blur-[120px]" />
 
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white">
-                      {profile.role === 'company'
-                        ? 'Company'
-                        : profile.role === 'worker'
-                          ? 'Worker'
-                          : 'Role not set'}
-                    </span>
+        <div className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-violet-500/10 blur-[140px]" />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <Link
+            href={isOwnProfile ? '/dashboard' : '/workers'}
+            className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
+          >
+            ← {isOwnProfile ? 'Back to Dashboard' : 'Back to Workers'}
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => void loadProfile(true)}
+            disabled={refreshing}
+            className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-black text-white transition hover:bg-white/[0.114] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {refreshing
+              ? 'Refreshing...'
+              : 'Refresh Profile'}
+          </button>
+        </div>
+
+        {message ? (
+          <Notice tone={messageTone}>{message}</Notice>
+        ) : null}
+
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500" />
+
+          <div className="p-5 sm:p-7 lg:p-8">
+            <div className="flex flex-col justify-between gap-8 xl:flex-row xl:items-start">
+              <div className="flex min-w-0 flex-1 flex-col gap-6 sm:flex-row sm:items-start">
+                <div className="relative shrink-0">
+                  <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-gradient-to-br from-cyan-400/20 via-blue-500/15 to-violet-500/15 text-4xl font-black text-cyan-300 shadow-xl shadow-cyan-950/30 sm:h-36 sm:w-36">
+                    {profilePhoto?.file_url ? (
+                      <img
+                        src={profilePhoto.file_url}
+                        alt={displayName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span>{getInitial(displayName)}</span>
+                    )}
                   </div>
 
-                  <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
-                    {profile.company_name || profile.full_name || 'CrewCall Profile'}
+                  <span
+                    className={[
+                      'absolute -bottom-1 -right-1 h-7 w-7 rounded-full border-4 border-slate-950',
+                      onlineNow
+                        ? 'bg-emerald-400'
+                        : 'bg-slate-600',
+                    ].join(' ')}
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge
+                      label={
+                        onlineNow ? 'Online Now' : 'Offline'
+                      }
+                      tone={onlineNow ? 'green' : 'slate'}
+                    />
+
+                    <StatusBadge
+                      label={
+                        profile.role === 'company'
+                          ? 'Company'
+                          : profile.role === 'worker'
+                            ? 'Worker'
+                            : 'Role Not Set'
+                      }
+                      tone="cyan"
+                    />
+
+                    {profile.available_for_work ? (
+                      <StatusBadge
+                        label="Available for Work"
+                        tone="green"
+                      />
+                    ) : null}
+
+                    {profile.currently_working ? (
+                      <StatusBadge
+                        label="Currently Working"
+                        tone="blue"
+                      />
+                    ) : null}
+                  </div>
+
+                  <h1 className="mt-4 break-words text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    {displayName}
                   </h1>
 
-                  <p className="mt-3 max-w-2xl text-sm font-semibold text-slate-200 sm:text-base">
-                    {profile.trade || 'Trade not added yet'} ·{' '}
-                    {[profile.city, profile.state].filter(Boolean).join(', ') ||
-                      'Location not added yet'}
+                  <p className="mt-3 text-base font-semibold text-slate-300 sm:text-lg">
+                    {profile.trade || 'Trade not added yet'}
                   </p>
+
+                  <p className="mt-2 text-sm font-semibold text-slate-400">
+                    {profileLocation}
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    {profile.phone ? (
+                      <a
+                        href={`tel:${profile.phone}`}
+                        className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15"
+                      >
+                        Call
+                      </a>
+                    ) : null}
+
+                    {!isOwnProfile ? (
+  <>
+    <Link
+      href={`/messages?user=${profile.id}`}
+      className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-black text-white transition hover:bg-white/[0.1]"
+    >
+      Message
+    </Link>
+
+    <ReportModal
+      targetType={
+        profile.role === 'company'
+          ? 'company'
+          : 'user'
+      }
+      targetId={profile.id}
+      targetName={displayName}
+    />
+  </>
+) : null}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
-                <StatCard label="Complete" value={`${completionScore}%`} />
-                <StatCard label="Files" value={String(profileFiles.length)} />
-                <StatCard label="Certs" value={String(certificationFiles.length)} />
-                <StatCard label="Licenses" value={String(licenseFiles.length)} />
+              <div className="grid w-full shrink-0 grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[470px]">
+                <HeroStat
+                  label="Complete"
+                  value={`${completionScore}%`}
+                  tone="cyan"
+                />
+
+                <HeroStat
+                  label="Files"
+                  value={String(profileFiles.length)}
+                  tone="blue"
+                />
+
+                <HeroStat
+                  label="Certs"
+                  value={String(certificationFiles.length)}
+                  tone="violet"
+                />
+
+                <HeroStat
+                  label="Licenses"
+                  value={String(licenseFiles.length)}
+                  tone="green"
+                />
               </div>
             </div>
           </div>
+        </section>
 
-          {message && (
-            <div className="border-t border-slate-200 bg-blue-50 px-6 py-4 text-sm font-bold text-blue-900 sm:px-8">
-              {message}
-            </div>
-          )}
+        <div className="grid gap-6 xl:grid-cols-[1.45fr_0.75fr]">
+          <div className="space-y-6">
+            <SectionCard>
+              <SectionHeader
+                eyebrow="Professional Profile"
+                title={
+                  isOwnProfile
+                    ? 'Edit Profile'
+                    : 'Profile Details'
+                }
+                description={
+                  isOwnProfile
+                    ? 'Keep your profile complete, professional, and ready for new CrewCall opportunities.'
+                    : 'Review this user’s professional information, experience, and availability.'
+                }
+                action={
+                  isOwnProfile ? (
+                    <PrimaryButton
+                      onClick={() => void saveProfile()}
+                      disabled={saving}
+                    >
+                      {saving
+                        ? 'Saving...'
+                        : 'Save Profile'}
+                    </PrimaryButton>
+                  ) : undefined
+                }
+              />
 
-          <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr]">
-            <div className="space-y-6">
-              <CrewCard>
-                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-2xl font-black text-slate-950">
-                      {isOwnProfile ? 'Edit Profile' : 'Profile Details'}
-                    </h2>
-                    <p className="text-sm font-semibold text-slate-500">
-                      Keep your CrewCall profile clean, verified, and ready for jobs.
-                    </p>
-                  </div>
-
-                  {isOwnProfile && (
-                    <CrewButton onClick={saveProfile} disabled={saving}>
-                      {saving ? 'Saving...' : 'Save Profile'}
-                    </CrewButton>
-                  )}
-                </div>
-
+              <div className="p-5 sm:p-6">
                 <div className="grid gap-4 md:grid-cols-2">
                   <FieldBlock label="Role">
                     {isOwnProfile ? (
                       <select
                         value={profile.role || ''}
                         onChange={(event) =>
-                          updateField('role', event.target.value as Role)
+                          updateField(
+                            'role',
+                            event.target.value as Role
+                          )
                         }
-                        className="input"
+                        className="input-dark"
                       >
                         <option value="">Select role</option>
                         <option value="worker">Worker</option>
                         <option value="company">Company</option>
                       </select>
                     ) : (
-                      <ReadOnlyValue value={profile.role || 'Not added yet'} />
+                      <ReadOnlyValue
+                        value={
+                          profile.role || 'Not added yet'
+                        }
+                      />
                     )}
                   </FieldBlock>
 
@@ -617,12 +994,19 @@ function ProfilePageInner() {
                     {isOwnProfile ? (
                       <input
                         value={profile.full_name || ''}
-                        onChange={(event) => updateField('full_name', event.target.value)}
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'full_name',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="Your name"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.full_name)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.full_name)}
+                      />
                     )}
                   </FieldBlock>
 
@@ -631,13 +1015,20 @@ function ProfilePageInner() {
                       <input
                         value={profile.company_name || ''}
                         onChange={(event) =>
-                          updateField('company_name', event.target.value)
+                          updateField(
+                            'company_name',
+                            event.target.value
+                          )
                         }
-                        className="input"
+                        className="input-dark"
                         placeholder="Company name"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.company_name)} />
+                      <ReadOnlyValue
+                        value={textValue(
+                          profile.company_name
+                        )}
+                      />
                     )}
                   </FieldBlock>
 
@@ -645,12 +1036,19 @@ function ProfilePageInner() {
                     {isOwnProfile ? (
                       <input
                         value={profile.phone || ''}
-                        onChange={(event) => updateField('phone', event.target.value)}
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'phone',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="Phone number"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.phone)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.phone)}
+                      />
                     )}
                   </FieldBlock>
 
@@ -658,12 +1056,19 @@ function ProfilePageInner() {
                     {isOwnProfile ? (
                       <input
                         value={profile.city || ''}
-                        onChange={(event) => updateField('city', event.target.value)}
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'city',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="City"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.city)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.city)}
+                      />
                     )}
                   </FieldBlock>
 
@@ -671,12 +1076,19 @@ function ProfilePageInner() {
                     {isOwnProfile ? (
                       <input
                         value={profile.state || ''}
-                        onChange={(event) => updateField('state', event.target.value)}
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'state',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="State"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.state)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.state)}
+                      />
                     )}
                   </FieldBlock>
 
@@ -684,42 +1096,67 @@ function ProfilePageInner() {
                     {isOwnProfile ? (
                       <input
                         value={profile.trade || ''}
-                        onChange={(event) => updateField('trade', event.target.value)}
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'trade',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="Plumbing, electrical, HVAC..."
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.trade)} />
+                      <ReadOnlyValue
+                        value={textValue(profile.trade)}
+                      />
                     )}
                   </FieldBlock>
 
                   <FieldBlock label="Years Experience">
                     {isOwnProfile ? (
                       <input
-                        value={profile.years_experience || ''}
-                        onChange={(event) =>
-                          updateField('years_experience', event.target.value)
+                        value={
+                          profile.years_experience || ''
                         }
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'years_experience',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="Example: 8 years"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.years_experience)} />
+                      <ReadOnlyValue
+                        value={textValue(
+                          profile.years_experience
+                        )}
+                      />
                     )}
                   </FieldBlock>
 
                   <FieldBlock label="Insurance Provider">
                     {isOwnProfile ? (
                       <input
-                        value={profile.insurance_provider || ''}
-                        onChange={(event) =>
-                          updateField('insurance_provider', event.target.value)
+                        value={
+                          profile.insurance_provider || ''
                         }
-                        className="input"
+                        onChange={(event) =>
+                          updateField(
+                            'insurance_provider',
+                            event.target.value
+                          )
+                        }
+                        className="input-dark"
                         placeholder="Insurance provider"
                       />
                     ) : (
-                      <ReadOnlyValue value={textValue(profile.insurance_provider)} />
+                      <ReadOnlyValue
+                        value={textValue(
+                          profile.insurance_provider
+                        )}
+                      />
                     )}
                   </FieldBlock>
 
@@ -729,12 +1166,19 @@ function ProfilePageInner() {
                         type="date"
                         value={profile.booked_until || ''}
                         onChange={(event) =>
-                          updateField('booked_until', event.target.value || null)
+                          updateField(
+                            'booked_until',
+                            event.target.value || null
+                          )
                         }
-                        className="input"
+                        className="input-dark"
                       />
                     ) : (
-                      <ReadOnlyValue value={formatDate(profile.booked_until)} />
+                      <ReadOnlyValue
+                        value={formatDate(
+                          profile.booked_until
+                        )}
+                      />
                     )}
                   </FieldBlock>
                 </div>
@@ -745,69 +1189,82 @@ function ProfilePageInner() {
                       <textarea
                         value={profile.job_experience || ''}
                         onChange={(event) =>
-                          updateField('job_experience', event.target.value)
+                          updateField(
+                            'job_experience',
+                            event.target.value
+                          )
                         }
-                        className="input min-h-32"
+                        className="input-dark min-h-36 resize-y"
                         placeholder="Tell companies what kind of work you do best."
                       />
                     ) : (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-700">
-                        {textValue(profile.job_experience)}
+                      <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-5 text-sm font-semibold leading-7 text-slate-300">
+                        {textValue(
+                          profile.job_experience
+                        )}
                       </div>
                     )}
                   </FieldBlock>
                 </div>
 
-                {isOwnProfile && (
+                {isOwnProfile ? (
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.liability_form_signed)}
-                        onChange={(event) =>
-                          updateField('liability_form_signed', event.target.checked)
-                        }
-                      />
-                      Liability signed
-                    </label>
+                    <ToggleCard
+                      label="Liability Signed"
+                      description="Compliance form completed"
+                      checked={Boolean(
+                        profile.liability_form_signed
+                      )}
+                      onChange={(checked) =>
+                        updateField(
+                          'liability_form_signed',
+                          checked
+                        )
+                      }
+                    />
 
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.available_for_work)}
-                        onChange={(event) =>
-                          updateField('available_for_work', event.target.checked)
-                        }
-                      />
-                      Available
-                    </label>
+                    <ToggleCard
+                      label="Available"
+                      description="Open to new job offers"
+                      checked={Boolean(
+                        profile.available_for_work
+                      )}
+                      onChange={(checked) =>
+                        updateField(
+                          'available_for_work',
+                          checked
+                        )
+                      }
+                    />
 
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(profile.currently_working)}
-                        onChange={(event) =>
-                          updateField('currently_working', event.target.checked)
-                        }
-                      />
-                      Currently working
-                    </label>
+                    <ToggleCard
+                      label="Currently Working"
+                      description="Actively assigned to a job"
+                      checked={Boolean(
+                        profile.currently_working
+                      )}
+                      onChange={(checked) =>
+                        updateField(
+                          'currently_working',
+                          checked
+                        )
+                      }
+                    />
                   </div>
-                )}
-              </CrewCard>
+                ) : null}
+              </div>
+            </SectionCard>
 
-              {isOwnProfile && (
-                <CrewCard>
-                  <div className="mb-5">
-                    <h2 className="text-2xl font-black text-slate-950">
-                      Profile Files
-                    </h2>
-                    <p className="text-sm font-semibold text-slate-500">
-                      Upload your photo, licenses, certifications, and insurance.
-                    </p>
-                  </div>
+            {isOwnProfile ? (
+              <SectionCard>
+                <SectionHeader
+                  eyebrow="Profile Verification"
+                  title="Upload Profile Files"
+                  description="Add a profile photo, trade licenses, certifications, and insurance documents."
+                />
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 p-5 md:grid-cols-2 sm:p-6">
+                  <UploadWrapper>
                     <ProfileFileUpload
                       userId={profile.id}
                       category="profile_photo"
@@ -816,7 +1273,9 @@ function ProfilePageInner() {
                       accept="image/*"
                       onUploadComplete={loadProfile}
                     />
+                  </UploadWrapper>
 
+                  <UploadWrapper>
                     <ProfileFileUpload
                       userId={profile.id}
                       category="license"
@@ -825,16 +1284,20 @@ function ProfilePageInner() {
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfile}
                     />
+                  </UploadWrapper>
 
+                  <UploadWrapper>
                     <ProfileFileUpload
                       userId={profile.id}
                       category="certification"
                       label="Certification"
-                      description="Upload safety cards, certifications, or training docs."
+                      description="Upload safety cards, certifications, or training documents."
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfile}
                     />
+                  </UploadWrapper>
 
+                  <UploadWrapper>
                     <ProfileFileUpload
                       userId={profile.id}
                       category="insurance"
@@ -843,212 +1306,504 @@ function ProfilePageInner() {
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfile}
                     />
-                  </div>
-                </CrewCard>
-              )}
+                  </UploadWrapper>
+                </div>
+              </SectionCard>
+            ) : null}
 
-              <CrewCard>
-                <div className="mb-5">
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Uploaded Documents
-                  </h2>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Licenses, insurance, certifications, and profile documents.
-                  </p>
+            <SectionCard>
+              <SectionHeader
+                eyebrow="Verification Documents"
+                title="Uploaded Documents"
+                description="Licenses, insurance, certifications, and profile files."
+                badge={`${profileFiles.length} ${
+                  profileFiles.length === 1
+                    ? 'file'
+                    : 'files'
+                }`}
+              />
+
+              <div className="p-5 sm:p-6">
+                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4 sm:p-5">
+                  <ProfileFileList
+                    files={profileFiles}
+                    canDelete={isOwnProfile}
+                    onDeleteComplete={loadProfile}
+                  />
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard>
+              <SectionHeader
+                eyebrow="CrewCall Reputation"
+                title="Reviews"
+                description="Ratings and feedback from completed CrewCall work."
+              />
+
+              <div className="p-5 sm:p-6">
+                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4 sm:p-5">
+                  <ProfileReviews profileId={profile.id} />
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+
+          <aside className="space-y-6">
+            {canInviteWorker ? (
+              <SidebarCard
+                eyebrow="Company Action"
+                title="Invite Worker"
+                description="Invite this worker to one of your open or assigned jobs."
+              >
+                <div className="space-y-3">
+                  <select
+                    value={selectedInviteJobId}
+                    onChange={(event) =>
+                      setSelectedInviteJobId(
+                        event.target.value
+                      )
+                    }
+                    className="input-dark"
+                  >
+                    {companyJobs.length === 0 ? (
+                      <option value="">
+                        No open jobs available
+                      </option>
+                    ) : null}
+
+                    {companyJobs.map((job) => (
+                      <option key={job.id} value={job.id}>
+                        {job.title || 'Untitled job'} ·{' '}
+                        {job.location || 'No location'}
+                      </option>
+                    ))}
+                  </select>
+
+                  <PrimaryButton
+                    onClick={() => void inviteWorker()}
+                    disabled={
+                      inviting || !selectedInviteJobId
+                    }
+                    fullWidth
+                  >
+                    {inviting
+                      ? 'Sending Invite...'
+                      : 'Send Invite'}
+                  </PrimaryButton>
+                </div>
+              </SidebarCard>
+            ) : null}
+
+            {isOwnProfile && isWorkerProfile ? (
+              <SidebarCard
+                eyebrow="Payments"
+                title="Stripe Payouts"
+                description="Connect Stripe so companies can pay you through CrewCall."
+              >
+                <div className="space-y-3">
+                  <StatusRow
+                    label="Onboarding"
+                    value={
+                      profile.stripe_onboarding_complete
+                        ? 'Complete'
+                        : 'Not complete'
+                    }
+                    active={Boolean(
+                      profile.stripe_onboarding_complete
+                    )}
+                  />
+
+                  <StatusRow
+                    label="Charges"
+                    value={
+                      profile.stripe_charges_enabled
+                        ? 'Enabled'
+                        : 'Disabled'
+                    }
+                    active={Boolean(
+                      profile.stripe_charges_enabled
+                    )}
+                  />
+
+                  <StatusRow
+                    label="Payouts"
+                    value={
+                      profile.stripe_payouts_enabled
+                        ? 'Enabled'
+                        : 'Disabled'
+                    }
+                    active={Boolean(
+                      profile.stripe_payouts_enabled
+                    )}
+                  />
+
+                  <PrimaryButton
+                    onClick={() =>
+                      void startStripeOnboarding()
+                    }
+                    disabled={stripeLoading}
+                    fullWidth
+                  >
+                    {stripeLoading
+                      ? 'Opening Stripe...'
+                      : profile.stripe_onboarding_complete
+                        ? 'Open Stripe Setup'
+                        : 'Set Up Stripe'}
+                  </PrimaryButton>
+                </div>
+              </SidebarCard>
+            ) : null}
+
+            <SidebarCard
+              eyebrow="CrewCall Trust"
+              title="Trust Score"
+              description="Complete profiles are easier for workers and companies to trust."
+            >
+              <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-5">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-4xl font-black text-white">
+                      {completionScore}%
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-cyan-100/60">
+                      Profile completion
+                    </p>
+                  </div>
+
+                  <StatusBadge
+                    label={
+                      completionScore >= 80
+                        ? 'Strong'
+                        : 'Needs Work'
+                    }
+                    tone={
+                      completionScore >= 80
+                        ? 'green'
+                        : 'amber'
+                    }
+                  />
                 </div>
 
-                <ProfileFileList
-                  files={profileFiles}
-                  canDelete={isOwnProfile}
-                  onDeleteComplete={loadProfile}
+                <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-950/60">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+                    style={{
+                      width: `${completionScore}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {trustBadges.map((badge) => (
+                  <StatusRow
+                    key={badge.label}
+                    label={badge.label}
+                    value={badge.detail}
+                    active={badge.active}
+                  />
+                ))}
+              </div>
+            </SidebarCard>
+
+            <SidebarCard
+              eyebrow="Availability"
+              title="Work Status"
+              description="Current availability and recent activity."
+            >
+              <div className="space-y-3">
+                <StatusRow
+                  label="Available"
+                  value={
+                    profile.available_for_work
+                      ? 'Yes'
+                      : 'No'
+                  }
+                  active={Boolean(
+                    profile.available_for_work
+                  )}
                 />
-              </CrewCard>
 
-              <CrewCard>
-                <ProfileReviews profileId={profile.id} />
-              </CrewCard>
-            </div>
+                <StatusRow
+                  label="Currently Working"
+                  value={
+                    profile.currently_working
+                      ? 'Yes'
+                      : 'No'
+                  }
+                  active={Boolean(
+                    profile.currently_working
+                  )}
+                />
 
-            <aside className="space-y-6">
-              {canInviteWorker && (
-                <CrewCard>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Invite Worker
-                  </h2>
-                  <p className="mt-2 text-sm font-semibold text-slate-500">
-                    Send this worker an invite to one of your open jobs.
-                  </p>
+                <StatusRow
+                  label="Booked Until"
+                  value={formatDate(profile.booked_until)}
+                  active={Boolean(profile.booked_until)}
+                />
 
-                  <div className="mt-5 space-y-3">
-                    <select
-                      value={selectedInviteJobId}
-                      onChange={(event) => setSelectedInviteJobId(event.target.value)}
-                      className="input"
-                    >
-                      {companyJobs.length === 0 && (
-                        <option value="">No open jobs available</option>
-                      )}
+                <StatusRow
+                  label="Last Seen"
+                  value={formatDateTime(profile.last_seen)}
+                  active={onlineNow}
+                />
+              </div>
+            </SidebarCard>
 
-                      {companyJobs.map((job) => (
-                        <option key={job.id} value={job.id}>
-                          {job.title || 'Untitled job'} · {job.location || 'No location'}
-                        </option>
-                      ))}
-                    </select>
+            <SidebarCard
+              eyebrow="At a Glance"
+              title="Quick Details"
+              description="Core profile and contact information."
+            >
+              <div className="space-y-3">
+                <InfoLine
+                  label="Name"
+                  value={profile.full_name}
+                />
 
-                    <CrewButton
-                      onClick={inviteWorker}
-                      disabled={inviting || !selectedInviteJobId}
-                      fullWidth
-                    >
-                      {inviting ? 'Sending Invite...' : 'Send Invite'}
-                    </CrewButton>
-                  </div>
-                </CrewCard>
-              )}
+                <InfoLine
+                  label="Company"
+                  value={profile.company_name}
+                />
 
-              {isOwnProfile && isWorkerProfile && (
-                <CrewCard>
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Stripe Payouts
-                  </h2>
-                  <p className="mt-2 text-sm font-semibold text-slate-500">
-                    Connect Stripe so companies can pay you through CrewCall.
-                  </p>
+                <InfoLine
+                  label="Phone"
+                  value={profile.phone}
+                />
 
-                  <div className="mt-5 space-y-3">
-                    <StatusRow
-                      label="Onboarding"
-                      value={
-                        profile.stripe_onboarding_complete
-                          ? 'Complete'
-                          : 'Not complete'
-                      }
-                      active={Boolean(profile.stripe_onboarding_complete)}
-                    />
+                <InfoLine
+                  label="Trade"
+                  value={profile.trade}
+                />
 
-                    <StatusRow
-                      label="Charges"
-                      value={profile.stripe_charges_enabled ? 'Enabled' : 'Disabled'}
-                      active={Boolean(profile.stripe_charges_enabled)}
-                    />
+                <InfoLine
+                  label="Location"
+                  value={
+                    [profile.city, profile.state]
+                      .filter(Boolean)
+                      .join(', ')
+                  }
+                />
 
-                    <StatusRow
-                      label="Payouts"
-                      value={profile.stripe_payouts_enabled ? 'Enabled' : 'Disabled'}
-                      active={Boolean(profile.stripe_payouts_enabled)}
-                    />
+                <InfoLine
+                  label="Experience"
+                  value={profile.years_experience}
+                />
+              </div>
+            </SidebarCard>
+          </aside>
+        </div>
+      </div>
 
-                    <CrewButton
-                      onClick={startStripeOnboarding}
-                      disabled={stripeLoading}
-                      fullWidth
-                    >
-                      {stripeLoading ? 'Opening Stripe...' : 'Set Up Stripe'}
-                    </CrewButton>
-                  </div>
-                </CrewCard>
-              )}
+      <style jsx global>{`
+        .input-dark {
+          min-height: 48px;
+          width: 100%;
+          border-radius: 1rem;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(2, 6, 23, 0.7);
+          padding: 0.8rem 1rem;
+          color: white;
+          font-size: 0.875rem;
+          font-weight: 700;
+          outline: none;
+          transition:
+            border-color 150ms ease,
+            background-color 150ms ease,
+            box-shadow 150ms ease;
+        }
 
-              <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">Trust Score</h2>
-                <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Higher trust makes workers and companies easier to hire.
+        .input-dark::placeholder {
+          color: rgb(100 116 139);
+        }
+
+        .input-dark:focus {
+          border-color: rgba(34, 211, 238, 0.5);
+          background: rgba(2, 6, 23, 0.9);
+          box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+        }
+
+        .input-dark option {
+          background: rgb(15 23 42);
+          color: white;
+        }
+      `}</style>
+    </main>
+  )
+}
+
+function LoadingState() {
+  return (
+    <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500" />
+
+          <div className="p-6 sm:p-8">
+            <div className="flex items-center gap-4">
+              <div className="relative h-14 w-14">
+                <span className="absolute inset-0 animate-ping rounded-2xl bg-cyan-400/20" />
+
+                <span className="absolute inset-0 animate-pulse rounded-2xl bg-cyan-400/15" />
+              </div>
+
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                  CrewCall Profile
                 </p>
 
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-sm font-black">
-                    <span>{completionScore}% complete</span>
-                    <span>{completionScore >= 80 ? 'Strong' : 'Needs work'}</span>
-                  </div>
-                  <div className="h-4 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${completionScore}%` }}
-                    />
-                  </div>
-                </div>
+                <p className="mt-1 text-lg font-bold text-white">
+                  Loading profile...
+                </p>
+              </div>
+            </div>
 
-                <div className="mt-5 space-y-3">
-                  {trustBadges.map((badge) => (
-                    <StatusRow
-                      key={badge.label}
-                      label={badge.label}
-                      value={badge.detail}
-                      active={badge.active}
-                    />
-                  ))}
-                </div>
-              </CrewCard>
+            <div className="mt-8 h-80 animate-pulse rounded-3xl border border-white/10 bg-white/[0.04]" />
 
-              <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">
-                  Work Status
-                </h2>
+            <div className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_0.75fr]">
+              <div className="h-96 animate-pulse rounded-3xl border border-white/10 bg-white/[0.04]" />
 
-                <div className="mt-5 space-y-3">
-                  <StatusRow
-                    label="Available"
-                    value={profile.available_for_work ? 'Yes' : 'No'}
-                    active={Boolean(profile.available_for_work)}
-                  />
-
-                  <StatusRow
-                    label="Currently Working"
-                    value={profile.currently_working ? 'Yes' : 'No'}
-                    active={Boolean(profile.currently_working)}
-                  />
-
-                  <StatusRow
-                    label="Booked Until"
-                    value={formatDate(profile.booked_until)}
-                    active={Boolean(profile.booked_until)}
-                  />
-
-                  <StatusRow
-                    label="Last Seen"
-                    value={
-                      profile.last_seen
-                        ? new Date(profile.last_seen).toLocaleString()
-                        : 'Not available'
-                    }
-                    active={onlineNow}
-                  />
-                </div>
-              </CrewCard>
-
-              <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">
-                  Quick Details
-                </h2>
-
-                <div className="mt-5 space-y-3">
-                  <InfoLine label="Name" value={profile.full_name} />
-                  <InfoLine label="Company" value={profile.company_name} />
-                  <InfoLine label="Phone" value={profile.phone} />
-                  <InfoLine label="Trade" value={profile.trade} />
-                  <InfoLine
-                    label="Location"
-                    value={[profile.city, profile.state].filter(Boolean).join(', ')}
-                  />
-                  <InfoLine label="Experience" value={profile.years_experience} />
-                </div>
-              </CrewCard>
-            </aside>
+              <div className="h-96 animate-pulse rounded-3xl border border-white/10 bg-white/[0.04]" />
+            </div>
           </div>
-        </section>
+        </div>
       </div>
     </main>
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function SectionCard({
+  children,
+}: {
+  children: ReactNode
+}) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-white shadow-xl backdrop-blur">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-300">
+    <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
+      {children}
+    </section>
+  )
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  badge,
+  action,
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  badge?: string
+  action?: ReactNode
+}) {
+  return (
+    <div className="flex flex-col justify-between gap-5 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:p-6">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+          {eyebrow}
+        </p>
+
+        <h2 className="mt-2 text-2xl font-black text-white">
+          {title}
+        </h2>
+
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+          {description}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        {badge ? (
+          <span className="rounded-full border border-white/10 bg-white/[0.055] px-4 py-2 text-xs font-black text-slate-300">
+            {badge}
+          </span>
+        ) : null}
+
+        {action}
+      </div>
+    </div>
+  )
+}
+
+function SidebarCard({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  children: ReactNode
+}) {
+  return (
+    <section className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-5 shadow-xl shadow-black/20 backdrop-blur-xl sm:p-6">
+      <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+        {eyebrow}
+      </p>
+
+      <h2 className="mt-2 text-2xl font-black text-white">
+        {title}
+      </h2>
+
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        {description}
+      </p>
+
+      <div className="mt-5">{children}</div>
+    </section>
+  )
+}
+
+function UploadWrapper({
+  children,
+}: {
+  children: ReactNode
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4">
+      {children}
+    </div>
+  )
+}
+
+function HeroStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: 'cyan' | 'blue' | 'violet' | 'green'
+}) {
+  const classes = {
+    cyan:
+      'border-cyan-400/20 bg-cyan-500/10 text-cyan-300',
+    blue:
+      'border-blue-400/20 bg-blue-500/10 text-blue-300',
+    violet:
+      'border-violet-400/20 bg-violet-500/10 text-violet-300',
+    green:
+      'border-emerald-400/20 bg-emerald-500/10 text-emerald-300',
+  }
+
+  return (
+    <div
+      className={[
+        'rounded-3xl border p-4',
+        classes[tone],
+      ].join(' ')}
+    >
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-black">{value}</p>
+
+      <p className="mt-2 text-3xl font-black text-white">
+        {value}
+      </p>
     </div>
   )
 }
@@ -1062,17 +1817,59 @@ function FieldBlock({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-slate-700">{label}</span>
+      <span className="mb-2 block text-sm font-black text-slate-300">
+        {label}
+      </span>
+
       {children}
     </label>
   )
 }
 
-function ReadOnlyValue({ value }: { value: string }) {
+function ReadOnlyValue({
+  value,
+}: {
+  value: string
+}) {
   return (
-    <div className="min-h-[48px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+    <div className="min-h-[48px] rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-3 text-sm font-bold text-slate-300">
       {value}
     </div>
+  )
+}
+
+function ToggleCard({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string
+  description: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-3xl border border-white/10 bg-slate-950/55 p-4 transition hover:border-cyan-400/20">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) =>
+          onChange(event.target.checked)
+        }
+        className="mt-1 h-4 w-4 accent-cyan-400"
+      />
+
+      <span>
+        <span className="block text-sm font-black text-white">
+          {label}
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          {description}
+        </span>
+      </span>
+    </label>
   )
 }
 
@@ -1086,16 +1883,22 @@ function StatusRow({
   active: boolean
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/55 p-4">
       <div>
-        <p className="text-sm font-black text-slate-900">{label}</p>
-        <p className="text-xs font-bold text-slate-500">{value}</p>
+        <p className="text-sm font-black text-white">
+          {label}
+        </p>
+
+        <p className="mt-1 text-xs font-bold text-slate-500">
+          {value}
+        </p>
       </div>
 
       <span
-        className={`h-3 w-3 shrink-0 rounded-full ${
-          active ? 'bg-emerald-500' : 'bg-slate-300'
-        }`}
+        className={[
+          'h-3 w-3 shrink-0 rounded-full',
+          active ? 'bg-emerald-400' : 'bg-slate-600',
+        ].join(' ')}
       />
     </div>
   )
@@ -1109,26 +1912,127 @@ function InfoLine({
   value: string | null | undefined
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-4">
       <p className="text-xs font-black uppercase tracking-wide text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-slate-900">{textValue(value)}</p>
+
+      <p className="mt-1 break-words text-sm font-black text-white">
+        {textValue(value)}
+      </p>
+    </div>
+  )
+}
+
+function StatusBadge({
+  label,
+  tone,
+}: {
+  label: string
+  tone:
+    | 'cyan'
+    | 'green'
+    | 'blue'
+    | 'amber'
+    | 'slate'
+}) {
+  const classes = {
+    cyan:
+      'border-cyan-400/20 bg-cyan-500/10 text-cyan-300',
+    green:
+      'border-emerald-400/20 bg-emerald-500/10 text-emerald-300',
+    blue:
+      'border-blue-400/20 bg-blue-500/10 text-blue-300',
+    amber:
+      'border-amber-400/20 bg-amber-500/10 text-amber-300',
+    slate:
+      'border-white/10 bg-white/[0.055] text-slate-300',
+  }
+
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wider',
+        classes[tone],
+      ].join(' ')}
+    >
+      <span
+        className={[
+          'h-2 w-2 rounded-full',
+          tone === 'cyan'
+            ? 'bg-cyan-400'
+            : tone === 'green'
+              ? 'bg-emerald-400'
+              : tone === 'blue'
+                ? 'bg-blue-400'
+                : tone === 'amber'
+                  ? 'bg-amber-400'
+                  : 'bg-slate-400',
+        ].join(' ')}
+      />
+
+      {label}
+    </span>
+  )
+}
+
+function PrimaryButton({
+  children,
+  onClick,
+  disabled,
+  fullWidth = false,
+}: {
+  children: ReactNode
+  onClick: () => void
+  disabled?: boolean
+  fullWidth?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        'inline-flex min-h-11 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50',
+        fullWidth ? 'w-full' : '',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Notice({
+  tone,
+  children,
+}: {
+  tone: NoticeTone
+  children: ReactNode
+}) {
+  const classes = {
+    error:
+      'border-red-400/20 bg-red-500/10 text-red-200',
+    success:
+      'border-emerald-400/20 bg-emerald-500/10 text-emerald-200',
+    info:
+      'border-blue-400/20 bg-blue-500/10 text-blue-200',
+  }
+
+  return (
+    <div
+      className={[
+        'rounded-2xl border p-4 text-sm font-bold',
+        classes[tone],
+      ].join(' ')}
+    >
+      {children}
     </div>
   )
 }
 
 export default function ProfilePage() {
   return (
-    <Suspense
-      fallback={
-        <main className="min-h-screen bg-slate-50 px-4 py-8">
-          <div className="mx-auto max-w-6xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-xl">
-            <p className="text-lg font-black text-slate-700">Loading profile...</p>
-          </div>
-        </main>
-      }
-    >
+    <Suspense fallback={<LoadingState />}>
       <ProfilePageInner />
     </Suspense>
   )

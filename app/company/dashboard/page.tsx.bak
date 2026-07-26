@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import SubscriptionGate from '@/app/components/SubscriptionGate'
 
 import GlassCard from '@/app/components/ui/GlassCard'
 import PageHeader from '@/app/components/ui/PageHeader'

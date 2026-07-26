@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Job = {
@@ -65,7 +65,6 @@ type AnalyticsStats = {
 
 export default function CompanyAnalyticsPage() {
   const [loading, setLoading] = useState(true)
-  const [companyId, setCompanyId] = useState<string | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
@@ -73,11 +72,7 @@ export default function CompanyAnalyticsPage() {
   const [jobViews, setJobViews] = useState<JobView[]>([])
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    loadAnalytics()
-  }, [])
-
-  async function loadAnalytics() {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true)
     setError('')
 
@@ -92,8 +87,6 @@ export default function CompanyAnalyticsPage() {
         setLoading(false)
         return
       }
-
-      setCompanyId(user.id)
 
       const { data: jobsData, error: jobsError } = await supabase
         .from('jobs')
@@ -155,7 +148,51 @@ export default function CompanyAnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadAnalytics()
+
+    const refresh = () => {
+      loadAnalytics()
+    }
+
+    const channel = supabase
+      .channel('company-analytics-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'jobs' },
+        refresh
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'applications' },
+        refresh
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        refresh
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'job_views' },
+        refresh
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reviews' },
+        refresh
+      )
+      .subscribe()
+
+    window.addEventListener('focus', refresh)
+
+    return () => {
+      window.removeEventListener('focus', refresh)
+      supabase.removeChannel(channel)
+    }
+  }, [loadAnalytics])
 
   const stats: AnalyticsStats = useMemo(() => {
     const completedJobs = jobs.filter((job) => job.status === 'completed')
@@ -230,6 +267,144 @@ export default function CompanyAnalyticsPage() {
       }))
       .sort((a, b) => b.count - a.count)
   }, [jobs])
+
+
+  const activity = useMemo(() => {
+    const jobTitleMap = new Map(
+      jobs.map((job) => [job.id, job.title || 'Untitled Job'])
+    )
+
+    const items = [
+      ...jobViews.map((view) => ({
+        id: `view-${view.id}`,
+        type: 'View',
+        title: jobTitleMap.get(view.job_id) || 'Job',
+        created_at: view.created_at,
+      })),
+      ...applications.map((application) => ({
+        id: `application-${application.id}`,
+        type:
+          application.status === 'hired'
+            ? 'Worker hired'
+            : 'New application',
+        title: jobTitleMap.get(application.job_id) || 'Job',
+        created_at: application.created_at,
+      })),
+      ...messages.map((message) => ({
+        id: `message-${message.id}`,
+        type: 'New message',
+        title: jobTitleMap.get(message.job_id) || 'Job',
+        created_at: message.created_at,
+      })),
+      ...reviews.map((review) => ({
+        id: `review-${review.id}`,
+        type: 'New review',
+        title: `${review.rating || 0} star rating`,
+        created_at: review.created_at,
+      })),
+    ]
+
+    return items
+      .filter((item) => item.created_at)
+      .sort(
+        (a, b) =>
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+      )
+      .slice(0, 8)
+  }, [jobs, jobViews, applications, messages, reviews])
+
+  const chartData = useMemo(() => {
+    const days = Array.from({ length: 14 }, (_, index) => {
+      const date = new Date()
+      date.setHours(0, 0, 0, 0)
+      date.setDate(date.getDate() - (13 - index))
+      return date
+    })
+
+    function countForDay(
+      values: Array<{ created_at: string | null }>,
+      day: Date
+    ) {
+      const nextDay = new Date(day)
+      nextDay.setDate(nextDay.getDate() + 1)
+
+      return values.filter((value) => {
+        if (!value.created_at) return false
+        const created = new Date(value.created_at)
+        return created >= day && created < nextDay
+      }).length
+    }
+
+    return days.map((day) => ({
+      label: day.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
+      views: countForDay(jobViews, day),
+      applications: countForDay(applications, day),
+    }))
+  }, [jobViews, applications])
+
+  const insights = useMemo(() => {
+    const result: string[] = []
+
+    const featuredAverage =
+      stats.featuredJobs > 0
+        ? stats.featuredViews / stats.featuredJobs
+        : 0
+
+    const regularJobs = jobs.length - stats.featuredJobs
+    const regularAverage =
+      regularJobs > 0 ? stats.regularViews / regularJobs : 0
+
+    if (featuredAverage > regularAverage && regularAverage > 0) {
+      result.push(
+        `Featured jobs average ${(featuredAverage / regularAverage).toFixed(
+          1
+        )}× more views than regular jobs.`
+      )
+    }
+
+    if (stats.totalViews > 0 && stats.applicants === 0) {
+      result.push(
+        'Your jobs are receiving views but no applications yet. Consider improving pay, title, or job details.'
+      )
+    }
+
+    if (stats.applicants > 0 && stats.workersHired === 0) {
+      result.push(
+        'You have applicants waiting but no recorded hires yet.'
+      )
+    }
+
+    const completedWithoutReview = Math.max(
+      stats.completedJobs - stats.reviews,
+      0
+    )
+
+    if (completedWithoutReview > 0) {
+      result.push(
+        `${completedWithoutReview} completed ${
+          completedWithoutReview === 1 ? 'job still needs' : 'jobs still need'
+        } a review.`
+      )
+    }
+
+    if (stats.openJobs === 0) {
+      result.push(
+        'You have no open jobs. Post a new job to keep your worker pipeline active.'
+      )
+    }
+
+    if (result.length === 0) {
+      result.push(
+        'Your company activity looks healthy. Keep monitoring views and applications as more jobs are posted.'
+      )
+    }
+
+    return result.slice(0, 4)
+  }, [jobs.length, stats])
 
   function getApplicationsForJob(jobId: string) {
     return applications.filter((app) => app.job_id === jobId)
@@ -348,10 +523,13 @@ export default function CompanyAnalyticsPage() {
               <StatCard label="Featured Jobs" value={stats.featuredJobs} />
               <StatCard label="Urgent Jobs" value={stats.urgentJobs} />
               <StatCard label="Featured Views" value={stats.featuredViews} />
-              <StatCard label="Regular Views" value={stats.regularViews} />
-              <StatCard
-                label="Company ID"
-                value={companyId ? 'Active' : 'Unknown'}
+              <StatCard label="Regular Views" value={stats.regularViews} />              <StatCard
+                label="Average Views / Applicant"
+                value={
+                  stats.applicants > 0
+                    ? (stats.totalViews / stats.applicants).toFixed(1)
+                    : '0'
+                }
               />
             </section>
 
@@ -393,6 +571,85 @@ export default function CompanyAnalyticsPage() {
               </div>
             </section>
 
+
+            <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <h2 className="text-2xl font-black">14-Day Activity</h2>
+                <p className="mt-2 text-slate-300">
+                  Daily job views and applications.
+                </p>
+
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <BarChart
+                    title="Views"
+                    values={chartData.map((item) => ({
+                      label: item.label,
+                      value: item.views,
+                    }))}
+                  />
+
+                  <BarChart
+                    title="Applications"
+                    values={chartData.map((item) => ({
+                      label: item.label,
+                      value: item.applications,
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <h2 className="text-2xl font-black">CrewCall Insights</h2>
+                <p className="mt-2 text-slate-300">
+                  Actionable observations from your current data.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {insights.map((insight) => (
+                    <div
+                      key={insight}
+                      className="rounded-2xl border border-cyan-400/15 bg-cyan-400/10 p-4 text-sm font-semibold leading-6 text-cyan-50"
+                    >
+                      {insight}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <h2 className="text-2xl font-black">Recent Activity</h2>
+              <p className="mt-2 text-slate-300">
+                The latest activity across your jobs.
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {activity.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 text-slate-400">
+                    No recent activity yet.
+                  </div>
+                ) : (
+                  activity.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <p className="font-black text-white">{item.type}</p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {item.title}
+                        </p>
+                      </div>
+
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        {formatDate(item.created_at)}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
             <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
@@ -418,6 +675,42 @@ export default function CompanyAnalyticsPage() {
                   jobs={jobs.length - stats.featuredJobs}
                   views={stats.regularViews}
                 />
+              </div>
+            </section>
+
+
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <h2 className="text-2xl font-black">Top Performing Jobs</h2>
+              <p className="mt-2 text-slate-300">
+                Ranked by total job views.
+              </p>
+
+              <div className="mt-6 overflow-x-auto">
+                <table className="min-w-full text-left">
+                  <thead className="border-b border-white/10 text-sm uppercase text-slate-400">
+                    <tr>
+                      <th className="py-3">Job</th>
+                      <th className="py-3">Views</th>
+                      <th className="py-3">Applicants</th>
+                      <th className="py-3">Messages</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...jobs]
+                      .sort(
+                        (a,b)=>
+                          getViewsForJob(b.id).length-getViewsForJob(a.id).length
+                      )
+                      .map(job=>(
+                        <tr key={job.id} className="border-b border-white/5">
+                          <td className="py-3 font-bold">{job.title || 'Untitled Job'}</td>
+                          <td>{getViewsForJob(job.id).length}</td>
+                          <td>{getApplicationsForJob(job.id).length}</td>
+                          <td>{getMessagesForJob(job.id).length}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
               </div>
             </section>
 
@@ -501,6 +794,62 @@ export default function CompanyAnalyticsPage() {
         )}
       </div>
     </main>
+  )
+}
+
+
+function BarChart({
+  title,
+  values,
+}: {
+  title: string
+  values: Array<{
+    label: string
+    value: number
+  }>
+}) {
+  const maxValue = Math.max(...values.map((item) => item.value), 1)
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+      <div className="flex items-end justify-between">
+        <p className="font-black text-white">{title}</p>
+        <p className="text-sm font-bold text-cyan-200">
+          {values.reduce((sum, item) => sum + item.value, 0)} total
+        </p>
+      </div>
+
+      <div className="mt-6 flex h-44 items-end gap-1.5">
+        {values.map((item) => {
+          const height =
+            item.value === 0
+              ? 4
+              : Math.max((item.value / maxValue) * 100, 8)
+
+          return (
+            <div
+              key={`${title}-${item.label}`}
+              className="group flex min-w-0 flex-1 flex-col items-center justify-end"
+            >
+              <div className="mb-2 hidden text-[10px] font-black text-white group-hover:block">
+                {item.value}
+              </div>
+
+              <div
+                className="w-full rounded-t-md bg-cyan-400/80 transition hover:bg-cyan-300"
+                style={{ height: `${height}%` }}
+                title={`${item.label}: ${item.value}`}
+              />
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-3 flex justify-between text-[10px] font-bold text-slate-500">
+        <span>{values[0]?.label}</span>
+        <span>{values[values.length - 1]?.label}</span>
+      </div>
+    </div>
   )
 }
 
