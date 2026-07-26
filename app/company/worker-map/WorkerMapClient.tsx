@@ -12,6 +12,7 @@ import {
 } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { supabase } from '@/lib/supabase'
+import AIRecruiterHeartbeat from '@/app/components/AIRecruiterHeartbeat'
 
 const db = supabase as any
 
@@ -1144,6 +1145,7 @@ export default function WorkerMapClient() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
+      <AIRecruiterHeartbeat />
         <div className="mx-auto max-w-7xl">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
             Loading worker map...

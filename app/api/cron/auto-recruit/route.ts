@@ -21,7 +21,7 @@ type RecruitingJob = {
 type RankedMatch = {
   worker_id: string
   match_score: number | null
-  rank: number | null
+  match_rank: number | null
 }
 
 type ExistingInviteRow = {
@@ -270,9 +270,9 @@ async function processRecruitingJob(
 
       adminClient
         .from('job_matches')
-        .select('worker_id, match_score, rank')
+        .select('worker_id, match_score, match_rank')
         .eq('job_id', freshJob.id)
-        .order('rank', {
+        .order('match_rank', {
           ascending: true,
           nullsFirst: false,
         })
@@ -544,7 +544,7 @@ async function processRecruitingJob(
       matchScore:
         Number(selectedMatch.match_score) || 0,
       rank:
-        Number(selectedMatch.rank) ||
+        Number(selectedMatch.match_rank) ||
         selectedIndex + 1,
     }
   } catch (error) {

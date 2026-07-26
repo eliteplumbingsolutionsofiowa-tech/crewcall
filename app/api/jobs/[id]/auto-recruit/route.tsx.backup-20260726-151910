@@ -25,7 +25,7 @@ type AutoRecruitRequest = {
 type RankedMatch = {
   worker_id: string
   match_score: number | null
-  match_rank: number | null
+  rank: number | null
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -42,40 +42,6 @@ function createAdminClient() {
       persistSession: false,
     },
   })
-}
-
-async function logRecruitEvent(
-  adminClient: any,
-  {
-    jobId,
-    workerId = null,
-    eventType,
-    message,
-    metadata = {},
-  }: {
-    jobId: string
-    workerId?: string | null
-    eventType: string
-    message: string
-    metadata?: Record<string, unknown>
-  }
-) {
-  const { error } = await adminClient
-    .from('ai_recruit_events')
-    .insert({
-      job_id: jobId,
-      worker_id: workerId,
-      event_type: eventType,
-      message,
-      metadata,
-    })
-
-  if (error) {
-    console.error(
-      'AI recruiter event logging error:',
-      error
-    )
-  }
 }
 
 function getBearerToken(request: Request) {
@@ -247,12 +213,6 @@ export async function POST(
         )
       }
 
-      await logRecruitEvent(adminClient, {
-        jobId,
-        eventType: 'recruiting_paused',
-        message: 'AI recruiting paused.',
-      })
-
       return NextResponse.json({
         success: true,
         recruiting: false,
@@ -280,12 +240,6 @@ export async function POST(
         )
       }
 
-      await logRecruitEvent(adminClient, {
-        jobId,
-        eventType: 'recruiting_stopped',
-        message: 'AI recruiting stopped.',
-      })
-
       return NextResponse.json({
         success: true,
         recruiting: false,
@@ -305,17 +259,6 @@ export async function POST(
           ai_recruiting_complete: true,
         })
         .eq('id', jobId)
-
-      await logRecruitEvent(adminClient, {
-        jobId,
-        workerId: job.assigned_worker_id || null,
-        eventType: job.assigned_worker_id
-          ? 'position_filled'
-          : 'recruiting_unavailable',
-        message: job.assigned_worker_id
-          ? 'The job already has an assigned worker.'
-          : 'AI recruiting is unavailable for this job.',
-      })
 
       return NextResponse.json(
         {
@@ -363,21 +306,6 @@ export async function POST(
           { status: 500 }
         )
       }
-
-      await logRecruitEvent(adminClient, {
-        jobId,
-        eventType:
-          action === 'restart'
-            ? 'recruiting_restarted'
-            : 'recruiting_started',
-        message:
-          action === 'restart'
-            ? 'AI recruiting restarted.'
-            : 'AI recruiting started.',
-        metadata: {
-          nextWorkerIndex,
-        },
-      })
 
       if (action === 'start') {
         return NextResponse.json({
@@ -427,9 +355,9 @@ export async function POST(
     const { data: matches, error: matchError } =
       await adminClient
         .from('job_matches')
-        .select('worker_id, match_score, match_rank')
+        .select('worker_id, match_score, rank')
         .eq('job_id', jobId)
-        .order('match_rank', {
+        .order('rank', {
           ascending: true,
           nullsFirst: false,
         })
@@ -468,29 +396,15 @@ export async function POST(
         })
         .eq('id', jobId)
 
-      const completionMessage =
-        rankedMatches.length === 0
-          ? 'No ranked workers are available. Run job matching first.'
-          : 'All matched workers have already been invited.'
-
-      await logRecruitEvent(adminClient, {
-        jobId,
-        eventType:
-          rankedMatches.length === 0
-            ? 'no_matches_available'
-            : 'recruiting_complete',
-        message: completionMessage,
-        metadata: {
-          totalMatches: rankedMatches.length,
-        },
-      })
-
       return NextResponse.json({
         success: true,
         recruiting: false,
         complete: true,
         totalMatches: rankedMatches.length,
-        message: completionMessage,
+        message:
+          rankedMatches.length === 0
+            ? 'No ranked workers are available. Run job matching first.'
+            : 'All matched workers have already been invited.',
       })
     }
 
@@ -617,24 +531,6 @@ export async function POST(
       )
     }
 
-    await logRecruitEvent(adminClient, {
-      jobId,
-      workerId: worker.id,
-      eventType: 'invite_sent',
-      message: `Invitation sent to ${workerName}.`,
-      metadata: {
-        inviteId: invite.id,
-        workerName,
-        matchScore:
-          Number(nextMatch.match_score) || 0,
-        rank:
-          Number(nextMatch.match_rank) ||
-          matchIndex + 1,
-        nextWorkerIndex: nextIndex,
-        totalMatches: rankedMatches.length,
-      },
-    })
-
     return NextResponse.json({
       success: true,
       recruiting: true,
@@ -646,7 +542,7 @@ export async function POST(
         matchScore:
           Number(nextMatch.match_score) || 0,
         rank:
-          Number(nextMatch.match_rank) ||
+          Number(nextMatch.rank) ||
           matchIndex + 1,
       },
       nextWorkerIndex: nextIndex,

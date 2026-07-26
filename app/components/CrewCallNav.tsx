@@ -665,6 +665,17 @@ export default function CrewCallNav() {
               Operations
             </NavLink>
 
+
+            <NavLink
+              href="/company/recruiting"
+              onClick={onNavigate}
+              active={pathname.startsWith(
+                '/company/recruiting'
+              )}
+            >
+              AI Recruiting
+            </NavLink>
+
             <NavLink
               href="/post-job"
               onClick={onNavigate}

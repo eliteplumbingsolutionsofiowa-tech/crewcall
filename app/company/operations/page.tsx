@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { supabase } from '@/lib/supabase'
+import AIRecruiterHeartbeat from '@/app/components/AIRecruiterHeartbeat'
 
 import GlassCard from '@/app/components/ui/GlassCard'
 import PageHeader from '@/app/components/ui/PageHeader'
@@ -17,6 +18,7 @@ import SecondaryButton from '@/app/components/ui/SecondaryButton'
 import SectionHeader from '@/app/components/ui/SectionHeader'
 import StatCard from '@/app/components/ui/StatCard'
 import StatusBadge from '@/app/components/ui/StatusBadge'
+import AIRecruiterCommandCenter from '@/app/components/AIRecruiterCommandCenter'
 
 type Job = {
   id: string
@@ -926,6 +928,7 @@ export default function CompanyOperationsPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
+      <AIRecruiterHeartbeat />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-0 h-[34rem] w-[65rem] -translate-x-1/2 rounded-full bg-blue-600/10 blur-3xl"
@@ -2107,164 +2110,11 @@ function OperationsJobCard({
         </div>
 
           {status === 'open' && !job.assigned_worker_id && (
-            <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
-                    AI Auto Recruiter
-                  </p>
-
-                  <p className="mt-1 text-sm font-black text-white">
-                    {autoRecruitStatus?.complete
-                      ? 'Recruiting complete'
-                      : autoRecruitStatus?.recruiting
-                        ? 'Actively recruiting workers'
-                        : 'Ready to recruit'}
-                  </p>
-                </div>
-
-                <StatusBadge
-                  tone={
-                    autoRecruitStatus?.complete
-                      ? 'green'
-                      : autoRecruitStatus?.recruiting
-                        ? 'cyan'
-                        : 'slate'
-                  }
-                  dot={Boolean(autoRecruitStatus?.recruiting)}
-                  pulse={Boolean(autoRecruitStatus?.recruiting)}
-                >
-                  {autoRecruitStatus?.complete
-                    ? 'Complete'
-                    : autoRecruitStatus?.recruiting
-                      ? 'Active'
-                      : 'Paused'}
-                </StatusBadge>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                    Invites Sent
-                  </p>
-
-                  <p className="mt-1 text-xl font-black text-white">
-                    {autoRecruitStatus?.inviteCount ?? 0}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                    Next Worker
-                  </p>
-
-                  <p className="mt-1 text-xl font-black text-white">
-                    #
-                    {(autoRecruitStatus?.nextWorkerIndex ?? 0) + 1}
-                  </p>
-                </div>
-
-                <div className="col-span-2 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-3 sm:col-span-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                    Matches
-                  </p>
-
-                  <p className="mt-1 text-xl font-black text-white">
-                    {autoRecruitStatus?.totalMatches ?? '—'}
-                  </p>
-                </div>
-              </div>
-
-              {autoRecruitStatus?.invitedWorker && (
-                <div className="mt-3 rounded-xl border border-green-400/20 bg-green-400/[0.07] px-4 py-3">
-                  <p className="text-xs font-black text-green-200">
-                    Invited {autoRecruitStatus.invitedWorker.name}
-                  </p>
-
-                  <p className="mt-1 text-xs font-semibold text-green-200/70">
-                    Rank #{autoRecruitStatus.invitedWorker.rank} •{' '}
-                    {autoRecruitStatus.invitedWorker.matchScore}% match
-                  </p>
-                </div>
-              )}
-
-              {autoRecruitMessage && (
-                <div className="mt-3 rounded-xl border border-green-400/20 bg-green-400/[0.07] px-4 py-3 text-xs font-bold text-green-200">
-                  {autoRecruitMessage}
-                </div>
-              )}
-
-              {autoRecruitError && (
-                <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-xs font-bold text-red-200">
-                  {autoRecruitError}
-                </div>
-              )}
-
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {!autoRecruitStatus?.recruiting && (
-                  <ScheduleActionButton
-                    onClick={() =>
-                      void runAutoRecruitAction('start', {
-                        automaticallySendFirst: true,
-                      })
-                    }
-                    disabled={autoRecruitLoading}
-                    emphasis
-                  >
-                    {autoRecruitLoading ? 'Working...' : 'Start AI'}
-                  </ScheduleActionButton>
-                )}
-
-                {autoRecruitStatus?.recruiting && (
-                  <ScheduleActionButton
-                    onClick={() =>
-                      void runAutoRecruitAction('send_next')
-                    }
-                    disabled={autoRecruitLoading}
-                    emphasis
-                  >
-                    {autoRecruitLoading ? 'Sending...' : 'Send Next'}
-                  </ScheduleActionButton>
-                )}
-
-                {autoRecruitStatus?.recruiting && (
-                  <ScheduleActionButton
-                    onClick={() =>
-                      void runAutoRecruitAction('pause')
-                    }
-                    disabled={autoRecruitLoading}
-                  >
-                    Pause
-                  </ScheduleActionButton>
-                )}
-
-                <ScheduleActionButton
-                  onClick={() =>
-                    void runAutoRecruitAction('stop')
-                  }
-                  disabled={autoRecruitLoading}
-                >
-                  Stop
-                </ScheduleActionButton>
-
-                <ScheduleActionButton
-                  onClick={() =>
-                    void runAutoRecruitAction('restart')
-                  }
-                  disabled={autoRecruitLoading}
-                >
-                  Restart
-                </ScheduleActionButton>
-
-                <ScheduleActionButton
-                  onClick={() =>
-                    void runAutoRecruitAction('status')
-                  }
-                  disabled={autoRecruitLoading}
-                >
-                  Refresh
-                </ScheduleActionButton>
-              </div>
+            <div className="mt-5">
+              <AIRecruiterCommandCenter
+                jobId={job.id}
+                jobTitle={job.title}
+              />
             </div>
           )}
 
