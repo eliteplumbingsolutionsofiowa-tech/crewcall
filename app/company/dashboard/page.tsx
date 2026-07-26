@@ -83,6 +83,13 @@ type WorkerProfile = {
   longitude: number | null
 }
 
+type CompanyProfile = {
+  company_name: string | null
+  full_name: string | null
+  city: string | null
+  state: string | null
+}
+
 type DashboardStats = {
   openJobs: number
   completedJobs: number
@@ -99,6 +106,8 @@ type DashboardStats = {
 
 export default function CompanyDashboardPage() {
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState('')
 
   const [jobs, setJobs] = useState<Job[]>([])
@@ -108,13 +117,28 @@ export default function CompanyDashboardPage() {
   const [jobViews, setJobViews] = useState<JobView[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [workers, setWorkers] = useState<WorkerProfile[]>([])
+  const [companyProfile, setCompanyProfile] =
+    useState<CompanyProfile | null>(null)
 
   useEffect(() => {
     void loadDashboard()
+
+    const refreshInterval = window.setInterval(() => {
+      void loadDashboard(true)
+    }, 60_000)
+
+    return () => {
+      window.clearInterval(refreshInterval)
+    }
   }, [])
 
-  async function loadDashboard() {
-    setLoading(true)
+  async function loadDashboard(silent = false) {
+    if (silent) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
+
     setError('')
 
     try {
@@ -143,7 +167,12 @@ export default function CompanyDashboardPage() {
 
       setJobs(loadedJobs)
 
-      const [notificationsRes, reviewsRes, workersRes] = await Promise.all([
+      const [
+        notificationsRes,
+        reviewsRes,
+        workersRes,
+        companyProfileRes,
+      ] = await Promise.all([
         supabase
           .from('notifications')
           .select('id, title, body, link_url, is_read, read, created_at')
@@ -164,6 +193,12 @@ export default function CompanyDashboardPage() {
           .eq('role', 'worker')
           .order('is_online', { ascending: false })
           .limit(12),
+
+        supabase
+          .from('profiles')
+          .select('company_name, full_name, city, state')
+          .eq('id', user.id)
+          .maybeSingle(),
       ])
 
       if (notificationsRes.error) {
@@ -178,9 +213,19 @@ export default function CompanyDashboardPage() {
         console.warn('Could not load workers:', workersRes.error)
       }
 
+      if (companyProfileRes.error) {
+        console.warn(
+          'Could not load company profile:',
+          companyProfileRes.error,
+        )
+      }
+
       setNotifications((notificationsRes.data || []) as Notification[])
       setReviews((reviewsRes.data || []) as Review[])
       setWorkers((workersRes.data || []) as WorkerProfile[])
+      setCompanyProfile(
+        (companyProfileRes.data as CompanyProfile | null) || null,
+      )
 
       if (jobIds.length === 0) {
         setApplications([])
@@ -224,11 +269,13 @@ export default function CompanyDashboardPage() {
       setApplications((applicationsRes.data || []) as Application[])
       setMessages((messagesRes.data || []) as Message[])
       setJobViews((viewsRes.data || []) as JobView[])
+      setLastUpdated(new Date())
     } catch (err) {
       console.error('Company dashboard error:', err)
       setError('Could not load the company dashboard.')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -288,6 +335,16 @@ export default function CompanyDashboardPage() {
 
   const recentApplications = applications.slice(0, 5)
   const recentMessages = messages.slice(0, 5)
+
+  const pendingApplications = useMemo(
+    () =>
+      applications.filter((application) => {
+        const status = application.status?.toLowerCase() || 'pending'
+
+        return status === 'pending'
+      }).length,
+    [applications],
+  )
 
   const jobsNeedingAttention = useMemo(() => {
     return jobs.filter((job) => {
@@ -420,6 +477,105 @@ export default function CompanyDashboardPage() {
     return alerts.slice(0, 6)
   }, [jobs, jobsNeedingAttention, stats.unreadNotifications])
 
+  const recommendedActions = useMemo(() => {
+    const actions: Array<{
+      id: string
+      title: string
+      description: string
+      href: string
+      label: string
+      tone: 'blue' | 'amber' | 'red' | 'green'
+    }> = []
+
+    if (pendingApplications > 0) {
+      actions.push({
+        id: 'review-applications',
+        title: `Review ${pendingApplications} pending application${
+          pendingApplications === 1 ? '' : 's'
+        }`,
+        description:
+          'Workers are waiting for a response on your active job postings.',
+        href: '/company/applications',
+        label: 'Review Applications',
+        tone: 'blue',
+      })
+    }
+
+    if (stats.unpaidJobs > 0) {
+      actions.push({
+        id: 'complete-payments',
+        title: `Complete ${stats.unpaidJobs} outstanding payment${
+          stats.unpaidJobs === 1 ? '' : 's'
+        }`,
+        description:
+          'Keep workers paid promptly and protect your company rating.',
+        href: '/company/jobs',
+        label: 'Review Payments',
+        tone: 'red',
+      })
+    }
+
+    if (jobsNeedingAttention.length > 0) {
+      actions.push({
+        id: 'boost-jobs',
+        title: `Improve ${jobsNeedingAttention.length} job posting${
+          jobsNeedingAttention.length === 1 ? '' : 's'
+        }`,
+        description:
+          'These open jobs have not received an application yet.',
+        href: '/company/jobs',
+        label: 'Manage Jobs',
+        tone: 'amber',
+      })
+    }
+
+    if (stats.unreadNotifications > 0) {
+      actions.push({
+        id: 'read-notifications',
+        title: `Read ${stats.unreadNotifications} new notification${
+          stats.unreadNotifications === 1 ? '' : 's'
+        }`,
+        description:
+          'Review recent job, payment, application, and account activity.',
+        href: '/notifications',
+        label: 'Open Notifications',
+        tone: 'blue',
+      })
+    }
+
+    if (stats.openJobs === 0) {
+      actions.push({
+        id: 'post-job',
+        title: 'Post your next job',
+        description:
+          'Create a new opportunity and start connecting with available workers.',
+        href: '/post-job',
+        label: 'Post a Job',
+        tone: 'green',
+      })
+    }
+
+    if (actions.length === 0) {
+      actions.push({
+        id: 'all-clear',
+        title: 'Your company is caught up',
+        description:
+          'There are no urgent applications, payments, alerts, or inactive postings.',
+        href: '/workers',
+        label: 'Browse Workers',
+        tone: 'green',
+      })
+    }
+
+    return actions.slice(0, 4)
+  }, [
+    jobsNeedingAttention.length,
+    pendingApplications,
+    stats.openJobs,
+    stats.unpaidJobs,
+    stats.unreadNotifications,
+  ])
+
   const activityFeed = useMemo(() => {
     const items = [
       ...notifications.map((notification) => ({
@@ -510,6 +666,22 @@ export default function CompanyDashboardPage() {
 
   const greeting = getGreeting()
 
+  const companyDisplayName =
+    companyProfile?.company_name?.trim() ||
+    companyProfile?.full_name?.trim() ||
+    'Your Company'
+
+  const companyLocation = [
+    companyProfile?.city,
+    companyProfile?.state,
+  ]
+    .filter(Boolean)
+    .join(', ')
+
+  const lastUpdatedLabel = lastUpdated
+    ? `Updated ${formatRelativeTime(lastUpdated.toISOString())}`
+    : 'Loading latest activity'
+
   function getJobTitle(jobId: string | null) {
     if (!jobId) {
       return 'Unknown job'
@@ -583,8 +755,12 @@ export default function CompanyDashboardPage() {
         <PageHeader
           eyebrow="CrewCall Company Command Center"
           greeting={greeting}
-          title="Company Dashboard"
-          description="Manage your jobs, applicants, workers, messages, payments, and hiring activity from one place."
+          title={`${companyDisplayName} Dashboard`}
+          description={
+            companyLocation
+              ? `${companyLocation} • ${lastUpdatedLabel}`
+              : lastUpdatedLabel
+          }
           actions={
             <div className="flex flex-wrap gap-3">
               <PrimaryButton href="/post-job">
@@ -598,6 +774,24 @@ export default function CompanyDashboardPage() {
               <SecondaryButton href="/company/analytics">
                 Analytics
               </SecondaryButton>
+
+              <button
+                type="button"
+                onClick={() => void loadDashboard(true)}
+                disabled={refreshing}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-white transition hover:border-blue-400/30 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`mr-2 inline-block ${
+                    refreshing ? 'animate-spin' : ''
+                  }`}
+                >
+                  ↻
+                </span>
+
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
             </div>
           }
         />
@@ -742,6 +936,38 @@ export default function CompanyDashboardPage() {
                   tone="amber"
                   icon={<span aria-hidden="true">★</span>}
                 />
+              </div>
+            </section>
+
+            <section>
+              <SectionHeader
+                eyebrow="Recommended Next Steps"
+                title="Action center"
+                description="The most important things your company can do right now."
+              />
+
+              <div
+                className={`mt-5 grid gap-4 ${
+                  recommendedActions.length === 1
+                    ? 'grid-cols-1'
+                    : recommendedActions.length === 2
+                      ? 'md:grid-cols-2'
+                      : recommendedActions.length === 3
+                        ? 'md:grid-cols-2 xl:grid-cols-3'
+                        : 'md:grid-cols-2 xl:grid-cols-4'
+                }`}
+              >
+                {recommendedActions.map((action) => (
+                  <ActionCenterCard
+                    key={action.id}
+                    title={action.title}
+                    description={action.description}
+                    href={action.href}
+                    label={action.label}
+                    tone={action.tone}
+                    wide={recommendedActions.length === 1}
+                  />
+                ))}
               </div>
             </section>
 
@@ -1592,6 +1818,95 @@ function getGreeting() {
   }
 
   return 'Good evening'
+}
+
+function ActionCenterCard({
+  title,
+  description,
+  href,
+  label,
+  tone,
+  wide = false,
+}: {
+  title: string
+  description: string
+  href: string
+  label: string
+  tone: 'blue' | 'amber' | 'red' | 'green'
+  wide?: boolean
+}) {
+  const toneClasses = {
+    blue: {
+      card: 'border-blue-400/20 bg-blue-400/[0.07]',
+      icon: 'border-blue-400/20 bg-blue-400/10 text-blue-200',
+      button: 'bg-blue-400 text-slate-950 hover:bg-blue-300',
+      symbol: '→',
+    },
+    amber: {
+      card: 'border-amber-400/20 bg-amber-400/[0.07]',
+      icon: 'border-amber-400/20 bg-amber-400/10 text-amber-200',
+      button: 'bg-amber-400 text-slate-950 hover:bg-amber-300',
+      symbol: '!',
+    },
+    red: {
+      card: 'border-red-400/20 bg-red-400/[0.07]',
+      icon: 'border-red-400/20 bg-red-400/10 text-red-200',
+      button: 'bg-red-400 text-white hover:bg-red-300',
+      symbol: '$',
+    },
+    green: {
+      card: 'border-emerald-400/20 bg-emerald-400/[0.07]',
+      icon:
+        'border-emerald-400/20 bg-emerald-400/10 text-emerald-200',
+      button: 'bg-emerald-400 text-slate-950 hover:bg-emerald-300',
+      symbol: '✓',
+    },
+  }
+
+  const styles = toneClasses[tone]
+
+  return (
+    <Link
+      href={href}
+      className={`group flex h-full rounded-2xl border p-5 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/20 ${styles.card} ${
+        wide
+          ? 'flex-col gap-5 md:flex-row md:items-center md:p-6'
+          : 'flex-col'
+      }`}
+    >
+      <div
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-lg font-black ${styles.icon}`}
+      >
+        {styles.symbol}
+      </div>
+
+      <div className={wide ? 'min-w-0 flex-1' : ''}>
+        <h3
+          className={`font-black leading-7 text-white ${
+            wide ? 'text-xl' : 'mt-5 text-lg'
+          }`}
+        >
+          {title}
+        </h3>
+
+        <p
+          className={`text-sm leading-6 text-slate-300 ${
+            wide ? 'mt-1 max-w-2xl' : 'mt-2 flex-1'
+          }`}
+        >
+          {description}
+        </p>
+      </div>
+
+      <span
+        className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl px-5 py-2 text-sm font-black transition ${styles.button} ${
+          wide ? 'md:ml-auto' : 'mt-5'
+        }`}
+      >
+        {label}
+      </span>
+    </Link>
+  )
 }
 
 function QuickActionCard({

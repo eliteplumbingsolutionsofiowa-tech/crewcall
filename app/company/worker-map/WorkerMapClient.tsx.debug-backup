@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 import {
   CircleMarker,
   MapContainer,
@@ -29,21 +28,6 @@ type Worker = {
   insurance_verified: boolean | null
   liability_form_verified: boolean | null
   avatar_url: string | null
-  years_experience: string | number | null
-  skills: string[] | null
-  crewcall_score: number | null
-  license_number: string | null
-  osha10: boolean | null
-  osha30: boolean | null
-  med_gas: boolean | null
-  background_verified: boolean | null
-  drug_tested: boolean | null
-  availability_status: string | null
-  available_for_work: boolean | null
-  currently_working: boolean | null
-  booked_until: string | null
-  preferred_work: string[] | null
-  willing_to_travel: boolean | null
 }
 
 type Coordinates = {
@@ -229,54 +213,7 @@ function RecenterMap({
   return null
 }
 
-function parseExperienceYears(
-  value: string | number | null | undefined
-) {
-  if (value === null || value === undefined || value === '') {
-    return 0
-  }
-
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0
-  }
-
-  const match = String(value).match(/\d+(?:\.\d+)?/)
-
-  if (!match) {
-    return 0
-  }
-
-  const years = Number(match[0])
-
-  return Number.isFinite(years) ? years : 0
-}
-
-function formatWorkerAvailability(worker: Worker) {
-  if (worker.currently_working === true && worker.booked_until) {
-    return `Currently working; booked until ${worker.booked_until}`
-  }
-
-  if (worker.available_for_work === true) {
-    return worker.availability_status
-      ? `Available for work: ${worker.availability_status}`
-      : 'Available for work'
-  }
-
-  if (worker.availability_status) {
-    return worker.availability_status
-  }
-
-  if (worker.is_online === true) {
-    return 'Online now; availability not confirmed'
-  }
-
-  return 'Current availability not confirmed'
-}
-
 export default function WorkerMapClient() {
-  const searchParams = useSearchParams()
-  const jobId = searchParams.get('jobId')
-
   const [workers, setWorkers] = useState<Worker[]>([])
   const [companyLocation, setCompanyLocation] =
     useState<Coordinates | null>(null)
@@ -295,10 +232,6 @@ export default function WorkerMapClient() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<AiRecruiterResult | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
-  const [inviteSending, setInviteSending] = useState(false)
-  const [inviteProgress, setInviteProgress] = useState<string | null>(null)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const [invitedWorkerIds, setInvitedWorkerIds] = useState<string[]>([])
 
   const [loading, setLoading] = useState(true)
   const [locating, setLocating] = useState(false)
@@ -307,53 +240,6 @@ export default function WorkerMapClient() {
   useEffect(() => {
     void loadWorkers()
   }, [])
-
-  useEffect(() => {
-    if (!jobId) {
-      return
-    }
-
-    let cancelled = false
-
-    async function preloadJob() {
-      const { data } = await db
-        .from('jobs')
-        .select(
-          'title, trade, location, pay_rate, start_date, description'
-        )
-        .eq('id', jobId)
-        .maybeSingle()
-
-      if (!data || cancelled) {
-        return
-      }
-
-      const prompt = [
-        data.title,
-        data.trade,
-        data.location,
-        data.pay_rate
-          ? `Pay $${Number(data.pay_rate).toLocaleString()}`
-          : null,
-        data.start_date
-          ? `Starts ${new Date(data.start_date).toLocaleDateString()}`
-          : null,
-        data.description,
-      ]
-        .filter(Boolean)
-        .join('. ')
-
-      setRecruiterPrompt(prompt)
-      runRecruiter(prompt)
-    }
-
-    void preloadJob()
-
-    return () => {
-      cancelled = true
-    }
-  }, [jobId])
-
 
   async function loadWorkers() {
     setLoading(true)
@@ -382,11 +268,8 @@ export default function WorkerMapClient() {
       return
     }
 
-    if (
-      !profile ||
-      (profile.role !== 'company' && profile.role !== 'admin')
-    ) {
-      setMessage('This map is available to company and admin accounts.')
+    if (!profile || profile.role !== 'company') {
+      setMessage('This map is available to company accounts.')
       setLoading(false)
       return
     }
@@ -407,30 +290,11 @@ export default function WorkerMapClient() {
         location_updated_at,
         insurance_verified,
         liability_form_verified,
-        avatar_url,
-        years_experience,
-        skills,
-        crewcall_score,
-        license_number,
-        osha10,
-        osha30,
-        med_gas,
-        background_verified,
-        drug_tested,
-        availability_status,
-        available_for_work,
-        currently_working,
-        booked_until,
-        preferred_work,
-        willing_to_travel
+        avatar_url
       `
       )
       .eq('role', 'worker')
-
-    console.log('==============================')
-    console.log('Raw workers from Supabase:')
-    console.log(data)
-    console.log('==============================')
+      .eq('location_visible', true)
 
     if (error) {
       setMessage(error.message)
@@ -439,27 +303,13 @@ export default function WorkerMapClient() {
       return
     }
 
-    const availableWorkers = ((data || []) as Worker[]).map(
-      (worker) => {
-        const locationIsUsable =
-          worker.location_visible === true &&
-          typeof worker.latitude === 'number' &&
-          typeof worker.longitude === 'number'
-
-        return {
-          ...worker,
-          latitude: locationIsUsable ? worker.latitude : null,
-          longitude: locationIsUsable ? worker.longitude : null,
-        }
-      }
+    const validWorkers = ((data || []) as Worker[]).filter(
+      (worker) =>
+        typeof worker.latitude === 'number' &&
+        typeof worker.longitude === 'number'
     )
 
-    console.log('==============================')
-    console.log('Workers available to recruiter:')
-    console.log(availableWorkers)
-    console.log('==============================')
-
-    setWorkers(availableWorkers)
+    setWorkers(validWorkers)
     setLoading(false)
   }
 
@@ -516,9 +366,8 @@ export default function WorkerMapClient() {
     )
   }, [workers])
 
-  function runRecruiter(promptOverride?: string) {
-    const sourcePrompt = promptOverride ?? recruiterPrompt
-    const prompt = sourcePrompt.trim().toLowerCase()
+  function runRecruiter() {
+    const prompt = recruiterPrompt.trim().toLowerCase()
 
     if (!prompt) {
       setMessage(
@@ -655,109 +504,6 @@ export default function WorkerMapClient() {
         if (worker.liability_form_verified === true) {
           matchScore += 8
           matchReasons.push('Liability verified')
-        }
-
-        const experienceYears = parseExperienceYears(
-          worker.years_experience
-        )
-
-        if (experienceYears >= 10) {
-          matchScore += 12
-          matchReasons.push(`${experienceYears}+ years experience`)
-        } else if (experienceYears >= 5) {
-          matchScore += 8
-          matchReasons.push(`${experienceYears}+ years experience`)
-        } else if (experienceYears >= 2) {
-          matchScore += 4
-        }
-
-        if (worker.license_number) {
-          matchScore += 10
-          matchReasons.push('License listed')
-        }
-
-        if (worker.available_for_work === true) {
-          matchScore += 12
-          matchReasons.push('Available for work')
-        }
-
-        if (worker.currently_working === true) {
-          matchScore -= 5
-        }
-
-        if (worker.background_verified === true) {
-          matchScore += 5
-        }
-
-        if (worker.drug_tested === true) {
-          matchScore += 4
-        }
-
-        if (worker.osha10 === true) {
-          matchScore += 3
-        }
-
-        if (worker.osha30 === true) {
-          matchScore += 5
-        }
-
-        if (worker.med_gas === true) {
-          matchScore += 6
-        }
-
-        if (
-          typeof worker.crewcall_score === 'number' &&
-          worker.crewcall_score >= 90
-        ) {
-          matchScore += 10
-          matchReasons.push('Excellent CrewCall score')
-        } else if (
-          typeof worker.crewcall_score === 'number' &&
-          worker.crewcall_score >= 80
-        ) {
-          matchScore += 6
-          matchReasons.push('Strong CrewCall score')
-        }
-
-        if (
-          recruiterActive &&
-          prompt &&
-          Array.isArray(worker.skills)
-        ) {
-          const matchedSkills = worker.skills.filter((skill) =>
-            prompt.includes(skill.toLowerCase())
-          )
-
-          if (matchedSkills.length > 0) {
-            matchScore += Math.min(12, matchedSkills.length * 4)
-            matchReasons.push(
-              `Skill match: ${matchedSkills.slice(0, 2).join(', ')}`
-            )
-          }
-        }
-
-        if (
-          recruiterActive &&
-          prompt &&
-          Array.isArray(worker.preferred_work)
-        ) {
-          const preferredMatch = worker.preferred_work.some((work) =>
-            prompt.includes(work.toLowerCase())
-          )
-
-          if (preferredMatch) {
-            matchScore += 8
-            matchReasons.push('Preferred work match')
-          }
-        }
-
-        if (
-          recruiterActive &&
-          prompt.includes('travel') &&
-          worker.willing_to_travel === true
-        ) {
-          matchScore += 6
-          matchReasons.push('Willing to travel')
         }
 
         const distanceScore = getDistanceScore(distance, radius)
@@ -911,59 +657,29 @@ export default function WorkerMapClient() {
                     : worker.matchScore >= 50
                       ? 'Possible'
                       : 'Limited',
-              experience:
-                worker.years_experience || 'Not listed',
-              availability: formatWorkerAvailability(worker),
-              crewcallScore: worker.crewcall_score,
+              experience: 'Not listed on this map view',
+              availability: worker.is_online
+                ? 'Online now'
+                : 'Current availability not confirmed',
+              crewcallScore: null,
               preferredPay: 'Not listed',
-              skills: Array.from(
-                new Set([
-                  ...(worker.trade ? [worker.trade] : []),
-                  ...(worker.skills || []),
-                ])
-              ),
+              skills: worker.trade ? [worker.trade] : [],
               credentials: [
-                worker.license_number
-                  ? `License listed: ${worker.license_number}`
-                  : '',
                 worker.insurance_verified
                   ? 'Insurance verified'
                   : '',
                 worker.liability_form_verified
                   ? 'Liability form verified'
                   : '',
-                worker.osha10 ? 'OSHA 10' : '',
-                worker.osha30 ? 'OSHA 30' : '',
-                worker.med_gas ? 'Medical gas certified' : '',
-                worker.background_verified
-                  ? 'Background verified'
-                  : '',
-                worker.drug_tested ? 'Drug tested' : '',
-                worker.willing_to_travel
-                  ? 'Willing to travel'
-                  : '',
               ].filter(Boolean),
-              preferredWork: worker.preferred_work || [],
               reasons: worker.matchReasons,
               warnings: [
                 !worker.trade ? 'Trade is not listed' : '',
-                !worker.years_experience
-                  ? 'Experience is not listed'
-                  : '',
-                !worker.license_number
-                  ? 'License information is not listed'
-                  : '',
-                worker.available_for_work !== true
-                  ? 'Availability is not confirmed'
-                  : '',
                 !worker.insurance_verified
                   ? 'Insurance verification is not confirmed'
                   : '',
                 !worker.liability_form_verified
                   ? 'Liability verification is not confirmed'
-                  : '',
-                !worker.background_verified
-                  ? 'Background verification is not confirmed'
                   : '',
               ].filter(Boolean),
             })),
@@ -1011,129 +727,7 @@ export default function WorkerMapClient() {
     return () => {
       cancelled = true
     }
-  }, [recruiterRunId, rankedWorkers])
-
-  async function sendAiInvitations(
-    drafts: AiInvitationDraft[]
-  ) {
-    if (inviteSending) {
-      return
-    }
-
-    setInviteError(null)
-    setInviteProgress(null)
-
-    if (!jobId) {
-      setInviteError(
-        'Open the AI Recruiter from a specific job before sending invitations.'
-      )
-      return
-    }
-
-    const pendingDrafts = drafts.filter(
-      (draft) =>
-        draft.workerId &&
-        !invitedWorkerIds.includes(draft.workerId)
-    )
-
-    if (pendingDrafts.length === 0) {
-      setInviteProgress(
-        'All selected workers have already been invited.'
-      )
-      return
-    }
-
-    setInviteSending(true)
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        throw new Error(
-          'You must be logged in to send invitations.'
-        )
-      }
-
-      const successfullyInvited: string[] = []
-      const failedInvitations: string[] = []
-
-      for (let index = 0; index < pendingDrafts.length; index += 1) {
-        const draft = pendingDrafts[index]
-
-        setInviteProgress(
-          `Sending invitation ${index + 1} of ${pendingDrafts.length}...`
-        )
-
-        try {
-          const response = await fetch(
-            `/api/jobs/${jobId}/invite`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({
-                workerId: draft.workerId,
-              }),
-            }
-          )
-
-          const payload = await response.json().catch(() => null)
-
-          if (!response.ok) {
-            throw new Error(
-              payload?.error || 'Invitation could not be sent.'
-            )
-          }
-
-          successfullyInvited.push(draft.workerId)
-        } catch (error) {
-          failedInvitations.push(
-            `${draft.workerName}: ${
-              error instanceof Error
-                ? error.message
-                : 'Invitation failed.'
-            }`
-          )
-        }
-      }
-
-      if (successfullyInvited.length > 0) {
-        setInvitedWorkerIds((current) =>
-          Array.from(
-            new Set([
-              ...current,
-              ...successfullyInvited,
-            ])
-          )
-        )
-      }
-
-      if (failedInvitations.length > 0) {
-        setInviteError(failedInvitations.join(' '))
-      }
-
-      const sentCount = successfullyInvited.length
-
-      setInviteProgress(
-        `${sentCount} ${
-          sentCount === 1 ? 'invitation' : 'invitations'
-        } sent successfully.`
-      )
-    } catch (error) {
-      setInviteError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to send AI invitations.'
-      )
-      setInviteProgress(null)
-    } finally {
-      setInviteSending(false)
-    }
-  }
+  }, [recruiterRunId])
 
   const bestMatch = recruiterActive ? rankedWorkers[0] : null
 
@@ -1230,7 +824,7 @@ export default function WorkerMapClient() {
 
                 <button
                   type="button"
-                  onClick={() => runRecruiter()}
+                  onClick={runRecruiter}
                   className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:brightness-110"
                 >
                   Find Best Workers
@@ -1454,74 +1048,9 @@ export default function WorkerMapClient() {
 
                   {aiResult.invitationDrafts.length > 0 ? (
                     <div className="rounded-2xl border border-blue-400/20 bg-blue-400/10 p-5">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-200">
-                            Invitation Drafts
-                          </p>
-
-                          <p className="mt-2 text-sm text-blue-100/70">
-                            Send AI-selected workers an invitation to this job.
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void sendAiInvitations(
-                                aiResult.invitationDrafts.slice(0, 3)
-                              )
-                            }
-                            disabled={
-                              inviteSending ||
-                              !jobId ||
-                              aiResult.invitationDrafts.length === 0
-                            }
-                            className="rounded-xl bg-blue-400 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {inviteSending
-                              ? 'Sending...'
-                              : 'Invite Top 3'}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void sendAiInvitations(
-                                aiResult.invitationDrafts
-                              )
-                            }
-                            disabled={
-                              inviteSending ||
-                              !jobId ||
-                              aiResult.invitationDrafts.length === 0
-                            }
-                            className="rounded-xl border border-blue-300/30 bg-blue-300/10 px-4 py-2.5 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Invite All
-                          </button>
-                        </div>
-                      </div>
-
-                      {inviteProgress ? (
-                        <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-100">
-                          {inviteProgress}
-                        </div>
-                      ) : null}
-
-                      {inviteError ? (
-                        <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm font-semibold text-red-100">
-                          {inviteError}
-                        </div>
-                      ) : null}
-
-                      {!jobId ? (
-                        <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">
-                          Open this recruiter from a job in the Operations
-                          Center to send invitations.
-                        </div>
-                      ) : null}
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-200">
+                        Invitation Drafts
+                      </p>
 
                       <div className="mt-4 grid gap-4 lg:grid-cols-2">
                         {aiResult.invitationDrafts.map((draft, index) => (
@@ -1537,40 +1066,17 @@ export default function WorkerMapClient() {
                               {draft.message}
                             </p>
 
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void sendAiInvitations([draft])
-                                }
-                                disabled={
-                                  inviteSending ||
-                                  !jobId ||
-                                  invitedWorkerIds.includes(
-                                    draft.workerId
-                                  )
-                                }
-                                className="rounded-lg bg-blue-400 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {invitedWorkerIds.includes(
-                                  draft.workerId
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void navigator.clipboard.writeText(
+                                  draft.message
                                 )
-                                  ? 'Invitation Sent'
-                                  : 'Send Invitation'}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void navigator.clipboard.writeText(
-                                    draft.message
-                                  )
-                                }
-                                className="rounded-lg border border-blue-300/20 bg-blue-300/10 px-3 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20"
-                              >
-                                Copy Invitation
-                              </button>
-                            </div>
+                              }
+                              className="mt-4 rounded-lg border border-blue-300/20 bg-blue-300/10 px-3 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20"
+                            >
+                              Copy Invitation
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -1703,13 +1209,7 @@ export default function WorkerMapClient() {
                   </CircleMarker>
                 ) : null}
 
-                {rankedWorkers
-                  .filter(
-                    (worker) =>
-                      typeof worker.latitude === 'number' &&
-                      typeof worker.longitude === 'number'
-                  )
-                  .map((worker, index) => (
+                {rankedWorkers.map((worker, index) => (
                   <CircleMarker
                     key={worker.id}
                     center={[

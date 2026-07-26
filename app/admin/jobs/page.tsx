@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { hasAdminAccess } from '@/lib/admin-access'
 
 type AdminProfile = {
   id: string
+  role: string | null
   is_admin: boolean | null
 }
 
@@ -150,7 +152,7 @@ export default function AdminJobsPage() {
 
     const { data: adminData, error: adminError } = await db
       .from('profiles')
-      .select('id, is_admin')
+      .select('id, role, is_admin')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -163,7 +165,7 @@ export default function AdminJobsPage() {
 
     setAdminProfile(adminData || null)
 
-    if (!adminData?.is_admin) {
+    if (!hasAdminAccess(adminData)) {
       setMessage('You do not have admin access.')
       setLoading(false)
       setRefreshing(false)
@@ -507,7 +509,7 @@ export default function AdminJobsPage() {
     )
   }
 
-  if (!adminProfile?.is_admin) {
+  if (!hasAdminAccess(adminProfile)) {
     return (
       <main className="min-h-screen bg-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
         <div className="mx-auto max-w-3xl rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 shadow-2xl shadow-black/20">

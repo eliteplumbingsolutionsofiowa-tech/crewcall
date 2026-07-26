@@ -298,6 +298,17 @@ export async function POST(request: Request) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object
+
+        // This webhook syncs CrewCall subscriptions only.
+        // Job payments, boosts, and other one-time Checkout Sessions
+        // must not be treated as subscriptions.
+        if (session.mode !== 'subscription') {
+          console.log(
+            `Skipping non-subscription Checkout Session: ${session.id} (${session.mode})`
+          )
+          break
+        }
+
         const userId =
           session.metadata?.crewcall_user_id ||
           session.client_reference_id ||

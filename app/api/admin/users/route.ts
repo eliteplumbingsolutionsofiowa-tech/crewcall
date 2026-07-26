@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { hasAdminAccess } from '@/lib/admin-access'
 import { createClient, type User } from '@supabase/supabase-js'
 
 type ProfileRow = {
@@ -289,11 +290,10 @@ export async function GET(request: Request) {
       )
     }
 
-    const hasAdminAccess =
-      adminProfile?.role === 'admin' ||
-      adminProfile?.is_admin === true
+    const isAdmin =
+  hasAdminAccess(adminProfile)
 
-    if (!hasAdminAccess) {
+if (!isAdmin) {
       return jsonError(
         'Admin access only.',
         403

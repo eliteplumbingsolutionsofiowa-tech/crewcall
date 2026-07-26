@@ -29,6 +29,22 @@ type JobRow = {
   id: string
 }
 
+type GeneratedJob = {
+  title: string
+  description: string
+  requiredSkills: string[]
+  recommendedCertifications: string[]
+  suggestedPayRange: string
+  hiringDifficulty: 'Easy' | 'Moderate' | 'Difficult'
+  estimatedMatches: number
+}
+
+type GenerateJobResponse = {
+  success?: boolean
+  generated?: GeneratedJob
+  error?: string
+}
+
 type QueryError = {
   message: string
 }
@@ -77,7 +93,11 @@ export default function PostJobPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [message, setMessage] = useState('')
+  const [aiMessage, setAiMessage] = useState('')
+  const [jobNotes, setJobNotes] = useState('')
+  const [generatedJob, setGeneratedJob] = useState<GeneratedJob | null>(null)
 
   const [title, setTitle] = useState('')
   const [trade, setTrade] = useState('')
@@ -152,6 +172,74 @@ export default function PostJobPage() {
       active = false
     }
   }, [router])
+
+  async function generateJobWithAi() {
+    if (generating) {
+      return
+    }
+
+    if (!trade.trim()) {
+      setAiMessage('Enter the trade first.')
+      return
+    }
+
+    if (!location.trim()) {
+      setAiMessage('Enter the location first.')
+      return
+    }
+
+    setGenerating(true)
+    setAiMessage('CrewCall AI is writing your job posting...')
+
+    try {
+      const response = await fetch('/api/ai/generate-job', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trade: trade.trim(),
+          location: location.trim(),
+          payRate: payRate.trim(),
+          notes: jobNotes.trim(),
+        }),
+      })
+
+      const result = (await response.json().catch(() => null)) as
+        | GenerateJobResponse
+        | null
+
+      if (!response.ok || !result?.success || !result.generated) {
+        setAiMessage(
+          result?.error || 'CrewCall AI could not generate the job posting.'
+        )
+        setGenerating(false)
+        return
+      }
+
+      const generated = result.generated
+
+      setGeneratedJob(generated)
+      setTitle(generated.title)
+      setDescription(generated.description)
+
+      if (!payRate.trim() && generated.suggestedPayRange) {
+        setPayRate(generated.suggestedPayRange)
+      }
+
+      setAiMessage(
+        'Job generated successfully. Review and edit everything before posting.'
+      )
+    } catch (error) {
+      setAiMessage(
+        error instanceof Error
+          ? error.message
+          : 'CrewCall AI could not generate the job posting.'
+      )
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   async function generateMatches(jobId: string) {
     try {
@@ -290,6 +378,61 @@ export default function PostJobPage() {
           </div>
         </div>
 
+        <section className="overflow-hidden rounded-3xl border border-purple-400/25 bg-gradient-to-br from-purple-500/15 via-blue-500/10 to-cyan-500/10 shadow-2xl">
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-purple-200">
+                  CrewCall AI Job Writer
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  Generate your job posting
+                </h2>
+
+                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+                  Enter the trade and location below, add any rough notes, and
+                  CrewCall AI will create a professional title, scope, skills,
+                  certifications, and hiring estimate.
+                </p>
+              </div>
+
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-400/20 text-3xl ring-1 ring-purple-300/20">
+                ✨
+              </div>
+            </div>
+
+            <label className="mt-5 block">
+              <span className="text-sm font-black text-slate-200">
+                Quick Notes for AI
+              </span>
+
+              <textarea
+                value={jobNotes}
+                onChange={(event) => setJobNotes(event.target.value)}
+                placeholder="Example: Commercial rough-in, Monday start, worker should bring hand tools, approximately two weeks of work..."
+                rows={4}
+                className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none ring-purple-300/40 placeholder:text-slate-500 focus:ring-4"
+              />
+            </label>
+
+            {aiMessage ? (
+              <div className="mt-4 rounded-2xl border border-purple-300/20 bg-purple-300/10 p-4 text-sm font-bold text-purple-100">
+                {aiMessage}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={generateJobWithAi}
+              disabled={generating}
+              className="mt-5 w-full rounded-2xl bg-gradient-to-r from-purple-400 via-cyan-300 to-blue-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generating ? 'Generating Job...' : '✨ Generate With AI'}
+            </button>
+          </div>
+        </section>
+
         <form
           onSubmit={handleSubmit}
           className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-6"
@@ -369,6 +512,98 @@ export default function PostJobPage() {
               className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
             />
           </label>
+
+          {generatedJob ? (
+            <section className="mt-5 rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
+                    AI Hiring Forecast
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-300">
+                    These are AI suggestions. Review all job terms before posting.
+                  </p>
+                </div>
+
+                <span className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-white">
+                  {generatedJob.hiringDifficulty} hiring
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    Suggested Pay
+                  </p>
+
+                  <p className="mt-2 text-lg font-black text-white">
+                    {generatedJob.suggestedPayRange || 'Not estimated'}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    Estimated Matches
+                  </p>
+
+                  <p className="mt-2 text-lg font-black text-white">
+                    Approximately {generatedJob.estimatedMatches}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    Recommended Skills
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {generatedJob.requiredSkills.length > 0 ? (
+                      generatedJob.requiredSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full bg-blue-400/20 px-3 py-1 text-xs font-black text-blue-100"
+                        >
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-400">
+                        None suggested
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    Recommended Certifications
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {generatedJob.recommendedCertifications.length > 0 ? (
+                      generatedJob.recommendedCertifications.map(
+                        (certification) => (
+                          <span
+                            key={certification}
+                            className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black text-emerald-100"
+                          >
+                            {certification}
+                          </span>
+                        )
+                      )
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-400">
+                        None suggested
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <div className="mt-5 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
             <p className="text-sm font-black text-orange-100">

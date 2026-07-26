@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 import {
   CircleMarker,
   MapContainer,
@@ -29,7 +28,7 @@ type Worker = {
   insurance_verified: boolean | null
   liability_form_verified: boolean | null
   avatar_url: string | null
-  years_experience: string | number | null
+  years_experience: string | null
   skills: string[] | null
   crewcall_score: number | null
   license_number: string | null
@@ -229,18 +228,12 @@ function RecenterMap({
   return null
 }
 
-function parseExperienceYears(
-  value: string | number | null | undefined
-) {
-  if (value === null || value === undefined || value === '') {
+function parseExperienceYears(value: string | null) {
+  if (!value) {
     return 0
   }
 
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0
-  }
-
-  const match = String(value).match(/\d+(?:\.\d+)?/)
+  const match = value.match(/\d+(?:\.\d+)?/)
 
   if (!match) {
     return 0
@@ -274,9 +267,6 @@ function formatWorkerAvailability(worker: Worker) {
 }
 
 export default function WorkerMapClient() {
-  const searchParams = useSearchParams()
-  const jobId = searchParams.get('jobId')
-
   const [workers, setWorkers] = useState<Worker[]>([])
   const [companyLocation, setCompanyLocation] =
     useState<Coordinates | null>(null)
@@ -295,10 +285,6 @@ export default function WorkerMapClient() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<AiRecruiterResult | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
-  const [inviteSending, setInviteSending] = useState(false)
-  const [inviteProgress, setInviteProgress] = useState<string | null>(null)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const [invitedWorkerIds, setInvitedWorkerIds] = useState<string[]>([])
 
   const [loading, setLoading] = useState(true)
   const [locating, setLocating] = useState(false)
@@ -307,53 +293,6 @@ export default function WorkerMapClient() {
   useEffect(() => {
     void loadWorkers()
   }, [])
-
-  useEffect(() => {
-    if (!jobId) {
-      return
-    }
-
-    let cancelled = false
-
-    async function preloadJob() {
-      const { data } = await db
-        .from('jobs')
-        .select(
-          'title, trade, location, pay_rate, start_date, description'
-        )
-        .eq('id', jobId)
-        .maybeSingle()
-
-      if (!data || cancelled) {
-        return
-      }
-
-      const prompt = [
-        data.title,
-        data.trade,
-        data.location,
-        data.pay_rate
-          ? `Pay $${Number(data.pay_rate).toLocaleString()}`
-          : null,
-        data.start_date
-          ? `Starts ${new Date(data.start_date).toLocaleDateString()}`
-          : null,
-        data.description,
-      ]
-        .filter(Boolean)
-        .join('. ')
-
-      setRecruiterPrompt(prompt)
-      runRecruiter(prompt)
-    }
-
-    void preloadJob()
-
-    return () => {
-      cancelled = true
-    }
-  }, [jobId])
-
 
   async function loadWorkers() {
     setLoading(true)
@@ -516,9 +455,8 @@ export default function WorkerMapClient() {
     )
   }, [workers])
 
-  function runRecruiter(promptOverride?: string) {
-    const sourcePrompt = promptOverride ?? recruiterPrompt
-    const prompt = sourcePrompt.trim().toLowerCase()
+  function runRecruiter() {
+    const prompt = recruiterPrompt.trim().toLowerCase()
 
     if (!prompt) {
       setMessage(
@@ -1011,129 +949,7 @@ export default function WorkerMapClient() {
     return () => {
       cancelled = true
     }
-  }, [recruiterRunId, rankedWorkers])
-
-  async function sendAiInvitations(
-    drafts: AiInvitationDraft[]
-  ) {
-    if (inviteSending) {
-      return
-    }
-
-    setInviteError(null)
-    setInviteProgress(null)
-
-    if (!jobId) {
-      setInviteError(
-        'Open the AI Recruiter from a specific job before sending invitations.'
-      )
-      return
-    }
-
-    const pendingDrafts = drafts.filter(
-      (draft) =>
-        draft.workerId &&
-        !invitedWorkerIds.includes(draft.workerId)
-    )
-
-    if (pendingDrafts.length === 0) {
-      setInviteProgress(
-        'All selected workers have already been invited.'
-      )
-      return
-    }
-
-    setInviteSending(true)
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        throw new Error(
-          'You must be logged in to send invitations.'
-        )
-      }
-
-      const successfullyInvited: string[] = []
-      const failedInvitations: string[] = []
-
-      for (let index = 0; index < pendingDrafts.length; index += 1) {
-        const draft = pendingDrafts[index]
-
-        setInviteProgress(
-          `Sending invitation ${index + 1} of ${pendingDrafts.length}...`
-        )
-
-        try {
-          const response = await fetch(
-            `/api/jobs/${jobId}/invite`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({
-                workerId: draft.workerId,
-              }),
-            }
-          )
-
-          const payload = await response.json().catch(() => null)
-
-          if (!response.ok) {
-            throw new Error(
-              payload?.error || 'Invitation could not be sent.'
-            )
-          }
-
-          successfullyInvited.push(draft.workerId)
-        } catch (error) {
-          failedInvitations.push(
-            `${draft.workerName}: ${
-              error instanceof Error
-                ? error.message
-                : 'Invitation failed.'
-            }`
-          )
-        }
-      }
-
-      if (successfullyInvited.length > 0) {
-        setInvitedWorkerIds((current) =>
-          Array.from(
-            new Set([
-              ...current,
-              ...successfullyInvited,
-            ])
-          )
-        )
-      }
-
-      if (failedInvitations.length > 0) {
-        setInviteError(failedInvitations.join(' '))
-      }
-
-      const sentCount = successfullyInvited.length
-
-      setInviteProgress(
-        `${sentCount} ${
-          sentCount === 1 ? 'invitation' : 'invitations'
-        } sent successfully.`
-      )
-    } catch (error) {
-      setInviteError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to send AI invitations.'
-      )
-      setInviteProgress(null)
-    } finally {
-      setInviteSending(false)
-    }
-  }
+  }, [recruiterRunId])
 
   const bestMatch = recruiterActive ? rankedWorkers[0] : null
 
@@ -1230,7 +1046,7 @@ export default function WorkerMapClient() {
 
                 <button
                   type="button"
-                  onClick={() => runRecruiter()}
+                  onClick={runRecruiter}
                   className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:brightness-110"
                 >
                   Find Best Workers
@@ -1454,74 +1270,9 @@ export default function WorkerMapClient() {
 
                   {aiResult.invitationDrafts.length > 0 ? (
                     <div className="rounded-2xl border border-blue-400/20 bg-blue-400/10 p-5">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-200">
-                            Invitation Drafts
-                          </p>
-
-                          <p className="mt-2 text-sm text-blue-100/70">
-                            Send AI-selected workers an invitation to this job.
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void sendAiInvitations(
-                                aiResult.invitationDrafts.slice(0, 3)
-                              )
-                            }
-                            disabled={
-                              inviteSending ||
-                              !jobId ||
-                              aiResult.invitationDrafts.length === 0
-                            }
-                            className="rounded-xl bg-blue-400 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {inviteSending
-                              ? 'Sending...'
-                              : 'Invite Top 3'}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              void sendAiInvitations(
-                                aiResult.invitationDrafts
-                              )
-                            }
-                            disabled={
-                              inviteSending ||
-                              !jobId ||
-                              aiResult.invitationDrafts.length === 0
-                            }
-                            className="rounded-xl border border-blue-300/30 bg-blue-300/10 px-4 py-2.5 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Invite All
-                          </button>
-                        </div>
-                      </div>
-
-                      {inviteProgress ? (
-                        <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-100">
-                          {inviteProgress}
-                        </div>
-                      ) : null}
-
-                      {inviteError ? (
-                        <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm font-semibold text-red-100">
-                          {inviteError}
-                        </div>
-                      ) : null}
-
-                      {!jobId ? (
-                        <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">
-                          Open this recruiter from a job in the Operations
-                          Center to send invitations.
-                        </div>
-                      ) : null}
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-200">
+                        Invitation Drafts
+                      </p>
 
                       <div className="mt-4 grid gap-4 lg:grid-cols-2">
                         {aiResult.invitationDrafts.map((draft, index) => (
@@ -1537,40 +1288,17 @@ export default function WorkerMapClient() {
                               {draft.message}
                             </p>
 
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void sendAiInvitations([draft])
-                                }
-                                disabled={
-                                  inviteSending ||
-                                  !jobId ||
-                                  invitedWorkerIds.includes(
-                                    draft.workerId
-                                  )
-                                }
-                                className="rounded-lg bg-blue-400 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {invitedWorkerIds.includes(
-                                  draft.workerId
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void navigator.clipboard.writeText(
+                                  draft.message
                                 )
-                                  ? 'Invitation Sent'
-                                  : 'Send Invitation'}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void navigator.clipboard.writeText(
-                                    draft.message
-                                  )
-                                }
-                                className="rounded-lg border border-blue-300/20 bg-blue-300/10 px-3 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20"
-                              >
-                                Copy Invitation
-                              </button>
-                            </div>
+                              }
+                              className="mt-4 rounded-lg border border-blue-300/20 bg-blue-300/10 px-3 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20"
+                            >
+                              Copy Invitation
+                            </button>
                           </div>
                         ))}
                       </div>

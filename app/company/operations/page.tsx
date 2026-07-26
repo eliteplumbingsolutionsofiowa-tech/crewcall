@@ -1,7 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import { supabase } from '@/lib/supabase'
 
 import GlassCard from '@/app/components/ui/GlassCard'
@@ -68,6 +74,35 @@ type WorkerProfile = {
   is_online: boolean | null
   last_seen: string | null
   crewcall_score: number | null
+}
+
+type AutoRecruitAction =
+  | 'start'
+  | 'pause'
+  | 'stop'
+  | 'restart'
+  | 'send_next'
+  | 'status'
+
+type AutoRecruitStatus = {
+  success?: boolean
+  jobId?: string
+  recruiting?: boolean
+  complete?: boolean
+  startedAt?: string | null
+  lastInviteAt?: string | null
+  nextWorkerIndex?: number
+  inviteCount?: number
+  totalMatches?: number
+  assignedWorkerId?: string | null
+  message?: string
+  error?: string
+  invitedWorker?: {
+    id: string
+    name: string
+    matchScore: number
+    rank: number
+  }
 }
 
 type ActivityItem = {
@@ -640,6 +675,173 @@ export default function CompanyOperationsPage() {
       .slice(0, 8)
   }, [applicationsByJobId, jobs])
 
+  const aiOperationsSummary = useMemo(() => {
+    const recommendations: Array<{
+      id: string
+      title: string
+      description: string
+      href: string
+      actionLabel: string
+      severity: 'high' | 'medium' | 'low'
+    }> = []
+
+    const unstaffedJobs = jobs.filter((job) => {
+      const status = normalizeStatus(job.status)
+
+      return (
+        ['open', 'assigned'].includes(status) &&
+        !job.assigned_worker_id
+      )
+    })
+
+    const urgentUnstaffedJobs = unstaffedJobs.filter((job) =>
+      Boolean(job.urgent),
+    )
+
+    const jobsStartingSoonWithoutWorkers = unstaffedJobs.filter(
+      (job) => {
+        if (!job.start_date) {
+          return false
+        }
+
+        const startTime = toTimestamp(job.start_date)
+        const now = Date.now()
+        const fortyEightHours = 48 * 60 * 60 * 1000
+
+        return (
+          startTime >= now &&
+          startTime <= now + fortyEightHours
+        )
+      },
+    )
+
+    if (urgentUnstaffedJobs.length > 0) {
+      recommendations.push({
+        id: 'urgent-staffing',
+        title: 'Urgent staffing risk',
+        description: `${urgentUnstaffedJobs.length} urgent job${
+          urgentUnstaffedJobs.length === 1 ? '' : 's'
+        } still need assigned workers.`,
+        href: '/company/jobs',
+        actionLabel: 'Staff Jobs',
+        severity: 'high',
+      })
+    }
+
+    if (jobsStartingSoonWithoutWorkers.length > 0) {
+      recommendations.push({
+        id: 'starting-soon',
+        title: 'Jobs starting soon',
+        description: `${jobsStartingSoonWithoutWorkers.length} job${
+          jobsStartingSoonWithoutWorkers.length === 1 ? '' : 's'
+        } begin within 48 hours without assigned workers.`,
+        href: '/workers',
+        actionLabel: 'Find Workers',
+        severity: 'high',
+      })
+    }
+
+    if (stats.paymentsDue > 0) {
+      recommendations.push({
+        id: 'payments-due',
+        title: 'Payments need attention',
+        description: `${stats.paymentsDue} assigned or completed job${
+          stats.paymentsDue === 1 ? '' : 's'
+        } have not been marked paid.`,
+        href: '/admin/payments',
+        actionLabel: 'Review Payments',
+        severity: 'medium',
+      })
+    }
+
+    if (stats.unreadNotifications > 0) {
+      recommendations.push({
+        id: 'unread-notifications',
+        title: 'Unread company alerts',
+        description: `${stats.unreadNotifications} notification${
+          stats.unreadNotifications === 1 ? '' : 's'
+        } should be reviewed.`,
+        href: '/notifications',
+        actionLabel: 'View Alerts',
+        severity: 'low',
+      })
+    }
+
+    if (
+      stats.openJobs > 0 &&
+      stats.applications === 0
+    ) {
+      recommendations.push({
+        id: 'low-candidate-flow',
+        title: 'Candidate flow is low',
+        description:
+          'You have open jobs but no active applications. Consider inviting matched workers directly.',
+        href: '/company/worker-map',
+        actionLabel: 'Run Recruiter',
+        severity: 'medium',
+      })
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push({
+        id: 'healthy-operation',
+        title: 'Operation looks healthy',
+        description:
+          'CrewCall found no immediate staffing, payment, or notification risks.',
+        href: '/company/jobs',
+        actionLabel: 'View Jobs',
+        severity: 'low',
+      })
+    }
+
+    let healthScore = 100
+
+    healthScore -= urgentUnstaffedJobs.length * 12
+    healthScore -= jobsStartingSoonWithoutWorkers.length * 8
+    healthScore -= stats.paymentsDue * 4
+    healthScore -= Math.min(stats.unreadNotifications, 10)
+    healthScore -=
+      stats.openJobs > 0 && stats.applications === 0 ? 8 : 0
+
+    healthScore = Math.max(
+      35,
+      Math.min(100, healthScore),
+    )
+
+    const highPriorityCount = recommendations.filter(
+      (recommendation) =>
+        recommendation.severity === 'high',
+    ).length
+
+    const mediumPriorityCount = recommendations.filter(
+      (recommendation) =>
+        recommendation.severity === 'medium',
+    ).length
+
+    const status =
+      healthScore >= 90
+        ? 'Excellent'
+        : healthScore >= 75
+          ? 'Stable'
+          : healthScore >= 60
+            ? 'Needs Attention'
+            : 'At Risk'
+
+    return {
+      healthScore,
+      status,
+      highPriorityCount,
+      mediumPriorityCount,
+      recommendations: recommendations.slice(0, 5),
+    }
+  }, [
+    jobs,
+    stats.applications,
+    stats.openJobs,
+    stats.paymentsDue,
+    stats.unreadNotifications,
+  ])
+
   const activityFeed = useMemo<ActivityItem[]>(() => {
     const applicationActivity = applications
       .slice(0, 10)
@@ -768,6 +970,124 @@ export default function CompanyOperationsPage() {
             </div>
           }
         />
+
+        {!error && (
+          <section className="mb-6">
+            <GlassCard
+              padding="lg"
+              accent
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
+                    CrewCall AI Operations Intelligence
+                  </p>
+
+                  <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    Your live operational briefing
+                  </h2>
+
+                  <p className="mt-3 text-sm font-semibold leading-6 text-slate-400">
+                    CrewCall is analyzing staffing, job starts,
+                    payments, applications, and company alerts.
+                  </p>
+                </div>
+
+                <div className="grid min-w-full gap-3 sm:grid-cols-3 xl:min-w-[520px]">
+                  <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+                      Health Score
+                    </p>
+
+                    <div className="mt-3 flex items-end gap-2">
+                      <span className="text-4xl font-black text-white">
+                        {aiOperationsSummary.healthScore}
+                      </span>
+
+                      <span className="pb-1 text-sm font-bold text-slate-400">
+                        / 100
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm font-black text-blue-200">
+                      {aiOperationsSummary.status}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-red-300">
+                      Critical
+                    </p>
+
+                    <p className="mt-3 text-4xl font-black text-white">
+                      {aiOperationsSummary.highPriorityCount}
+                    </p>
+
+                    <p className="mt-2 text-sm font-semibold text-red-100/70">
+                      High-priority actions
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">
+                      Watchlist
+                    </p>
+
+                    <p className="mt-3 text-4xl font-black text-white">
+                      {aiOperationsSummary.mediumPriorityCount}
+                    </p>
+
+                    <p className="mt-2 text-sm font-semibold text-amber-100/70">
+                      Items needing review
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-7 grid gap-3 lg:grid-cols-2">
+                {aiOperationsSummary.recommendations.map(
+                  (recommendation) => (
+                    <Link
+                      key={recommendation.id}
+                      href={recommendation.href}
+                      className="group rounded-2xl border border-white/10 bg-slate-950/55 p-5 transition hover:-translate-y-0.5 hover:border-blue-400/30 hover:bg-slate-900/80"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${
+                                recommendation.severity === 'high'
+                                  ? 'bg-red-400'
+                                  : recommendation.severity ===
+                                      'medium'
+                                    ? 'bg-amber-400'
+                                    : 'bg-emerald-400'
+                              }`}
+                            />
+
+                            <p className="font-black text-white">
+                              {recommendation.title}
+                            </p>
+                          </div>
+
+                          <p className="mt-3 text-sm font-semibold leading-6 text-slate-400">
+                            {recommendation.description}
+                          </p>
+                        </div>
+
+                        <span className="shrink-0 text-sm font-black text-blue-300 transition group-hover:translate-x-1">
+                          {recommendation.actionLabel} →
+                        </span>
+                      </div>
+                    </Link>
+                  ),
+                )}
+              </div>
+            </GlassCard>
+          </section>
+        )}
 
         {error && (
           <GlassCard
@@ -1443,7 +1763,7 @@ function ScheduleActionButton({
   disabled,
   emphasis = false,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   onClick: () => void
   disabled?: boolean
   emphasis?: boolean
@@ -1479,6 +1799,177 @@ function OperationsJobCard({
   const paymentDue =
     Boolean(job.assigned_worker_id) &&
     normalizeStatus(job.payment_status) !== 'paid'
+
+  const [autoRecruitStatus, setAutoRecruitStatus] =
+    useState<AutoRecruitStatus | null>(null)
+
+  const [autoRecruitLoading, setAutoRecruitLoading] =
+    useState(false)
+
+  const [autoRecruitMessage, setAutoRecruitMessage] =
+    useState('')
+
+  const [autoRecruitError, setAutoRecruitError] =
+    useState('')
+
+  const runAutoRecruitAction = useCallback(
+    async (
+      action: AutoRecruitAction,
+      options?: {
+        automaticallySendFirst?: boolean
+      },
+    ) => {
+      if (autoRecruitLoading) {
+        return
+      }
+
+      setAutoRecruitLoading(true)
+      setAutoRecruitMessage('')
+      setAutoRecruitError('')
+
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
+        if (sessionError || !session?.access_token) {
+          throw new Error('Please log in again to use AI recruiting.')
+        }
+
+        const sendAction = async (
+          requestedAction: AutoRecruitAction,
+        ) => {
+          const response = await fetch(
+            `/api/jobs/${job.id}/auto-recruit`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                action: requestedAction,
+              }),
+            },
+          )
+
+          const result =
+            (await response.json().catch(() => null)) as
+              | AutoRecruitStatus
+              | null
+
+          if (!response.ok) {
+            throw new Error(
+              result?.error ||
+                result?.message ||
+                'AI recruiting could not be updated.',
+            )
+          }
+
+          return result || {}
+        }
+
+        let result = await sendAction(action)
+
+        if (
+          action === 'start' &&
+          options?.automaticallySendFirst &&
+          result.recruiting
+        ) {
+          result = await sendAction('send_next')
+        }
+
+        setAutoRecruitStatus((currentStatus) => ({
+          ...currentStatus,
+          ...result,
+        }))
+
+        setAutoRecruitMessage(
+          result.message ||
+            (action === 'status'
+              ? ''
+              : 'AI recruiting updated successfully.'),
+        )
+      } catch (caughtError) {
+        console.error(
+          'AI auto recruiter action failed:',
+          caughtError,
+        )
+
+        setAutoRecruitError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'AI recruiting could not be updated.',
+        )
+      } finally {
+        setAutoRecruitLoading(false)
+      }
+    },
+    [autoRecruitLoading, job.id],
+  )
+
+  useEffect(() => {
+    if (status !== 'open' || job.assigned_worker_id) {
+      return
+    }
+
+    void runAutoRecruitAction('status')
+  }, [
+    job.assigned_worker_id,
+    job.id,
+    status,
+  ])
+
+  const dispatchIntelligence = (() => {
+    let matchScore = 52
+
+    matchScore += Math.min(applicationCount * 8, 24)
+    matchScore += job.trade ? 8 : 0
+    matchScore += job.location ? 6 : 0
+    matchScore += job.pay_rate != null ? 5 : 0
+    matchScore += job.start_date ? 5 : 0
+    matchScore += worker ? 20 : 0
+    matchScore -= job.urgent && !worker ? 12 : 0
+
+    matchScore = Math.max(20, Math.min(99, matchScore))
+
+    const staffingRisk =
+      worker
+        ? 'Low'
+        : job.urgent || applicationCount === 0
+          ? 'High'
+          : applicationCount < 3
+            ? 'Medium'
+            : 'Low'
+
+    const confidence =
+      worker
+        ? 96
+        : applicationCount >= 5
+          ? 86
+          : applicationCount >= 2
+            ? 72
+            : applicationCount === 1
+              ? 58
+              : 34
+
+    const recommendation =
+      worker
+        ? 'Worker assigned. Monitor arrival, messages, and payment status.'
+        : applicationCount >= 3
+          ? 'Review the strongest applicants and assign a worker.'
+          : applicationCount > 0
+            ? 'Review current applicants and invite backup candidates.'
+            : 'Run AI Recruiter and invite matched workers immediately.'
+
+    return {
+      matchScore,
+      staffingRisk,
+      confidence,
+      recommendation,
+    }
+  })()
 
   return (
     <div
@@ -1565,7 +2056,217 @@ function OperationsJobCard({
               </div>
             </div>
           )}
+
+          <div className="mt-4 rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+                  AI Dispatch
+                </p>
+
+                <p className="mt-1 text-sm font-black text-white">
+                  {dispatchIntelligence.recommendation}
+                </p>
+              </div>
+
+              <StatusBadge
+                tone={
+                  dispatchIntelligence.staffingRisk === 'High'
+                    ? 'red'
+                    : dispatchIntelligence.staffingRisk === 'Medium'
+                      ? 'amber'
+                      : 'green'
+                }
+              >
+                {dispatchIntelligence.staffingRisk} Risk
+              </StatusBadge>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-slate-950/55 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                  Match Score
+                </p>
+
+                <p className="mt-1 text-2xl font-black text-white">
+                  {dispatchIntelligence.matchScore}%
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-slate-950/55 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                  Hiring Confidence
+                </p>
+
+                <p className="mt-1 text-2xl font-black text-white">
+                  {dispatchIntelligence.confidence}%
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+
+          {status === 'open' && !job.assigned_worker_id && (
+            <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
+                    AI Auto Recruiter
+                  </p>
+
+                  <p className="mt-1 text-sm font-black text-white">
+                    {autoRecruitStatus?.complete
+                      ? 'Recruiting complete'
+                      : autoRecruitStatus?.recruiting
+                        ? 'Actively recruiting workers'
+                        : 'Ready to recruit'}
+                  </p>
+                </div>
+
+                <StatusBadge
+                  tone={
+                    autoRecruitStatus?.complete
+                      ? 'green'
+                      : autoRecruitStatus?.recruiting
+                        ? 'cyan'
+                        : 'slate'
+                  }
+                  dot={Boolean(autoRecruitStatus?.recruiting)}
+                  pulse={Boolean(autoRecruitStatus?.recruiting)}
+                >
+                  {autoRecruitStatus?.complete
+                    ? 'Complete'
+                    : autoRecruitStatus?.recruiting
+                      ? 'Active'
+                      : 'Paused'}
+                </StatusBadge>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    Invites Sent
+                  </p>
+
+                  <p className="mt-1 text-xl font-black text-white">
+                    {autoRecruitStatus?.inviteCount ?? 0}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-slate-950/55 px-3 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    Next Worker
+                  </p>
+
+                  <p className="mt-1 text-xl font-black text-white">
+                    #
+                    {(autoRecruitStatus?.nextWorkerIndex ?? 0) + 1}
+                  </p>
+                </div>
+
+                <div className="col-span-2 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-3 sm:col-span-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    Matches
+                  </p>
+
+                  <p className="mt-1 text-xl font-black text-white">
+                    {autoRecruitStatus?.totalMatches ?? '—'}
+                  </p>
+                </div>
+              </div>
+
+              {autoRecruitStatus?.invitedWorker && (
+                <div className="mt-3 rounded-xl border border-green-400/20 bg-green-400/[0.07] px-4 py-3">
+                  <p className="text-xs font-black text-green-200">
+                    Invited {autoRecruitStatus.invitedWorker.name}
+                  </p>
+
+                  <p className="mt-1 text-xs font-semibold text-green-200/70">
+                    Rank #{autoRecruitStatus.invitedWorker.rank} •{' '}
+                    {autoRecruitStatus.invitedWorker.matchScore}% match
+                  </p>
+                </div>
+              )}
+
+              {autoRecruitMessage && (
+                <div className="mt-3 rounded-xl border border-green-400/20 bg-green-400/[0.07] px-4 py-3 text-xs font-bold text-green-200">
+                  {autoRecruitMessage}
+                </div>
+              )}
+
+              {autoRecruitError && (
+                <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-xs font-bold text-red-200">
+                  {autoRecruitError}
+                </div>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {!autoRecruitStatus?.recruiting && (
+                  <ScheduleActionButton
+                    onClick={() =>
+                      void runAutoRecruitAction('start', {
+                        automaticallySendFirst: true,
+                      })
+                    }
+                    disabled={autoRecruitLoading}
+                    emphasis
+                  >
+                    {autoRecruitLoading ? 'Working...' : 'Start AI'}
+                  </ScheduleActionButton>
+                )}
+
+                {autoRecruitStatus?.recruiting && (
+                  <ScheduleActionButton
+                    onClick={() =>
+                      void runAutoRecruitAction('send_next')
+                    }
+                    disabled={autoRecruitLoading}
+                    emphasis
+                  >
+                    {autoRecruitLoading ? 'Sending...' : 'Send Next'}
+                  </ScheduleActionButton>
+                )}
+
+                {autoRecruitStatus?.recruiting && (
+                  <ScheduleActionButton
+                    onClick={() =>
+                      void runAutoRecruitAction('pause')
+                    }
+                    disabled={autoRecruitLoading}
+                  >
+                    Pause
+                  </ScheduleActionButton>
+                )}
+
+                <ScheduleActionButton
+                  onClick={() =>
+                    void runAutoRecruitAction('stop')
+                  }
+                  disabled={autoRecruitLoading}
+                >
+                  Stop
+                </ScheduleActionButton>
+
+                <ScheduleActionButton
+                  onClick={() =>
+                    void runAutoRecruitAction('restart')
+                  }
+                  disabled={autoRecruitLoading}
+                >
+                  Restart
+                </ScheduleActionButton>
+
+                <ScheduleActionButton
+                  onClick={() =>
+                    void runAutoRecruitAction('status')
+                  }
+                  disabled={autoRecruitLoading}
+                >
+                  Refresh
+                </ScheduleActionButton>
+              </div>
+            </div>
+          )}
 
         <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:max-w-[21rem] lg:justify-end">
           <OperationButton href={`/my-jobs/${job.id}`}>
@@ -1578,6 +2279,15 @@ function OperationsJobCard({
               emphasis
             >
               Applicants
+            </OperationButton>
+          )}
+
+          {status === 'open' && (
+            <OperationButton
+              href={`/company/worker-map?jobId=${job.id}`}
+              emphasis
+            >
+              Run AI Recruiter
             </OperationButton>
           )}
 
@@ -1879,7 +2589,7 @@ function OperationButton({
   emphasis = false,
 }: {
   href: string
-  children: React.ReactNode
+  children: ReactNode
   emphasis?: boolean
 }) {
   return (

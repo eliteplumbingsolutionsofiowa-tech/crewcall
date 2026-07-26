@@ -697,6 +697,13 @@ export default function ApplicantsPage() {
                 View Job
               </Link>
 
+              <Link
+                href={`/my-jobs/${job.id}/ai`}
+                className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02]"
+              >
+                AI Worker Matches
+              </Link>
+
               {canPayWorker && (
                 <Link
                   href={`/jobs/${job.id}/pay`}

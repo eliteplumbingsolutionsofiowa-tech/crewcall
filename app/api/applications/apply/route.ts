@@ -4,18 +4,36 @@ import { ApplicantEmail } from '@/emails/ApplicantEmail'
 import { sendCrewCallEmail } from '@/lib/resend'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing Supabase environment variables.')
+if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+  throw new Error('Missing required Supabase environment variables.')
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey)
+const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+})
+
+const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+})
 
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
   'https://crewcall-tqin.vercel.app'
+
+const MAX_PAY_RATE_LENGTH = 100
+const MAX_NEGOTIATION_MESSAGE_LENGTH = 2_000
 
 type ApplyRequest = {
   jobId?: string
@@ -30,6 +48,7 @@ type JobRow = {
   company_id: string | null
   pay_rate: string | null
   status: string | null
+  assigned_worker_id?: string | null
 }
 
 type ProfileRow = {
@@ -37,40 +56,196 @@ type ProfileRow = {
   email: string | null
   full_name: string | null
   company_name: string | null
+  role?: string | null
+}
+
+type SupabaseErrorLike = {
+  code?: string | null
+  message?: string | null
+}
+
+function getBearerToken(request: Request) {
+  const authorization = request.headers.get('authorization')
+
+  if (!authorization?.startsWith('Bearer ')) {
+    return null
+  }
+
+  const token = authorization.slice('Bearer '.length).trim()
+
+  return token || null
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmed = value.trim()
+
+  return trimmed || null
+}
+
+function isDuplicateApplicationError(error: SupabaseErrorLike | null) {
+  if (!error) {
+    return false
+  }
+
+  const message = error.message?.toLowerCase() || ''
+
+  return (
+    error.code === '23505' ||
+    message.includes('duplicate key') ||
+    message.includes('unique constraint')
+  )
 }
 
 export async function POST(req: Request) {
   try {
-    const {
-      jobId,
-      workerId,
-      requestedPayRate,
-      negotiationMessage,
-    } = (await req.json()) as ApplyRequest
+    const accessToken = getBearerToken(req)
 
-    if (!jobId || !workerId) {
+    if (!accessToken) {
       return NextResponse.json(
-        { error: 'Missing jobId or workerId' },
+        { error: 'Authorization token required.' },
+        { status: 401 }
+      )
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await authClient.auth.getUser(accessToken)
+
+    if (userError || !user) {
+      return NextResponse.json(
+        {
+          error:
+            userError?.message ||
+            'Unable to verify the authenticated user.',
+        },
+        { status: 401 }
+      )
+    }
+
+    const payload = (await req.json()) as ApplyRequest
+
+    const jobId = normalizeOptionalString(payload.jobId)
+    const requestedWorkerId = normalizeOptionalString(payload.workerId)
+    const requestedPayRate = normalizeOptionalString(
+      payload.requestedPayRate
+    )
+    const negotiationMessage = normalizeOptionalString(
+      payload.negotiationMessage
+    )
+
+    if (!jobId) {
+      return NextResponse.json(
+        { error: 'Missing jobId.' },
         { status: 400 }
       )
     }
 
-    const { data: job, error: jobError } = await supabase
+    if (requestedWorkerId && requestedWorkerId !== user.id) {
+      return NextResponse.json(
+        {
+          error: 'You cannot submit an application for another user.',
+        },
+        { status: 403 }
+      )
+    }
+
+    if (
+      requestedPayRate &&
+      requestedPayRate.length > MAX_PAY_RATE_LENGTH
+    ) {
+      return NextResponse.json(
+        {
+          error: `Requested pay rate cannot exceed ${MAX_PAY_RATE_LENGTH} characters.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    if (
+      negotiationMessage &&
+      negotiationMessage.length > MAX_NEGOTIATION_MESSAGE_LENGTH
+    ) {
+      return NextResponse.json(
+        {
+          error: `Negotiation message cannot exceed ${MAX_NEGOTIATION_MESSAGE_LENGTH.toLocaleString()} characters.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    const {
+      data: workerProfile,
+      error: workerProfileError,
+    } = await adminClient
+      .from('profiles')
+      .select('id, email, full_name, company_name, role')
+      .eq('id', user.id)
+      .maybeSingle<ProfileRow>()
+
+    if (workerProfileError) {
+      return NextResponse.json(
+        { error: workerProfileError.message },
+        { status: 400 }
+      )
+    }
+
+    if (!workerProfile) {
+      return NextResponse.json(
+        { error: 'Worker profile not found.' },
+        { status: 404 }
+      )
+    }
+
+    if (workerProfile.role !== 'worker') {
+      return NextResponse.json(
+        {
+          error: 'Only worker accounts can apply to jobs.',
+        },
+        { status: 403 }
+      )
+    }
+
+    const { data: job, error: jobError } = await adminClient
       .from('jobs')
-      .select('id, title, company_id, pay_rate, status')
+      .select(
+        'id, title, company_id, pay_rate, status, assigned_worker_id'
+      )
       .eq('id', jobId)
       .maybeSingle<JobRow>()
 
-    if (jobError || !job) {
+    if (jobError) {
       return NextResponse.json(
-        { error: jobError?.message || 'Job not found' },
+        { error: jobError.message },
+        { status: 400 }
+      )
+    }
+
+    if (!job) {
+      return NextResponse.json(
+        { error: 'Job not found.' },
         { status: 404 }
       )
     }
 
     if (job.status && job.status !== 'open') {
       return NextResponse.json(
-        { error: 'This job is not accepting applications.' },
+        {
+          error: 'This job is not accepting applications.',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (job.assigned_worker_id) {
+      return NextResponse.json(
+        {
+          error: 'This job has already been assigned.',
+        },
         { status: 400 }
       )
     }
@@ -82,63 +257,106 @@ export async function POST(req: Request) {
       )
     }
 
-    const { data: existing } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('job_id', jobId)
-      .eq('worker_id', workerId)
-      .maybeSingle()
-
-    if (existing) {
-      return NextResponse.json({ error: 'Already applied' }, { status: 400 })
+    if (job.company_id === user.id) {
+      return NextResponse.json(
+        {
+          error: 'You cannot apply to your own job.',
+        },
+        { status: 403 }
+      )
     }
 
-    const { data: workerProfile } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, company_name')
-      .eq('id', workerId)
-      .maybeSingle<ProfileRow>()
+    const { data: existing, error: existingError } =
+      await adminClient
+        .from('applications')
+        .select('id, status')
+        .eq('job_id', jobId)
+        .eq('worker_id', user.id)
+        .maybeSingle()
 
-    const { data: companyProfile } = await supabase
+    if (existingError) {
+      return NextResponse.json(
+        { error: existingError.message },
+        { status: 400 }
+      )
+    }
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'You have already applied to this job.' },
+        { status: 409 }
+      )
+    }
+
+    const { data: companyProfile } = await adminClient
       .from('profiles')
       .select('id, email, full_name, company_name')
       .eq('id', job.company_id)
       .maybeSingle<ProfileRow>()
 
-    const { data: application, error: appError } = await supabase
-      .from('applications')
-      .insert({
-        job_id: jobId,
-        worker_id: workerId,
-        status: 'pending',
-        requested_pay_rate: requestedPayRate || null,
-        negotiation_message: negotiationMessage || null,
-        created_at: new Date().toISOString(),
-      } as never)
-      .select()
-      .single()
+    const { data: application, error: appError } =
+      await adminClient
+        .from('applications')
+        .insert({
+          job_id: jobId,
+          worker_id: user.id,
+          status: 'pending',
+          requested_pay_rate: requestedPayRate,
+          negotiation_message: negotiationMessage,
+          created_at: new Date().toISOString(),
+        } as never)
+        .select()
+        .single()
 
     if (appError) {
-      return NextResponse.json({ error: appError.message }, { status: 400 })
+      if (isDuplicateApplicationError(appError)) {
+        return NextResponse.json(
+          { error: 'You have already applied to this job.' },
+          { status: 409 }
+        )
+      }
+
+      return NextResponse.json(
+        { error: appError.message },
+        { status: 400 }
+      )
     }
 
-    await supabase.from('notifications').insert({
-      user_id: job.company_id,
-      type: 'application',
-      title: 'New application',
-      body: `New applicant for ${job.title || 'your job'}`,
-      message: `New applicant for ${job.title || 'your job'}`,
-      job_id: jobId,
-      is_read: false,
-      read: false,
-      created_at: new Date().toISOString(),
-    } as never)
-
     const workerName =
-      workerProfile?.full_name || workerProfile?.company_name || 'A worker'
+      workerProfile.full_name ||
+      workerProfile.company_name ||
+      user.email ||
+      'A worker'
 
     const companyName =
-      companyProfile?.company_name || companyProfile?.full_name || 'there'
+      companyProfile?.company_name ||
+      companyProfile?.full_name ||
+      'there'
+
+    const { error: notificationError } = await adminClient
+      .from('notifications')
+      .insert({
+        user_id: job.company_id,
+        type: 'application',
+        title: 'New application',
+        body: `${workerName} applied for ${
+          job.title || 'your job'
+        }.`,
+        message: `${workerName} applied for ${
+          job.title || 'your job'
+        }.`,
+        job_id: jobId,
+        is_read: false,
+        read: false,
+        created_at: new Date().toISOString(),
+      } as never)
+
+    if (notificationError) {
+      console.error(
+        'Unable to create application notification:',
+        notificationError
+      )
+    }
 
     const emailResults = {
       companyEmailSent: false,
@@ -149,12 +367,15 @@ export async function POST(req: Request) {
       try {
         await sendCrewCallEmail({
           to: companyProfile.email,
-          subject: `New applicant for ${job.title || 'your job'}`,
+          subject: `New applicant for ${
+            job.title || 'your job'
+          }`,
           html: ApplicantEmail({
             companyName,
             workerName,
             jobTitle: job.title,
-            requestedPay: requestedPayRate || job.pay_rate,
+            requestedPay:
+              requestedPayRate || job.pay_rate,
             message: negotiationMessage,
             actionUrl: `${appUrl}/my-jobs/${jobId}/applicants`,
           }),
@@ -165,19 +386,26 @@ export async function POST(req: Request) {
 
         emailResults.companyEmailSent = true
       } catch (emailError) {
-        console.error('Company application email failed:', emailError)
+        console.error(
+          'Company application email failed:',
+          emailError
+        )
       }
     }
 
-    if (workerProfile?.email) {
+    if (workerProfile.email) {
       try {
         await sendCrewCallEmail({
           to: workerProfile.email,
-          subject: `Application submitted: ${job.title || 'CrewCall job'}`,
+          subject: `Application submitted: ${
+            job.title || 'CrewCall job'
+          }`,
           html: `
             <div style="font-family:Arial,sans-serif;line-height:1.5;color:#0f172a;">
               <h2>Application submitted</h2>
-              <p>Hi ${escapeHtml(workerProfile.full_name || 'there')},</p>
+              <p>Hi ${escapeHtml(
+                workerProfile.full_name || 'there'
+              )},</p>
               <p>Your application for <strong>${escapeHtml(
                 job.title || 'this job'
               )}</strong> has been sent.</p>
@@ -209,7 +437,10 @@ export async function POST(req: Request) {
 
         emailResults.workerEmailSent = true
       } catch (emailError) {
-        console.error('Worker application confirmation email failed:', emailError)
+        console.error(
+          'Worker application confirmation email failed:',
+          emailError
+        )
       }
     }
 
@@ -219,9 +450,14 @@ export async function POST(req: Request) {
       ...emailResults,
     })
   } catch (error) {
+    console.error('Application apply route failed:', error)
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Server error',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Server error',
       },
       { status: 500 }
     )

@@ -3,15 +3,51 @@ import { createClient } from '@supabase/supabase-js'
 import { MessageEmail } from '@/emails/MessageEmail'
 import { sendCrewCallEmail } from '@/lib/resend'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (
+  !supabaseUrl ||
+  !supabaseAnonKey ||
+  !supabaseServiceRoleKey
+) {
+  throw new Error(
+    'Missing required Supabase environment variables.'
+  )
+}
+
+const adminClient = createClient(
+  supabaseUrl,
+  supabaseServiceRoleKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+)
+
+const authClient = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
 )
 
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
   'https://crewcall-tqin.vercel.app'
+
+const MAX_MESSAGE_LENGTH = 5_000
 
 type SendMessageRequest = {
   conversationId?: string
@@ -47,52 +83,138 @@ type ConversationRow = {
     | null
 }
 
+function getBearerToken(request: Request) {
+  const authorization =
+    request.headers.get('authorization')
+
+  if (
+    !authorization ||
+    !authorization.startsWith('Bearer ')
+  ) {
+    return null
+  }
+
+  return authorization
+    .slice('Bearer '.length)
+    .trim()
+}
+
+function normalizeOptionalString(
+  value: unknown
+): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmed = value.trim()
+
+  return trimmed || null
+}
+
 export async function POST(req: Request) {
   try {
+    const accessToken = getBearerToken(req)
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'Authorization token required.' },
+        { status: 401 }
+      )
+    }
+
     const {
-      conversationId,
-      senderId,
-      recipientId,
-      body,
-      fileUrl,
-      fileName,
-      fileType,
-    } = (await req.json()) as SendMessageRequest
+      data: { user },
+      error: userError,
+    } = await authClient.auth.getUser(accessToken)
 
-    if (!conversationId || !senderId || !recipientId) {
+    if (userError || !user) {
       return NextResponse.json(
-        { error: 'Missing conversationId, senderId, or recipientId.' },
+        {
+          error:
+            userError?.message ||
+            'Unable to verify user.',
+        },
+        { status: 401 }
+      )
+    }
+
+    const payload =
+      (await req.json()) as SendMessageRequest
+
+    const conversationId =
+      normalizeOptionalString(
+        payload.conversationId
+      )
+
+    const requestedSenderId =
+      normalizeOptionalString(payload.senderId)
+
+    const recipientId =
+      normalizeOptionalString(
+        payload.recipientId
+      )
+
+    const body =
+      normalizeOptionalString(payload.body)
+
+    const fileUrl =
+      normalizeOptionalString(payload.fileUrl)
+
+    const fileName =
+      normalizeOptionalString(payload.fileName)
+
+    const fileType =
+      normalizeOptionalString(payload.fileType)
+
+    if (!conversationId || !recipientId) {
+      return NextResponse.json(
+        {
+          error:
+            'Missing conversationId or recipientId.',
+        },
         { status: 400 }
       )
     }
 
-    const safeBody =
-      body?.trim() || fileName || fileType || 'Attachment'
-
-    const { data: message, error: messageError } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        recipient_id: recipientId,
-        body: safeBody,
-        file_url: fileUrl || null,
-        file_name: fileName || null,
-        file_type: fileType || null,
-        is_read: false,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single()
-
-    if (messageError) {
+    if (
+      requestedSenderId &&
+      requestedSenderId !== user.id
+    ) {
       return NextResponse.json(
-        { error: messageError.message },
+        {
+          error:
+            'You cannot send a message as another user.',
+        },
+        { status: 403 }
+      )
+    }
+
+    if (!body && !fileUrl) {
+      return NextResponse.json(
+        {
+          error:
+            'A message body or attachment is required.',
+        },
         { status: 400 }
       )
     }
 
-    const { data: conversation } = await supabase
+    if (
+      body &&
+      body.length > MAX_MESSAGE_LENGTH
+    ) {
+      return NextResponse.json(
+        {
+          error: `Messages cannot exceed ${MAX_MESSAGE_LENGTH.toLocaleString()} characters.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    const {
+      data: conversation,
+      error: conversationError,
+    } = await adminClient
       .from('conversations')
       .select(
         `
@@ -109,61 +231,169 @@ export async function POST(req: Request) {
       .eq('id', conversationId)
       .maybeSingle<ConversationRow>()
 
-    const normalizedJob = Array.isArray(conversation?.job)
-      ? conversation?.job[0] || null
-      : conversation?.job || null
+    if (conversationError) {
+      return NextResponse.json(
+        { error: conversationError.message },
+        { status: 400 }
+      )
+    }
 
-    const { data: senderProfile } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, company_name')
-      .eq('id', senderId)
-      .maybeSingle<ProfileRow>()
+    if (!conversation) {
+      return NextResponse.json(
+        { error: 'Conversation not found.' },
+        { status: 404 }
+      )
+    }
 
-    const { data: recipientProfile } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, company_name')
-      .eq('id', recipientId)
-      .maybeSingle<ProfileRow>()
+    const participants = [
+      conversation.company_id,
+      conversation.worker_id,
+    ].filter(
+      (participantId): participantId is string =>
+        Boolean(participantId)
+    )
 
-    await supabase.from('notifications').insert({
-      user_id: recipientId,
-      type: 'message',
-      title: 'New Message',
-      body: `${senderProfile?.company_name || senderProfile?.full_name || 'Someone'} sent you a message.`,
-      message: `${senderProfile?.company_name || senderProfile?.full_name || 'Someone'} sent you a message.`,
-      link_url: `/messages/${conversationId}`,
-      conversation_id: conversationId,
-      job_id: conversation?.job_id || null,
-      read: false,
-      is_read: false,
-      created_at: new Date().toISOString(),
-    })
+    if (!participants.includes(user.id)) {
+      return NextResponse.json(
+        {
+          error:
+            'You are not authorized to access this conversation.',
+        },
+        { status: 403 }
+      )
+    }
+
+    if (
+      recipientId === user.id ||
+      !participants.includes(recipientId)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Recipient is not a valid participant in this conversation.',
+        },
+        { status: 403 }
+      )
+    }
+
+    const safeBody =
+      body ||
+      fileName ||
+      fileType ||
+      'Attachment'
+
+    const {
+      data: message,
+      error: messageError,
+    } = await adminClient
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        recipient_id: recipientId,
+        body: safeBody,
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: fileType,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (messageError) {
+      return NextResponse.json(
+        { error: messageError.message },
+        { status: 400 }
+      )
+    }
+
+    const normalizedJob = Array.isArray(
+      conversation.job
+    )
+      ? conversation.job[0] || null
+      : conversation.job || null
+
+    const [
+      senderProfileResult,
+      recipientProfileResult,
+    ] = await Promise.all([
+      adminClient
+        .from('profiles')
+        .select(
+          'id, email, full_name, company_name'
+        )
+        .eq('id', user.id)
+        .maybeSingle<ProfileRow>(),
+
+      adminClient
+        .from('profiles')
+        .select(
+          'id, email, full_name, company_name'
+        )
+        .eq('id', recipientId)
+        .maybeSingle<ProfileRow>(),
+    ])
+
+    const senderProfile =
+      senderProfileResult.data
+
+    const recipientProfile =
+      recipientProfileResult.data
+
+    const senderName =
+      senderProfile?.company_name ||
+      senderProfile?.full_name ||
+      user.email ||
+      'Someone'
+
+    const {
+      error: notificationError,
+    } = await adminClient
+      .from('notifications')
+      .insert({
+        user_id: recipientId,
+        type: 'message',
+        title: 'New Message',
+        body: `${senderName} sent you a message.`,
+        message: `${senderName} sent you a message.`,
+        link_url: `/messages/${conversationId}`,
+        conversation_id: conversationId,
+        job_id: conversation.job_id,
+        read: false,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      })
+
+    if (notificationError) {
+      console.error(
+        'Unable to create message notification:',
+        notificationError
+      )
+    }
 
     if (recipientProfile?.email) {
-      await sendCrewCallEmail({
-        to: recipientProfile.email,
-        subject: `New message from ${
-          senderProfile?.company_name ||
-          senderProfile?.full_name ||
-          'CrewCall'
-        }`,
-        html: MessageEmail({
-          recipientName:
-            recipientProfile.full_name || recipientProfile.company_name,
-          senderName:
-            senderProfile?.company_name ||
-            senderProfile?.full_name ||
-            'Someone',
-          jobTitle: normalizedJob?.title,
-          messagePreview: safeBody,
-          actionUrl: `${appUrl}/messages/${conversationId}`,
-        }),
-        text: `${
-          senderProfile?.company_name ||
-          senderProfile?.full_name ||
-          'Someone'
-        } sent you a new CrewCall message.`,
-      })
+      try {
+        await sendCrewCallEmail({
+          to: recipientProfile.email,
+          subject: `New message from ${senderName}`,
+          html: MessageEmail({
+            recipientName:
+              recipientProfile.full_name ||
+              recipientProfile.company_name,
+            senderName,
+            jobTitle: normalizedJob?.title,
+            messagePreview: safeBody,
+            actionUrl: `${appUrl}/messages/${conversationId}`,
+          }),
+          text: `${senderName} sent you a new CrewCall message.`,
+        })
+      } catch (emailError) {
+        console.error(
+          'Unable to send message email:',
+          emailError
+        )
+      }
     }
 
     return NextResponse.json({
@@ -171,9 +401,17 @@ export async function POST(req: Request) {
       message,
     })
   } catch (error) {
+    console.error(
+      'Message send route failed:',
+      error
+    )
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Server error',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Server error',
       },
       { status: 500 }
     )

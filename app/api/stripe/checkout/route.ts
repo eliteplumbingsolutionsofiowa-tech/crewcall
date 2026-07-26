@@ -7,101 +7,410 @@ export const runtime = 'nodejs'
 
 function getEnv(name: string) {
   const value = process.env[name]?.trim()
-  if (!value) throw new Error(`Missing ${name}`)
+
+  if (!value) {
+    throw new Error(`Missing ${name}`)
+  }
+
   return value
 }
 
+const stripeSecretKey = getEnv('STRIPE_SECRET_KEY')
+const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL')
+const supabaseAnonKey = getEnv(
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+)
+const supabaseServiceRoleKey = getEnv(
+  'SUPABASE_SERVICE_ROLE_KEY'
+)
+
+const siteUrl = (
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'https://crewcall-tqin.vercel.app'
+).replace(/\/$/, '')
+
+const stripe = new Stripe(stripeSecretKey)
+
+const authClient = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+)
+
+const adminClient = createClient(
+  supabaseUrl,
+  supabaseServiceRoleKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+)
+
+type CheckoutRequest = {
+  jobId?: string
+}
+
+type JobRow = {
+  id: string
+  title: string | null
+  pay_rate: string | null
+  payment_status: string | null
+  company_id: string | null
+  assigned_worker_id: string | null
+  status: string | null
+  stripe_checkout_session_id: string | null
+}
+
+function getBearerToken(request: Request) {
+  const authorization =
+    request.headers.get('authorization')
+
+  if (
+    !authorization ||
+    !authorization.startsWith('Bearer ')
+  ) {
+    return null
+  }
+
+  const token = authorization
+    .slice('Bearer '.length)
+    .trim()
+
+  return token || null
+}
+
+function normalizeString(value: unknown) {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmed = value.trim()
+
+  return trimmed || null
+}
+
 function parseDollarAmount(value: unknown) {
-  const cleaned = String(value || '0').replace(/[^0-9.]/g, '')
-  return Number(cleaned) || 0
+  const cleaned = String(value || '0').replace(
+    /[^0-9.]/g,
+    ''
+  )
+
+  const amount = Number(cleaned)
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0
+  ) {
+    return 0
+  }
+
+  return amount
 }
 
 export async function POST(req: Request) {
   try {
-    const stripeSecretKey = getEnv('STRIPE_SECRET_KEY')
-    const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL')
-    const supabaseServiceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY')
-    const siteUrl = getEnv('NEXT_PUBLIC_SITE_URL').replace(/\/$/, '')
+    const accessToken = getBearerToken(req)
 
-    console.log('STRIPE KEY START:', stripeSecretKey.slice(0, 8))
-    console.log('STRIPE KEY LENGTH:', stripeSecretKey.length)
-
-    const stripe = new Stripe(stripeSecretKey)
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
-    const body = await req.json()
-    const jobId = body.jobId
-
-    console.log('CHECKOUT BODY:', body)
-    console.log('JOB ID RECEIVED:', jobId)
-
-    if (!jobId) {
-      return NextResponse.json({ error: 'Missing job ID.' }, { status: 400 })
-    }
-
-    const { data: job, error: jobError } = await supabaseAdmin
-      .from('jobs')
-      .select('id, title, pay_rate, payment_status')
-      .eq('id', jobId)
-      .maybeSingle()
-
-    console.log('JOB RESULT:', job)
-    console.log('JOB ERROR:', jobError)
-
-    if (jobError || !job) {
+    if (!accessToken) {
       return NextResponse.json(
-        { error: jobError?.message || 'Job not found.' },
-        { status: 404 }
+        { error: 'Authorization token required.' },
+        { status: 401 }
       )
     }
 
-    const grossAmount = parseDollarAmount(job.pay_rate)
+    const {
+      data: { user },
+      error: userError,
+    } = await authClient.auth.getUser(accessToken)
 
-    if (grossAmount <= 0) {
+    if (userError || !user) {
       return NextResponse.json(
-        { error: 'This job does not have a valid pay amount.' },
+        {
+          error:
+            userError?.message ||
+            'Unable to verify the authenticated user.',
+        },
+        { status: 401 }
+      )
+    }
+
+    const body =
+      (await req.json().catch(() => null)) as
+        | CheckoutRequest
+        | null
+
+    const jobId = normalizeString(body?.jobId)
+
+    if (!jobId) {
+      return NextResponse.json(
+        { error: 'Missing job ID.' },
         { status: 400 }
       )
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: 'usd',
-            unit_amount: Math.round(grossAmount * 100),
-            product_data: {
-              name: job.title || 'CrewCall Job Payment',
-              description: `Payment for CrewCall job ${job.id}`,
-            },
-          },
-        },
-      ],
-      metadata: { jobId: job.id },
-      success_url: `${siteUrl}/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/jobs/${job.id}/pay`,
-    })
+    const { data: job, error: jobError } =
+      await adminClient
+        .from('jobs')
+        .select(
+          `
+          id,
+          title,
+          pay_rate,
+          payment_status,
+          company_id,
+          assigned_worker_id,
+          status,
+          stripe_checkout_session_id
+        `
+        )
+        .eq('id', jobId)
+        .maybeSingle<JobRow>()
 
-    const { error: updateError } = await supabaseAdmin
-      .from('jobs')
-      .update({
-        payment_status: 'pending',
-        stripe_checkout_session_id: session.id,
-      })
-      .eq('id', job.id)
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    if (jobError) {
+      return NextResponse.json(
+        { error: jobError.message },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ url: session.url })
-  } catch (error: any) {
-    console.error('STRIPE CHECKOUT ERROR:', error)
+    if (!job) {
+      return NextResponse.json(
+        { error: 'Job not found.' },
+        { status: 404 }
+      )
+    }
+
+    if (job.company_id !== user.id) {
+      return NextResponse.json(
+        { error: 'You do not own this job.' },
+        { status: 403 }
+      )
+    }
+
+    if (!job.assigned_worker_id) {
+      return NextResponse.json(
+        {
+          error:
+            'A worker must be assigned before payment.',
+        },
+        { status: 409 }
+      )
+    }
+
+    if (
+      job.status !== 'assigned' &&
+      job.status !== 'in_progress' &&
+      job.status !== 'completed'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'This job is not ready for payment.',
+        },
+        { status: 409 }
+      )
+    }
+
+    if (job.payment_status === 'paid') {
+      return NextResponse.json(
+        {
+          error:
+            'This job has already been paid.',
+          alreadyPaid: true,
+        },
+        { status: 409 }
+      )
+    }
+
+    if (
+      job.payment_status === 'pending' &&
+      job.stripe_checkout_session_id
+    ) {
+      try {
+        const existingSession =
+          await stripe.checkout.sessions.retrieve(
+            job.stripe_checkout_session_id
+          )
+
+        if (
+          existingSession.status === 'open' &&
+          existingSession.url
+        ) {
+          return NextResponse.json({
+            url: existingSession.url,
+            reused: true,
+          })
+        }
+
+        if (
+          existingSession.payment_status ===
+          'paid'
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                'Stripe shows this job is already paid. Refresh the page.',
+              alreadyPaid: true,
+            },
+            { status: 409 }
+          )
+        }
+      } catch (sessionError) {
+        console.error(
+          'Unable to reuse existing Stripe checkout session:',
+          sessionError
+        )
+      }
+    }
+
+    const grossAmount = parseDollarAmount(
+      job.pay_rate
+    )
+
+    if (grossAmount <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            'This job does not have a valid pay amount.',
+        },
+        { status: 400 }
+      )
+    }
+
+    const amountInCents = Math.round(
+      grossAmount * 100
+    )
+
+    if (amountInCents < 50) {
+      return NextResponse.json(
+        {
+          error:
+            'The payment amount is below Stripe’s minimum.',
+        },
+        { status: 400 }
+      )
+    }
+
+    const session =
+      await stripe.checkout.sessions.create(
+        {
+          mode: 'payment',
+          payment_method_types: ['card'],
+          client_reference_id: job.id,
+          customer_email: user.email || undefined,
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: 'usd',
+                unit_amount: amountInCents,
+                product_data: {
+                  name:
+                    job.title ||
+                    'CrewCall Job Payment',
+                  description: `Payment for CrewCall job ${job.id}`,
+                },
+              },
+            },
+          ],
+          metadata: {
+            jobId: job.id,
+            companyId: user.id,
+            workerId:
+              job.assigned_worker_id,
+            amountCents: String(
+              amountInCents
+            ),
+          },
+          payment_intent_data: {
+            metadata: {
+              jobId: job.id,
+              companyId: user.id,
+              workerId:
+                job.assigned_worker_id,
+              amountCents: String(
+                amountInCents
+              ),
+            },
+          },
+          success_url: `${siteUrl}/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${siteUrl}/jobs/${job.id}/pay`,
+        },
+        {
+          idempotencyKey:
+            `crewcall-job-checkout-${job.id}-${amountInCents}`,
+        }
+      )
+
+    const { error: updateError } =
+      await adminClient
+        .from('jobs')
+        .update({
+          payment_status: 'pending',
+          stripe_checkout_session_id:
+            session.id,
+        })
+        .eq('id', job.id)
+        .eq('company_id', user.id)
+        .neq('payment_status', 'paid')
+
+    if (updateError) {
+      console.error(
+        'Stripe checkout created but job update failed:',
+        {
+          jobId: job.id,
+          sessionId: session.id,
+          error: updateError,
+        }
+      )
+
+      return NextResponse.json(
+        {
+          error:
+            'Checkout was created, but CrewCall could not save it. Contact support before retrying.',
+          sessionId: session.id,
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!session.url) {
+      return NextResponse.json(
+        {
+          error:
+            'Stripe did not return a checkout URL.',
+        },
+        { status: 502 }
+      )
+    }
+
+    return NextResponse.json({
+      url: session.url,
+      sessionId: session.id,
+    })
+  } catch (error) {
+    console.error(
+      'Stripe checkout route failed:',
+      error
+    )
+
     return NextResponse.json(
-      { error: error?.message || 'Unable to create Stripe checkout session.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to create Stripe checkout session.',
+      },
       { status: 500 }
     )
   }

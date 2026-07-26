@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react'
 import CrewCallToast from '@/app/components/CrewCallToast'
+import CommandPalette from '@/app/components/search/CommandPalette'
 import { supabase } from '@/lib/supabase'
 
 type Role = 'company' | 'worker' | 'admin' | null
@@ -63,6 +64,8 @@ export default function CrewCallNav() {
   const [loading, setLoading] = useState(true)
   const [loggingOut, setLoggingOut] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] =
+    useState(false)
 
   const [toast, setToast] = useState<ToastState>(null)
   const [notificationPulse, setNotificationPulse] = useState(false)
@@ -357,7 +360,40 @@ export default function CrewCallNav() {
 
   useEffect(() => {
     setMobileMenuOpen(false)
+    setCommandPaletteOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    const handleCommandShortcut = (
+      event: KeyboardEvent,
+    ) => {
+      const isCommandShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === 'k'
+
+      if (!isCommandShortcut || !userId) {
+        return
+      }
+
+      event.preventDefault()
+
+      setCommandPaletteOpen(
+        (current) => !current,
+      )
+    }
+
+    window.addEventListener(
+      'keydown',
+      handleCommandShortcut,
+    )
+
+    return () => {
+      window.removeEventListener(
+        'keydown',
+        handleCommandShortcut,
+      )
+    }
+  }, [userId])
 
   useEffect(() => {
     if (!userId) {
@@ -805,6 +841,13 @@ export default function CrewCallNav() {
 
   return (
     <>
+      <CommandPalette
+        open={commandPaletteOpen}
+        role={role}
+        authenticated={Boolean(userId)}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
+
       <CrewCallToast
         open={toast !== null}
         title={toast?.title ?? ''}
@@ -842,10 +885,41 @@ export default function CrewCallNav() {
             </Link>
 
             <div className="hidden flex-wrap items-center justify-end gap-2 text-sm font-black lg:flex">
+              {userId ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCommandPaletteOpen(true)
+                  }
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-800/95 px-4 py-2 text-sm font-black text-white shadow-md shadow-black/20 transition hover:border-cyan-400/50 hover:bg-slate-700 hover:text-cyan-200"
+                  aria-label="Open CrewCall search"
+                >
+                  <span aria-hidden="true">⌕</span>
+                  <span>Search</span>
+                  <span className="rounded-md border border-white/10 bg-slate-950/60 px-1.5 py-0.5 text-[10px] text-slate-400">
+                    ⌘K
+                  </span>
+                </button>
+              ) : null}
+
               {renderNavigation()}
             </div>
 
             <div className="flex items-center gap-2 lg:hidden">
+              {userId ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setCommandPaletteOpen(true)
+                  }}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-800 text-lg font-black text-white shadow-md shadow-black/20 transition hover:border-cyan-400/50 hover:bg-slate-700 hover:text-cyan-200"
+                  aria-label="Open CrewCall search"
+                >
+                  ⌕
+                </button>
+              ) : null}
+
               {userId && alertTotal > 0 ? (
                 <Link
                   href="/notifications"
