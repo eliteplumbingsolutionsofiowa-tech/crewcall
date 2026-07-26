@@ -667,6 +667,26 @@ export default function CrewCallNav() {
 
 
             <NavLink
+              href="/company/organization"
+              onClick={onNavigate}
+              active={pathname.startsWith(
+                '/company/organization'
+              )}
+            >
+              Organization
+            </NavLink>
+
+            <NavLink
+              href="/company/schedule"
+              onClick={onNavigate}
+              active={pathname.startsWith(
+                '/company/schedule'
+              )}
+            >
+              Schedule
+            </NavLink>
+
+            <NavLink
               href="/company/recruiting"
               onClick={onNavigate}
               active={pathname.startsWith(
