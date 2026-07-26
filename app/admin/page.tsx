@@ -909,6 +909,45 @@ export default function AdminPage() {
 
                 <Link
                   href="/admin/payments"
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <a
+                  href="/admin/launch-checklist"
+                  className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-5"
+                >
+                  <h3 className="font-black">
+                    🚀 Launch Checklist
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Track launch readiness.
+                  </p>
+                </a>
+
+                <a
+                  href="/admin/system-health"
+                  className="rounded-2xl border border-green-400/20 bg-green-400/10 p-5"
+                >
+                  <h3 className="font-black">
+                    🟢 System Health
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Monitor production status.
+                  </p>
+                </a>
+
+                <a
+                  href="/admin/errors"
+                  className="rounded-2xl border border-red-400/20 bg-red-400/10 p-5"
+                >
+                  <h3 className="font-black">
+                    ⚠️ Error Center
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Review application issues.
+                  </p>
+                </a>
+              </div>
+
                   className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
                 >
                   Payments
