@@ -299,41 +299,12 @@ export async function POST(request: Request) {
       case 'checkout.session.completed': {
         const session = event.data.object
 
-        // Handle one-time CrewCall job payments
-        if (session.mode === 'payment') {
-          const jobId = session.metadata?.jobId
-
-          if (!jobId) {
-            throw new Error(
-              `Payment Checkout Session ${session.id} is missing jobId metadata.`
-            )
-          }
-
-          const { error } = await supabase
-            .from('jobs')
-            .update({
-              payment_status: 'paid',
-              paid_at: new Date().toISOString(),
-            })
-            .eq('id', jobId)
-
-          if (error) {
-            throw new Error(
-              `Unable to update paid job ${jobId}: ${error.message}`
-            )
-          }
-
-          console.log(
-            `CrewCall job payment completed: ${jobId}`
-          )
-
-          break
-        }
-
-        // Subscription Checkout Sessions continue below
+        // This webhook syncs CrewCall subscriptions only.
+        // Job payments, boosts, and other one-time Checkout Sessions
+        // must not be treated as subscriptions.
         if (session.mode !== 'subscription') {
           console.log(
-            `Skipping unsupported Checkout Session: ${session.id} (${session.mode})`
+            `Skipping non-subscription Checkout Session: ${session.id} (${session.mode})`
           )
           break
         }
