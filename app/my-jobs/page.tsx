@@ -23,6 +23,11 @@ type Job = {
   payout_status: string | null
   company_id: string
   assigned_worker_id: string | null
+  assigned_worker: {
+    id: string
+    full_name: string | null
+    trade: string | null
+  } | null
   created_at: string
   applicant_count: number
   view_count: number
@@ -183,8 +188,30 @@ export default function MyJobsPage() {
       })
     }
 
+    const workerIds = cleanJobs
+      .map((job) => job.assigned_worker_id)
+      .filter(Boolean) as string[]
+
+    const { data: workersData } =
+      workerIds.length > 0
+        ? await supabase
+            .from('profiles')
+            .select('id, full_name, trade')
+            .in('id', workerIds)
+        : { data: [] }
+
+    const workerMap = new Map(
+      (workersData || []).map((worker) => [
+        worker.id,
+        worker,
+      ])
+    )
+
     const mergedJobs: Job[] = cleanJobs.map((job) => ({
       ...job,
+      assigned_worker: job.assigned_worker_id
+        ? workerMap.get(job.assigned_worker_id) || null
+        : null,
       payout_status: job.payout_status || 'not_released',
       applicant_count: countMap.get(job.id) || 0,
       view_count: viewMap.get(job.id) || 0,
@@ -581,6 +608,23 @@ export default function MyJobsPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-3 lg:w-[260px] lg:flex-col">
+
+                    {job.assigned_worker && (
+                      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-center">
+                        <div className="text-xs font-black uppercase tracking-wide text-emerald-200">
+                          Assigned Worker
+                        </div>
+                        <div className="mt-1 text-sm font-black text-white">
+                          {job.assigned_worker.full_name || 'Worker'}
+                        </div>
+                        {job.assigned_worker.trade && (
+                          <div className="mt-1 text-xs font-bold text-emerald-100">
+                            {job.assigned_worker.trade}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {!isCompleted && (
                       <Link
                         href={`/my-jobs/${job.id}/applicants`}

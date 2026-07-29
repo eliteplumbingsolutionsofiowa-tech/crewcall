@@ -365,8 +365,8 @@ export default function WorkerLocationPresence() {
           : 'border-white/10 bg-slate-950/60 text-slate-300'
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl">
-      <div className="border-b border-white/10 bg-gradient-to-r from-cyan-400/10 via-white/[0.03] to-blue-400/10 px-6 py-5">
+    <section className="overflow-hidden rounded-3xl border border-slate-700/60 bg-slate-950 shadow-2xl">
+      <div className="border-b border-white/10 bg-gradient-to-r from-cyan-500/20 via-slate-900 to-blue-500/20 px-6 py-5">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -401,7 +401,7 @@ export default function WorkerLocationPresence() {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="bg-slate-950 p-6">
         <div
           className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${statusMessageClass}`}
         >

@@ -178,9 +178,9 @@ export default function AIRecruiterCommandCenter({
         }),
         db
           .from('job_matches')
-          .select('worker_id, match_score, match_rank')
+          .select('worker_id, match_score, rank')
           .eq('job_id', jobId)
-          .order('match_rank', { ascending: true }),
+          .order('rank', { ascending: true }),
         db
           .from('job_invites')
           .select(
@@ -709,7 +709,59 @@ export default function AIRecruiterCommandCenter({
         </div>
       </div>
 
-      <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[1.35fr_0.9fr]">
+      <div className="grid gap-5 p-5 sm:p-6">
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.05] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
+                AI Recruiter Status
+              </p>
+              <h3 className="mt-1 text-lg font-black text-white">
+                {currentCandidate
+                  ? currentCandidate.name
+                  : 'Waiting for candidate'}
+              </h3>
+            </div>
+
+            {currentCandidate && (
+              <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-sm font-black text-cyan-200">
+                {currentCandidate.matchScore}% Match
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Status
+              </p>
+              <p className="mt-1 font-black text-white">
+                {statusLabel(status, stats)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Attempts
+              </p>
+              <p className="mt-1 font-black text-white">
+                {stats.invites}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Next Action
+              </p>
+              <p className="mt-1 font-black text-white">
+                {status.recruiting
+                  ? 'Monitoring response'
+                  : 'Ready'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
@@ -784,7 +836,7 @@ export default function AIRecruiterCommandCenter({
             </div>
 
             {currentCandidate ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-slate-500">
                     Trade
@@ -888,6 +940,90 @@ export default function AIRecruiterCommandCenter({
         </div>
 
         <aside className="rounded-2xl border border-white/10 bg-black/20 p-5">
+          <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.05] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
+              AI Recruiter Activity
+            </p>
+
+            <h3 className="mt-2 text-lg font-black text-white">
+              {currentCandidate
+                ? `Contacting ${currentCandidate.name}`
+                : 'Waiting for candidate'}
+            </h3>
+
+            <div className="mt-4 grid gap-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">
+                  Match Score
+                </span>
+                <span className="font-black text-white">
+                  {currentCandidate
+                    ? `${currentCandidate.matchScore}%`
+                    : '—'}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">
+                  Status
+                </span>
+                <span className="font-black text-white">
+                  {statusLabel(status, stats)}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">
+                  Candidates contacted
+                </span>
+                <span className="font-black text-white">
+                  {stats.invites}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-5 rounded-2xl border border-violet-400/20 bg-violet-400/[0.05] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-300">
+              AI Recruiter Intelligence
+            </p>
+
+            <h3 className="mt-2 text-lg font-black text-white">
+              Making the next hiring decision
+            </h3>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">
+                  Currently contacting
+                </span>
+                <span className="font-black text-white">
+                  {currentCandidate
+                    ? currentCandidate.name
+                    : 'Searching'}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">
+                  Why selected
+                </span>
+                <span className="font-black text-white">
+                  Highest match
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">
+                  Next candidate
+                </span>
+                <span className="font-black text-white">
+                  Queued automatically
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-300">

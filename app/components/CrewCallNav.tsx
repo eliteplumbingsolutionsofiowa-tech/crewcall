@@ -620,7 +620,7 @@ export default function CrewCallNav() {
     role === 'admin' || role === 'company'
       ? '/company/dashboard'
       : role === 'worker'
-        ? '/worker-dashboard'
+        ? '/worker/dashboard'
         : '/dashboard'
 
   const logoHref = userId ? dashboardHref : '/'
@@ -645,7 +645,7 @@ export default function CrewCallNav() {
               pathname === dashboardHref ||
               pathname === '/dashboard' ||
               pathname === '/company/dashboard' ||
-              pathname === '/worker-dashboard' ||
+              pathname === '/worker/dashboard' ||
               pathname === '/worker/dashboard'
             }
           >

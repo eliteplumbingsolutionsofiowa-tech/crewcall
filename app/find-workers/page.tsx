@@ -236,7 +236,7 @@ export default function FindWorkersPage() {
     }
 
     if (profileData.role !== 'company') {
-      router.replace('/worker-dashboard')
+      router.replace('/worker/dashboard')
       return
     }
 

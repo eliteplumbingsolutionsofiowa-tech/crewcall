@@ -43,7 +43,7 @@ const COMMANDS: CommandItem[] = [
     id: 'worker-dashboard',
     title: 'Worker Dashboard',
     description: 'View work activity, availability, jobs, and earnings.',
-    href: '/worker-dashboard',
+    href: '/worker/dashboard',
     keywords: ['dashboard', 'worker', 'home', 'overview'],
     icon: '▦',
     roles: ['worker'],

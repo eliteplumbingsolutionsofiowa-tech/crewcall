@@ -40,13 +40,7 @@ function getBearerToken(request: Request) {
 async function createInviteNotification(
   adminClient: ReturnType<typeof createAdminClient>,
   workerId: string,
-  inviteId: string,
-  job: {
-    title: string | null
-    trade?: string | null
-    location?: string | null
-    pay_rate?: string | null
-  }
+  jobTitle: string | null
 ) {
   if (!adminClient) return
 
@@ -56,15 +50,11 @@ async function createInviteNotification(
       user_id: workerId,
       type: 'invite',
       title: 'New job invitation',
-      body: `You were invited to ${job.title || 'a CrewCall job'}.
+      body: `You were invited to ${jobTitle || 'a CrewCall job'}.
 
-Trade: ${job.trade || 'Not listed'}
-Location: ${job.location || 'Not listed'}
-Pay: ${job.pay_rate || 'Not listed'}
-
-Open your Worker Invites to review and respond.`,
-      link: `/worker/invites/${inviteId}`,
-      link_url: `/worker/invites/${inviteId}`,
+Check your Worker Invites page to review the job details and respond.`,
+      link: '/worker/invites',
+      link_url: '/worker/invites',
       read: false,
       is_read: false,
     })
@@ -154,7 +144,7 @@ export async function POST(
     const { data: job, error: jobError } = await adminClient
       .from('jobs')
       .select(
-        'id,title,company_id,status,trade,location,pay_rate,start_date'
+        'id,title,company_id,status'
       )
       .eq('id', jobId)
       .maybeSingle()
@@ -217,8 +207,7 @@ export async function POST(
       await createInviteNotification(
         adminClient,
         workerId,
-        existingInvite.id,
-        job
+        job.title
       )
 
       return NextResponse.json({
@@ -254,8 +243,7 @@ export async function POST(
     await createInviteNotification(
       adminClient,
       workerId,
-      invite.id,
-      job
+      job.title
     )
 
     return NextResponse.json({

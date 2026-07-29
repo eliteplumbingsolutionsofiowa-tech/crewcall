@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import MessageJobButton from '@/app/components/MessageJobButton'
 
 type Job = {
   id: string
@@ -563,12 +564,14 @@ export default function MyWorkPage() {
                         View Job
                       </Link>
 
-                      <Link
-                        href={`/messages?jobId=${job.id}`}
-                        className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-blue-400"
-                      >
-                        Message Company
-                      </Link>
+                      {job.company_id && (
+                        <MessageJobButton
+                          targetUserId={job.company_id}
+                          jobId={job.id}
+                          label="Message Company"
+                          className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-blue-400"
+                        />
+                      )}
 
                       {job.status ===
                         'completed' &&

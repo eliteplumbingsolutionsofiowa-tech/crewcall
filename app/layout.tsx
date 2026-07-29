@@ -36,6 +36,49 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
           <main className="flex-1">{children}</main>
 
+          <footer className="border-t border-white/10 bg-black/20 px-5 py-8">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-bold text-slate-400">
+              <a
+                href="/terms"
+                className="transition hover:text-cyan-300"
+              >
+                Terms
+              </a>
+
+              <a
+                href="/privacy"
+                className="transition hover:text-cyan-300"
+              >
+                Privacy
+              </a>
+
+              <a
+                href="/contractor-agreement"
+                className="transition hover:text-cyan-300"
+              >
+                Contractor Agreement
+              </a>
+
+              <a
+                href="/faq"
+                className="transition hover:text-cyan-300"
+              >
+                FAQ
+              </a>
+
+              <a
+                href="/contact"
+                className="transition hover:text-cyan-300"
+              >
+                Contact
+              </a>
+            </div>
+
+            <p className="mt-4 text-center text-xs font-bold text-slate-600">
+              © {new Date().getFullYear()} CrewCall. All rights reserved.
+            </p>
+          </footer>
+
           <MobileBottomNav />
         </div>
       </body>

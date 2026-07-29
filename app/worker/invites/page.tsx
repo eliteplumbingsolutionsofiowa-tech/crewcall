@@ -70,11 +70,20 @@ export default function WorkerInvitesPage() {
       return
     }
 
-    await supabase
+    const { error: seenError } = await supabase
       .from('job_invites')
-      .update({ worker_seen: true })
+      .update({
+        worker_seen: true,
+      })
       .eq('worker_id', user.id)
       .eq('worker_seen', false)
+
+    if (seenError) {
+      console.error(
+        'Unable to mark worker invites seen:',
+        seenError
+      )
+    }
 
     const { data, error } = await supabase
       .from('job_invites')
@@ -140,7 +149,48 @@ export default function WorkerInvitesPage() {
   }, [])
 
   useEffect(() => {
-    loadInvites()
+    let mounted = true
+
+    const refresh = async () => {
+      if (!mounted) return
+
+      await loadInvites()
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+    }
+
+    void refresh()
+
+    const channel = supabase
+      .channel('worker-invites-live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_invites',
+        },
+        refresh
+      )
+      .subscribe()
+
+    window.addEventListener(
+      'focus',
+      refresh
+    )
+
+    return () => {
+      mounted = false
+
+      window.removeEventListener(
+        'focus',
+        refresh
+      )
+
+      supabase.removeChannel(channel)
+    }
   }, [loadInvites])
 
   function updateInviteStatus(
@@ -161,78 +211,57 @@ export default function WorkerInvitesPage() {
   }
 
   async function acceptInvite(invite: Invite) {
-    const confirmed = window.confirm('Accept this invite and take this job?')
+    const confirmed = window.confirm(
+      'Accept this invite and take this job?'
+    )
+
     if (!confirmed) return
 
     setWorkingId(invite.id)
     setMessage('')
-    updateInviteStatus(invite.id, 'accepted')
 
-    const { error: inviteError } = await supabase
-      .from('job_invites')
-      .update({
-        status: 'accepted',
-        worker_seen: true,
-        company_seen: false,
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const response = await fetch('/api/invites/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inviteId: invite.id,
+          workerId: invite.worker_id,
+        }),
       })
-      .eq('id', invite.id)
 
-    if (inviteError) {
-      updateInviteStatus(invite.id, 'pending')
-      setMessage(inviteError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Accept failed'
+        )
+      }
+
+      updateInviteStatus(
+        invite.id,
+        'accepted'
+      )
+
+      setMessage(
+        'Invite accepted successfully.'
+      )
+
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Accept failed'
+      )
+    } finally {
       setWorkingId(null)
-      return
     }
-
-    const { error: jobError } = await supabase
-      .from('jobs')
-      .update({
-        status: 'assigned',
-        assigned_worker_id: invite.worker_id,
-      })
-      .eq('id', invite.job_id)
-      .is('assigned_worker_id', null)
-
-    if (jobError) {
-      updateInviteStatus(invite.id, 'pending')
-
-      await supabase
-        .from('job_invites')
-        .update({
-          status: 'pending',
-          worker_seen: true,
-          company_seen: true,
-        })
-        .eq('id', invite.id)
-
-      setMessage(jobError.message)
-      setWorkingId(null)
-      return
-    }
-
-    await supabase
-      .from('job_invites')
-      .update({
-        status: 'declined',
-        worker_seen: true,
-        company_seen: false,
-      })
-      .eq('job_id', invite.job_id)
-      .neq('id', invite.id)
-
-    await supabase.from('notifications').insert({
-      user_id: invite.company_id,
-      type: 'invite',
-      title: 'Worker accepted invite',
-      body: 'A worker accepted your job invite.',
-      link_url: `/jobs/${invite.job_id}`,
-      is_read: false,
-      read: false,
-    })
-
-    setMessage('Invite accepted. Job assigned to you.')
-    await loadInvites()
-    setWorkingId(null)
   }
 
   async function declineInvite(invite: Invite) {

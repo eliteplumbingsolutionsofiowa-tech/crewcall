@@ -499,7 +499,7 @@ export default function JobsPage() {
                   </Link>
                 ) : (
                   <Link
-                    href="/worker-dashboard"
+                    href="/worker/dashboard"
                     className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
                   >
                     Worker Dashboard

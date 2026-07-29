@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import JobFileList from '@/app/components/JobFileList'
 import JobFileUpload from '@/app/components/JobFileUpload'
 import { supabase } from '@/lib/supabase'
+import MessageJobButton from '@/app/components/MessageJobButton'
 
 type UserRole = 'worker' | 'company' | 'admin'
 
@@ -491,10 +492,22 @@ export default function JobDetailsPage() {
     setMessage(null)
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setMessage('Your login session expired. Please log in again.')
+        setMessageTone('error')
+        setWorkingId(null)
+        return
+      }
+
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           jobId: job.id,
@@ -519,6 +532,60 @@ export default function JobDetailsPage() {
     } catch {
       setMessage('Unable to start Stripe Checkout.')
       setMessageTone('error')
+      setWorkingId(null)
+    }
+  }
+
+  async function releasePayment() {
+    if (!job) {
+      return
+    }
+
+    setWorkingId('release')
+    setMessage(null)
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setMessage('Your login session expired. Please log in again.')
+        setMessageTone('error')
+        setWorkingId(null)
+        return
+      }
+
+      const response = await fetch('/api/stripe/release-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setMessage(
+          data.error || 'Unable to release worker payout.'
+        )
+        setMessageTone('error')
+        setWorkingId(null)
+        return
+      }
+
+      setMessage('Worker payout released successfully.')
+      setMessageTone('success')
+
+      await loadPage(true)
+    } catch {
+      setMessage('Unable to release worker payout.')
+      setMessageTone('error')
+    } finally {
       setWorkingId(null)
     }
   }
@@ -884,6 +951,10 @@ export default function JobDetailsPage() {
               void updateJobStatus('completed')
             }
             onPayWorker={() => void payWorker()}
+            onReleasePayment={() => void releasePayment()}
+            jobPayoutStatus={job.payout_status}
+            jobId={job.id}
+            assignedWorkerId={job.assigned_worker_id}
           />
         ) : null}
 
@@ -1238,6 +1309,10 @@ function CompanyActions({
   onMarkInProgress,
   onMarkComplete,
   onPayWorker,
+  onReleasePayment,
+  jobPayoutStatus,
+  jobId,
+  assignedWorkerId,
 }: {
   currentStatus: string
   paymentPaid: boolean
@@ -1245,6 +1320,10 @@ function CompanyActions({
   onMarkInProgress: () => void
   onMarkComplete: () => void
   onPayWorker: () => void
+  onReleasePayment: () => void
+  jobPayoutStatus: string | null
+  jobId: string
+  assignedWorkerId: string | null
 }) {
   const completed = currentStatus === 'completed'
 
@@ -1265,6 +1344,13 @@ function CompanyActions({
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {assignedWorkerId ? (
+            <MessageJobButton
+              jobId={jobId}
+              targetUserId={assignedWorkerId}
+            />
+          ) : null}
+
           <ActionButton
             label={
               workingId === 'in_progress'
@@ -1305,9 +1391,30 @@ function CompanyActions({
               tone="cyan"
             />
           ) : (
-            <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
-              Worker Paid
-            </div>
+            <>
+              <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
+                Worker Paid
+              </div>
+
+              {completed && jobPayoutStatus !== 'released' ? (
+                <ActionButton
+                  label={
+                    workingId === 'release'
+                      ? 'Releasing...'
+                      : 'Release Worker Payout'
+                  }
+                  disabled={
+                    workingId === 'release'
+                  }
+                  onClick={onReleasePayment}
+                  tone="green"
+                />
+              ) : completed ? (
+                <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
+                  ✓ Payout Released
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>

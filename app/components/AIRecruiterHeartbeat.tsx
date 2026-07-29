@@ -14,6 +14,8 @@ type RecruitingJob = {
   ai_recruiting: boolean | null
   ai_recruiting_complete: boolean | null
   ai_last_invite_at: string | null
+  ai_next_action_at: string | null
+  ai_attempt_count: number | null
   assigned_worker_id: string | null
   status: string | null
 }
@@ -119,6 +121,8 @@ export default function AIRecruiterHeartbeat() {
             ai_recruiting,
             ai_recruiting_complete,
             ai_last_invite_at,
+            ai_next_action_at,
+            ai_attempt_count,
             assigned_worker_id,
             status
           `,
@@ -151,10 +155,18 @@ export default function AIRecruiterHeartbeat() {
       const eligibleJob = recruitingJobs.find((job) => {
         const status = normalizeStatus(job.status)
 
+        const nextAction = job.ai_next_action_at
+          ? new Date(job.ai_next_action_at).getTime()
+          : 0
+
+        const actionReady =
+          !nextAction || Date.now() >= nextAction
+
         return (
           job.ai_recruiting === true &&
           job.ai_recruiting_complete !== true &&
           !job.assigned_worker_id &&
+          actionReady &&
           ![
             'assigned',
             'in_progress',

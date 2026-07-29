@@ -58,12 +58,28 @@ export default function PayPage() {
       return
     }
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      setMessage('Authorization token required.')
+      setPaying(false)
+      return
+    }
+
     const amount = job.pay_rate || '0'
 
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id, amount }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        jobId: job.id,
+        amount,
+      }),
     })
 
     const text = await res.text()
@@ -74,7 +90,9 @@ export default function PayPage() {
       result = JSON.parse(text)
     } catch {
       console.error('RAW NON-JSON RESPONSE:', text)
-      setMessage('Server did not return JSON. Check app/api/stripe/checkout/route.ts.')
+      setMessage(
+        'Server did not return JSON. Check app/api/stripe/checkout/route.ts.'
+      )
       setPaying(false)
       return
     }

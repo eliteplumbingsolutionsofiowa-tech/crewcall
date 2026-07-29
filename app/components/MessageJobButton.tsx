@@ -3,21 +3,13 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type ProfileRole = 'company' | 'worker' | string | null
-
 type Profile = {
   id: string
-  role: ProfileRole
+  role: string | null
 }
 
 type Conversation = {
   id: string
-}
-
-type ConversationInsert = {
-  worker_id: string
-  company_id: string
-  job_id: string | null
 }
 
 type Props = {
@@ -27,64 +19,10 @@ type Props = {
   className?: string
 }
 
-type QueryError = {
-  message: string
-}
-
-type MaybeSingleQuery<T> = {
-  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
-}
-
-type SingleQuery<T> = {
-  single: () => Promise<{ data: T | null; error: QueryError | null }>
-}
-
-type SelectIdQuery<T> = {
-  select: (columns: string) => SingleQuery<T>
-}
-
-type EqMaybeQuery<T> = {
-  eq: (column: string, value: string) => MaybeSingleQuery<T>
-}
-
-type SelectMaybeTable<T> = {
-  select: (columns: string) => EqMaybeQuery<T>
-}
-
-type ConversationQuery<T> = {
-  eq: (column: string, value: string) => ConversationQuery<T>
-  maybeSingle: () => Promise<{ data: T | null; error: QueryError | null }>
-}
-
-type ConversationTable<T> = {
-  select: (columns: string) => ConversationQuery<T>
-}
-
-type ConversationInsertTable<TInsert, TReturn> = {
-  insert: (value: TInsert) => SelectIdQuery<TReturn>
-}
-
-function profilesTable() {
-  return supabase.from('profiles') as unknown as SelectMaybeTable<Profile>
-}
-
-function conversationsTable() {
-  return supabase
-    .from('conversations') as unknown as ConversationTable<Conversation>
-}
-
-function conversationsInsertTable() {
-  return supabase
-    .from('conversations') as unknown as ConversationInsertTable<
-      ConversationInsert,
-      Conversation
-    >
-}
-
 export default function MessageJobButton({
   targetUserId,
   jobId = null,
-  label = 'Message',
+  label = 'Message Worker',
   className = '',
 }: Props) {
   const [loading, setLoading] = useState(false)
@@ -105,28 +43,20 @@ export default function MessageJobButton({
       return
     }
 
-    const { data: myProfile, error: myProfileError } =
-      await profilesTable()
-        .select('id, role')
-        .eq('id', user.id)
-        .maybeSingle()
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', user.id)
+      .single<Profile>()
 
-    if (myProfileError || !myProfile) {
-      setMessage(myProfileError?.message || 'Could not load your profile.')
-      setLoading(false)
-      return
-    }
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', targetUserId)
+      .single<Profile>()
 
-    const { data: targetProfile, error: targetProfileError } =
-      await profilesTable()
-        .select('id, role')
-        .eq('id', targetUserId)
-        .maybeSingle()
-
-    if (targetProfileError || !targetProfile) {
-      setMessage(
-        targetProfileError?.message || 'Could not load the other profile.'
-      )
+    if (!myProfile || !targetProfile) {
+      setMessage('Could not load profiles.')
       setLoading(false)
       return
     }
@@ -134,22 +64,33 @@ export default function MessageJobButton({
     let workerId: string | null = null
     let companyId: string | null = null
 
-    if (myProfile.role === 'worker' && targetProfile.role === 'company') {
+    const myRole = myProfile.role?.toLowerCase()
+    const targetRole = targetProfile.role?.toLowerCase()
+
+    if (
+      myRole === 'company' &&
+      targetRole === 'worker'
+    ) {
+      companyId = myProfile.id
+      workerId = targetProfile.id
+    }
+
+    if (
+      myRole === 'worker' &&
+      targetRole === 'company'
+    ) {
       workerId = myProfile.id
       companyId = targetProfile.id
-    } else if (
-      myProfile.role === 'company' &&
-      targetProfile.role === 'worker'
-    ) {
-      workerId = targetProfile.id
-      companyId = myProfile.id
-    } else {
-      setMessage('Messages must be between a company and a worker.')
+    }
+
+    if (!workerId || !companyId) {
+      setMessage('Unable to start job conversation.')
       setLoading(false)
       return
     }
 
-    let query = conversationsTable()
+    let query = supabase
+      .from('conversations')
       .select('id')
       .eq('worker_id', workerId)
       .eq('company_id', companyId)
@@ -158,61 +99,72 @@ export default function MessageJobButton({
       query = query.eq('job_id', jobId)
     }
 
-    const { data: existingConversation, error: existingError } =
-      await query.maybeSingle()
-
-    if (existingError) {
-      setMessage(existingError.message)
-      setLoading(false)
-      return
-    }
+    const { data: existingConversation } =
+      await query.maybeSingle<Conversation>()
 
     if (existingConversation?.id) {
-      window.location.href = `/messages/${existingConversation.id}`
+      window.location.href =
+        `/messages/${existingConversation.id}`
       return
     }
 
-    const { data: newConversation, error: createError } =
-      await conversationsInsertTable()
+    const { data: newConversation, error } =
+      await supabase
+        .from('conversations')
         .insert({
           worker_id: workerId,
           company_id: companyId,
           job_id: jobId,
         })
         .select('id')
-        .single()
+        .single<Conversation>()
 
-    if (createError) {
-      setMessage(createError.message)
+    if (error || !newConversation) {
+      setMessage(
+        error?.message || 'Unable to create conversation.'
+      )
       setLoading(false)
       return
     }
 
-    if (newConversation?.id) {
-      window.location.href = `/messages/${newConversation.id}`
-      return
-    }
-
-    setMessage('Could not create conversation.')
-    setLoading(false)
+    window.location.href =
+      `/messages/${newConversation.id}`
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col">
       <button
         type="button"
         onClick={startConversation}
         disabled={loading}
-        className={
-          className ||
-          'rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-50'
-        }
+        className="
+          inline-flex
+          min-h-12
+          items-center
+          justify-center
+          rounded-2xl
+          border
+          border-cyan-400/30
+          bg-cyan-400
+          px-5
+          py-3
+          text-sm
+          font-black
+          text-slate-950
+          shadow-lg
+          shadow-cyan-400/20
+          transition
+          hover:bg-cyan-300
+          disabled:cursor-not-allowed
+          disabled:opacity-60
+          ${className}
+        "
       >
-        {loading ? 'Opening...' : label}
+        {loading ? 'Opening...' : `💬 ${label}`}
       </button>
 
       {message && (
-        <p className="text-sm font-bold text-red-600">
+        <p className="mt-2 text-sm font-bold text-red-300">
           {message}
         </p>
       )}

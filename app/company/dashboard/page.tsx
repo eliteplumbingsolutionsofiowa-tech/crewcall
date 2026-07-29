@@ -771,6 +771,10 @@ export default function CompanyDashboardPage() {
                 Find Workers
               </SecondaryButton>
 
+              <SecondaryButton href="/company/invites">
+                Invite Workers
+              </SecondaryButton>
+
               <SecondaryButton href="/company/analytics">
                 Analytics
               </SecondaryButton>
@@ -1016,9 +1020,26 @@ export default function CompanyDashboardPage() {
                               </div>
 
                               <p className="mt-2 text-sm font-semibold text-slate-400">
-                                {job.location || 'Location not listed'} •{' '}
-                                {worker?.full_name || 'No worker assigned'}
+                                {job.location || 'Location not listed'}
                               </p>
+
+                              {worker && (
+                                <div className="mt-3 inline-flex rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2">
+                                  <div>
+                                    <div className="text-[10px] font-black uppercase tracking-wide text-emerald-200">
+                                      Assigned Worker
+                                    </div>
+                                    <div className="text-sm font-black text-white">
+                                      {worker.full_name || 'Worker'}
+                                    </div>
+                                    {worker.trade && (
+                                      <div className="text-xs font-bold text-emerald-100">
+                                        {worker.trade}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex shrink-0 flex-wrap gap-2">

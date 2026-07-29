@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 
 type Profile = {
   id: string
-  role: 'company' | 'worker' | null
+  role: 'company' | 'worker' | 'admin' | null
   full_name: string | null
   company_name: string | null
 }
@@ -41,16 +41,23 @@ export default function CompanyInvitesPage() {
   const [message, setMessage] = useState('')
   const [filter, setFilter] = useState<
     'all' | 'pending' | 'accepted' | 'declined'
-  >('all')
+  >('pending')
 
   const loadInvites = useCallback(async () => {
     setLoading(true)
     setMessage('')
+    console.log('INVITES: START LOAD')
 
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+
+    const user = session?.user
+
+    const userError = sessionError
+
+    console.log('INVITES: SESSION', user?.id, sessionError)
 
     if (userError || !user) {
       setMessage('You must be logged in to view company invites.')
@@ -73,28 +80,30 @@ export default function CompanyInvitesPage() {
     }
 
     const currentProfile = profileData as Profile
+    console.log('INVITES: PROFILE', currentProfile)
     setProfile(currentProfile)
 
-    if (currentProfile.role !== 'company') {
+    if (
+      currentProfile.role !== 'company' &&
+      currentProfile.role !== 'admin'
+    ) {
       setMessage('Only companies can view this page.')
       setInvites([])
       setLoading(false)
       return
     }
 
-    await supabase
-      .from('job_invites')
-      const supabaseUntyped = supabase as any
+    const supabaseUntyped = supabase as any
 
-await supabaseUntyped
-  .from('job_invites')
-  .update({ company_seen: true })
-  .eq('company_id', user.id)
-  .eq('company_seen', false)
+    void supabaseUntyped
+      .from('job_invites')
+      .update({ company_seen: true })
       .eq('company_id', user.id)
       .eq('company_seen', false)
 
     window.dispatchEvent(new Event('crewcall-refresh-nav'))
+
+    console.log('INVITES: BEFORE JOB QUERY')
 
     const { data, error } = await supabase
       .from('job_invites')
@@ -122,6 +131,8 @@ await supabaseUntyped
       `)
       .eq('company_id', user.id)
       .order('created_at', { ascending: false })
+
+    console.log('INVITES: JOB QUERY DONE', data, error)
 
     if (error) {
       setMessage(error.message)
@@ -151,54 +162,7 @@ await supabaseUntyped
   }, [])
 
   useEffect(() => {
-    let mounted = true
-
-    async function boot() {
-      if (!mounted) return
-      await loadInvites()
-    }
-
-    boot()
-
-    const refresh = async () => {
-      if (!mounted) return
-      await loadInvites()
-      window.dispatchEvent(new Event('crewcall-refresh-nav'))
-    }
-
-    window.addEventListener('focus', refresh)
-    window.addEventListener('pageshow', refresh)
-    window.addEventListener('crewcall-refresh-nav', refresh)
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        refresh()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibility)
-
-    const inviteChannel = supabase
-      .channel('company-invites-live')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'job_invites',
-        },
-        refresh
-      )
-      .subscribe()
-
-    return () => {
-      mounted = false
-      window.removeEventListener('focus', refresh)
-      window.removeEventListener('pageshow', refresh)
-      window.removeEventListener('crewcall-refresh-nav', refresh)
-      document.removeEventListener('visibilitychange', handleVisibility)
-      supabase.removeChannel(inviteChannel)
-    }
+    void loadInvites()
   }, [loadInvites])
 
   const filteredInvites = useMemo(() => {

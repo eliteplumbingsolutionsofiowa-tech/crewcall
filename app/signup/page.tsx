@@ -1,11 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Role = 'worker' | 'company'
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+      <SignupForm />
+    </Suspense>
+  )
+}
+
+function SignupForm() {
+  const searchParams = useSearchParams()
+  const inviteCode = searchParams.get('invite') || null
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -29,6 +40,7 @@ export default function SignupPage() {
           full_name: cleanFullName,
           phone: cleanPhone,
           role,
+          invite_code_used: inviteCode,
         },
       },
     })

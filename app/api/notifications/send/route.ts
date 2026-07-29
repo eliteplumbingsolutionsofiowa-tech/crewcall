@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const resendApiKey = process.env.RESEND_API_KEY
-const emailFrom = process.env.EMAIL_FROM || 'CrewCall <notifications@crewcall.app>'
+const emailFrom = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'CrewCall <notifications@crewcall.app>'
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('Missing Supabase environment variables.')

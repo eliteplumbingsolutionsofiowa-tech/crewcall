@@ -21,7 +21,7 @@ function destinationForRole(
   }
 
   if (role === 'worker') {
-    return '/jobs'
+    return '/worker/dashboard'
   }
 
   return '/profile'

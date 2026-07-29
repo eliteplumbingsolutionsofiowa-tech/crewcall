@@ -59,6 +59,58 @@ export type Database = {
           },
         ]
       }
+      ai_recruit_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          job_id: string
+          message: string
+          metadata: Json | null
+          worker_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          job_id: string
+          message: string
+          metadata?: Json | null
+          worker_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          job_id?: string
+          message?: string
+          metadata?: Json | null
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_recruit_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_recruit_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_recruit_events_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           company_counter_offer: string | null
@@ -197,6 +249,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invites: {
+        Row: {
+          accepted: boolean | null
+          created_at: string | null
+          email: string | null
+          id: string
+          invite_code: string
+          inviter_id: string | null
+          role: string | null
+        }
+        Insert: {
+          accepted?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          invite_code: string
+          inviter_id?: string | null
+          role?: string | null
+        }
+        Update: {
+          accepted?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          invite_code?: string
+          inviter_id?: string | null
+          role?: string | null
+        }
+        Relationships: []
       }
       job_applications: {
         Row: {
@@ -470,6 +552,11 @@ export type Database = {
       }
       jobs: {
         Row: {
+          ai_last_invite_at: string | null
+          ai_next_worker_index: number | null
+          ai_recruiting: boolean | null
+          ai_recruiting_complete: boolean | null
+          ai_recruiting_started_at: string | null
           assigned_application_id: string | null
           assigned_to: string | null
           assigned_worker_id: string | null
@@ -514,6 +601,11 @@ export type Database = {
           worker_payout_cents: number | null
         }
         Insert: {
+          ai_last_invite_at?: string | null
+          ai_next_worker_index?: number | null
+          ai_recruiting?: boolean | null
+          ai_recruiting_complete?: boolean | null
+          ai_recruiting_started_at?: string | null
           assigned_application_id?: string | null
           assigned_to?: string | null
           assigned_worker_id?: string | null
@@ -558,6 +650,11 @@ export type Database = {
           worker_payout_cents?: number | null
         }
         Update: {
+          ai_last_invite_at?: string | null
+          ai_next_worker_index?: number | null
+          ai_recruiting?: boolean | null
+          ai_recruiting_complete?: boolean | null
+          ai_recruiting_started_at?: string | null
           assigned_application_id?: string | null
           assigned_to?: string | null
           assigned_worker_id?: string | null
@@ -638,6 +735,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          company_name: string | null
+          created_at: string | null
+          email: string | null
+          follow_up_date: string | null
+          id: string
+          lead_type: string | null
+          location: string | null
+          message: string | null
+          name: string | null
+          notes: string | null
+          phone: string | null
+          referral_source: string | null
+          status: string | null
+          trade: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          follow_up_date?: string | null
+          id?: string
+          lead_type?: string | null
+          location?: string | null
+          message?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          referral_source?: string | null
+          status?: string | null
+          trade?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          follow_up_date?: string | null
+          id?: string
+          lead_type?: string | null
+          location?: string | null
+          message?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          referral_source?: string | null
+          status?: string | null
+          trade?: string | null
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -843,6 +994,8 @@ export type Database = {
           insurance_url: string | null
           insurance_verified: boolean | null
           insured: boolean | null
+          invite_code_used: string | null
+          invited_by: string | null
           is_admin: boolean | null
           is_online: boolean | null
           is_suspended: boolean | null
@@ -932,6 +1085,8 @@ export type Database = {
           insurance_url?: string | null
           insurance_verified?: boolean | null
           insured?: boolean | null
+          invite_code_used?: string | null
+          invited_by?: string | null
           is_admin?: boolean | null
           is_online?: boolean | null
           is_suspended?: boolean | null
@@ -1021,6 +1176,8 @@ export type Database = {
           insurance_url?: string | null
           insurance_verified?: boolean | null
           insured?: boolean | null
+          invite_code_used?: string | null
+          invited_by?: string | null
           is_admin?: boolean | null
           is_online?: boolean | null
           is_suspended?: boolean | null

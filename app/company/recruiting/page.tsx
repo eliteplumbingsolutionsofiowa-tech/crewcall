@@ -32,7 +32,7 @@ type MatchRow = {
   job_id: string
   worker_id: string
   match_score: number | null
-  match_rank: number | null
+  rank: number | null
 }
 
 type ProfileRow = {
@@ -320,11 +320,9 @@ export default function CompanyRecruitingPage() {
             .select(`
               job_id,
               worker_id,
-              match_score,
-              match_rank
+              match_score
             `)
-            .in('job_id', jobIds)
-            .order('match_rank', { ascending: true }),
+            .in('job_id', jobIds),
 
           db
             .from('ai_recruit_events')
@@ -515,8 +513,8 @@ export default function CompanyRecruitingPage() {
           .filter((match) => match.job_id === job.id)
           .sort(
             (a, b) =>
-              (Number(a.match_rank) || 999999) -
-              (Number(b.match_rank) || 999999),
+              (Number(a.rank) || 999999) -
+              (Number(b.rank) || 999999),
           )
 
         const currentIndex = Math.max(
@@ -553,7 +551,7 @@ export default function CompanyRecruitingPage() {
             ? Number(currentMatch.match_score) || 0
             : null,
           currentRank: currentMatch
-            ? Number(currentMatch.match_rank) || currentIndex + 1
+            ? Number(currentMatch.rank) || currentIndex + 1
             : null,
         }
       })
@@ -1036,7 +1034,7 @@ export default function CompanyRecruitingPage() {
           )}
         </section>
 
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+        <section className="mt-8 grid gap-6 xl:grid-cols-1">
           <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <div>

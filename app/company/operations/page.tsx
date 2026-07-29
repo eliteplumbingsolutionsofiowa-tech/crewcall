@@ -1687,10 +1687,10 @@ function TodayScheduleCard({
 
           {job.assigned_worker_id ? (
             <Link
-              href="/messages"
+              href={`/messages?workerId=${job.assigned_worker_id}&jobId=${job.id}`}
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/10"
             >
-              Message
+              Message Worker
             </Link>
           ) : (
             <Link

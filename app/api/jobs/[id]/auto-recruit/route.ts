@@ -25,11 +25,46 @@ type AutoRecruitRequest = {
 type RankedMatch = {
   worker_id: string
   match_score: number | null
-  match_rank: number | null
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+async function sendCrewCallNotificationEmail({
+  userIds,
+  title,
+  message,
+  jobId,
+}: {
+  userIds: string[]
+  title: string
+  message: string
+  jobId: string
+}) {
+  try {
+    await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/send`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userIds,
+          title,
+          message,
+          jobId,
+          sendEmail: true,
+        }),
+      },
+    )
+  } catch (error) {
+    console.error(
+      'CrewCall email notification failed:',
+      error,
+    )
+  }
+}
 
 function createAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -170,6 +205,8 @@ export async function POST(
           ai_recruiting,
           ai_recruiting_started_at,
           ai_last_invite_at,
+          ai_next_action_at,
+          ai_attempt_count,
           ai_next_worker_index,
           ai_recruiting_complete
         `)
@@ -410,6 +447,7 @@ export async function POST(
         .eq('company_id', user.id)
 
     if (inviteLoadError) {
+      console.error('AUTO RECRUIT inviteLoadError:', inviteLoadError)
       return NextResponse.json(
         {
           error: inviteLoadError.message,
@@ -427,17 +465,11 @@ export async function POST(
     const { data: matches, error: matchError } =
       await adminClient
         .from('job_matches')
-        .select('worker_id, match_score, match_rank')
+        .select('worker_id, match_score')
         .eq('job_id', jobId)
-        .order('match_rank', {
-          ascending: true,
-          nullsFirst: false,
-        })
-        .order('match_score', {
-          ascending: false,
-        })
 
     if (matchError) {
+      console.error('AUTO RECRUIT matchError:', matchError)
       return NextResponse.json(
         {
           error: matchError.message,
@@ -513,6 +545,7 @@ export async function POST(
         .maybeSingle()
 
     if (workerError) {
+      console.error('AUTO RECRUIT workerError:', workerError)
       return NextResponse.json(
         {
           error: workerError.message,
@@ -554,6 +587,7 @@ export async function POST(
         .single()
 
     if (createInviteError) {
+      console.error('AUTO RECRUIT createInviteError:', createInviteError)
       return NextResponse.json(
         {
           error: createInviteError.message,
@@ -572,10 +606,12 @@ export async function POST(
         .from('notifications')
         .insert({
           user_id: worker.id,
-          title: 'New job invitation',
-          body: `You were invited to ${
+          title: '🤖 CrewCall AI matched you',
+          body: `You were selected for ${
             job.title || 'a CrewCall job'
-          }.`,
+          }. Your AI match score is ${
+            nextMatch.match_score || 0
+          }%.`,
           link_url: `/jobs/${jobId}`,
           read: false,
           is_read: false,
@@ -588,12 +624,62 @@ export async function POST(
       )
     }
 
+    const companyNotificationResult =
+      await adminClient
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: '🤖 AI Recruiter found a match',
+          body: `${workerName} was selected for ${
+            job.title || 'your CrewCall job'
+          } with a ${
+            nextMatch.match_score || 0
+          }% match score.`,
+          link_url: `/my-jobs/${jobId}/recruiter`,
+          read: false,
+          is_read: false,
+        })
+
+    if (companyNotificationResult.error) {
+      console.error(
+        'AI recruiter company notification error:',
+        companyNotificationResult.error
+      )
+    }
+
+    await sendCrewCallNotificationEmail({
+      userIds: [user.id],
+      title: '🤖 AI Recruiter found a match',
+      message: `${workerName} was selected for ${
+        job.title || 'your CrewCall job'
+      } with a ${
+        nextMatch.match_score || 0
+      }% match score.`,
+      jobId,
+    })
+
+    await sendCrewCallNotificationEmail({
+      userIds: [worker.id],
+      title: '🤖 CrewCall AI matched you',
+      message: `You were selected for ${
+        job.title || 'a CrewCall job'
+      }. Your AI match score is ${
+        nextMatch.match_score || 0
+      }%.`,
+      jobId,
+    })
+
     const nextIndex = Math.max(
       matchIndex + 1,
       nextWorkerIndex + 1
     )
 
-    const now = new Date().toISOString()
+    const nowDate = new Date()
+    const now = nowDate.toISOString()
+
+    const nextAction = new Date(
+      nowDate.getTime() + 24 * 60 * 60 * 1000,
+    ).toISOString()
 
     const { error: jobUpdateError } =
       await adminClient
@@ -603,12 +689,16 @@ export async function POST(
           ai_recruiting_started_at:
             job.ai_recruiting_started_at || now,
           ai_last_invite_at: now,
+          ai_next_action_at: nextAction,
+          ai_attempt_count:
+            Number(job.ai_attempt_count || 0) + 1,
           ai_next_worker_index: nextIndex,
           ai_recruiting_complete: false,
         })
         .eq('id', jobId)
 
     if (jobUpdateError) {
+      console.error('AUTO RECRUIT jobUpdateError:', jobUpdateError)
       return NextResponse.json(
         {
           error: jobUpdateError.message,
@@ -628,7 +718,7 @@ export async function POST(
         matchScore:
           Number(nextMatch.match_score) || 0,
         rank:
-          Number(nextMatch.match_rank) ||
+          0 ||
           matchIndex + 1,
         nextWorkerIndex: nextIndex,
         totalMatches: rankedMatches.length,
@@ -646,7 +736,7 @@ export async function POST(
         matchScore:
           Number(nextMatch.match_score) || 0,
         rank:
-          Number(nextMatch.match_rank) ||
+          0 ||
           matchIndex + 1,
       },
       nextWorkerIndex: nextIndex,
@@ -654,7 +744,10 @@ export async function POST(
       message: `Invitation sent to ${workerName}.`,
     })
   } catch (error) {
-    console.error('Auto recruiter route error:', error)
+    console.error(
+      'AUTO RECRUIT FAILURE DETAIL:',
+      error instanceof Error ? error.stack : error
+    )
 
     return NextResponse.json(
       {

@@ -158,7 +158,7 @@ export default function PostJobPage() {
       }
 
       if (data.role !== 'company' && data.role !== 'admin') {
-        router.replace('/worker-dashboard')
+        router.replace('/worker/dashboard')
         return
       }
 
@@ -277,7 +277,7 @@ export default function PostJobPage() {
     }
 
     if (profile.role !== 'company' && profile.role !== 'admin') {
-      router.replace('/worker-dashboard')
+      router.replace('/worker/dashboard')
       return
     }
 

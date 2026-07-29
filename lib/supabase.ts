@@ -28,6 +28,9 @@ export const supabase =
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
+      lock: async (_name, _acquireTimeout, fn) => {
+        return await fn()
+      },
     },
 
     global: {

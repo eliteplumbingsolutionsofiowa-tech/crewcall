@@ -728,9 +728,7 @@ export default function NotificationsPage() {
                                   notification.type
                                 )}`}
                               >
-                                {notification.type === 'invite'
-                                  ? 'INVITE'
-                                  : notification.type}
+                                {notification.type}
                               </span>
                             )}
                           </div>
@@ -770,9 +768,7 @@ export default function NotificationsPage() {
                             >
                               {workingId === notification.id
                                 ? 'Opening...'
-                                : notification.type === 'invite'
-                                  ? 'View Invite'
-                                  : 'Open'}
+                                : 'Open'}
                             </button>
                           )}
 

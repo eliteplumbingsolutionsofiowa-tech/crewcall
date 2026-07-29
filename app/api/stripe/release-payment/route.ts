@@ -259,7 +259,7 @@ export async function POST(req: Request) {
     }
 
     if (
-      job.stripe_transfer_id ||
+      job.stripe_transfer_id &&
       job.payout_status === 'released'
     ) {
       return NextResponse.json({
@@ -494,6 +494,13 @@ export async function POST(req: Request) {
     const releasedAt =
       new Date().toISOString()
 
+    console.log('CREWCALL PAYOUT SAVE', {
+      jobId: job.id,
+      transferId: transfer.id,
+      platformFee,
+      workerAmount,
+    })
+
     const {
       data: releasedJob,
       error: updateError,
@@ -502,8 +509,8 @@ export async function POST(req: Request) {
       .update({
         payout_status: 'released',
         stripe_transfer_id: transfer.id,
-        platform_fee_cents: platformFee,
-        worker_payout_cents: workerAmount,
+        platform_fee_cents: Number(platformFee),
+        worker_payout_cents: Number(workerAmount),
         payout_released_at: releasedAt,
       })
       .eq('id', job.id)
