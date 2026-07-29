@@ -228,7 +228,7 @@ export default function WorkerDashboard() {
               </Link>
 
               <Link
-                href="/invites"
+                href="/worker/invites"
                 className="w-fit rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 View Invites
