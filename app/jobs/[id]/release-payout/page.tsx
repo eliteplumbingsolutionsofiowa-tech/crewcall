@@ -7,50 +7,47 @@ export default function ReleasePayoutPage() {
   const params = useParams()
   const router = useRouter()
 
-  const jobId = params.id as string
+  const jobId = String(params?.id || '')
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  async function releasePayout() {
+  async function handleRelease() {
+    if (!jobId) {
+      setMessage('Missing job ID')
+      return
+    }
+
     setLoading(true)
-    setMessage('')
 
     try {
-      const response = await fetch(
-        '/api/stripe/release-payment',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            jobId,
-          }),
-        }
-      )
+      const res = await fetch('/api/stripe/release-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId,
+        }),
+      })
 
-      const data = await response.json()
+      const data = await res.json()
 
-      if (!response.ok) {
-        throw new Error(
-          data.error || 'Unable to release payout'
-        )
+      if (!res.ok) {
+        throw new Error(data.error || 'Release payout failed')
       }
 
-      setMessage(
-        'Payout released successfully!'
-      )
+      setMessage('Payout released successfully.')
 
       setTimeout(() => {
         router.push('/my-jobs')
       }, 2000)
 
-    } catch (error) {
+    } catch (err) {
       setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Payout failed'
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong'
       )
     } finally {
       setLoading(false)
@@ -58,26 +55,27 @@ export default function ReleasePayoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
-      <div className="max-w-xl w-full rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
+      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
 
         <h1 className="text-3xl font-bold mb-4">
           Release Worker Payout
         </h1>
 
-        <p className="text-slate-300 mb-8">
-          This will send the completed job payment
-          to the worker's connected Stripe account.
+        <p className="text-slate-300 mb-6">
+          Job ID:
         </p>
 
+        <div className="rounded-lg bg-black/30 p-3 text-sm mb-6 break-all">
+          {jobId}
+        </div>
+
         <button
-          onClick={releasePayout}
+          onClick={handleRelease}
           disabled={loading}
-          className="w-full rounded-xl bg-green-500 px-6 py-4 font-bold text-black disabled:opacity-50"
+          className="w-full rounded-xl bg-green-500 px-6 py-4 font-bold text-black"
         >
-          {loading
-            ? 'Processing...'
-            : 'Release Payout'}
+          {loading ? 'Processing...' : 'Release Payout'}
         </button>
 
         {message && (
