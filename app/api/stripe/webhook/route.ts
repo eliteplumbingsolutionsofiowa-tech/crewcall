@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic'
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseServiceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 
 function getCustomerId(
   customer:
@@ -18,6 +19,7 @@ function getCustomerId(
     | null
 ) {
   if (!customer) return null
+
   return typeof customer === 'string'
     ? customer
     : customer.id
@@ -31,7 +33,10 @@ export async function POST(request: Request) {
     !supabaseServiceRoleKey
   ) {
     return NextResponse.json(
-      { error: 'Missing Stripe environment variables.' },
+      {
+        error:
+          'Missing Stripe environment variables.',
+      },
       { status: 500 }
     )
   }
@@ -84,7 +89,6 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
-
       case 'checkout.session.completed': {
         const session =
           event.data.object as Stripe.Checkout.Session
@@ -96,14 +100,21 @@ export async function POST(request: Request) {
         )
 
         /*
-          JOB PAYMENTS
+          CrewCall JOB PAYMENTS
         */
-        if (
-          session.mode === 'payment' &&
-          session.metadata?.jobId
-        ) {
+        if (session.mode === 'payment') {
           const jobId =
-            session.metadata.jobId
+            session.metadata?.jobId ||
+            session.client_reference_id
+
+          if (!jobId) {
+            console.log(
+              'Skipping payment checkout without CrewCall job ID:',
+              session.id
+            )
+
+            break
+          }
 
           const { error } =
             await supabase
@@ -132,11 +143,9 @@ export async function POST(request: Request) {
 
 
         /*
-          SUBSCRIPTIONS
+          CrewCall SUBSCRIPTIONS
         */
-        if (
-          session.mode === 'subscription'
-        ) {
+        if (session.mode === 'subscription') {
           const userId =
             session.metadata
               ?.crewcall_user_id ||
@@ -145,9 +154,10 @@ export async function POST(request: Request) {
 
           if (!userId) {
             console.log(
-              'Skipping subscription checkout without CrewCall user ID:',
+              'Skipping subscription without CrewCall user:',
               session.id
             )
+
             break
           }
 
@@ -163,27 +173,32 @@ export async function POST(request: Request) {
               : session.subscription?.id ||
                 null
 
-          await supabase
-            .from('subscriptions')
-            .upsert(
-              {
-                user_id: userId,
-                status: 'active',
-                stripe_customer_id:
-                  customerId,
-                stripe_subscription_id:
-                  subscriptionId,
-                plan:
-                  session.metadata?.plan ||
-                  'founding_member',
-                updated_at:
-                  new Date().toISOString(),
-              },
-              {
-                onConflict:
-                  'user_id',
-              }
-            )
+          const { error } =
+            await supabase
+              .from('subscriptions')
+              .upsert(
+                {
+                  user_id: userId,
+                  status: 'active',
+                  stripe_customer_id:
+                    customerId,
+                  stripe_subscription_id:
+                    subscriptionId,
+                  plan:
+                    session.metadata?.plan ||
+                    'founding_member',
+                  updated_at:
+                    new Date().toISOString(),
+                },
+                {
+                  onConflict:
+                    'user_id',
+                }
+              )
+
+          if (error) {
+            throw new Error(error.message)
+          }
         }
 
         break
@@ -197,7 +212,16 @@ export async function POST(request: Request) {
         const jobId =
           intent.metadata?.jobId
 
-        if (jobId) {
+        if (!jobId) {
+          console.log(
+            'Skipping payment intent without job ID:',
+            intent.id
+          )
+
+          break
+        }
+
+        const { error } =
           await supabase
             .from('jobs')
             .update({
@@ -207,11 +231,14 @@ export async function POST(request: Request) {
             })
             .eq('id', jobId)
 
-          console.log(
-            'Payment intent marked job paid:',
-            jobId
-          )
+        if (error) {
+          throw new Error(error.message)
         }
+
+        console.log(
+          'Payment intent marked job paid:',
+          jobId
+        )
 
         break
       }
@@ -223,7 +250,6 @@ export async function POST(request: Request) {
           event.type
         )
     }
-
 
     return NextResponse.json({
       received: true,
