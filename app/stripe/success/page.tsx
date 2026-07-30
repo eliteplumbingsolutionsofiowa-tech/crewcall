@@ -151,7 +151,7 @@ function StripeSuccessContent() {
     setJob({
       ...foundJob,
       payment_status: 'paid',
-      payout_status: 'released',
+      payout_status: 'not_released',
       status: 'completed',
     })
 
@@ -242,7 +242,7 @@ function StripeSuccessContent() {
                   </span>
 
                   <span className="inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-sm font-bold text-cyan-700">
-                    ✓ Payout Released
+                    ✓ Payment Secured
                   </span>
                 </div>
               )}
