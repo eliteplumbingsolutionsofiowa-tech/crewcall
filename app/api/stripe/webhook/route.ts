@@ -34,8 +34,7 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       {
-        error:
-          'Missing Stripe environment variables.',
+        error: 'Missing Stripe environment variables.',
       },
       { status: 500 }
     )
@@ -46,7 +45,9 @@ export async function POST(request: Request) {
 
   if (!signature) {
     return NextResponse.json(
-      { error: 'Missing signature.' },
+      {
+        error: 'Missing Stripe signature.',
+      },
       { status: 400 }
     )
   }
@@ -66,12 +67,14 @@ export async function POST(request: Request) {
       )
   } catch (error) {
     console.error(
-      'Stripe signature failed:',
+      'Stripe webhook signature failed:',
       error
     )
 
     return NextResponse.json(
-      { error: 'Invalid signature.' },
+      {
+        error: 'Invalid webhook signature.',
+      },
       { status: 400 }
     )
   }
@@ -100,16 +103,18 @@ export async function POST(request: Request) {
         )
 
         /*
-          CrewCall JOB PAYMENTS
+          CREWCALL JOB PAYMENT
         */
+
         if (session.mode === 'payment') {
           const jobId =
             session.metadata?.jobId ||
-            session.client_reference_id
+            session.client_reference_id ||
+            null
 
           if (!jobId) {
             console.log(
-              'Skipping payment checkout without CrewCall job ID:',
+              'Payment completed without CrewCall job ID:',
               session.id
             )
 
@@ -121,6 +126,9 @@ export async function POST(request: Request) {
               .from('jobs')
               .update({
                 payment_status: 'paid',
+                paid: true,
+                paid_at:
+                  new Date().toISOString(),
                 stripe_payment_intent_id:
                   typeof session.payment_intent ===
                   'string'
@@ -134,7 +142,7 @@ export async function POST(request: Request) {
           }
 
           console.log(
-            'CrewCall job marked paid:',
+            'CrewCall job marked PAID:',
             jobId
           )
 
@@ -143,8 +151,9 @@ export async function POST(request: Request) {
 
 
         /*
-          CrewCall SUBSCRIPTIONS
+          CREWCALL SUBSCRIPTIONS
         */
+
         if (session.mode === 'subscription') {
           const userId =
             session.metadata
@@ -154,7 +163,7 @@ export async function POST(request: Request) {
 
           if (!userId) {
             console.log(
-              'Skipping subscription without CrewCall user:',
+              'Subscription missing CrewCall user:',
               session.id
             )
 
@@ -210,11 +219,12 @@ export async function POST(request: Request) {
           event.data.object as Stripe.PaymentIntent
 
         const jobId =
-          intent.metadata?.jobId
+          intent.metadata?.jobId ||
+          null
 
         if (!jobId) {
           console.log(
-            'Skipping payment intent without job ID:',
+            'Payment intent missing job ID:',
             intent.id
           )
 
@@ -226,6 +236,9 @@ export async function POST(request: Request) {
             .from('jobs')
             .update({
               payment_status: 'paid',
+              paid: true,
+              paid_at:
+                new Date().toISOString(),
               stripe_payment_intent_id:
                 intent.id,
             })
@@ -236,7 +249,7 @@ export async function POST(request: Request) {
         }
 
         console.log(
-          'Payment intent marked job paid:',
+          'Payment intent updated job:',
           jobId
         )
 
@@ -257,7 +270,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error(
-      'Webhook processing failed:',
+      'Stripe webhook processing failed:',
       error
     )
 
@@ -266,7 +279,7 @@ export async function POST(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : 'Webhook failed',
+            : 'Webhook processing failed.',
       },
       { status: 500 }
     )
