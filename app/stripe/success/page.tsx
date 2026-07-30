@@ -16,11 +16,11 @@ type Job = {
 }
 
 type JobPaymentUpdate = {
-  payment_status: string
-  payout_status: string
-  status: string
-  paid_at: string
-  payout_released_at: string
+  payment_status?: string
+  payout_status?: string
+  status?: string
+  paid_at?: string
+  payout_released_at?: string
 }
 
 type QueryError = {
@@ -136,10 +136,9 @@ function StripeSuccessContent() {
     const { error: updateError } = await jobsUpdateTable()
       .update({
         payment_status: 'paid',
-        payout_status: 'released',
+        payout_status: 'not_released',
         status: 'completed',
         paid_at: now,
-        payout_released_at: now,
       })
       .eq('id', foundJob.id)
 
@@ -157,7 +156,7 @@ function StripeSuccessContent() {
     })
 
     setMessage(
-      'Payment confirmed. Worker payout released. Job completed successfully.'
+      'Payment confirmed. Worker payment is secured. Complete the job to release payout.'
     )
 
     setSuccess(true)
@@ -297,7 +296,7 @@ function StripeSuccessContent() {
                 </p>
 
                 <p className="text-sm text-white/85">
-                  Worker paid. Job archived. Reviews unlocked.
+                  Payment secured. Complete the job to release worker payout.
                 </p>
               </div>
 
