@@ -652,7 +652,7 @@ export default function MyJobsPage() {
 
                     {canReleasePayout && (
                       <Link
-                        href={`/jobs/${job.id}/release-payout`}
+                        href={`/api/stripe/release-payment?jobId=${job.id}`}
                         className="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-500"
                       >
                         Release Payout
