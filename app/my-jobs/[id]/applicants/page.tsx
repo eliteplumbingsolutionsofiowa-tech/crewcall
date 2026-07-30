@@ -715,7 +715,7 @@ export default function ApplicantsPage() {
 
               {canReleasePayout && (
                 <Link
-                  href={`/api/stripe/release-payment?jobId=${job.id}`}
+                  href={`/jobs/${job.id}/release-payout`}
                   className="rounded-2xl bg-emerald-600 px-6 py-4 text-sm font-black text-white shadow-xl transition hover:scale-[1.02] hover:bg-emerald-500"
                 >
                   Release Payout
@@ -802,7 +802,7 @@ export default function ApplicantsPage() {
 
                     {canReleasePayout && (
                       <Link
-                        href={`/api/stripe/release-payment?jobId=${job.id}`}
+                        href={`/jobs/${job.id}/release-payout`}
                         className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500"
                       >
                         Release Payout
