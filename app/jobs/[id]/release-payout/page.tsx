@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function ReleasePayoutPage() {
   const params = useParams()
@@ -21,10 +22,19 @@ export default function ReleasePayoutPage() {
     setLoading(true)
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error('Authorization token missing. Please log in again.')
+      }
+
       const res = await fetch('/api/stripe/release-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           jobId,
