@@ -123,7 +123,10 @@ export default function LoginPage() {
         throw profileError
       }
 
-      console.log('LOGIN PROFILE CHECK', profile)
+      console.log(
+        'LOGIN PROFILE CHECK:',
+        JSON.stringify(profile)
+      )
 
       const destination =
         profile?.is_admin
@@ -132,7 +135,10 @@ export default function LoginPage() {
               profile?.role || null
             )
 
-      console.log('LOGIN DESTINATION', destination)
+      console.log(
+        'LOGIN DESTINATION:',
+        destination
+      )
 
       /*
        * Use a full browser navigation after login.

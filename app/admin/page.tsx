@@ -14,6 +14,7 @@ type Profile = {
   id: string
   full_name: string | null
   role: string | null
+  is_admin: boolean | null
   company_name: string | null
   company_verified: boolean | null
   insurance_verified: boolean | null
@@ -221,7 +222,7 @@ export default function AdminPage() {
         const { data: myProfile, error: profileError } =
           await db
             .from('profiles')
-            .select('role')
+            .select('role, is_admin')
             .eq('id', user.id)
             .maybeSingle()
 
@@ -229,7 +230,10 @@ export default function AdminPage() {
           throw profileError
         }
 
-        if (myProfile?.role !== 'admin') {
+        if (
+          myProfile?.role !== 'admin' &&
+          myProfile?.is_admin !== true
+        ) {
           setAccessDenied(true)
           throw new Error('Admin access only.')
         }
