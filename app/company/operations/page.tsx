@@ -1982,7 +1982,7 @@ function OperationsJobCard({
           : 'border-white/10 bg-slate-950/55'
       }`}
     >
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-5">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <JobStatusBadge status={job.status} />
@@ -2110,7 +2110,7 @@ function OperationsJobCard({
         </div>
 
           {status === 'open' && !job.assigned_worker_id && (
-            <div className="mt-5">
+            <div className="mt-6 w-full">
               <AIRecruiterCommandCenter
                 jobId={job.id}
                 jobTitle={job.title}
@@ -2118,7 +2118,7 @@ function OperationsJobCard({
             </div>
           )}
 
-        <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:max-w-[21rem] lg:justify-end">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <OperationButton href={`/my-jobs/${job.id}`}>
             Manage
           </OperationButton>
