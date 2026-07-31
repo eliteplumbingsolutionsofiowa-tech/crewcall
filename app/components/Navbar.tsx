@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type UserRole = 'company' | 'worker' | null
+type UserRole = 'company' | 'worker' | 'admin' | null
 
 type Profile = {
   id: string
@@ -106,11 +106,13 @@ export default function Navbar() {
   }
 
   const dashboardHref =
-    role === 'company'
-      ? '/company/dashboard'
-      : role === 'worker'
-        ? '/worker/dashboard'
-        : '/jobs'
+    role === 'admin'
+      ? '/admin'
+      : role === 'company'
+        ? '/company/dashboard'
+        : role === 'worker'
+          ? '/worker/dashboard'
+          : '/jobs'
 
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:px-8">
