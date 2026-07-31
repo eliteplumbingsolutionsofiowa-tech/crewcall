@@ -37,6 +37,8 @@ type Applicant = {
   status: string | null
   created_at: string
   requested_pay: string | null
+  requested_pay_rate: string | null
+  company_counter_offer: string | null
   worker: WorkerProfile | null
 }
 
@@ -399,6 +401,8 @@ export default function ApplicantsPage() {
           status,
           created_at,
           requested_pay,
+          requested_pay_rate,
+          company_counter_offer,
           worker:profiles!applications_worker_id_fkey (
             id,
             full_name,
@@ -416,6 +420,8 @@ export default function ApplicantsPage() {
         .order('created_at', {
           ascending: false,
         })
+
+    console.log("NEGOTIATION DEBUG", applicationData)
 
     if (applicationError) {
       setMessage(applicationError.message)
@@ -992,12 +998,29 @@ export default function ApplicantsPage() {
 
                     <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-5">
                       <p className="text-xs font-black uppercase tracking-wide text-orange-200">
-                        Requested Pay
+                        Pay Negotiation
                       </p>
 
-                      <p className="mt-3 text-2xl font-black text-orange-50">
-                        {applicant.requested_pay || 'Not listed'}
-                      </p>
+                      <div className="mt-3 space-y-2 text-sm font-bold text-white">
+
+                        <p>
+                          Worker Request:
+                          <span className="ml-2 text-orange-200">
+                            {applicant.requested_pay_rate ||
+                              applicant.requested_pay ||
+                              'Not listed'}
+                          </span>
+                        </p>
+
+                        <p>
+                          Company Counter:
+                          <span className="ml-2 text-cyan-200">
+                            {applicant.company_counter_offer ||
+                              'None'}
+                          </span>
+                        </p>
+
+                      </div>
                     </div>
                   </div>
                 </div>
