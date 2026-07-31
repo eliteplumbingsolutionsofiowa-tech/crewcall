@@ -788,6 +788,16 @@ export default function CrewCallNav() {
             >
               My Work
             </NavLink>
+
+            <NavLink
+              href="/worker/payments"
+              onClick={onNavigate}
+              active={pathname.startsWith(
+                '/worker/payments'
+              )}
+            >
+              Payments
+            </NavLink>
           </>
         ) : null}
 
