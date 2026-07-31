@@ -861,6 +861,18 @@ export default function ApplicantsPage() {
                 applicant.status === 'rejected' ||
                 applicant.status === 'declined'
 
+              console.log("HIRE DEBUG", {
+                jobId: job?.id,
+                jobStatus: job?.status,
+                assigned_worker_id: job?.assigned_worker_id,
+                assigned_application_id: job?.assigned_application_id,
+                applicantId: applicant.id,
+                applicantStatus: applicant.status,
+                workerId: applicant.worker_id,
+                jobAlreadyAssigned,
+                isRejected,
+              })
+
               return (
                 <div
                   key={applicant.id}
