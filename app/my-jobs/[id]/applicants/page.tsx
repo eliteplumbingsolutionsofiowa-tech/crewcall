@@ -663,13 +663,23 @@ export default function ApplicantsPage() {
     return photoByUserId.get(workerId) || null
   }
 
+  const normalizedStatus =
+    String(job?.status || '').toLowerCase()
+
+  const normalizedPaymentStatus =
+    String(job?.payment_status || '').toLowerCase()
+
+  const normalizedPayoutStatus =
+    String(job?.payout_status || '').toLowerCase()
+
   const canPayWorker =
-    Boolean(job?.assigned_worker_id) && job?.payment_status !== 'paid'
+    Boolean(job?.assigned_worker_id) &&
+    normalizedPaymentStatus !== 'paid'
 
   const canReleasePayout =
-    job?.status === 'completed' &&
-    job?.payment_status === 'paid' &&
-    job?.payout_status !== 'released'
+    normalizedStatus === 'completed' &&
+    normalizedPaymentStatus === 'paid' &&
+    normalizedPayoutStatus !== 'released'
 
   if (loading) {
     return (
