@@ -63,6 +63,21 @@ export default function AdminRevenuePage() {
     0
   )
 
+  const paidJobs = jobs.length
+
+  const releasedPayouts = jobs.filter(
+    (job) => job.payout_status === 'released'
+  ).length
+
+  const pendingPayouts = jobs.filter(
+    (job) => job.payout_status !== 'released'
+  ).length
+
+  const averageFee =
+    jobs.length > 0
+      ? revenue / jobs.length / 100
+      : 0
+
   const averageJob =
     jobs.length > 0
       ? volume / jobs.length
@@ -102,6 +117,30 @@ export default function AdminRevenuePage() {
           <Stat
             label="Average Job"
             value={`$${averageJob.toFixed(2)}`}
+          />
+
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-4">
+
+          <Stat
+            label="Paid Jobs"
+            value={paidJobs.toString()}
+          />
+
+          <Stat
+            label="Released Payouts"
+            value={releasedPayouts.toString()}
+          />
+
+          <Stat
+            label="Pending Payouts"
+            value={pendingPayouts.toString()}
+          />
+
+          <Stat
+            label="Average Platform Fee"
+            value={`$${averageFee.toFixed(2)}`}
           />
 
         </div>
