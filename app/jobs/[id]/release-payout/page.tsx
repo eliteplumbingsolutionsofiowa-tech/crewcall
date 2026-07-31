@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 
 export default function ReleasePayoutPage() {
   const params = useParams()
@@ -12,6 +11,7 @@ export default function ReleasePayoutPage() {
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [success, setSuccess] = useState(false)
 
   async function handleRelease() {
     if (!jobId) {
@@ -19,22 +19,20 @@ export default function ReleasePayoutPage() {
       return
     }
 
+    const confirmed = window.confirm(
+      'Are you sure you want to release this worker payout?'
+    )
+
+    if (!confirmed) return
+
     setLoading(true)
+    setMessage('')
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session?.access_token) {
-        throw new Error('Authorization token missing. Please log in again.')
-      }
-
       const res = await fetch('/api/stripe/release-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           jobId,
@@ -47,16 +45,21 @@ export default function ReleasePayoutPage() {
         throw new Error(data.error || 'Release payout failed')
       }
 
-      setMessage('Payout released successfully.')
+      setSuccess(true)
+      setMessage(
+        data.alreadyReleased
+          ? 'Payout was already released.'
+          : 'Worker payout released successfully.'
+      )
 
       setTimeout(() => {
-        router.push('/my-jobs')
-      }, 2000)
+        router.push('/company/dashboard')
+      }, 3000)
 
-    } catch (err) {
+    } catch (error) {
       setMessage(
-        err instanceof Error
-          ? err.message
+        error instanceof Error
+          ? error.message
           : 'Something went wrong'
       )
     } finally {
@@ -66,35 +69,80 @@ export default function ReleasePayoutPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
 
-        <h1 className="text-3xl font-bold mb-4">
-          Release Worker Payout
-        </h1>
+      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-10 shadow-2xl">
 
-        <p className="text-slate-300 mb-6">
-          Job ID:
-        </p>
+        <div className="text-center">
 
-        <div className="rounded-lg bg-black/30 p-3 text-sm mb-6 break-all">
-          {jobId}
+          {success ? (
+            <>
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-green-500/20 text-5xl">
+                ✓
+              </div>
+
+              <h1 className="text-4xl font-black mb-4">
+                Payment Released
+              </h1>
+
+              <p className="text-slate-300 text-lg">
+                The worker payout has been successfully sent through Stripe.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-4xl font-black mb-4">
+                Release Worker Payout
+              </h1>
+
+              <p className="text-slate-300 mb-8">
+                Confirm that the job is complete and release payment to the worker.
+              </p>
+            </>
+          )}
+
         </div>
 
-        <button
-          onClick={handleRelease}
-          disabled={loading}
-          className="w-full rounded-xl bg-green-500 px-6 py-4 font-bold text-black"
-        >
-          {loading ? 'Processing...' : 'Release Payout'}
-        </button>
+
+        <div className="rounded-2xl bg-black/30 border border-white/10 p-5 mb-8">
+
+          <div className="text-sm text-slate-400 mb-2">
+            Job ID
+          </div>
+
+          <div className="break-all font-mono text-sm">
+            {jobId}
+          </div>
+
+        </div>
+
+
+        {!success && (
+          <button
+            onClick={handleRelease}
+            disabled={loading}
+            className="w-full rounded-2xl bg-green-500 px-6 py-5 text-xl font-black text-black hover:bg-green-400 disabled:opacity-50"
+          >
+            {loading
+              ? 'Processing Payment...'
+              : 'Release Payout'}
+          </button>
+        )}
+
 
         {message && (
-          <div className="mt-6 rounded-xl bg-white/10 p-4">
+          <div
+            className={`mt-6 rounded-2xl p-5 text-center font-semibold ${
+              success
+                ? 'bg-green-500/20 text-green-300'
+                : 'bg-white/10 text-white'
+            }`}
+          >
             {message}
           </div>
         )}
 
       </div>
+
     </main>
   )
 }
