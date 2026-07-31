@@ -76,7 +76,7 @@ export default function WorkerApplicationsPage() {
           worker_id,
           status,
           created_at,
-          jobs (
+          jobs!applications_job_id_fkey (
             id,
             title,
             location,

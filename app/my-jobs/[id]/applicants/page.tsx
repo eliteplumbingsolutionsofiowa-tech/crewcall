@@ -16,6 +16,7 @@ type Job = {
   assigned_application_id: string | null
   payment_status: string | null
   payout_status: string | null
+  pay_rate: string | null
 }
 
 type WorkerProfile = {
@@ -64,6 +65,7 @@ type JobUpdate = {
   status?: string
   payment_status?: string
   payout_status?: string
+  pay_rate?: string | null
 }
 
 type ApplicationUpdate = {
@@ -489,11 +491,18 @@ export default function ApplicantsPage() {
     setActionLoadingId(applicant.id)
     setMessage('')
 
+    const finalPay =
+      applicant.company_counter_offer ||
+      applicant.requested_pay_rate ||
+      applicant.requested_pay ||
+      job.pay_rate
+
     const { error: jobError } = await jobsUpdateTable()
       .update({
         assigned_worker_id: applicant.worker_id,
         assigned_application_id: applicant.id,
         status: 'assigned',
+        pay_rate: finalPay,
       })
       .eq('id', job.id)
 
