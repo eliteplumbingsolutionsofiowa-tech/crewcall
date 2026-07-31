@@ -19,6 +19,10 @@ type JobPayment = {
   pay_rate: string | null
   payment_status: string | null
   payout_status: string | null
+  worker_payout_cents: number | null
+  platform_fee_cents: number | null
+  stripe_transfer_id: string | null
+  payout_released_at: string | null
   status: string | null
   company_id: string | null
   assigned_worker_id: string | null
@@ -134,6 +138,10 @@ export default function AdminPaymentsPage() {
         pay_rate,
         payment_status,
         payout_status,
+        worker_payout_cents,
+        platform_fee_cents,
+        stripe_transfer_id,
+        payout_released_at,
         status,
         company_id,
         assigned_worker_id,
@@ -173,6 +181,10 @@ export default function AdminPaymentsPage() {
       pay_rate: job.pay_rate,
       payment_status: job.payment_status,
       payout_status: job.payout_status,
+      worker_payout_cents: job.worker_payout_cents,
+      platform_fee_cents: job.platform_fee_cents,
+      stripe_transfer_id: job.stripe_transfer_id,
+      payout_released_at: job.payout_released_at,
       status: job.status,
       company_id: job.company_id,
       assigned_worker_id: job.assigned_worker_id,
@@ -475,6 +487,49 @@ export default function AdminPaymentsPage() {
                             </span>{' '}
                             {job.worker?.stripe_account_id || 'Not connected'}
                           </p>
+
+                          <div className="md:col-span-2 mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+                            <p className="mb-3 text-xs font-black uppercase tracking-wider text-emerald-300">
+                              Transaction Ledger
+                            </p>
+
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+
+                              <p>
+                                <span className="text-slate-400">Gross:</span>{' '}
+                                ${Number(job.pay_rate || 0).toLocaleString()}
+                              </p>
+
+                              <p>
+                                <span className="text-slate-400">CrewCall Fee:</span>{' '}
+                                ${(
+                                  (job.platform_fee_cents || 0) / 100
+                                ).toFixed(2)}
+                              </p>
+
+                              <p>
+                                <span className="text-slate-400">Worker Paid:</span>{' '}
+                                ${(
+                                  (job.worker_payout_cents || 0) / 100
+                                ).toFixed(2)}
+                              </p>
+
+                              <p>
+                                <span className="text-slate-400">Released:</span>{' '}
+                                {job.payout_released_at
+                                  ? formatDate(job.payout_released_at)
+                                  : 'Pending'}
+                              </p>
+
+                            </div>
+
+                            {job.stripe_transfer_id && (
+                              <p className="mt-3 break-all text-xs text-slate-400">
+                                Stripe Transfer: {job.stripe_transfer_id}
+                              </p>
+                            )}
+
+                          </div>
                         </div>
                       </div>
 
