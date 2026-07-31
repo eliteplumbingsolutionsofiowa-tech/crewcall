@@ -136,10 +136,14 @@ export default function CrewCallNav() {
         )
       }
 
+      console.log('CREWCALL NAV PROFILE', profile)
+
       const userRole =
         profile?.is_admin
           ? 'admin'
           : profile?.role ?? null
+
+      console.log('CREWCALL NAV ROLE', userRole)
 
       setRole(userRole)
 

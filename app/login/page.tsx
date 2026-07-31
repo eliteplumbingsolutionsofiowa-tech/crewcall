@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 type LoginProfile = {
   id: string
   role: string | null
+  is_admin: boolean | null
 }
 
 function destinationForRole(
@@ -114,7 +115,7 @@ export default function LoginPage() {
         error: profileError,
       } = await supabase
         .from('profiles')
-        .select('id, role')
+        .select('id, role, is_admin')
         .eq('id', loginData.user.id)
         .maybeSingle<LoginProfile>()
 
@@ -123,9 +124,11 @@ export default function LoginPage() {
       }
 
       const destination =
-        destinationForRole(
-          profile?.role || null
-        )
+        profile?.is_admin
+          ? '/admin'
+          : destinationForRole(
+              profile?.role || null
+            )
 
       /*
        * Use a full browser navigation after login.
