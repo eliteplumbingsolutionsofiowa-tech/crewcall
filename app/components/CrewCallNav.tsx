@@ -625,11 +625,13 @@ export default function CrewCallNav() {
   }
 
   const dashboardHref =
-    role === 'admin' || role === 'company'
-      ? '/company/dashboard'
-      : role === 'worker'
-        ? '/worker/dashboard'
-        : '/dashboard'
+    role === 'admin'
+      ? '/admin'
+      : role === 'company'
+        ? '/company/dashboard'
+        : role === 'worker'
+          ? '/worker/dashboard'
+          : '/dashboard'
 
   const logoHref = userId ? dashboardHref : '/'
 
