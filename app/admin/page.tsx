@@ -222,13 +222,14 @@ export default function AdminPage() {
         const { data: myProfile, error: profileError } =
           await db
             .from('profiles')
-            .select('role, is_admin')
+            .select('id, role, is_admin')
             .eq('id', user.id)
-            .maybeSingle()
+            .single()
 
         if (profileError) {
           throw profileError
         }
+
 
         if (
           myProfile?.role !== 'admin' &&
