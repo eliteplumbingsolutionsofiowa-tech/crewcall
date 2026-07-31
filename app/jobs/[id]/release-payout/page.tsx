@@ -29,10 +29,21 @@ export default function ReleasePayoutPage() {
     setMessage('')
 
     try {
+      const { supabase } = await import('@/lib/supabase')
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error('Authorization token required.')
+      }
+
       const res = await fetch('/api/stripe/release-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           jobId,
