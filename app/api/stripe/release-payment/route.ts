@@ -325,28 +325,34 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!worker.stripe_details_submitted) {
+    const stripeAccount = await stripe.accounts.retrieve(
+      worker.stripe_account_id
+    )
+
+    if (
+      !stripeAccount.details_submitted ||
+      !stripeAccount.payouts_enabled
+    ) {
       return NextResponse.json(
         {
           error:
-            'Worker has not completed Stripe onboarding.',
+            'Worker Stripe onboarding or payouts are not complete.',
         },
         { status: 400 }
       )
     }
 
-    if (
-      !worker.stripe_charges_enabled ||
-      !worker.stripe_payouts_enabled
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Worker Stripe account is not fully enabled yet.',
-        },
-        { status: 400 }
-      )
-    }
+    await adminClient
+      .from('profiles')
+      .update({
+        stripe_charges_enabled:
+          stripeAccount.charges_enabled || false,
+        stripe_payouts_enabled:
+          stripeAccount.payouts_enabled || false,
+        stripe_details_submitted:
+          stripeAccount.details_submitted || false,
+      })
+      .eq('id', worker.id)
 
     const grossAmount = centsFromPayRate(
       job.pay_rate
