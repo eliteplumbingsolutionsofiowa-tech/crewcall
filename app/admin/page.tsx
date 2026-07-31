@@ -874,6 +874,18 @@ export default function AdminPage() {
           </a>
 
           <a
+            href="/admin/launch-readiness"
+            className="rounded-2xl border border-purple-400/20 bg-purple-400/10 p-5 transition hover:bg-purple-400/20"
+          >
+            <h2 className="font-black text-purple-200">
+              🚀 Launch Readiness
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Check marketplace readiness before going live.
+            </p>
+          </a>
+
+          <a
             href="/admin/system-health"
             className="rounded-2xl border border-green-400/20 bg-green-400/10 p-5 transition hover:bg-green-400/20"
           >
