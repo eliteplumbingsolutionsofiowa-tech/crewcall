@@ -17,6 +17,7 @@ type Role = 'company' | 'worker' | 'admin' | null
 
 type Profile = {
   role: Role
+  is_admin: boolean | null
 }
 
 type RealtimeNotification = {
@@ -120,7 +121,7 @@ export default function CrewCallNav() {
       const { data: profile, error: profileError } =
         await supabase
           .from('profiles')
-          .select('role')
+          .select('role, is_admin')
           .eq('id', user.id)
           .maybeSingle<Profile>()
 
@@ -135,7 +136,10 @@ export default function CrewCallNav() {
         )
       }
 
-      const userRole = profile?.role ?? null
+      const userRole =
+        profile?.is_admin
+          ? 'admin'
+          : profile?.role ?? null
 
       setRole(userRole)
 
