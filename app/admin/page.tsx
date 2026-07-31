@@ -948,10 +948,16 @@ export default function AdminPage() {
 
                 <Link
                   href="/admin/payments"
-
                   className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
                 >
                   Payments
+                </Link>
+
+                <Link
+                  href="/admin/revenue"
+                  className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20"
+                >
+                  Revenue
                 </Link>
               </div>
             }
