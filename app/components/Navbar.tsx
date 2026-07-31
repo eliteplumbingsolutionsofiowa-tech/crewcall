@@ -197,6 +197,13 @@ export default function Navbar() {
                   </Link>
 
                   <Link
+                    href="/worker/payments"
+                    className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Payments
+                  </Link>
+
+                  <Link
                     href="/saved-jobs"
                     className="rounded-2xl px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                   >
