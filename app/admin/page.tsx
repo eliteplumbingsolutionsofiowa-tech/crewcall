@@ -30,6 +30,8 @@ type Job = {
   status: string | null
   payment_status: string | null
   payout_status: string | null
+  worker_payout_cents: number | null
+  platform_fee_cents: number | null
   pay_rate: string | null
   company_id: string | null
   assigned_worker_id: string | null
@@ -496,6 +498,30 @@ export default function AdminPage() {
       (job) => job.payment_status === 'paid'
     ).length
 
+    const marketplaceVolume = jobs.reduce(
+      (sum, job) =>
+        sum + Number(job.pay_rate || 0),
+      0
+    )
+
+    const crewcallRevenue = jobs.reduce(
+      (sum, job) =>
+        sum + Number(job.platform_fee_cents || 0),
+      0
+    )
+
+    const workerPayouts = jobs.reduce(
+      (sum, job) =>
+        sum + Number(job.worker_payout_cents || 0),
+      0
+    )
+
+    const pendingPayouts = jobs.filter(
+      (job) =>
+        job.payment_status === 'paid' &&
+        job.payout_status !== 'released'
+    ).length
+
     const unpaidJobs = jobs.filter(
       (job) => job.payment_status !== 'paid'
     ).length
@@ -542,6 +568,10 @@ export default function AdminPage() {
       assignedJobs,
       completedJobs,
       paidJobs,
+      marketplaceVolume,
+      crewcallRevenue,
+      workerPayouts,
+      pendingPayouts,
       unpaidJobs,
       pendingApplications,
       pendingInvites,
@@ -935,6 +965,26 @@ export default function AdminPage() {
             label="Invites"
             value={stats.pendingInvites}
           />
+
+          <MiniStat
+            label="Marketplace Volume"
+            value={Math.round(Number(stats.marketplaceVolume || 0))}
+          />
+
+          <MiniStat
+            label="CrewCall Revenue"
+            value={Math.round(Number(stats.crewcallRevenue || 0) / 100)}
+          />
+
+          <MiniStat
+            label="Worker Payouts"
+            value={Math.round(Number(stats.workerPayouts || 0) / 100)}
+          />
+
+          <MiniStat
+            label="Pending Payouts"
+            value={stats.pendingPayouts}
+          />
         </section>
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
@@ -963,6 +1013,13 @@ export default function AdminPage() {
                   className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20"
                 >
                   Revenue
+                </Link>
+
+                <Link
+                  href="/admin/analytics"
+                  className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-200 transition hover:bg-cyan-400/20"
+                >
+                  Analytics
                 </Link>
               </div>
             }
