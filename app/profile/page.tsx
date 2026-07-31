@@ -658,9 +658,17 @@ function ProfilePageInner() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          userId: currentUserId,
+          email: (await supabase.auth.getUser()).data.user?.email,
+        }),
       })
 
-      const result = await response.json()
+      const text = await response.text()
+
+      const result = text
+        ? JSON.parse(text)
+        : {}
 
       if (!response.ok) {
         setMessage(result?.error || 'Stripe onboarding could not be started.')
