@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'nodejs'
-
 const stripe = new Stripe(
   process.env.STRIPE_SECRET_KEY as string
 )
 
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL as string
+    : '',
   process.env.SUPABASE_SERVICE_ROLE_KEY as string
 )
 
@@ -44,12 +44,9 @@ export async function POST(req: Request) {
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({
-        stripe_charges_enabled:
-          account.charges_enabled || false,
-        stripe_payouts_enabled:
-          account.payouts_enabled || false,
-        stripe_details_submitted:
-          account.details_submitted || false,
+        stripe_charges_enabled: account.charges_enabled || false,
+        stripe_payouts_enabled: account.payouts_enabled || false,
+        stripe_details_submitted: account.details_submitted || false,
       })
       .eq('id', userId)
 
@@ -67,14 +64,9 @@ export async function POST(req: Request) {
       details_submitted: account.details_submitted,
     })
 
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Refresh failed',
-      },
+      { error: error?.message || 'Stripe refresh failed' },
       { status: 500 }
     )
   }
