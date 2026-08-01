@@ -52,11 +52,76 @@ export default function WorkerApplicationsPage() {
   const [message, setMessage] =
     useState<string | null>(null)
 
+  const [counterRates, setCounterRates] =
+    useState<Record<string, string>>({})
+
+  const [counterMessages, setCounterMessages] =
+    useState<Record<string, string>>({})
+
+  const [workingId, setWorkingId] =
+    useState<string | null>(null)
+
   const [search, setSearch] =
     useState('')
 
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>('all')
+
+  async function acceptCounter(app: Application) {
+    if (!app.company_counter_offer) return
+
+    setWorkingId(app.id)
+
+    await supabase
+      .from('applications')
+      .update({
+        requested_pay_rate: app.company_counter_offer,
+        negotiation_status: 'hired',
+        status: 'accepted',
+      })
+      .eq('id', app.id)
+
+    await loadApplications()
+
+    setWorkingId(null)
+  }
+
+  async function declineCounter(app: Application) {
+    setWorkingId(app.id)
+
+    await supabase
+      .from('applications')
+      .update({
+        negotiation_status: 'declined',
+      })
+      .eq('id', app.id)
+
+    await loadApplications()
+
+    setWorkingId(null)
+  }
+
+  async function sendWorkerCounter(app: Application) {
+    setWorkingId(app.id)
+
+    await supabase
+      .from('applications')
+      .update({
+        requested_pay_rate:
+          counterRates[app.id] ||
+          app.requested_pay_rate,
+
+        negotiation_message:
+          counterMessages[app.id] || null,
+
+        negotiation_status: 'open',
+      })
+      .eq('id', app.id)
+
+    await loadApplications()
+
+    setWorkingId(null)
+  }
 
   const loadApplications =
     useCallback(async () => {
@@ -542,22 +607,26 @@ export default function WorkerApplicationsPage() {
                               app.company_counter_offer ||
                               app.negotiation_status) && (
                               <div className="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+
                                 <p className="text-xs font-black uppercase tracking-wide text-amber-200">
                                   Pay Negotiation
                                 </p>
 
                                 <div className="mt-3 space-y-2 text-sm font-bold text-white">
+
                                   <p>
                                     Your Request:
                                     <span className="ml-2 text-emerald-300">
-                                      {app.requested_pay_rate || '—'}
+                                      ${app.requested_pay_rate || '—'}
                                     </span>
                                   </p>
 
                                   <p>
                                     Company Counter:
                                     <span className="ml-2 text-cyan-300">
-                                      {app.company_counter_offer || 'No counter yet'}
+                                      {app.company_counter_offer
+                                        ? `$${app.company_counter_offer}`
+                                        : 'No counter yet'}
                                     </span>
                                   </p>
 
@@ -567,50 +636,82 @@ export default function WorkerApplicationsPage() {
                                       {app.negotiation_status || 'open'}
                                     </span>
                                   </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {(app.requested_pay_rate ||
-                              app.company_counter_offer ||
-                              app.negotiation_status) && (
-                              <div className="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
-
-                                <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
-                                  Pay Negotiation
-                                </p>
-
-                                <div className="mt-3 space-y-2 text-sm font-bold text-white">
-
-                                  {app.requested_pay_rate && (
-                                    <p>
-                                      Your Request:
-                                      <span className="ml-2 text-emerald-300">
-                                        ${app.requested_pay_rate}
-                                      </span>
-                                    </p>
-                                  )}
-
-                                  {app.company_counter_offer && (
-                                    <p>
-                                      Company Counter:
-                                      <span className="ml-2 text-cyan-300">
-                                        ${app.company_counter_offer}
-                                      </span>
-                                    </p>
-                                  )}
-
-                                  <p>
-                                    Status:
-                                    <span className="ml-2 text-amber-300">
-                                      {app.negotiation_status || 'open'}
-                                    </span>
-                                  </p>
 
                                 </div>
 
+                                {app.company_counter_offer &&
+                                  app.negotiation_status !== 'hired' && (
+                                  <div className="mt-4 flex flex-wrap gap-3">
+
+                                    <button
+                                      onClick={() => acceptCounter(app)}
+                                      disabled={workingId === app.id}
+                                      className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white hover:bg-emerald-400 disabled:opacity-50"
+                                    >
+                                      Accept Counter
+                                    </button>
+
+                                    <button
+                                      onClick={() => declineCounter(app)}
+                                      disabled={workingId === app.id}
+                                      className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white hover:bg-red-400 disabled:opacity-50"
+                                    >
+                                      Decline
+                                    </button>
+
+                                  </div>
+                                )}
+
+                                {app.negotiation_status !== 'hired' &&
+                                  app.negotiation_status !== 'declined' && (
+                                  <div className="mt-5 space-y-3">
+
+                                    <input
+                                      value={
+                                        counterRates[app.id] ||
+                                        app.requested_pay_rate ||
+                                        ''
+                                      }
+                                      onChange={(e) =>
+                                        setCounterRates((prev) => ({
+                                          ...prev,
+                                          [app.id]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder="Counter amount"
+                                      className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+                                    />
+
+                                    <textarea
+                                      value={
+                                        counterMessages[app.id] || ''
+                                      }
+                                      onChange={(e) =>
+                                        setCounterMessages((prev) => ({
+                                          ...prev,
+                                          [app.id]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder="Message to company"
+                                      className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+                                    />
+
+                                    <button
+                                      onClick={() => sendWorkerCounter(app)}
+                                      disabled={workingId === app.id}
+                                      className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white hover:bg-blue-400 disabled:opacity-50"
+                                    >
+                                      {workingId === app.id
+                                        ? 'Sending...'
+                                        : 'Send Counter Again'}
+                                    </button>
+
+                                  </div>
+                                )}
+
                               </div>
                             )}
+
 
                             <p className="mt-4 text-xs font-black uppercase tracking-wide text-slate-500">
                               Applied{' '}
