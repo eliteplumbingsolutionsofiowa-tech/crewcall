@@ -41,6 +41,8 @@ type Applicant = {
   requested_pay: string | null
   requested_pay_rate: string | null
   company_counter_offer: string | null
+  negotiation_message: string | null
+  negotiation_status: string | null
   worker: WorkerProfile | null
 }
 
@@ -257,6 +259,10 @@ export default function ApplicantsPage() {
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteMessage, setInviteMessage] = useState('')
 
+  const [counterOffers, setCounterOffers] = useState<Record<string, string>>({})
+  const [counterMessages, setCounterMessages] = useState<Record<string, string>>({})
+  const [workingId, setWorkingId] = useState<string | null>(null)
+
   useEffect(() => {
     if (!jobId) return
 
@@ -425,6 +431,8 @@ export default function ApplicantsPage() {
           requested_pay,
           requested_pay_rate,
           company_counter_offer,
+          negotiation_message,
+          negotiation_status,
           worker:profiles!applications_worker_id_fkey (
             id,
             full_name,
@@ -545,6 +553,47 @@ export default function ApplicantsPage() {
     }
 
     setLoading(false)
+  }
+
+  async function sendCompanyCounter(applicant: Applicant) {
+    setWorkingId(applicant.id)
+
+    try {
+      const counter =
+        counterOffers[applicant.id]
+
+      if (!counter) {
+        setMessage('Enter a counter offer amount first.')
+        return
+      }
+
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          company_counter_offer: counter,
+          negotiation_message:
+            counterMessages[applicant.id] || null,
+          negotiation_status: 'open',
+        })
+        .eq('id', applicant.id)
+
+      if (error) {
+        throw error
+      }
+
+      setMessage('Counter offer sent to worker.')
+
+      await loadApplicants()
+
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to send counter offer.'
+      )
+    } finally {
+      setWorkingId(null)
+    }
   }
 
   async function hireApplicant(applicant: Applicant) {
@@ -1585,13 +1634,63 @@ export default function ApplicantsPage() {
                         <p>
                           Company Counter:
                           <span className="ml-2 text-cyan-200">
-                            {applicant.company_counter_offer ||
-                              'None'}
+                            {applicant.company_counter_offer
+                              ? `$${applicant.company_counter_offer}`
+                              : 'None'}
+                          </span>
+                        </p>
+
+                        <p>
+                          Status:
+                          <span className="ml-2 text-yellow-300">
+                            {applicant.negotiation_status || 'open'}
                           </span>
                         </p>
 
                       </div>
+
+                      {applicant.negotiation_status !== 'hired' && (
+                        <div className="mt-5 space-y-3">
+
+                          <input
+                            value={counterOffers[applicant.id] || ''}
+                            onChange={(e) =>
+                              setCounterOffers((prev) => ({
+                                ...prev,
+                                [applicant.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Enter counter offer"
+                            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+                          />
+
+                          <textarea
+                            value={counterMessages[applicant.id] || ''}
+                            onChange={(e) =>
+                              setCounterMessages((prev) => ({
+                                ...prev,
+                                [applicant.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Message to worker"
+                            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+                          />
+
+                          <button
+                            onClick={() => sendCompanyCounter(applicant)}
+                            disabled={workingId === applicant.id}
+                            className="rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-black text-white hover:bg-cyan-400 disabled:opacity-50"
+                          >
+                            {workingId === applicant.id
+                              ? 'Sending...'
+                              : 'Send Counter Offer'}
+                          </button>
+
+                        </div>
+                      )}
+
                     </div>
+
                   </div>
                 </div>
               )
