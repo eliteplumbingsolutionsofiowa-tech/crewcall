@@ -737,7 +737,7 @@ export async function POST(req: Request) {
       (workers ?? []) as WorkerProfile[]
     )
       .map((worker) => scoreWorker(job as Job, worker))
-      .filter((match) => match.match_score >= 25)
+      .filter((match) => match.match_score >= 0)
       .sort((a, b) => {
         if (b.match_score !== a.match_score) {
           return b.match_score - a.match_score

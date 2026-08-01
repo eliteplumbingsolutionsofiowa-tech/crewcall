@@ -252,6 +252,10 @@ export default function ApplicantsPage() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [matchByWorkerId, setMatchByWorkerId] = useState<Record<string, any>>({})
+  const [showComparison, setShowComparison] = useState(false)
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteMessage, setInviteMessage] = useState('')
 
   useEffect(() => {
     if (!jobId) return
@@ -329,9 +333,24 @@ export default function ApplicantsPage() {
       if (aAssigned && !bAssigned) return -1
       if (!aAssigned && bAssigned) return 1
 
+      const aScore =
+        matchByWorkerId[a.worker_id]?.match_score || 0
+
+      const bScore =
+        matchByWorkerId[b.worker_id]?.match_score || 0
+
+      if (aScore !== bScore) {
+        return bScore - aScore
+      }
+
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
-  }, [applicants, job?.assigned_application_id, job?.assigned_worker_id])
+  }, [
+    applicants,
+    matchByWorkerId,
+    job?.assigned_application_id,
+    job?.assigned_worker_id,
+  ])
 
   const assignedApplicant = sortedApplicants.find(
     (applicant) =>
@@ -443,6 +462,57 @@ export default function ApplicantsPage() {
     )
 
     setApplicants(safeApplicants)
+
+    const { data: matchData } = await supabase
+      .from('job_matches')
+      .select(
+        'worker_id, match_score, reason, trade_score, location_score, availability_score, certification_score'
+      )
+      .eq('job_id', jobId)
+
+    if (matchData && matchData.length > 0) {
+      setMatchByWorkerId(
+        Object.fromEntries(
+          matchData.map((match) => [
+            match.worker_id,
+            match,
+          ])
+        )
+      )
+    } else {
+      const { data: sessionData } = await supabase.auth.getSession()
+
+      if (sessionData.session?.access_token) {
+        await fetch('/api/jobs/match', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({
+            jobId,
+          }),
+        })
+
+        const { data: refreshedMatches } = await supabase
+          .from('job_matches')
+          .select(
+            'worker_id, match_score, reason, trade_score, location_score, availability_score, certification_score, pay_score'
+          )
+          .eq('job_id', jobId)
+
+        if (refreshedMatches) {
+          setMatchByWorkerId(
+            Object.fromEntries(
+              refreshedMatches.map((match) => [
+                match.worker_id,
+                match,
+              ])
+            )
+          )
+        }
+      }
+    }
 
     const workerIds = Array.from(
       new Set(
@@ -652,6 +722,86 @@ export default function ApplicantsPage() {
     window.location.href = `/messages/${newConversation.id}`
   }
 
+  async function inviteTopMatches() {
+    if (!job?.id) return
+
+    setInviteLoading(true)
+    setInviteMessage('')
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error('Authentication required.')
+      }
+
+      const matchResponse = await fetch('/api/jobs/match', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+        }),
+      })
+
+      const matchResult = await matchResponse.json()
+
+      if (!matchResponse.ok) {
+        throw new Error(
+          matchResult?.error || 'Unable to run AI matching.'
+        )
+      }
+
+      await loadApplicants()
+
+      const topWorkers = sortedApplicants
+        .slice(0, 3)
+        .map((applicant) => applicant.worker_id)
+
+      let invited = 0
+
+      for (const workerId of topWorkers) {
+        const response = await fetch(
+          `/api/jobs/${job.id}/invite`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              workerId,
+            }),
+          }
+        )
+
+        if (response.ok) {
+          invited++
+        }
+      }
+
+      setInviteMessage(
+        `✅ AI updated ${matchResult.matchesCreated || 0} matches and invited ${invited} worker${invited === 1 ? '' : 's'}`
+      )
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+
+    } catch (error) {
+      setInviteMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to send invites.'
+      )
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
   function getWorkerName(applicant: Applicant) {
     return (
       applicant.worker?.full_name ||
@@ -705,12 +855,12 @@ export default function ApplicantsPage() {
             </Link>
 
             <h1 className="mt-4 text-5xl font-black tracking-tight text-white">
-              Applicants
+              Manage Job Applicants
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-              Hire workers, decline applicants, message workers, and move the
-              job through the CrewCall workflow.
+              Review workers, compare qualifications, hire your crew, and move
+              this job through the complete CrewCall workflow.
             </p>
           </div>
 
@@ -723,12 +873,50 @@ export default function ApplicantsPage() {
                 View Job
               </Link>
 
-              <Link
-                href={`/my-jobs/${job.id}/ai`}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!job?.id) return
+
+                  setInviteLoading(true)
+                  setInviteMessage('')
+
+                  try {
+                    const response = await fetch('/api/jobs/match', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        jobId: job.id,
+                      }),
+                    })
+
+                    if (!response.ok) {
+                      const result = await response.json()
+                      throw new Error(
+                        result?.error || 'Unable to run AI matching.'
+                      )
+                    }
+
+                    window.location.href = `/my-jobs/${job.id}/ai`
+                  } catch (error) {
+                    setInviteMessage(
+                      error instanceof Error
+                        ? error.message
+                        : 'Unable to run AI matching.'
+                    )
+                  } finally {
+                    setInviteLoading(false)
+                  }
+                }}
+                disabled={inviteLoading}
                 className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02]"
               >
-                AI Worker Matches
-              </Link>
+                {inviteLoading
+                  ? '🤖 Running AI...'
+                  : '🤖 Run CrewCall AI Recruiter'}
+              </button>
 
               {canPayWorker && (
                 <Link
@@ -774,6 +962,44 @@ export default function ApplicantsPage() {
                     {[job.trade, job.location].filter(Boolean).join(' • ') ||
                       'No trade/location listed'}
                   </p>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        Pay
+                      </p>
+                      <p className="mt-1 text-xl font-black text-white">
+                        {formatMoney(job.pay_rate)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        Applicants
+                      </p>
+                      <p className="mt-1 text-xl font-black text-white">
+                        {sortedApplicants.length}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        Job Status
+                      </p>
+                      <p className="mt-1 text-xl font-black capitalize text-white">
+                        {job.status || 'Open'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        Payment
+                      </p>
+                      <p className="mt-1 text-xl font-black capitalize text-white">
+                        {job.payment_status || 'Unpaid'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -841,6 +1067,190 @@ export default function ApplicantsPage() {
           </div>
         )}
 
+        {sortedApplicants.length > 0 &&
+          matchByWorkerId[sortedApplicants[0].worker_id] && (
+            <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 p-6 shadow-2xl">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
+                    CrewCall AI Recommendation
+                  </p>
+
+                  <h2 className="mt-2 text-3xl font-black text-white">
+                    {getWorkerName(sortedApplicants[0])}
+                  </h2>
+
+                  <p className="mt-2 text-sm font-semibold text-cyan-100">
+                    {matchByWorkerId[sortedApplicants[0].worker_id].reason ||
+                      'Strong match for this job'}
+                  </p>
+                </div>
+
+                <div className="rounded-3xl bg-cyan-400/20 px-8 py-5 text-center">
+                  <p className="text-xs font-black uppercase text-cyan-200">
+                    Match Score
+                  </p>
+
+                  <p className="mt-1 text-5xl font-black text-white">
+                    {matchByWorkerId[sortedApplicants[0].worker_id].match_score}%
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowComparison((current) => !current)}
+                    className="mt-4 rounded-2xl bg-white/20 px-5 py-3 text-sm font-black text-white transition hover:bg-white/30"
+                  >
+                    {showComparison
+                      ? 'Hide Comparison'
+                      : 'Compare Applicants'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={inviteTopMatches}
+                    disabled={inviteLoading}
+                    className="mt-3 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-60"
+                  >
+                    {inviteLoading
+                      ? 'Inviting...'
+                      : 'Invite Top AI Matches'}
+                  </button>
+
+                  {inviteMessage && (
+                    <p className="mt-3 text-sm font-bold text-emerald-100">
+                      {inviteMessage}
+                    </p>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
+
+        {showComparison && sortedApplicants.length > 0 && (
+          <div className="rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6 shadow-2xl">
+
+            <div className="mb-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-200">
+                Applicant Comparison
+              </p>
+
+              <h2 className="mt-2 text-3xl font-black text-white">
+                AI Ranked Workers
+              </h2>
+            </div>
+
+            <div className="grid gap-4">
+              {sortedApplicants.map((applicant, index) => {
+                const worker = applicant.worker
+                const aiMatch = matchByWorkerId[applicant.worker_id]
+
+                return (
+                  <div
+                    key={applicant.id}
+                    className="rounded-3xl border border-white/10 bg-black/20 p-5"
+                  >
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+                      <div>
+                        <p className="text-xs font-black uppercase text-purple-200">
+                          #{index + 1}
+                        </p>
+
+                        <h3 className="mt-1 text-2xl font-black text-white">
+                          {getWorkerName(applicant)}
+                        </h3>
+
+                        <p className="mt-2 text-sm font-semibold text-slate-300">
+                          {[worker?.trade, worker?.city, worker?.state]
+                            .filter(Boolean)
+                            .join(' • ') || 'No details listed'}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-white/10 px-5 py-3 text-center">
+                        <p className="text-xs font-black uppercase text-slate-400">
+                          AI Match
+                        </p>
+
+                        <p className="text-3xl font-black text-white">
+                          {aiMatch?.match_score || 0}%
+                        </p>
+                      </div>
+
+                    </div>
+
+                    {aiMatch && (
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+
+                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
+                          Trade
+                          <br />
+                          {aiMatch.trade_score || 0}%
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
+                          Location
+                          <br />
+                          {aiMatch.location_score || 0}%
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
+                          Availability
+                          <br />
+                          {aiMatch.availability_score || 0}%
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
+                          Certification
+                          <br />
+                          {aiMatch.certification_score || 0}%
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
+                          Pay Fit
+                          <br />
+                          {aiMatch.pay_score || 0}%
+                        </div>
+
+                      </div>
+                    )}
+
+
+                    <div className="mt-4 grid gap-3 text-sm font-bold text-white sm:grid-cols-3">
+
+                      <div className="rounded-2xl bg-white/5 p-3">
+                        Experience:
+                        <br />
+                        {worker?.years_experience || 'Not listed'}
+                      </div>
+
+                      <div className="rounded-2xl bg-white/5 p-3">
+                        Insurance:
+                        <br />
+                        {worker?.insurance_provider
+                          ? '✓ Verified'
+                          : 'Pending'}
+                      </div>
+
+                      <div className="rounded-2xl bg-white/5 p-3">
+                        Liability:
+                        <br />
+                        {worker?.liability_form_signed
+                          ? '✓ Complete'
+                          : 'Pending'}
+                      </div>
+
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+          </div>
+        )}
+
         {sortedApplicants.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
             <h2 className="text-3xl font-black text-white">
@@ -852,9 +1262,27 @@ export default function ApplicantsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-5">
-            {sortedApplicants.map((applicant) => {
+          <div className="rounded-[2rem] border border-cyan-400/20 bg-slate-900/60 p-6 shadow-2xl">
+
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-white">
+                  Applicants
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-400">
+                  {sortedApplicants.length} worker{sortedApplicants.length === 1 ? '' : 's'} applied for this job
+                </p>
+              </div>
+
+              <div className="rounded-full bg-cyan-400/20 px-4 py-2 text-sm font-black text-cyan-200">
+                {job?.title || 'Job'}
+              </div>
+            </div>
+
+            <div className="grid gap-5">
+              {sortedApplicants.map((applicant) => {
               const worker = applicant.worker
+              const aiMatch = matchByWorkerId[applicant.worker_id]
               const workerName = getWorkerName(applicant)
               const workerPhoto = getWorkerPhoto(applicant.worker_id)
 
@@ -941,11 +1369,112 @@ export default function ApplicantsPage() {
                             .join(' • ') || 'No details listed'}
                         </p>
 
+                        <div className="mt-4 flex flex-wrap gap-2">
+
+                          {worker?.insurance_provider && (
+                            <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black text-emerald-200">
+                              ✓ Insured
+                            </span>
+                          )}
+
+                          {worker?.liability_form_signed && (
+                            <span className="rounded-full bg-blue-400/20 px-3 py-1 text-xs font-black text-blue-200">
+                              ✓ Liability Complete
+                            </span>
+                          )}
+
+                          {worker?.years_experience && (
+                            <span className="rounded-full bg-purple-400/20 px-3 py-1 text-xs font-black text-purple-200">
+                              {worker.years_experience} Years Experience
+                            </span>
+                          )}
+
+                        </div>
+
                         {worker?.years_experience && (
                           <p className="mt-4 text-sm font-bold text-slate-100">
                             Experience: {worker.years_experience} years
                           </p>
                         )}
+
+                        
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                              Verification
+                            </p>
+
+                            <div className="mt-3 space-y-2 text-sm font-bold text-white">
+                              <p>
+                                {worker?.insurance_provider
+                                  ? '✓ Insurance Verified'
+                                  : '○ Insurance Not Listed'}
+                              </p>
+
+                              <p>
+                                {worker?.liability_form_signed
+                                  ? '✓ Liability Form Signed'
+                                  : '○ Liability Pending'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {aiMatch && (
+                            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 sm:col-span-2">
+                              <p className="text-xs font-black uppercase tracking-wide text-cyan-200">
+                                AI Match Score
+                              </p>
+
+                              <div className="mt-2 flex flex-wrap items-center gap-4">
+                                <p className="text-4xl font-black text-white">
+                                  {aiMatch.match_score}%
+                                </p>
+
+                                <p className="text-sm font-bold text-cyan-100">
+                                  {aiMatch.reason || 'Strong CrewCall match'}
+                                </p>
+                              </div>
+
+                              <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+                                {aiMatch.trade_score >= 70 && (
+                                  <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-emerald-200">
+                                    ✓ Trade Match
+                                  </span>
+                                )}
+
+                                {aiMatch.location_score >= 70 && (
+                                  <span className="rounded-full bg-blue-400/20 px-3 py-1 text-blue-200">
+                                    ✓ Location Match
+                                  </span>
+                                )}
+
+                                {aiMatch.availability_score >= 70 && (
+                                  <span className="rounded-full bg-purple-400/20 px-3 py-1 text-purple-200">
+                                    ✓ Availability Match
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                              Worker Profile
+                            </p>
+
+                            <div className="mt-3 space-y-2 text-sm font-bold text-white">
+                              <p>
+                                Trade: {worker?.trade || 'Not listed'}
+                              </p>
+
+                              <p>
+                                Experience: {worker?.years_experience || 'Not listed'}
+                              </p>
+                            </div>
+                          </div>
+
+                        </div>
 
                         {worker?.insurance_provider && (
                           <p className="mt-2 text-sm font-semibold text-slate-300">
@@ -1057,7 +1586,8 @@ export default function ApplicantsPage() {
                   </div>
                 </div>
               )
-            })}
+              })}
+            </div>
           </div>
         )}
       </div>
