@@ -14,6 +14,77 @@ type PaymentRow = {
   stripe_transfer_id: string | null
 }
 
+
+function PaymentSection({
+  title,
+  payments,
+}: {
+  title: string
+  payments: PaymentRow[]
+}) {
+  return (
+    <section className="mt-8 space-y-5">
+      <h2 className="text-2xl font-black">
+        {title}
+      </h2>
+
+      {payments.length === 0 ? (
+        <div className="rounded-xl bg-white/10 p-6">
+          No {title.toLowerCase()}.
+        </div>
+      ) : (
+        payments.map((payment) => (
+          <div
+            key={payment.id}
+            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+          >
+            <h3 className="text-2xl font-black">
+              {payment.title || 'CrewCall Job'}
+            </h3>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-slate-400">
+                  Worker Paid
+                </p>
+                <p className="font-bold">
+                  ${((payment.worker_payout_cents || 0) / 100).toFixed(2)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400">
+                  Status
+                </p>
+                <p className="font-bold">
+                  {payment.payout_status || 'pending'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-400">
+                  Released
+                </p>
+                <p className="font-bold">
+                  {payment.payout_released_at
+                    ? new Date(payment.payout_released_at).toLocaleDateString()
+                    : '-'}
+                </p>
+              </div>
+            </div>
+
+            {payment.stripe_transfer_id && (
+              <p className="mt-4 text-xs text-slate-400 break-all">
+                Stripe Transfer: {payment.stripe_transfer_id}
+              </p>
+            )}
+          </div>
+        ))
+      )}
+    </section>
+  )
+}
+
 export default function CompanyPaymentsPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,6 +154,16 @@ export default function CompanyPaymentsPage() {
     0
   )
 
+  const releasedPayments = payments.filter(
+    (payment) =>
+      payment.payout_status === 'released'
+  )
+
+  const pendingPayments = payments.filter(
+    (payment) =>
+      payment.payout_status !== 'released'
+  )
+
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
 
@@ -119,82 +200,16 @@ export default function CompanyPaymentsPage() {
         </div>
 
 
-        <div className="mt-8 space-y-5">
+        <PaymentSection
+          title="Payment History"
+          payments={releasedPayments}
+        />
 
-          {loading ? (
-            <div className="rounded-xl bg-white/10 p-6">
-              Loading payments...
-            </div>
-          ) : payments.length === 0 ? (
-            <div className="rounded-xl bg-white/10 p-6">
-              No payments yet.
-            </div>
-          ) : (
+        <PaymentSection
+          title="Pending Payments"
+          payments={pendingPayments}
+        />
 
-            payments.map((payment) => (
-
-              <div
-                key={payment.id}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6"
-              >
-
-                <h2 className="text-2xl font-black">
-                  {payment.title || 'CrewCall Job'}
-                </h2>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-
-                  <div>
-                    <p className="text-sm text-slate-400">
-                      Worker Paid
-                    </p>
-                    <p className="font-bold">
-                      ${(
-                        (payment.worker_payout_cents || 0) /
-                        100
-                      ).toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-slate-400">
-                      Status
-                    </p>
-                    <p className="font-bold">
-                      {payment.payout_status || 'pending'}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-slate-400">
-                      Released
-                    </p>
-                    <p className="font-bold">
-                      {payment.payout_released_at
-                        ? new Date(
-                            payment.payout_released_at
-                          ).toLocaleDateString()
-                        : '-'}
-                    </p>
-                  </div>
-
-                </div>
-
-                {payment.stripe_transfer_id && (
-                  <p className="mt-4 text-xs text-slate-400 break-all">
-                    Stripe Transfer:
-                    {' '}
-                    {payment.stripe_transfer_id}
-                  </p>
-                )}
-
-              </div>
-
-            ))
-
-          )}
-
-        </div>
 
       </div>
 
