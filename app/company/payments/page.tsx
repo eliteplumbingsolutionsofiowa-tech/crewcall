@@ -66,8 +66,14 @@ export default function CompanyPaymentsPage() {
   }, [])
 
   const totalSpent = payments.reduce(
-    (sum, item) =>
-      sum + Number(item.pay_rate || 0),
+    (sum, item) => {
+      const amount = Number(
+        String(item.pay_rate || '0')
+          .replace(/[^0-9.]/g, '')
+      )
+
+      return sum + (Number.isNaN(amount) ? 0 : amount)
+    },
     0
   )
 
