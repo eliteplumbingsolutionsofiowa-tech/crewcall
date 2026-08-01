@@ -163,7 +163,6 @@ export default function AdminPaymentsPage() {
       `
       )
       .order('created_at', { ascending: false })
-      .returns<JobPayment[]>()
 
     if (error) {
       setMessage(error.message)
@@ -173,7 +172,8 @@ export default function AdminPaymentsPage() {
       return
     }
 
-    const cleaned: CleanJobPayment[] = (data ?? []).map((job) => ({
+    const cleaned: CleanJobPayment[] =
+      ((data || []) as unknown as JobPayment[]).map((job) => ({
       id: job.id,
       title: job.title,
       trade: job.trade,
