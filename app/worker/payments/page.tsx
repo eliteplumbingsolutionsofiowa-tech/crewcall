@@ -7,7 +7,7 @@ import { formatMoney } from '@/lib/formatMoney'
 type PaymentRow = {
   id: string
   title: string | null
-  pay_rate: number | null
+  pay_rate: string | null
   worker_payout_cents: number | null
   platform_fee_cents: number | null
   payout_released_at: string | null
@@ -42,7 +42,7 @@ export default function WorkerPaymentsPage() {
         return
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('jobs')
         .select(
           `
@@ -60,6 +60,13 @@ export default function WorkerPaymentsPage() {
         .order('payout_released_at', {
           ascending: false,
         })
+
+      if (error) {
+        console.error('Worker payments error:', error.message)
+        setPayments([])
+        setLoading(false)
+        return
+      }
 
       setPayments((data || []) as PaymentRow[])
       setLoading(false)
