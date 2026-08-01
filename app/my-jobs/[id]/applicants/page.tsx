@@ -1067,8 +1067,7 @@ export default function ApplicantsPage() {
           </div>
         )}
 
-        {sortedApplicants.length > 0 &&
-          matchByWorkerId[sortedApplicants[0].worker_id] && (
+        {Object.keys(matchByWorkerId).length > 0 && (
             <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 p-6 shadow-2xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
@@ -1078,12 +1077,23 @@ export default function ApplicantsPage() {
                   </p>
 
                   <h2 className="mt-2 text-3xl font-black text-white">
-                    {getWorkerName(sortedApplicants[0])}
+                    {getWorkerName(
+                      sortedApplicants.find(
+                        (applicant) =>
+                          matchByWorkerId[applicant.worker_id]
+                      ) || sortedApplicants[0]
+                    )}
                   </h2>
 
                   <p className="mt-2 text-sm font-semibold text-cyan-100">
-                    {matchByWorkerId[sortedApplicants[0].worker_id].reason ||
-                      'Strong match for this job'}
+                    {matchByWorkerId[
+                      (
+                        sortedApplicants.find(
+                          (applicant) =>
+                            matchByWorkerId[applicant.worker_id]
+                        ) || sortedApplicants[0]
+                      ).worker_id
+                    ]?.reason || 'Strong match for this job'}
                   </p>
                 </div>
 
@@ -1093,7 +1103,14 @@ export default function ApplicantsPage() {
                   </p>
 
                   <p className="mt-1 text-5xl font-black text-white">
-                    {matchByWorkerId[sortedApplicants[0].worker_id].match_score}%
+                    {matchByWorkerId[
+                      (
+                        sortedApplicants.find(
+                          (applicant) =>
+                            matchByWorkerId[applicant.worker_id]
+                        ) || sortedApplicants[0]
+                      ).worker_id
+                    ]?.match_score || 0}%
                   </p>
 
                   <button
@@ -1129,19 +1146,24 @@ export default function ApplicantsPage() {
           )}
 
         {showComparison && sortedApplicants.length > 0 && (
-          <div className="rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6 shadow-2xl">
+          <div className="rounded-[2rem] border border-purple-400/20 bg-gradient-to-br from-purple-500/10 to-blue-500/10 p-6 shadow-2xl">
 
-            <div className="mb-5">
+            <div className="mb-6">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-200">
-                Applicant Comparison
+                CrewCall AI Comparison
               </p>
 
               <h2 className="mt-2 text-3xl font-black text-white">
-                AI Ranked Workers
+                Ranked Hiring Candidates
               </h2>
+
+              <p className="mt-2 text-sm font-semibold text-slate-300">
+                AI evaluates trade fit, location, availability, credentials,
+                pay compatibility, and reputation.
+              </p>
             </div>
 
-            <div className="grid gap-4">
+            <div className="space-y-5">
               {sortedApplicants.map((applicant, index) => {
                 const worker = applicant.worker
                 const aiMatch = matchByWorkerId[applicant.worker_id]
@@ -1151,30 +1173,39 @@ export default function ApplicantsPage() {
                     key={applicant.id}
                     className="rounded-3xl border border-white/10 bg-black/20 p-5"
                   >
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
                       <div>
-                        <p className="text-xs font-black uppercase text-purple-200">
-                          #{index + 1}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-black text-purple-200">
+                            RANK #{index + 1}
+                          </span>
 
-                        <h3 className="mt-1 text-2xl font-black text-white">
+                          {aiMatch && (
+                            <span className="rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-black text-cyan-200">
+                              AI MATCH
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="mt-3 text-2xl font-black text-white">
                           {getWorkerName(applicant)}
                         </h3>
 
-                        <p className="mt-2 text-sm font-semibold text-slate-300">
+                        <p className="mt-1 text-sm font-semibold text-slate-300">
                           {[worker?.trade, worker?.city, worker?.state]
                             .filter(Boolean)
-                            .join(' • ') || 'No details listed'}
+                            .join(' • ') || 'Profile incomplete'}
                         </p>
                       </div>
 
-                      <div className="rounded-2xl bg-white/10 px-5 py-3 text-center">
+                      <div className="rounded-3xl bg-white/10 px-8 py-4 text-center">
                         <p className="text-xs font-black uppercase text-slate-400">
-                          AI Match
+                          Match Score
                         </p>
 
-                        <p className="text-3xl font-black text-white">
+                        <p className="text-4xl font-black text-white">
                           {aiMatch?.match_score || 0}%
                         </p>
                       </div>
@@ -1182,67 +1213,45 @@ export default function ApplicantsPage() {
                     </div>
 
                     {aiMatch && (
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                      <>
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
 
-                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
-                          Trade
-                          <br />
-                          {aiMatch.trade_score || 0}%
+                          {[
+                            ['Trade', aiMatch.trade_score],
+                            ['Location', aiMatch.location_score],
+                            ['Availability', aiMatch.availability_score],
+                            ['Certifications', aiMatch.certification_score],
+                            ['Pay Fit', aiMatch.pay_score],
+                            ['Experience', aiMatch.experience_score],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-2xl bg-white/5 p-3 text-center"
+                            >
+                              <p className="text-xs font-black uppercase text-slate-400">
+                                {label}
+                              </p>
+                              <p className="mt-1 text-xl font-black text-white">
+                                {value || 0}%
+                              </p>
+                            </div>
+                          ))}
+
                         </div>
 
-                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
-                          Location
-                          <br />
-                          {aiMatch.location_score || 0}%
+                        <div className="mt-5 rounded-2xl bg-white/5 p-4">
+                          <p className="text-xs font-black uppercase text-purple-200">
+                            AI Reason
+                          </p>
+
+                          <p className="mt-2 text-sm font-semibold text-white">
+                            {aiMatch.reason || 'Strong CrewCall match'}
+                          </p>
                         </div>
 
-                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
-                          Availability
-                          <br />
-                          {aiMatch.availability_score || 0}%
-                        </div>
-
-                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
-                          Certification
-                          <br />
-                          {aiMatch.certification_score || 0}%
-                        </div>
-
-                        <div className="rounded-2xl bg-white/5 p-3 text-sm font-bold text-white">
-                          Pay Fit
-                          <br />
-                          {aiMatch.pay_score || 0}%
-                        </div>
-
-                      </div>
+                      </>
                     )}
 
-
-                    <div className="mt-4 grid gap-3 text-sm font-bold text-white sm:grid-cols-3">
-
-                      <div className="rounded-2xl bg-white/5 p-3">
-                        Experience:
-                        <br />
-                        {worker?.years_experience || 'Not listed'}
-                      </div>
-
-                      <div className="rounded-2xl bg-white/5 p-3">
-                        Insurance:
-                        <br />
-                        {worker?.insurance_provider
-                          ? '✓ Verified'
-                          : 'Pending'}
-                      </div>
-
-                      <div className="rounded-2xl bg-white/5 p-3">
-                        Liability:
-                        <br />
-                        {worker?.liability_form_signed
-                          ? '✓ Complete'
-                          : 'Pending'}
-                      </div>
-
-                    </div>
                   </div>
                 )
               })}

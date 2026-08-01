@@ -82,8 +82,9 @@ export default function WorkerApplicationsPage() {
             location,
             pay_rate,
             assigned_worker_id,
-            profiles (
-              company_name
+            company:profiles!jobs_company_id_fkey (
+              company_name,
+              full_name
             )
           )
         `)
@@ -122,7 +123,7 @@ export default function WorkerApplicationsPage() {
             'Pay not listed',
 
           company_name:
-            app.jobs?.profiles
+            app.jobs?.company
               ?.company_name ||
             'Company',
 
