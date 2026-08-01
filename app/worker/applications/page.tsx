@@ -23,6 +23,11 @@ type Application = {
   pay_rate: string | null
   company_name: string | null
 
+  requested_pay_rate: string | null
+  company_counter_offer: string | null
+  negotiation_message: string | null
+  negotiation_status: string | null
+
   assigned_worker_id: string | null
 }
 
@@ -76,6 +81,10 @@ export default function WorkerApplicationsPage() {
           worker_id,
           status,
           created_at,
+          requested_pay_rate,
+          negotiation_message,
+          company_counter_offer,
+          negotiation_status,
           jobs!applications_job_id_fkey (
             id,
             title,
@@ -126,6 +135,18 @@ export default function WorkerApplicationsPage() {
             app.jobs?.company
               ?.company_name ||
             'Company',
+
+          requested_pay_rate:
+            app.requested_pay_rate || null,
+
+          company_counter_offer:
+            app.company_counter_offer || null,
+
+          negotiation_message:
+            app.negotiation_message || null,
+
+          negotiation_status:
+            app.negotiation_status || 'open',
 
           assigned_worker_id:
             app.jobs
@@ -516,6 +537,80 @@ export default function WorkerApplicationsPage() {
                                 app.pay_rate
                               }
                             </p>
+
+                            {(app.requested_pay_rate ||
+                              app.company_counter_offer ||
+                              app.negotiation_status) && (
+                              <div className="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+                                <p className="text-xs font-black uppercase tracking-wide text-amber-200">
+                                  Pay Negotiation
+                                </p>
+
+                                <div className="mt-3 space-y-2 text-sm font-bold text-white">
+                                  <p>
+                                    Your Request:
+                                    <span className="ml-2 text-emerald-300">
+                                      {app.requested_pay_rate || '—'}
+                                    </span>
+                                  </p>
+
+                                  <p>
+                                    Company Counter:
+                                    <span className="ml-2 text-cyan-300">
+                                      {app.company_counter_offer || 'No counter yet'}
+                                    </span>
+                                  </p>
+
+                                  <p>
+                                    Status:
+                                    <span className="ml-2 text-yellow-300">
+                                      {app.negotiation_status || 'open'}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {(app.requested_pay_rate ||
+                              app.company_counter_offer ||
+                              app.negotiation_status) && (
+                              <div className="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
+
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
+                                  Pay Negotiation
+                                </p>
+
+                                <div className="mt-3 space-y-2 text-sm font-bold text-white">
+
+                                  {app.requested_pay_rate && (
+                                    <p>
+                                      Your Request:
+                                      <span className="ml-2 text-emerald-300">
+                                        ${app.requested_pay_rate}
+                                      </span>
+                                    </p>
+                                  )}
+
+                                  {app.company_counter_offer && (
+                                    <p>
+                                      Company Counter:
+                                      <span className="ml-2 text-cyan-300">
+                                        ${app.company_counter_offer}
+                                      </span>
+                                    </p>
+                                  )}
+
+                                  <p>
+                                    Status:
+                                    <span className="ml-2 text-amber-300">
+                                      {app.negotiation_status || 'open'}
+                                    </span>
+                                  </p>
+
+                                </div>
+
+                              </div>
+                            )}
 
                             <p className="mt-4 text-xs font-black uppercase tracking-wide text-slate-500">
                               Applied{' '}
