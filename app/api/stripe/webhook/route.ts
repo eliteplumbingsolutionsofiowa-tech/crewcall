@@ -257,6 +257,58 @@ export async function POST(request: Request) {
       }
 
 
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted': {
+        const subscription =
+          event.data.object as Stripe.Subscription
+
+        const customerId =
+          getCustomerId(subscription.customer)
+
+        if (!customerId) {
+          console.log(
+            'Subscription event missing customer:',
+            subscription.id
+          )
+
+          break
+        }
+
+        const status =
+          event.type === 'customer.subscription.deleted'
+            ? 'canceled'
+            : subscription.status
+
+        const { error } =
+          await supabase
+            .from('subscriptions')
+            .update({
+              status,
+              stripe_subscription_id:
+                subscription.id,
+              updated_at:
+                new Date().toISOString(),
+            })
+            .eq(
+              'stripe_customer_id',
+              customerId
+            )
+
+        if (error) {
+          throw new Error(error.message)
+        }
+
+        console.log(
+          'CrewCall subscription updated:',
+          subscription.id,
+          status
+        )
+
+        break
+      }
+
+
       default:
         console.log(
           'Unhandled Stripe event:',
