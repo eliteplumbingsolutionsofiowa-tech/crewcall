@@ -66,164 +66,12 @@ function BillingContent() {
   const [loading, setLoading] = useState(true)
   const [startingCheckout, setStartingCheckout] = useState(false)
   const [connectingStripe, setConnectingStripe] = useState(false)
+  const [openingPortal, setOpeningPortal] = useState(false)
   const [message, setMessage] = useState('')
   const [messageTone, setMessageTone] = useState<
     'info' | 'success' | 'error'
   >('info')
 
-  const loadBilling = useCallback(async () => {
-    setLoading(true)
-
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError) {
-      setMessage(authError.message)
-      setMessageTone('error')
-      setLoading(false)
-      return
-    }
-
-    if (!authUser) {
-      setUser(null)
-      setProfile(null)
-      setSubscription(null)
-      setMessage('You must be logged in to view billing.')
-      setMessageTone('error')
-      setLoading(false)
-      return
-    }
-
-    setUser({
-      id: authUser.id,
-      email: authUser.email ?? null,
-    })
-
-    const [
-      { data: profileData, error: profileError },
-      { data: subscriptionData, error: subscriptionError },
-    ] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select(
-          [
-            'id',
-            'role',
-            'full_name',
-            'company_name',
-            'stripe_account_id',
-            'stripe_charges_enabled',
-            'stripe_payouts_enabled',
-            'stripe_details_submitted',
-          ].join(', ')
-        )
-        .eq('id', authUser.id)
-        .maybeSingle<BillingProfile>(),
-
-      supabase
-        .from('subscriptions')
-        .select(
-          [
-            'user_id',
-            'plan',
-            'status',
-            'stripe_customer_id',
-            'stripe_subscription_id',
-            'trial_starts_at',
-            'trial_ends_at',
-            'current_period_starts_at',
-            'current_period_ends_at',
-            'cancel_at_period_end',
-            'canceled_at',
-          ].join(', ')
-        )
-        .eq('user_id', authUser.id)
-        .maybeSingle<Subscription>(),
-    ])
-
-    if (profileError) {
-      setMessage(`Profile error: ${profileError.message}`)
-      setMessageTone('error')
-      setLoading(false)
-      return
-    }
-
-    if (subscriptionError) {
-      setMessage(`Subscription error: ${subscriptionError.message}`)
-      setMessageTone('error')
-      setLoading(false)
-      return
-    }
-
-    setProfile(profileData ?? null)
-    setSubscription(subscriptionData ?? null)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    void loadBilling()
-  }, [loadBilling])
-
-  useEffect(() => {
-    const result = searchParams.get('subscription')
-
-    if (result === 'success') {
-      setMessage(
-        'Stripe Checkout completed. Your membership is being activated.'
-      )
-      setMessageTone('success')
-      void loadBilling()
-      window.history.replaceState({}, '', '/billing')
-    }
-
-    if (result === 'canceled') {
-      setMessage('Stripe Checkout was canceled. No charge was made.')
-      setMessageTone('info')
-      window.history.replaceState({}, '', '/billing')
-    }
-  }, [loadBilling, searchParams])
-
-  const accountName = useMemo(() => {
-    return profile?.company_name || profile?.full_name || 'CrewCall account'
-  }, [profile])
-
-  const isCompany =
-    profile?.role === 'company' || profile?.role === 'admin'
-
-  const isWorker = profile?.role === 'worker'
-
-  const stripeConnected = Boolean(
-    profile?.stripe_account_id &&
-      profile?.stripe_details_submitted &&
-      profile?.stripe_payouts_enabled
-  )
-
-  const membershipActive = Boolean(
-    subscription?.stripe_subscription_id &&
-      ['active', 'trialing', 'past_due'].includes(subscription.status)
-  )
-
-  const trialActive = useMemo(() => {
-    if (subscription?.status !== 'trialing' || !subscription.trial_ends_at) {
-      return false
-    }
-
-    return new Date(subscription.trial_ends_at).getTime() > Date.now()
-  }, [subscription])
-
-  const trialDaysRemaining = useMemo(() => {
-    if (!trialActive || !subscription?.trial_ends_at) return 0
-
-    const milliseconds =
-      new Date(subscription.trial_ends_at).getTime() - Date.now()
-
-    return Math.max(
-      0,
-      Math.ceil(milliseconds / (1000 * 60 * 60 * 24))
-    )
-  }, [subscription, trialActive])
 
   async function handleStartSubscription() {
     setStartingCheckout(true)
@@ -329,6 +177,109 @@ function BillingContent() {
     }
   }
 
+  const isCompany =
+    profile?.role === 'company' || profile?.role === 'admin'
+
+  const isWorker = profile?.role === 'worker'
+
+  const stripeConnected = Boolean(
+    profile?.stripe_account_id &&
+      profile?.stripe_details_submitted &&
+      profile?.stripe_payouts_enabled
+  )
+
+  const membershipActive = Boolean(
+    subscription?.stripe_subscription_id &&
+      ['active', 'trialing', 'past_due'].includes(subscription.status)
+  )
+
+  const trialActive = useMemo(() => {
+    if (
+      subscription?.status !== 'trialing' ||
+      !subscription.trial_ends_at
+    ) {
+      return false
+    }
+
+    return (
+      new Date(subscription.trial_ends_at).getTime() >
+      Date.now()
+    )
+  }, [subscription])
+
+  const trialDaysRemaining = useMemo(() => {
+    if (!trialActive || !subscription?.trial_ends_at) {
+      return 0
+    }
+
+    const milliseconds =
+      new Date(subscription.trial_ends_at).getTime() -
+      Date.now()
+
+    return Math.max(
+      0,
+      Math.ceil(
+        milliseconds /
+          (1000 * 60 * 60 * 24)
+      )
+    )
+  }, [subscription, trialActive])
+
+  const accountName = useMemo(() => {
+    return profile?.company_name || profile?.full_name || 'CrewCall account'
+  }, [profile])
+
+
+
+  async function openCustomerPortal() {
+    setOpeningPortal(true)
+    setMessage('')
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error('You must be logged in.')
+      }
+
+      const response = await fetch(
+        '/api/stripe/customer-portal',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Unable to open billing portal.'
+        )
+      }
+
+      if (!data.url) {
+        throw new Error('Stripe did not return a portal URL.')
+      }
+
+      window.location.href = data.url
+
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to open billing portal.'
+      )
+      setMessageTone('error')
+    } finally {
+      setOpeningPortal(false)
+    }
+  }
+
   if (loading) {
     return <BillingLoading />
   }
@@ -430,6 +381,10 @@ function BillingContent() {
                     onStartSubscription={() =>
                       void handleStartSubscription()
                     }
+                    openingPortal={openingPortal}
+                    onOpenCustomerPortal={() =>
+                      void openCustomerPortal()
+                    }
                   />
                 )}
 
@@ -477,6 +432,8 @@ function CompanyMembershipSection({
   trialDaysRemaining,
   startingCheckout,
   onStartSubscription,
+  openingPortal,
+  onOpenCustomerPortal,
 }: {
   subscription: Subscription | null
   membershipActive: boolean
@@ -484,6 +441,8 @@ function CompanyMembershipSection({
   trialDaysRemaining: number
   startingCheckout: boolean
   onStartSubscription: () => void
+  openingPortal: boolean
+  onOpenCustomerPortal: () => void
 }) {
   const hasPaidStripeSubscription = Boolean(
     subscription?.stripe_subscription_id
@@ -537,6 +496,17 @@ function CompanyMembershipSection({
             <p className="font-black text-emerald-200">
               Your CrewCall membership is active
             </p>
+
+            <button
+              type="button"
+              onClick={onOpenCustomerPortal}
+              disabled={openingPortal}
+              className="mt-4 rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20 disabled:opacity-50"
+            >
+              {openingPortal
+                ? 'Opening...'
+                : 'Manage Subscription'}
+            </button>
 
             {subscription?.current_period_ends_at && (
               <p className="mt-2 text-sm font-semibold text-emerald-100/80">
