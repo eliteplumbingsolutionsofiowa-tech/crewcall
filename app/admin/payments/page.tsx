@@ -36,7 +36,10 @@ type PaymentProfile = {
   full_name: string | null
   company_name: string | null
   stripe_account_id: string | null
-  stripe_onboarded: boolean | null
+  stripe_onboarding_complete: boolean | null
+  stripe_charges_enabled: boolean | null
+  stripe_payouts_enabled: boolean | null
+  stripe_details_submitted: boolean | null
 }
 
 type CleanJobPayment = Omit<JobPayment, 'company' | 'worker'> & {
@@ -151,14 +154,20 @@ export default function AdminPaymentsPage() {
           full_name,
           company_name,
           stripe_account_id,
-          stripe_onboarded
+          stripe_onboarding_complete,
+          stripe_charges_enabled,
+          stripe_payouts_enabled,
+          stripe_details_submitted
         ),
         worker:profiles!jobs_assigned_worker_id_fkey (
           id,
           full_name,
           company_name,
           stripe_account_id,
-          stripe_onboarded
+          stripe_onboarding_complete,
+          stripe_charges_enabled,
+          stripe_payouts_enabled,
+          stripe_details_submitted
         )
       `
       )
@@ -471,14 +480,20 @@ export default function AdminPaymentsPage() {
 
                           <p>
                             <span className="text-emerald-300">Worker Stripe:</span>{' '}
-                            {job.worker?.stripe_onboarded ? 'Ready' : 'Not ready'}
+                            {job.worker?.stripe_payouts_enabled &&
+                            job.worker?.stripe_details_submitted
+                              ? 'Ready'
+                              : 'Not ready'}
                           </p>
 
                           <p className="md:col-span-2">
                             <span className="text-emerald-300">
                               Company Stripe:
                             </span>{' '}
-                            {job.company?.stripe_onboarded ? 'Ready' : 'Not ready'}
+                            {job.company?.stripe_payouts_enabled &&
+                            job.company?.stripe_details_submitted
+                              ? 'Ready'
+                              : 'Not ready'}
                           </p>
 
                           <p className="md:col-span-2">
