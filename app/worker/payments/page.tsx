@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { formatMoney } from '@/lib/formatMoney'
 
 type PaymentRow = {
   id: string
@@ -124,11 +125,9 @@ export default function WorkerPaymentsPage() {
                       Paid
                     </p>
                     <p className="font-bold">
-                      $
-                      {(
-                        (payment.worker_payout_cents || 0) /
-                        100
-                      ).toFixed(2)}
+                      {formatMoney(
+                        (payment.worker_payout_cents || 0) / 100
+                      )}
                     </p>
                   </div>
 
@@ -137,11 +136,9 @@ export default function WorkerPaymentsPage() {
                       Platform Fee
                     </p>
                     <p className="font-bold">
-                      $
-                      {(
-                        (payment.platform_fee_cents || 0) /
-                        100
-                      ).toFixed(2)}
+                      {formatMoney(
+                        (payment.platform_fee_cents || 0) / 100
+                      )}
                     </p>
                   </div>
 

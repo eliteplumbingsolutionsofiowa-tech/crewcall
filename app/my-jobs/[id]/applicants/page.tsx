@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { formatMoney } from '@/lib/formatMoney'
 
 type Job = {
   id: string

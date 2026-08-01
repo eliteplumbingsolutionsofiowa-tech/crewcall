@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { formatMoney } from '@/lib/formatMoney'
 
 type Job = {
   id: string
@@ -138,7 +139,7 @@ export default function PayPage() {
           </p>
 
           <p>
-            <strong>Amount:</strong> {job.pay_rate || '$0'}
+            <strong>Amount:</strong> {formatMoney(job.pay_rate)}
           </p>
         </div>
 

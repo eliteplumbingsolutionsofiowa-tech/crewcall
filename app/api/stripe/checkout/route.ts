@@ -100,10 +100,22 @@ function normalizeString(value: unknown) {
 }
 
 function parseDollarAmount(value: unknown) {
-  const cleaned = String(value || '0').replace(
-    /[^0-9.]/g,
-    ''
-  )
+  if (value === null || value === undefined) {
+    return 0
+  }
+
+  const raw = String(value).trim()
+
+  if (!raw) {
+    return 0
+  }
+
+  // Reject obvious letter/number mistakes like 100o or 1OOO
+  if (/[a-zA-Z]/.test(raw.replace(/\b(day|hr|hour|total|per)\b/gi, ''))) {
+    return 0
+  }
+
+  const cleaned = raw.replace(/[$,\s]/g, '')
 
   const amount = Number(cleaned)
 
