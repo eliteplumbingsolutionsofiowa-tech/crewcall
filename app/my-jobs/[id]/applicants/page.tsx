@@ -660,6 +660,29 @@ export default function ApplicantsPage() {
       is_read: false,
     })
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      const { data: existingConversation } =
+        await conversationsSelectTable()
+          .select('id')
+          .eq('job_id', job.id)
+          .eq('company_id', user.id)
+          .eq('worker_id', applicant.worker_id)
+          .maybeSingle()
+
+      if (!existingConversation?.id) {
+        await conversationsInsertTable()
+          .insert({
+            job_id: job.id,
+            company_id: user.id,
+            worker_id: applicant.worker_id,
+          })
+      }
+    }
+
     setMessage('Worker hired successfully.')
 
     await loadApplicants()
