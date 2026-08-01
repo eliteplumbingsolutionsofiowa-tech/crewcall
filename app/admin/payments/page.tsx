@@ -488,12 +488,11 @@ export default function AdminPaymentsPage() {
 
                           <p className="md:col-span-2">
                             <span className="text-emerald-300">
-                              Company Stripe:
+                              Company Payment:
                             </span>{' '}
-                            {job.company?.stripe_payouts_enabled &&
-                            job.company?.stripe_details_submitted
-                              ? 'Ready'
-                              : 'Not ready'}
+                            {job.payment_status === 'paid'
+                              ? 'Paid'
+                              : 'Pending'}
                           </p>
 
                           <p className="md:col-span-2">
