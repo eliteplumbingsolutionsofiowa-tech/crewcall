@@ -552,7 +552,9 @@ export type Database = {
       }
       jobs: {
         Row: {
+          ai_attempt_count: number | null
           ai_last_invite_at: string | null
+          ai_next_action_at: string | null
           ai_next_worker_index: number | null
           ai_recruiting: boolean | null
           ai_recruiting_complete: boolean | null
@@ -601,7 +603,9 @@ export type Database = {
           worker_payout_cents: number | null
         }
         Insert: {
+          ai_attempt_count?: number | null
           ai_last_invite_at?: string | null
+          ai_next_action_at?: string | null
           ai_next_worker_index?: number | null
           ai_recruiting?: boolean | null
           ai_recruiting_complete?: boolean | null
@@ -650,7 +654,9 @@ export type Database = {
           worker_payout_cents?: number | null
         }
         Update: {
+          ai_attempt_count?: number | null
           ai_last_invite_at?: string | null
+          ai_next_action_at?: string | null
           ai_next_worker_index?: number | null
           ai_recruiting?: boolean | null
           ai_recruiting_complete?: boolean | null
