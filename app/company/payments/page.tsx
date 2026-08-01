@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 type PaymentRow = {
   id: string
   title: string | null
-  pay_rate: number | null
+  pay_rate: string | null
   worker_payout_cents: number | null
   platform_fee_cents: number | null
   payout_status: string | null
@@ -31,7 +31,7 @@ export default function CompanyPaymentsPage() {
         return
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('jobs')
         .select(
           `
@@ -51,6 +51,13 @@ export default function CompanyPaymentsPage() {
           ascending: false,
         })
 
+      if (error) {
+        console.error('Company payments error:', error.message)
+        setPayments([])
+        setLoading(false)
+        return
+      }
+
       setPayments((data || []) as PaymentRow[])
       setLoading(false)
     }
@@ -60,7 +67,7 @@ export default function CompanyPaymentsPage() {
 
   const totalSpent = payments.reduce(
     (sum, item) =>
-      sum + (item.pay_rate || 0),
+      sum + Number(item.pay_rate || 0),
     0
   )
 
