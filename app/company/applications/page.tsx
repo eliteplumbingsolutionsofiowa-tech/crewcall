@@ -486,13 +486,24 @@ export default function CompanyApplicationsPage() {
               </div>
             ) : (
               grouped.map(([jobId, apps]) => (
-                <section key={jobId} className="space-y-4">
-                  <div className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-5">
+                <section
+                  key={jobId}
+                  className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/60 shadow-2xl"
+                >
+                  <div className="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 p-5 md:p-6">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h2 className="text-2xl font-black text-white">
-                          {apps[0].job_title}
-                        </h2>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h2 className="text-2xl font-black text-white">
+                            {apps[0].job_title}
+                          </h2>
+
+                          <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-cyan-100">
+                            {apps.length} {apps.length === 1
+                              ? "Applicant"
+                              : "Applicants"}
+                          </span>
+                        </div>
 
                         <p className="mt-1 text-sm font-bold text-slate-400">
                           {apps[0].job_location}
@@ -508,11 +519,11 @@ export default function CompanyApplicationsPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 border-t border-white/10 p-4 md:p-5">
                     {apps.map((app) => (
                       <article
                         key={app.id}
-                        className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-5 shadow-xl transition hover:border-cyan-400/20"
+                        className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 shadow-xl transition hover:border-cyan-400/30 hover:bg-white/[0.07]"
                       >
                         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0">
@@ -559,16 +570,16 @@ export default function CompanyApplicationsPage() {
                               Message
                             </Link>
 
-                            {app.status !== 'accepted' && (
-                              <button
-                                type="button"
-                                onClick={() => void hire(app)}
-                                disabled={actionLoading === app.id}
-                                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-60"
-                              >
-                                {actionLoading === app.id ? 'Hiring...' : 'Hire'}
-                              </button>
-                            )}
+                            {app.status !== "accepted" &&
+                              app.status !== "rejected" && (
+                                <Link
+                                  href={`/my-jobs/${app.job_id}/applicants`}
+                                  className="rounded-2xl bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-300"
+                                >
+                                  Review & Negotiate
+                                </Link>
+                              )}
+
 
                             {app.status !== 'rejected' &&
                               app.status !== 'accepted' && (

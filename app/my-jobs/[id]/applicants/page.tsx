@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -977,11 +977,31 @@ export default function ApplicantsPage() {
     normalizedPaymentStatus === 'paid' &&
     normalizedPayoutStatus !== 'released'
 
+  const topRecommendedApplicant =
+    sortedApplicants.find(
+      (applicant) => matchByWorkerId[applicant.worker_id]
+    ) || sortedApplicants[0] || null
+
+  const topRecommendedMatch = topRecommendedApplicant
+    ? matchByWorkerId[topRecommendedApplicant.worker_id]
+    : null
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
-        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading applicants...</p>
+        <div className="mx-auto max-w-7xl">
+          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
+            <div className="h-3 w-32 animate-pulse rounded-full bg-cyan-300/20" />
+            <div className="mt-5 h-10 w-80 max-w-full animate-pulse rounded-2xl bg-white/10" />
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-40 animate-pulse rounded-3xl bg-white/5"
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </main>
     )
@@ -990,873 +1010,880 @@ export default function ApplicantsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <Link
-              href="/my-jobs"
-              className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
-            >
-              ← Back to My Jobs
-            </Link>
-
-            <h1 className="mt-4 text-5xl font-black tracking-tight text-white">
-              Manage Job Applicants
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-              Review workers, compare qualifications, hire your crew, and move
-              this job through the complete CrewCall workflow.
-            </p>
-          </div>
-
-          {job && (
-            <div className="flex flex-wrap gap-3">
+        <header className="rounded-[2rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl backdrop-blur md:p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div>
               <Link
-                href={`/jobs/${job.id}`}
-                className="rounded-2xl bg-white px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] hover:bg-slate-100"
+                href="/my-jobs"
+                className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
               >
-                View Job
+                ← Back to My Jobs
               </Link>
 
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!job?.id) return
+              <p className="mt-5 text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                Hiring Workspace
+              </p>
 
-                  setInviteLoading(true)
-                  setInviteMessage('')
+              <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
+                {job?.title || 'Manage Applicants'}
+              </h1>
 
-                  try {
-                    const response = await fetch('/api/jobs/match', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        jobId: job.id,
-                      }),
-                    })
-
-                    if (!response.ok) {
-                      const result = await response.json()
-                      throw new Error(
-                        result?.error || 'Unable to run AI matching.'
-                      )
-                    }
-
-                    window.location.href = `/my-jobs/${job.id}/ai`
-                  } catch (error) {
-                    setInviteMessage(
-                      error instanceof Error
-                        ? error.message
-                        : 'Unable to run AI matching.'
-                    )
-                  } finally {
-                    setInviteLoading(false)
-                  }
-                }}
-                disabled={inviteLoading}
-                className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02]"
-              >
-                {inviteLoading
-                  ? '🤖 Running AI...'
-                  : '🤖 Run CrewCall AI Recruiter'}
-              </button>
-
-              {canPayWorker && (
-                <Link
-                  href={`/jobs/${job.id}/pay`}
-                  className="rounded-2xl bg-green-600 px-6 py-4 text-sm font-black text-white shadow-xl transition hover:scale-[1.02] hover:bg-green-500"
-                >
-                  Pay Worker
-                </Link>
-              )}
-
-              {canReleasePayout && (
-                <Link
-                  href={`/jobs/${job.id}/release-payout`}
-                  className="rounded-2xl bg-emerald-600 px-6 py-4 text-sm font-black text-white shadow-xl transition hover:scale-[1.02] hover:bg-emerald-500"
-                >
-                  Release Payout
-                </Link>
-              )}
+              <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
+                Review each applicant, negotiate pay, message workers, and hire
+                the best fit without leaving this job.
+              </p>
             </div>
-          )}
-        </div>
+
+            {job && (
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={`/jobs/${job.id}`}
+                  className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
+                >
+                  View Job
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!job?.id) return
+
+                    setInviteLoading(true)
+                    setInviteMessage('')
+
+                    try {
+                      const response = await fetch('/api/jobs/match', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          jobId: job.id,
+                        }),
+                      })
+
+                      if (!response.ok) {
+                        const result = await response.json()
+                        throw new Error(
+                          result?.error || 'Unable to run AI matching.'
+                        )
+                      }
+
+                      await loadApplicants()
+                      setShowComparison(true)
+                    } catch (error) {
+                      setInviteMessage(
+                        error instanceof Error
+                          ? error.message
+                          : 'Unable to run AI matching.'
+                      )
+                    } finally {
+                      setInviteLoading(false)
+                    }
+                  }}
+                  disabled={inviteLoading}
+                  className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] disabled:opacity-60"
+                >
+                  {inviteLoading ? 'Running AI...' : 'Run AI Match'}
+                </button>
+
+                {canPayWorker && (
+                  <Link
+                    href={`/jobs/${job.id}/pay`}
+                    className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-black text-white transition hover:bg-green-500"
+                  >
+                    Pay Worker
+                  </Link>
+                )}
+
+                {canReleasePayout && (
+                  <Link
+                    href={`/jobs/${job.id}/release-payout`}
+                    className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500"
+                  >
+                    Release Payout
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
 
         {message && (
-          <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 px-5 py-4 text-sm font-bold text-cyan-100">
+          <div className="rounded-3xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-4 text-sm font-bold text-cyan-50 shadow-xl">
             {message}
           </div>
         )}
 
-        {job && (
-          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur">
-            <div className="bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/10 p-6 md:p-8">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200/70">
-                    Job
-                  </p>
-
-                  <h2 className="mt-2 text-3xl font-black text-white">
-                    {job.title || 'Untitled Job'}
-                  </h2>
-
-                  <p className="mt-3 text-sm font-semibold text-slate-300">
-                    {[job.trade, job.location].filter(Boolean).join(' • ') ||
-                      'No trade/location listed'}
-                  </p>
-
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Pay
-                      </p>
-                      <p className="mt-1 text-xl font-black text-white">
-                        {formatMoney(job.pay_rate)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Applicants
-                      </p>
-                      <p className="mt-1 text-xl font-black text-white">
-                        {sortedApplicants.length}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Job Status
-                      </p>
-                      <p className="mt-1 text-xl font-black capitalize text-white">
-                        {job.status || 'Open'}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Payment
-                      </p>
-                      <p className="mt-1 text-xl font-black capitalize text-white">
-                        {job.payment_status || 'Unpaid'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <StatusPill value={job.status || 'open'} />
-                  <StatusPill value={job.payment_status || 'unpaid'} />
-                  <StatusPill value={job.payout_status || 'not_released'} />
-                </div>
-              </div>
-
-              {assignedApplicant && (
-                <div className="mt-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-200">
-                    Assigned Worker
-                  </p>
-
-                  <p className="mt-3 text-3xl font-black text-white">
-                    {getWorkerName(assignedApplicant)}
-                  </p>
-
-                  <p className="mt-2 text-sm font-semibold text-emerald-100/80">
-                    This worker is assigned to the job.
-                  </p>
-
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <LifecycleButton
-                      label="Mark In Progress"
-                      disabled={
-                        actionLoadingId === 'in_progress' ||
-                        job.status === 'in_progress' ||
-                        job.status === 'completed'
-                      }
-                      onClick={() => updateJobStatus('in_progress')}
-                    />
-
-                    <LifecycleButton
-                      label="Mark Complete"
-                      disabled={
-                        actionLoadingId === 'completed' ||
-                        job.status === 'completed'
-                      }
-                      onClick={() => updateJobStatus('completed')}
-                    />
-
-                    {canPayWorker && (
-                      <Link
-                        href={`/jobs/${job.id}/pay`}
-                        className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-black text-white transition hover:bg-green-500"
-                      >
-                        Pay Worker
-                      </Link>
-                    )}
-
-                    {canReleasePayout && (
-                      <Link
-                        href={`/jobs/${job.id}/release-payout`}
-                        className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500"
-                      >
-                        Release Payout
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+        {inviteMessage && (
+          <div className="rounded-3xl border border-purple-300/20 bg-purple-400/10 px-5 py-4 text-sm font-bold text-purple-50 shadow-xl">
+            {inviteMessage}
           </div>
         )}
 
-        {Object.keys(matchByWorkerId).length > 0 && (
-            <div className="rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 p-6 shadow-2xl">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {job && (
+          <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/70 shadow-2xl">
+            <div className="bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/15 p-6 md:p-8">
+              <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <StatusPill value={job.status || 'open'} />
+                    <StatusPill value={job.payment_status || 'unpaid'} />
+                    <StatusPill value={job.payout_status || 'not_released'} />
+                  </div>
 
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-                    CrewCall AI Recommendation
-                  </p>
-
-                  <h2 className="mt-2 text-3xl font-black text-white">
-                    {getWorkerName(
-                      sortedApplicants.find(
-                        (applicant) =>
-                          matchByWorkerId[applicant.worker_id]
-                      ) || sortedApplicants[0]
-                    )}
+                  <h2 className="mt-5 text-3xl font-black text-white">
+                    {job.title || 'Untitled Job'}
                   </h2>
 
-                  <p className="mt-2 text-sm font-semibold text-cyan-100">
-                    {matchByWorkerId[
-                      (
-                        sortedApplicants.find(
-                          (applicant) =>
-                            matchByWorkerId[applicant.worker_id]
-                        ) || sortedApplicants[0]
-                      ).worker_id
-                    ]?.reason || 'Strong match for this job'}
+                  <p className="mt-2 text-sm font-semibold text-slate-300">
+                    {[job.trade, job.location].filter(Boolean).join(' • ') ||
+                      'No trade or location listed'}
                   </p>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <JobMetric
+                      label="Pay"
+                      value={formatMoney(job.pay_rate)}
+                    />
+                    <JobMetric
+                      label="Applicants"
+                      value={String(sortedApplicants.length)}
+                    />
+                    <JobMetric
+                      label="Status"
+                      value={cleanStatus(job.status || 'open')}
+                    />
+                    <JobMetric
+                      label="Payment"
+                      value={cleanStatus(job.payment_status || 'unpaid')}
+                    />
+                  </div>
                 </div>
 
-                <div className="rounded-3xl bg-cyan-400/20 px-8 py-5 text-center">
-                  <p className="text-xs font-black uppercase text-cyan-200">
-                    Match Score
+                {assignedApplicant && (
+                  <div className="w-full rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5 xl:max-w-sm">
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-200">
+                      Assigned Worker
+                    </p>
+
+                    <p className="mt-3 text-2xl font-black text-white">
+                      {getWorkerName(assignedApplicant)}
+                    </p>
+
+                    <p className="mt-2 text-sm font-semibold text-emerald-100/80">
+                      Agreed pay:{' '}
+                      {formatMoney(
+                        assignedApplicant.company_counter_offer ||
+                          assignedApplicant.requested_pay_rate ||
+                          assignedApplicant.requested_pay ||
+                          job.pay_rate
+                      )}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <LifecycleButton
+                        label="Mark In Progress"
+                        disabled={
+                          actionLoadingId === 'in_progress' ||
+                          job.status === 'in_progress' ||
+                          job.status === 'completed'
+                        }
+                        onClick={() => updateJobStatus('in_progress')}
+                      />
+
+                      <LifecycleButton
+                        label="Mark Complete"
+                        disabled={
+                          actionLoadingId === 'completed' ||
+                          job.status === 'completed'
+                        }
+                        onClick={() => updateJobStatus('completed')}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 p-5 md:p-7">
+              {topRecommendedApplicant && topRecommendedMatch && (
+                <div className="mb-6 rounded-3xl border border-cyan-300/20 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
+                        CrewCall AI Pick
+                      </p>
+
+                      <h3 className="mt-2 text-2xl font-black text-white">
+                        {getWorkerName(topRecommendedApplicant)}
+                      </h3>
+
+                      <p className="mt-2 max-w-3xl text-sm font-semibold text-cyan-100">
+                        {topRecommendedMatch.reason ||
+                          'Strong overall match for this job.'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-2xl bg-cyan-300/15 px-5 py-3 text-center">
+                        <p className="text-xs font-black uppercase text-cyan-200">
+                          Match
+                        </p>
+                        <p className="text-3xl font-black text-white">
+                          {topRecommendedMatch.match_score || 0}%
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowComparison((current) => !current)}
+                        className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
+                      >
+                        {showComparison ? 'Hide Comparison' : 'Compare'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {showComparison && (
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+                      <MatchMetric
+                        label="Trade"
+                        value={topRecommendedMatch.trade_score}
+                      />
+                      <MatchMetric
+                        label="Location"
+                        value={topRecommendedMatch.location_score}
+                      />
+                      <MatchMetric
+                        label="Availability"
+                        value={topRecommendedMatch.availability_score}
+                      />
+                      <MatchMetric
+                        label="Credentials"
+                        value={topRecommendedMatch.certification_score}
+                      />
+                      <MatchMetric
+                        label="Pay Fit"
+                        value={topRecommendedMatch.pay_score}
+                      />
+                      <MatchMetric
+                        label="Experience"
+                        value={topRecommendedMatch.experience_score}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+                    Applicants
                   </p>
+                  <h3 className="mt-2 text-2xl font-black text-white">
+                    {sortedApplicants.length}{' '}
+                    {sortedApplicants.length === 1 ? 'candidate' : 'candidates'}
+                  </h3>
+                </div>
 
-                  <p className="mt-1 text-5xl font-black text-white">
-                    {matchByWorkerId[
-                      (
-                        sortedApplicants.find(
-                          (applicant) =>
-                            matchByWorkerId[applicant.worker_id]
-                        ) || sortedApplicants[0]
-                      ).worker_id
-                    ]?.match_score || 0}%
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowComparison((current) => !current)}
-                    className="mt-4 rounded-2xl bg-white/20 px-5 py-3 text-sm font-black text-white transition hover:bg-white/30"
-                  >
-                    {showComparison
-                      ? 'Hide Comparison'
-                      : 'Compare Applicants'}
-                  </button>
-
+                {sortedApplicants.length > 0 && (
                   <button
                     type="button"
                     onClick={inviteTopMatches}
                     disabled={inviteLoading}
-                    className="mt-3 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-60"
+                    className="rounded-2xl border border-purple-300/20 bg-purple-400/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-400/20 disabled:opacity-60"
                   >
                     {inviteLoading
                       ? 'Inviting...'
                       : 'Invite Top AI Matches'}
                   </button>
+                )}
+              </div>
 
-                  {inviteMessage && (
-                    <p className="mt-3 text-sm font-bold text-emerald-100">
-                      {inviteMessage}
-                    </p>
-                  )}
+              {sortedApplicants.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] p-10 text-center">
+                  <h3 className="text-2xl font-black text-white">
+                    No applicants yet
+                  </h3>
+                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                    New applicants will appear inside this job workspace.
+                  </p>
                 </div>
+              ) : (
+                <div className="space-y-5">
+                  {sortedApplicants.map((applicant, index) => {
+                    const worker = applicant.worker
+                    const aiMatch = matchByWorkerId[applicant.worker_id]
+                    const workerName = getWorkerName(applicant)
+                    const workerPhoto = getWorkerPhoto(applicant.worker_id)
 
-              </div>
-            </div>
-          )}
+                    const isAssigned =
+                      job.assigned_worker_id === applicant.worker_id ||
+                      job.assigned_application_id === applicant.id ||
+                      applicant.status === 'accepted' ||
+                      applicant.status === 'hired'
 
-        {showComparison && sortedApplicants.length > 0 && (
-          <div className="rounded-[2rem] border border-purple-400/20 bg-gradient-to-br from-purple-500/10 to-blue-500/10 p-6 shadow-2xl">
+                    const jobAlreadyAssigned = Boolean(
+                      job.assigned_worker_id ||
+                        job.assigned_application_id
+                    )
 
-            <div className="mb-6">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-200">
-                CrewCall AI Comparison
-              </p>
+                    const isRejected =
+                      applicant.status === 'rejected' ||
+                      applicant.status === 'declined'
 
-              <h2 className="mt-2 text-3xl font-black text-white">
-                Ranked Hiring Candidates
-              </h2>
+                    const workerOffer =
+                      applicant.requested_pay_rate ||
+                      applicant.requested_pay
 
-              <p className="mt-2 text-sm font-semibold text-slate-300">
-                AI evaluates trade fit, location, availability, credentials,
-                pay compatibility, and reputation.
-              </p>
-            </div>
+                    const agreedRate =
+                      applicant.negotiation_status === 'accepted'
+                        ? applicant.company_counter_offer || workerOffer
+                        : null
 
-            <div className="space-y-5">
-              {sortedApplicants.map((applicant, index) => {
-                const worker = applicant.worker
-                const aiMatch = matchByWorkerId[applicant.worker_id]
+                    return (
+                      <article
+                        key={applicant.id}
+                        className={`overflow-hidden rounded-[1.75rem] border shadow-xl transition ${
+                          isAssigned
+                            ? 'border-emerald-300/30 bg-emerald-400/[0.07]'
+                            : isRejected
+                              ? 'border-red-300/15 bg-red-400/[0.04] opacity-75'
+                              : 'border-white/10 bg-white/[0.045] hover:border-cyan-300/25'
+                        }`}
+                      >
+                        <div className="p-5 md:p-6">
+                          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                            <div className="flex min-w-0 flex-1 flex-col gap-5 sm:flex-row">
+                              <Link
+                                href={`/profile?user=${applicant.worker_id}`}
+                                className="shrink-0"
+                              >
+                                {workerPhoto ? (
+                                  <img
+                                    src={workerPhoto}
+                                    alt={workerName}
+                                    className="h-24 w-24 rounded-3xl border border-white/10 object-cover shadow-xl"
+                                  />
+                                ) : (
+                                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 text-4xl font-black text-white shadow-xl">
+                                    {workerName.charAt(0)}
+                                  </div>
+                                )}
+                              </Link>
 
-                return (
-                  <div
-                    key={applicant.id}
-                    className="rounded-3xl border border-white/10 bg-black/20 p-5"
-                  >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-slate-300">
+                                    #{index + 1}
+                                  </span>
 
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                  {aiMatch && index === 0 && (
+                                    <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-black text-cyan-100">
+                                      AI PICK
+                                    </span>
+                                  )}
 
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-black text-purple-200">
-                            RANK #{index + 1}
-                          </span>
+                                  <StatusPill
+                                    value={applicant.status || 'pending'}
+                                  />
 
-                          {aiMatch && (
-                            <span className="rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-black text-cyan-200">
-                              AI MATCH
-                            </span>
-                          )}
-                        </div>
+                                  {isAssigned && (
+                                    <StatusPill value="assigned" />
+                                  )}
+                                </div>
 
-                        <h3 className="mt-3 text-2xl font-black text-white">
-                          {getWorkerName(applicant)}
-                        </h3>
+                                <Link
+                                  href={`/profile?user=${applicant.worker_id}`}
+                                  className="mt-3 block"
+                                >
+                                  <h4 className="truncate text-3xl font-black text-white transition hover:text-cyan-200">
+                                    {workerName}
+                                  </h4>
+                                </Link>
 
-                        <p className="mt-1 text-sm font-semibold text-slate-300">
-                          {[worker?.trade, worker?.city, worker?.state]
-                            .filter(Boolean)
-                            .join(' • ') || 'Profile incomplete'}
-                        </p>
-                      </div>
-
-                      <div className="rounded-3xl bg-white/10 px-8 py-4 text-center">
-                        <p className="text-xs font-black uppercase text-slate-400">
-                          Match Score
-                        </p>
-
-                        <p className="text-4xl font-black text-white">
-                          {aiMatch?.match_score || 0}%
-                        </p>
-                      </div>
-
-                    </div>
-
-                    {aiMatch && (
-                      <>
-                        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-
-                          {[
-                            ['Trade', aiMatch.trade_score],
-                            ['Location', aiMatch.location_score],
-                            ['Availability', aiMatch.availability_score],
-                            ['Certifications', aiMatch.certification_score],
-                            ['Pay Fit', aiMatch.pay_score],
-                            ['Experience', aiMatch.experience_score],
-                          ].map(([label, value]) => (
-                            <div
-                              key={label}
-                              className="rounded-2xl bg-white/5 p-3 text-center"
-                            >
-                              <p className="text-xs font-black uppercase text-slate-400">
-                                {label}
-                              </p>
-                              <p className="mt-1 text-xl font-black text-white">
-                                {value || 0}%
-                              </p>
-                            </div>
-                          ))}
-
-                        </div>
-
-                        <div className="mt-5 rounded-2xl bg-white/5 p-4">
-                          <p className="text-xs font-black uppercase text-purple-200">
-                            AI Reason
-                          </p>
-
-                          <p className="mt-2 text-sm font-semibold text-white">
-                            {aiMatch.reason || 'Strong CrewCall match'}
-                          </p>
-                        </div>
-
-                      </>
-                    )}
-
-                  </div>
-                )
-              })}
-            </div>
-
-          </div>
-        )}
-
-        {sortedApplicants.length === 0 ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
-            <h2 className="text-3xl font-black text-white">
-              No applicants yet
-            </h2>
-
-            <p className="mt-3 text-slate-300">
-              Workers will appear here once they apply.
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-[2rem] border border-cyan-400/20 bg-slate-900/60 p-6 shadow-2xl">
-
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-white">
-                  Applicants
-                </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-400">
-                  {sortedApplicants.length} worker{sortedApplicants.length === 1 ? '' : 's'} applied for this job
-                </p>
-              </div>
-
-              <div className="rounded-full bg-cyan-400/20 px-4 py-2 text-sm font-black text-cyan-200">
-                {job?.title || 'Job'}
-              </div>
-            </div>
-
-            <div className="grid gap-5">
-              {sortedApplicants.map((applicant) => {
-              const worker = applicant.worker
-              const aiMatch = matchByWorkerId[applicant.worker_id]
-              const workerName = getWorkerName(applicant)
-              const workerPhoto = getWorkerPhoto(applicant.worker_id)
-
-              const isAssigned =
-                job?.assigned_worker_id === applicant.worker_id ||
-                job?.assigned_application_id === applicant.id ||
-                applicant.status === 'accepted' ||
-                applicant.status === 'hired'
-
-              const jobAlreadyAssigned = Boolean(
-                job?.assigned_worker_id || job?.assigned_application_id
-              )
-
-              const isRejected =
-                applicant.status === 'rejected' ||
-                applicant.status === 'declined'
-
-              console.log("HIRE DEBUG", {
-                jobId: job?.id,
-                jobStatus: job?.status,
-                assigned_worker_id: job?.assigned_worker_id,
-                assigned_application_id: job?.assigned_application_id,
-                applicantId: applicant.id,
-                applicantStatus: applicant.status,
-                workerId: applicant.worker_id,
-                jobAlreadyAssigned,
-                isRejected,
-              })
-
-              return (
-                <div
-                  key={applicant.id}
-                  className={`group rounded-[2rem] border p-6 shadow-2xl backdrop-blur transition-all duration-200 hover:-translate-y-1 ${
-                    isAssigned
-                      ? 'border-emerald-400/30 bg-emerald-400/10'
-                      : isRejected
-                        ? 'border-red-400/20 bg-red-400/5 opacity-80'
-                        : 'border-white/10 bg-white/10 hover:border-cyan-300/30 hover:bg-white/15'
-                  }`}
-                >
-                  <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-                    <Link
-                      href={`/profile?user=${applicant.worker_id}`}
-                      className="group flex min-w-0 flex-1 gap-5"
-                    >
-                      {workerPhoto ? (
-                        <img
-                          src={workerPhoto}
-                          alt={workerName}
-                          className="h-24 w-24 shrink-0 rounded-3xl border border-white/10 object-cover shadow-xl"
-                        />
-                      ) : (
-                        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-400 text-4xl font-black text-white shadow-xl">
-                          {workerName.charAt(0)}
-                        </div>
-                      )}
-
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="truncate text-3xl font-black text-white group-hover:text-cyan-200">
-                            {workerName}
-                          </h3>
-
-                          <StatusPill value={applicant.status || 'pending'} />
-
-                          {isAssigned && <StatusPill value="hired" />}
-
-                          {worker?.liability_form_signed && (
-                            <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100 ring-1 ring-emerald-300/20">
-                              Liability Signed
-                            </span>
-                          )}
-
-                          {worker?.insurance_provider && (
-                            <span className="rounded-full bg-blue-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-100 ring-1 ring-blue-300/20">
-                              Insured
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="mt-3 text-sm font-semibold text-slate-300">
-                          {[worker?.trade, worker?.city, worker?.state]
-                            .filter(Boolean)
-                            .join(' • ') || 'No details listed'}
-                        </p>
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-
-                          {worker?.insurance_provider && (
-                            <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black text-emerald-200">
-                              ✓ Insured
-                            </span>
-                          )}
-
-                          {worker?.liability_form_signed && (
-                            <span className="rounded-full bg-blue-400/20 px-3 py-1 text-xs font-black text-blue-200">
-                              ✓ Liability Complete
-                            </span>
-                          )}
-
-                          {worker?.years_experience && (
-                            <span className="rounded-full bg-purple-400/20 px-3 py-1 text-xs font-black text-purple-200">
-                              {worker.years_experience} Years Experience
-                            </span>
-                          )}
-
-                        </div>
-
-                        {worker?.years_experience && (
-                          <p className="mt-4 text-sm font-bold text-slate-100">
-                            Experience: {worker.years_experience} years
-                          </p>
-                        )}
-
-                        
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-
-                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                              Verification
-                            </p>
-
-                            <div className="mt-3 space-y-2 text-sm font-bold text-white">
-                              <p>
-                                {worker?.insurance_provider
-                                  ? '✓ Insurance Verified'
-                                  : '○ Insurance Not Listed'}
-                              </p>
-
-                              <p>
-                                {worker?.liability_form_signed
-                                  ? '✓ Liability Form Signed'
-                                  : '○ Liability Pending'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {aiMatch && (
-                            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 sm:col-span-2">
-                              <p className="text-xs font-black uppercase tracking-wide text-cyan-200">
-                                AI Match Score
-                              </p>
-
-                              <div className="mt-2 flex flex-wrap items-center gap-4">
-                                <p className="text-4xl font-black text-white">
-                                  {aiMatch.match_score}%
+                                <p className="mt-2 text-sm font-semibold text-slate-300">
+                                  {[worker?.trade, worker?.city, worker?.state]
+                                    .filter(Boolean)
+                                    .join(' • ') || 'Profile incomplete'}
                                 </p>
 
-                                <p className="text-sm font-bold text-cyan-100">
-                                  {aiMatch.reason || 'Strong CrewCall match'}
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  {worker?.years_experience && (
+                                    <WorkerBadge>
+                                      {worker.years_experience} years
+                                    </WorkerBadge>
+                                  )}
+
+                                  {worker?.insurance_provider && (
+                                    <WorkerBadge>✓ Insured</WorkerBadge>
+                                  )}
+
+                                  {worker?.liability_form_signed && (
+                                    <WorkerBadge>
+                                      ✓ Liability complete
+                                    </WorkerBadge>
+                                  )}
+
+                                  {aiMatch && (
+                                    <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black text-cyan-100">
+                                      {aiMatch.match_score || 0}% match
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                  Applied{' '}
+                                  {new Date(
+                                    applicant.created_at
+                                  ).toLocaleDateString()}
                                 </p>
                               </div>
-
-                              <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
-                                {aiMatch.trade_score >= 70 && (
-                                  <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-emerald-200">
-                                    ✓ Trade Match
-                                  </span>
-                                )}
-
-                                {aiMatch.location_score >= 70 && (
-                                  <span className="rounded-full bg-blue-400/20 px-3 py-1 text-blue-200">
-                                    ✓ Location Match
-                                  </span>
-                                )}
-
-                                {aiMatch.availability_score >= 70 && (
-                                  <span className="rounded-full bg-purple-400/20 px-3 py-1 text-purple-200">
-                                    ✓ Availability Match
-                                  </span>
-                                )}
-                              </div>
                             </div>
-                          )}
 
-                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                              Worker Profile
-                            </p>
+                            <div className="flex shrink-0 flex-wrap gap-3 xl:w-[240px] xl:flex-col">
+                              <Link
+                                href={`/profile?user=${applicant.worker_id}`}
+                                className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+                              >
+                                View Profile
+                              </Link>
 
-                            <div className="mt-3 space-y-2 text-sm font-bold text-white">
-                              <p>
-                                Trade: {worker?.trade || 'Not listed'}
-                              </p>
-
-                              <p>
-                                Experience: {worker?.years_experience || 'Not listed'}
-                              </p>
-                            </div>
-                          </div>
-
-                        </div>
-
-                        {worker?.insurance_provider && (
-                          <p className="mt-2 text-sm font-semibold text-slate-300">
-                            Insurance: {worker.insurance_provider}
-                          </p>
-                        )}
-
-                        <p className="mt-4 text-xs font-semibold text-slate-400">
-                          Applied{' '}
-                          {new Date(applicant.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </Link>
-
-                    <div className="flex shrink-0 flex-wrap gap-3 xl:w-[260px] xl:flex-col">
-                      <Link
-                        href={`/profile?user=${applicant.worker_id}`}
-                        className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
-                      >
-                        View Profile
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={() => messageWorker(applicant.worker_id)}
-                        disabled={actionLoadingId === applicant.worker_id}
-                        className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-400 disabled:opacity-60"
-                      >
-                        {actionLoadingId === applicant.worker_id
-                          ? 'Opening...'
-                          : 'Message'}
-                      </button>
-
-                      {!jobAlreadyAssigned &&
-                        !isRejected &&
-                        applicant.negotiation_status === 'accepted' && (
-                          <button
-                            type="button"
-                            onClick={() => hireApplicant(applicant)}
-                            disabled={actionLoadingId === applicant.id}
-                            className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
-                          >
-                            {actionLoadingId === applicant.id
-                              ? 'Hiring...'
-                              : 'Hire at Agreed Rate'}
-                          </button>
-                        )}
-
-                      {!jobAlreadyAssigned &&
-                        !isRejected &&
-                        applicant.negotiation_status !== 'accepted' && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              document
-                                .getElementById(
-                                  `negotiation-${applicant.id}`
-                                )
-                                ?.scrollIntoView({
-                                  behavior: 'smooth',
-                                  block: 'center',
-                                })
-                            }
-                            className="rounded-2xl bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-300"
-                          >
-                            Review Pay Offer Below
-                          </button>
-                        )}
-
-                      {!isAssigned && !isRejected && (
-                        <button
-                          type="button"
-                          onClick={() => declineApplicant(applicant)}
-                          disabled={
-                            actionLoadingId === `decline-${applicant.id}`
-                          }
-                          className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-400 disabled:opacity-60"
-                        >
-                          {actionLoadingId === `decline-${applicant.id}`
-                            ? 'Declining...'
-                            : 'Decline'}
-                        </button>
-                      )}
-
-                      {isAssigned && (
-                        <div className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-black text-white">
-                          Assigned
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-5">
-                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Worker Compliance
-                      </p>
-
-                      <p className="mt-3 text-sm font-bold text-white">
-                        {worker?.liability_form_signed
-                          ? 'Compliance started'
-                          : 'Compliance pending'}
-                      </p>
-                    </div>
-
-                    <div
-                      id={`negotiation-${applicant.id}`}
-                      className="scroll-mt-24 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-5"
-                    >
-                      <p className="text-xs font-black uppercase tracking-wide text-orange-200">
-                        Pay Negotiation
-                      </p>
-
-                      <div className="mt-3 space-y-2 text-sm font-bold text-white">
-
-                        <p>
-                          Worker Request:
-                          <span className="ml-2 text-orange-200">
-                            {applicant.requested_pay_rate ||
-                              applicant.requested_pay ||
-                              'Not listed'}
-                          </span>
-                        </p>
-
-                        <p>
-                          Company Counter:
-                          <span className="ml-2 text-cyan-200">
-                            {applicant.company_counter_offer
-                              ? `$${applicant.company_counter_offer}`
-                              : 'None'}
-                          </span>
-                        </p>
-
-                        <p>
-                          Agreed Rate:
-                          <span className="ml-2 text-emerald-300">
-                            {applicant.negotiation_status === 'accepted' &&
-                            applicant.company_counter_offer
-                              ? `$${applicant.company_counter_offer}`
-                              : 'Not agreed'}
-                          </span>
-                        </p>
-
-                        <p>
-                          Status:
-                          <span className="ml-2 text-yellow-300">
-                            {applicant.negotiation_status || 'open'}
-                          </span>
-                        </p>
-
-                      </div>
-
-                      {applicant.negotiation_status !== 'hired' && (
-                        <div className="mt-5 space-y-3">
-
-                          <input
-                            value={counterOffers[applicant.id] || ''}
-                            onChange={(e) =>
-                              setCounterOffers((prev) => ({
-                                ...prev,
-                                [applicant.id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Enter counter offer"
-                            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
-                          />
-
-                          <textarea
-                            value={counterMessages[applicant.id] || ''}
-                            onChange={(e) =>
-                              setCounterMessages((prev) => ({
-                                ...prev,
-                                [applicant.id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Message to worker"
-                            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
-                          />
-
-                          <div className="flex flex-col gap-3 sm:flex-row">
-                            {(applicant.requested_pay_rate ||
-                              applicant.requested_pay) && (
                               <button
                                 type="button"
                                 onClick={() =>
-                                  acceptWorkerOffer(applicant)
+                                  messageWorker(applicant.worker_id)
                                 }
                                 disabled={
-                                  workingId ===
-                                  `accept-${applicant.id}`
+                                  actionLoadingId === applicant.worker_id
                                 }
-                                className="flex-1 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+                                className="flex-1 rounded-2xl bg-blue-500 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-400 disabled:opacity-60"
                               >
-                                {workingId ===
-                                `accept-${applicant.id}`
-                                  ? 'Accepting...'
-                                  : 'Accept Worker Offer'}
+                                {actionLoadingId === applicant.worker_id
+                                  ? 'Opening...'
+                                  : 'Message'}
                               </button>
-                            )}
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                sendCompanyCounter(applicant)
-                              }
-                              disabled={workingId === applicant.id}
-                              className="flex-1 rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
-                            >
-                              {workingId === applicant.id
-                                ? 'Sending...'
-                                : 'Send Counter Offer'}
-                            </button>
+                              {!jobAlreadyAssigned &&
+                                !isRejected &&
+                                applicant.negotiation_status ===
+                                  'accepted' && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      hireApplicant(applicant)
+                                    }
+                                    disabled={
+                                      actionLoadingId === applicant.id
+                                    }
+                                    className="flex-1 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
+                                  >
+                                    {actionLoadingId === applicant.id
+                                      ? 'Hiring...'
+                                      : 'Hire at Agreed Rate'}
+                                  </button>
+                                )}
+
+                              {!jobAlreadyAssigned &&
+                                !isRejected &&
+                                applicant.negotiation_status !==
+                                  'accepted' && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      document
+                                        .getElementById(
+                                          `negotiation-${applicant.id}`
+                                        )
+                                        ?.scrollIntoView({
+                                          behavior: 'smooth',
+                                          block: 'center',
+                                        })
+                                    }
+                                    className="flex-1 rounded-2xl bg-orange-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-300"
+                                  >
+                                    Review Pay Offer
+                                  </button>
+                                )}
+
+                              {!isAssigned && !isRejected && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    declineApplicant(applicant)
+                                  }
+                                  disabled={
+                                    actionLoadingId ===
+                                    `decline-${applicant.id}`
+                                  }
+                                  className="flex-1 rounded-2xl bg-red-500/90 px-4 py-3 text-sm font-black text-white transition hover:bg-red-400 disabled:opacity-60"
+                                >
+                                  {actionLoadingId ===
+                                  `decline-${applicant.id}`
+                                    ? 'Declining...'
+                                    : 'Decline'}
+                                </button>
+                              )}
+
+                              {isAssigned && (
+                                <div className="rounded-2xl bg-emerald-500 px-4 py-3 text-center text-sm font-black text-white">
+                                  Assigned
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid border-t border-white/10 lg:grid-cols-[0.85fr_1.15fr]">
+                          <div className="border-b border-white/10 p-5 lg:border-b-0 lg:border-r md:p-6">
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                              Candidate Snapshot
+                            </p>
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                              <SnapshotRow
+                                label="Trade"
+                                value={worker?.trade || 'Not listed'}
+                              />
+                              <SnapshotRow
+                                label="Experience"
+                                value={
+                                  worker?.years_experience
+                                    ? `${worker.years_experience} years`
+                                    : 'Not listed'
+                                }
+                              />
+                              <SnapshotRow
+                                label="Insurance"
+                                value={
+                                  worker?.insurance_provider ||
+                                  'Not listed'
+                                }
+                              />
+                              <SnapshotRow
+                                label="Liability"
+                                value={
+                                  worker?.liability_form_signed
+                                    ? 'Complete'
+                                    : 'Pending'
+                                }
+                              />
+                            </div>
+
+                            {aiMatch && (
+                              <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.07] p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-xs font-black uppercase tracking-wide text-cyan-200">
+                                    AI Match
+                                  </p>
+                                  <p className="text-2xl font-black text-white">
+                                    {aiMatch.match_score || 0}%
+                                  </p>
+                                </div>
+
+                                <p className="mt-2 text-sm font-semibold leading-6 text-cyan-50/90">
+                                  {aiMatch.reason ||
+                                    'Strong CrewCall match.'}
+                                </p>
+                              </div>
+                            )}
                           </div>
 
+                          <div
+                            id={`negotiation-${applicant.id}`}
+                            className="scroll-mt-24 p-5 md:p-6"
+                          >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-200">
+                                  Pay Negotiation
+                                </p>
+                                <h5 className="mt-2 text-xl font-black text-white">
+                                  Set the final rate before hiring
+                                </h5>
+                              </div>
+
+                              <NegotiationStatus
+                                status={
+                                  agreedRate
+                                    ? 'agreed'
+                                    : applicant.company_counter_offer
+                                      ? 'waiting'
+                                      : 'review'
+                                }
+                              />
+                            </div>
+
+                            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                              <OfferCard
+                                label="Worker Request"
+                                value={
+                                  workerOffer
+                                    ? formatMoney(workerOffer)
+                                    : 'Not submitted'
+                                }
+                                tone="orange"
+                              />
+                              <OfferCard
+                                label="Company Counter"
+                                value={
+                                  applicant.company_counter_offer
+                                    ? formatMoney(
+                                        applicant.company_counter_offer
+                                      )
+                                    : 'Not sent'
+                                }
+                                tone="cyan"
+                              />
+                              <OfferCard
+                                label="Agreed Rate"
+                                value={
+                                  agreedRate
+                                    ? formatMoney(agreedRate)
+                                    : 'Not agreed'
+                                }
+                                tone="green"
+                              />
+                            </div>
+
+                            {!isAssigned && !isRejected && (
+                              <div className="mt-5 space-y-3">
+                                <div className="grid gap-3 md:grid-cols-[0.7fr_1.3fr]">
+                                  <input
+                                    inputMode="decimal"
+                                    value={
+                                      counterOffers[applicant.id] || ''
+                                    }
+                                    onChange={(event) =>
+                                      setCounterOffers((previous) => ({
+                                        ...previous,
+                                        [applicant.id]:
+                                          event.target.value,
+                                      }))
+                                    }
+                                    placeholder="Counter amount"
+                                    className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/40"
+                                  />
+
+                                  <textarea
+                                    rows={2}
+                                    value={
+                                      counterMessages[applicant.id] || ''
+                                    }
+                                    onChange={(event) =>
+                                      setCounterMessages((previous) => ({
+                                        ...previous,
+                                        [applicant.id]:
+                                          event.target.value,
+                                      }))
+                                    }
+                                    placeholder="Optional message to the worker"
+                                    className="w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/40"
+                                  />
+                                </div>
+
+                                <div className="flex flex-col gap-3 sm:flex-row">
+                                  {workerOffer && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        acceptWorkerOffer(applicant)
+                                      }
+                                      disabled={
+                                        workingId ===
+                                        `accept-${applicant.id}`
+                                      }
+                                      className="flex-1 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+                                    >
+                                      {workingId ===
+                                      `accept-${applicant.id}`
+                                        ? 'Accepting...'
+                                        : 'Accept Worker Offer'}
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      sendCompanyCounter(applicant)
+                                    }
+                                    disabled={
+                                      workingId === applicant.id
+                                    }
+                                    className="flex-1 rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
+                                  >
+                                    {workingId === applicant.id
+                                      ? 'Sending...'
+                                      : 'Send Counter Offer'}
+                                  </button>
+                                </div>
+
+                                {agreedRate && !jobAlreadyAssigned && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      hireApplicant(applicant)
+                                    }
+                                    disabled={
+                                      actionLoadingId === applicant.id
+                                    }
+                                    className="w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 px-5 py-4 text-sm font-black text-slate-950 shadow-lg transition hover:scale-[1.01] disabled:opacity-50"
+                                  >
+                                    {actionLoadingId === applicant.id
+                                      ? 'Hiring...'
+                                      : `Hire ${workerName} at ${formatMoney(
+                                          agreedRate
+                                        )}`}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {isAssigned && (
+                              <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
+                                This worker has been hired for this job.
+                              </div>
+                            )}
+
+                            {isRejected && (
+                              <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-400/10 p-4 text-sm font-bold text-red-100">
+                                This application has been declined.
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-
-                    </div>
-
-                  </div>
+                      </article>
+                    )
+                  })}
                 </div>
-              )
-              })}
+              )}
             </div>
-          </div>
+          </section>
         )}
       </div>
     </main>
+  )
+}
+
+function JobMetric({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-black capitalize text-white">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function MatchMetric({
+  label,
+  value,
+}: {
+  label: string
+  value: number | null | undefined
+}) {
+  return (
+    <div className="rounded-2xl bg-black/20 p-3 text-center">
+      <p className="text-xs font-black uppercase text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-black text-white">
+        {value || 0}%
+      </p>
+    </div>
+  )
+}
+
+function WorkerBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-slate-200">
+      {children}
+    </span>
+  )
+}
+
+function SnapshotRow({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-2xl bg-black/20 px-4 py-3">
+      <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+        {label}
+      </span>
+      <span className="text-right text-sm font-bold text-white">
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function OfferCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: 'orange' | 'cyan' | 'green'
+}) {
+  const classes =
+    tone === 'green'
+      ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'
+      : tone === 'cyan'
+        ? 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100'
+        : 'border-orange-300/20 bg-orange-400/10 text-orange-100'
+
+  return (
+    <div className={`rounded-2xl border p-4 ${classes}`}>
+      <p className="text-xs font-black uppercase tracking-wide opacity-70">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-black text-white">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function NegotiationStatus({
+  status,
+}: {
+  status: 'agreed' | 'waiting' | 'review'
+}) {
+  const label =
+    status === 'agreed'
+      ? 'Agreed'
+      : status === 'waiting'
+        ? 'Waiting on worker'
+        : 'Needs review'
+
+  const classes =
+    status === 'agreed'
+      ? 'bg-emerald-400/20 text-emerald-100'
+      : status === 'waiting'
+        ? 'bg-orange-400/20 text-orange-100'
+        : 'bg-blue-400/20 text-blue-100'
+
+  return (
+    <span
+      className={`w-fit rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ${classes}`}
+    >
+      {label}
+    </span>
   )
 }
 
