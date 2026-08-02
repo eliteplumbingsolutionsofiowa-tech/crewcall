@@ -649,6 +649,29 @@ export default function ApplicantsPage() {
   async function hireApplicant(applicant: Applicant) {
     if (!job) return
 
+    const workerSubmittedOffer = Boolean(
+      applicant.requested_pay_rate ||
+      applicant.requested_pay
+    )
+
+    if (
+      workerSubmittedOffer &&
+      applicant.negotiation_status !== 'accepted'
+    ) {
+      setMessage(
+        'Accept the worker offer or complete the negotiation before hiring.'
+      )
+
+      document
+        .getElementById(`negotiation-${applicant.id}`)
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+
+      return
+    }
+
     if (job.assigned_worker_id || job.assigned_application_id) {
       setMessage('This job already has an assigned worker.')
       return
@@ -1639,18 +1662,41 @@ export default function ApplicantsPage() {
                           : 'Message'}
                       </button>
 
-                      {!jobAlreadyAssigned && !isRejected && (
-                        <button
-                          type="button"
-                          onClick={() => hireApplicant(applicant)}
-                          disabled={actionLoadingId === applicant.id}
-                          className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-60"
-                        >
-                          {actionLoadingId === applicant.id
-                            ? 'Hiring...'
-                            : 'Hire Worker'}
-                        </button>
-                      )}
+                      {!jobAlreadyAssigned &&
+                        !isRejected &&
+                        applicant.negotiation_status === 'accepted' && (
+                          <button
+                            type="button"
+                            onClick={() => hireApplicant(applicant)}
+                            disabled={actionLoadingId === applicant.id}
+                            className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
+                          >
+                            {actionLoadingId === applicant.id
+                              ? 'Hiring...'
+                              : 'Hire at Agreed Rate'}
+                          </button>
+                        )}
+
+                      {!jobAlreadyAssigned &&
+                        !isRejected &&
+                        applicant.negotiation_status !== 'accepted' && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              document
+                                .getElementById(
+                                  `negotiation-${applicant.id}`
+                                )
+                                ?.scrollIntoView({
+                                  behavior: 'smooth',
+                                  block: 'center',
+                                })
+                            }
+                            className="rounded-2xl bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-300"
+                          >
+                            Review Pay Offer Below
+                          </button>
+                        )}
 
                       {!isAssigned && !isRejected && (
                         <button
@@ -1688,7 +1734,10 @@ export default function ApplicantsPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 p-5">
+                    <div
+                      id={`negotiation-${applicant.id}`}
+                      className="scroll-mt-24 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-5"
+                    >
                       <p className="text-xs font-black uppercase tracking-wide text-orange-200">
                         Pay Negotiation
                       </p>
