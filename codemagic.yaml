@@ -5,7 +5,7 @@ workflows:
     max_build_duration: 60
     environment:
       node: 22
-      xcode: 26.4
+      xcode: 26.6
     scripts:
       - name: Install dependencies
         script: npm ci
