@@ -73,6 +73,137 @@ function BillingContent() {
   >('info')
 
 
+  useEffect(() => {
+    let active = true
+
+    function withTimeout<T>(
+      promise: PromiseLike<T>,
+      label: string,
+      milliseconds = 10000
+    ): Promise<T> {
+      return Promise.race([
+        Promise.resolve(promise),
+        new Promise<T>((_, reject) => {
+          window.setTimeout(() => {
+            reject(new Error(`${label} timed out.`))
+          }, milliseconds)
+        }),
+      ])
+    }
+
+    async function loadBillingData() {
+      setLoading(true)
+      setMessage('')
+
+      try {
+        const authResult = await withTimeout(
+          supabase.auth.getUser(),
+          'Authentication'
+        )
+
+        if (authResult.error) {
+          throw new Error(authResult.error.message)
+        }
+
+        const authUser = authResult.data.user
+
+        if (!authUser) {
+          throw new Error('You must be logged in to view billing.')
+        }
+
+        if (!active) return
+
+        setUser({
+          id: authUser.id,
+          email: authUser.email ?? null,
+        })
+
+        const profileResult = await withTimeout(
+          supabase
+            .from('profiles')
+            .select(
+              `
+                id,
+                role,
+                full_name,
+                company_name,
+                stripe_account_id,
+                stripe_charges_enabled,
+                stripe_payouts_enabled,
+                stripe_details_submitted
+              `
+            )
+            .eq('id', authUser.id)
+            .maybeSingle(),
+          'Profile request'
+        )
+
+        if (profileResult.error) {
+          throw new Error(`Profile error: ${profileResult.error.message}`)
+        }
+
+        if (!active) return
+
+        setProfile(profileResult.data as BillingProfile | null)
+
+        const subscriptionResult = await withTimeout(
+          supabase
+            .from('subscriptions')
+            .select(
+              `
+                id,
+                user_id,
+                plan,
+                status,
+                stripe_customer_id,
+                stripe_subscription_id,
+                trial_ends_at,
+                current_period_ends_at,
+                cancel_at_period_end
+              `
+            )
+            .eq('user_id', authUser.id)
+            .maybeSingle(),
+          'Subscription request'
+        )
+
+        if (subscriptionResult.error) {
+          throw new Error(
+            `Subscription error: ${subscriptionResult.error.message}`
+          )
+        }
+
+        if (!active) return
+
+        setSubscription(
+          subscriptionResult.data as Subscription | null
+        )
+      } catch (error) {
+        console.warn('Billing page load failed')
+
+        if (active) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : 'Unable to load billing information.'
+          )
+          setMessageTone('error')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadBillingData()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+
   async function handleStartSubscription() {
     setStartingCheckout(true)
     setMessage('')
