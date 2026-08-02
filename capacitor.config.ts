@@ -4,6 +4,21 @@ const config: CapacitorConfig = {
   appId: 'com.crewcall.app',
   appName: 'CrewCall',
   webDir: 'mobile-shell',
+
+  server: {
+    url: 'https://crewcall-tqin.vercel.app',
+    cleartext: false,
+    allowNavigation: [
+      'crewcall-tqin.vercel.app',
+      '*.supabase.co',
+      '*.stripe.com',
+    ],
+  },
+
+  ios: {
+    contentInset: 'automatic',
+    backgroundColor: '#020617',
+  },
 }
 
 export default config
