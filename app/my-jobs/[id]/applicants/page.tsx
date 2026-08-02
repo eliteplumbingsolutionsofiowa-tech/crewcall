@@ -596,6 +596,56 @@ export default function ApplicantsPage() {
     }
   }
 
+  async function acceptWorkerOffer(applicant: Applicant) {
+    const workerOffer =
+      applicant.requested_pay_rate ||
+      applicant.requested_pay
+
+    if (!workerOffer) {
+      setMessage('This worker did not submit a pay request.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Accept ${getWorkerName(applicant)}'s requested rate of ${workerOffer}?`
+    )
+
+    if (!confirmed) return
+
+    setWorkingId(`accept-${applicant.id}`)
+    setMessage('')
+
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          company_counter_offer: workerOffer,
+          negotiation_status: 'accepted',
+          negotiation_message:
+            'Company accepted the worker requested rate.',
+        })
+        .eq('id', applicant.id)
+
+      if (error) {
+        throw error
+      }
+
+      setMessage(
+        `Worker offer accepted at ${workerOffer}. You can now hire the worker.`
+      )
+
+      await loadApplicants()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to accept the worker offer.'
+      )
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
   async function hireApplicant(applicant: Applicant) {
     if (!job) return
 
@@ -1664,6 +1714,16 @@ export default function ApplicantsPage() {
                         </p>
 
                         <p>
+                          Agreed Rate:
+                          <span className="ml-2 text-emerald-300">
+                            {applicant.negotiation_status === 'accepted' &&
+                            applicant.company_counter_offer
+                              ? `$${applicant.company_counter_offer}`
+                              : 'Not agreed'}
+                          </span>
+                        </p>
+
+                        <p>
                           Status:
                           <span className="ml-2 text-yellow-300">
                             {applicant.negotiation_status || 'open'}
@@ -1699,15 +1759,40 @@ export default function ApplicantsPage() {
                             className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
                           />
 
-                          <button
-                            onClick={() => sendCompanyCounter(applicant)}
-                            disabled={workingId === applicant.id}
-                            className="rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-black text-white hover:bg-cyan-400 disabled:opacity-50"
-                          >
-                            {workingId === applicant.id
-                              ? 'Sending...'
-                              : 'Send Counter Offer'}
-                          </button>
+                          <div className="flex flex-col gap-3 sm:flex-row">
+                            {(applicant.requested_pay_rate ||
+                              applicant.requested_pay) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  acceptWorkerOffer(applicant)
+                                }
+                                disabled={
+                                  workingId ===
+                                  `accept-${applicant.id}`
+                                }
+                                className="flex-1 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+                              >
+                                {workingId ===
+                                `accept-${applicant.id}`
+                                  ? 'Accepting...'
+                                  : 'Accept Worker Offer'}
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                sendCompanyCounter(applicant)
+                              }
+                              disabled={workingId === applicant.id}
+                              className="flex-1 rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
+                            >
+                              {workingId === applicant.id
+                                ? 'Sending...'
+                                : 'Send Counter Offer'}
+                            </button>
+                          </div>
 
                         </div>
                       )}
