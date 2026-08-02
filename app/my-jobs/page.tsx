@@ -628,9 +628,15 @@ export default function MyJobsPage() {
                     {!isCompleted && (
                       <Link
                         href={`/my-jobs/${job.id}/applicants`}
-                        className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+                        className={
+                          job.assigned_worker_id
+                            ? "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+                            : "rounded-2xl bg-cyan-500 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-cyan-400"
+                        }
                       >
-                        View Applicants
+                        {job.assigned_worker_id
+                          ? "View Applicants"
+                          : "Review & Negotiate"}
                       </Link>
                     )}
 
