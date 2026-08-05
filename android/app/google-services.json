@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "537136117331",
+    "project_id": "crewcall-d8af2",
+    "storage_bucket": "crewcall-d8af2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537136117331:android:ec5550f423adfc3ab4b8a6",
+        "android_client_info": {
+          "package_name": "com.crewcall.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAu2czpYaKH8celVkYL6F4KVI58p9rwVIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
