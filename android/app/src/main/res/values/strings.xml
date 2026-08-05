@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CrewCall</string>
+    <string name="title_activity_main">CrewCall</string>
+    <string name="package_name">com.crewcall.app</string>
+    <string name="custom_url_scheme">com.crewcall.app</string>
+</resources>

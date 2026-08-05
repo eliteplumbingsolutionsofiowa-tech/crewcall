@@ -55,7 +55,6 @@ export default function CompanyApplicationsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [collapsedJobs, setCollapsedJobs] = useState<Record<string, boolean>>({})
 
   const loadApplications = useCallback(async () => {
     setLoading((current) => current || applications.length === 0)
@@ -511,35 +510,17 @@ export default function CompanyApplicationsPage() {
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/jobs/${jobId}`}
-                          className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
-                        >
-                          View Job
-                        </Link>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCollapsedJobs((current) => ({
-                              ...current,
-                              [jobId]: !current[jobId],
-                            }))
-                          }
-                          className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
-                        >
-                          {collapsedJobs[jobId]
-                            ? `Show Applicants (${apps.length})`
-                            : 'Hide Applicants'}
-                        </button>
-                      </div>
+                      <Link
+                        href={`/jobs/${jobId}`}
+                        className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
+                      >
+                        View Job
+                      </Link>
                     </div>
                   </div>
 
-                  {!collapsedJobs[jobId] && (
-                    <div className="grid gap-4 border-t border-white/10 p-4 md:p-5">
-                      {apps.map((app) => (
+                  <div className="grid gap-4 border-t border-white/10 p-4 md:p-5">
+                    {apps.map((app) => (
                       <article
                         key={app.id}
                         className="rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 shadow-xl transition hover:border-cyan-400/30 hover:bg-white/[0.07]"
@@ -599,21 +580,6 @@ export default function CompanyApplicationsPage() {
                                 </Link>
                               )}
 
-                            {app.status === "accepted" && (
-                              <>
-                                <Link
-                                  href={`/my-jobs/${app.job_id}/applicants`}
-                                  className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-5 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-400/20"
-                                >
-                                  View Assignment
-                                </Link>
-
-                                <div className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white">
-                                  Worker Assigned
-                                </div>
-                              </>
-                            )}
-
 
                             {app.status !== 'rejected' &&
                               app.status !== 'accepted' && (
@@ -631,9 +597,8 @@ export default function CompanyApplicationsPage() {
                           </div>
                         </div>
                       </article>
-                      ))}
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </section>
               ))
             )}
