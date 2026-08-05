@@ -4,62 +4,86 @@ import LaunchProgress from '@/app/components/mission-control/LaunchProgress'
 import LaunchChecklist from '@/app/components/mission-control/LaunchChecklist'
 import SystemStatus from '@/app/components/mission-control/SystemStatus'
 import StatCard from '@/app/components/mission-control/StatCard'
+import { useMissionControl } from '@/hooks/useMissionControl'
 
 export default function MissionControlPage() {
-  const completed = 10
-  const total = 14
+  const {
+    workers,
+    companies,
+    openJobs,
+    activeJobs,
+    completedJobs,
+    paidJobs,
+    loading,
+  } = useMissionControl()
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        Loading Mission Control...
+      </main>
+    )
+  }
 
   const stats = [
     {
       title: 'Workers',
-      value: 127,
+      value: workers,
       icon: '👷',
       color: 'from-sky-500 to-cyan-400',
-      subtitle: '+12 today',
     },
     {
       title: 'Companies',
-      value: 43,
+      value: companies,
       icon: '🏢',
       color: 'from-violet-500 to-fuchsia-500',
-      subtitle: '+2 today',
     },
     {
       title: 'Open Jobs',
-      value: 31,
+      value: openJobs,
       icon: '📋',
       color: 'from-emerald-500 to-green-400',
-      subtitle: 'Hiring now',
     },
     {
-      title: 'Paid Jobs',
-      value: 86,
+      title: 'Completed',
+      value: completedJobs,
+      icon: '✅',
+      color: 'from-green-500 to-emerald-400',
+    },
+    {
+      title: 'Active',
+      value: activeJobs,
+      icon: '⚡',
+      color: 'from-orange-500 to-amber-400',
+    },
+    {
+      title: 'Paid',
+      value: paidJobs,
       icon: '💰',
-      color: 'from-amber-500 to-orange-400',
-      subtitle: 'Stripe synced',
+      color: 'from-yellow-500 to-orange-500',
     },
   ]
 
   const systems = [
     { name: 'Website', healthy: true },
+    { name: 'Supabase', healthy: true },
+    { name: 'Stripe', healthy: true },
+    { name: 'AI Recruiting', healthy: true },
     { name: 'Android', healthy: true },
     { name: 'Apple', healthy: false },
-    { name: 'Stripe', healthy: true },
-    { name: 'Supabase', healthy: true },
-    { name: 'AI Recruiting', healthy: true },
   ]
 
   const checklist = [
     { label: 'Website', complete: true },
     { label: 'Android Build', complete: true },
-    { label: 'Database', complete: true },
+    { label: 'Mission Control', complete: true },
     { label: 'Stripe', complete: true },
     { label: 'AI Recruiting', complete: true },
-    { label: 'Messaging', complete: true },
+    { label: 'Push Notifications', complete: false },
+    { label: 'Apple Approval', complete: false },
     { label: 'TestFlight', complete: false },
     { label: 'Google Play', complete: false },
-    { label: 'Push Notifications', complete: false },
-    { label: 'Production Launch', complete: false },
+    { label: 'Launch', complete: false },
   ]
 
   return (
@@ -70,36 +94,22 @@ export default function MissionControlPage() {
           <h1 className="text-5xl font-black">
             🚀 CrewCall Mission Control
           </h1>
-
           <p className="mt-2 text-slate-400">
-            Production launch dashboard
+            Live production dashboard
           </p>
         </div>
 
-        <LaunchProgress
-          completed={completed}
-          total={total}
-        />
+        <LaunchProgress completed={6} total={10} />
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {stats.map((stat) => (
-            <StatCard
-              key={stat.title}
-              {...stat}
-            />
+            <StatCard key={stat.title} {...stat} />
           ))}
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2">
-
-          <SystemStatus
-            systems={systems}
-          />
-
-          <LaunchChecklist
-            items={checklist}
-          />
-
+          <SystemStatus systems={systems} />
+          <LaunchChecklist items={checklist} />
         </div>
 
       </div>
