@@ -47,6 +47,8 @@ type Applicant = {
   status: string | null
   created_at: string
   requested_pay_rate: string | null
+  company_counter_offer: string | null
+  negotiation_status: string | null
   negotiation_message: string | null
   worker: ApplicantWorker | null
 }
@@ -393,6 +395,8 @@ export default function JobDetailsPage() {
             status,
             created_at,
             requested_pay_rate,
+            company_counter_offer,
+            negotiation_status,
             negotiation_message,
             worker:profiles!applications_worker_id_fkey (
               id,
