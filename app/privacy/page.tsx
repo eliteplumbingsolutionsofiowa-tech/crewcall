@@ -1,102 +1,216 @@
-export default function PrivacyPage() {
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | CrewCall',
+  description: 'Privacy Policy for CrewCall.',
+}
+
+export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white md:px-6">
-      <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/10 bg-white/5 p-8">
-        <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
-          Privacy Policy
-        </p>
+    <main className="min-h-screen bg-slate-950 text-slate-200">
+      <div className="mx-auto max-w-4xl px-6 py-16">
+        <a
+          href="/"
+          className="mb-10 inline-block text-sm font-semibold text-blue-400 hover:text-blue-300"
+        >
+          ← Back to CrewCall
+        </a>
 
-        <h1 className="mt-4 text-4xl font-black">Privacy Policy</h1>
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold tracking-tight text-white">
+            Privacy Policy
+          </h1>
+          <p className="mt-3 text-slate-400">
+            Effective date: August 7, 2026
+          </p>
+        </div>
 
-        <p className="mt-4 text-sm font-bold text-slate-400">
-          Last updated: August 2026
-        </p>
+        <div className="space-y-10 leading-7">
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              1. Introduction
+            </h2>
+            <p>
+              CrewCall provides a platform that helps companies and skilled
+              workers connect for work opportunities. This Privacy Policy
+              explains how CrewCall collects, uses, stores, and shares
+              information when you use our website, mobile application, and
+              related services.
+            </p>
+          </section>
 
-        <div className="mt-8 space-y-8 text-slate-300">
-          <Section title="Information We Collect">
-            CrewCall collects information needed to provide our skilled trades
-            marketplace. This may include name, email address, company
-            information, trade, role, profile information, job postings,
-            applications, reviews, uploaded documents, messages, and payment
-            related information.
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              2. Information We Collect
+            </h2>
+            <p className="mb-3">
+              Depending on how you use CrewCall, we may collect information
+              including:
+            </p>
+            <ul className="list-disc space-y-2 pl-6">
+              <li>Name, email address, phone number, and account information.</li>
+              <li>
+                Company, trade, skills, work experience, certifications, and
+                professional profile information.
+              </li>
+              <li>
+                Job postings, applications, offers, messages, reviews, and
+                other content you submit through CrewCall.
+              </li>
+              <li>
+                Approximate or precise location information when you choose to
+                enable location-based features.
+              </li>
+              <li>
+                Device, browser, IP address, log, and diagnostic information.
+              </li>
+              <li>
+                Subscription, transaction, and payout-related information.
+                Payment information may be processed by third-party payment
+                providers rather than stored directly by CrewCall.
+              </li>
+            </ul>
+          </section>
 
-            We may also collect location information when users enable location
-            services to help connect workers and companies based on distance
-            and availability.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              3. How We Use Information
+            </h2>
+            <p className="mb-3">We may use information to:</p>
+            <ul className="list-disc space-y-2 pl-6">
+              <li>Create, maintain, and secure CrewCall accounts.</li>
+              <li>Connect workers with companies and job opportunities.</li>
+              <li>
+                Provide job matching, recruiting, messaging, notifications,
+                location-based features, and other platform functionality.
+              </li>
+              <li>Process subscriptions, payments, and worker payouts.</li>
+              <li>Verify accounts and help prevent fraud or misuse.</li>
+              <li>Provide customer support.</li>
+              <li>Improve the performance, reliability, and safety of CrewCall.</li>
+              <li>Comply with applicable legal obligations.</li>
+            </ul>
+          </section>
 
-          <Section title="How We Use Information">
-            We use information to create accounts, connect companies with
-            workers, display job opportunities, support messaging, process
-            payments, improve matching services, maintain security, prevent
-            abuse, and provide customer support.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              4. Location Information
+            </h2>
+            <p>
+              CrewCall may use location information to provide features such
+              as nearby job opportunities, worker availability, distance
+              calculations, and worker mapping. Location access depends on
+              your device permissions and CrewCall settings. You can control
+              location permissions through your device settings.
+            </p>
+          </section>
 
-          <Section title="Location Information">
-            Workers may choose to share location information to help companies
-            find available workers nearby. Location sharing can be managed
-            through account settings and device permissions.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              5. How We Share Information
+            </h2>
+            <p>
+              We may share information as necessary to operate CrewCall,
+              including with other users when required for marketplace
+              functionality and with service providers that support hosting,
+              authentication, databases, payments, communications, analytics,
+              and security. We may also disclose information when required by
+              law or to protect CrewCall, our users, or others.
+            </p>
+            <p className="mt-3">
+              CrewCall does not sell personal information to advertisers.
+            </p>
+          </section>
 
-          <Section title="Messages and Communications">
-            Messages sent through CrewCall may be stored to provide
-            communication features between companies and workers, support job
-            coordination, and maintain platform security.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              6. Payments
+            </h2>
+            <p>
+              CrewCall may use third-party payment processors to handle
+              subscriptions, payments, and payouts. Those providers may
+              collect financial and identity information according to their
+              own privacy policies and legal obligations.
+            </p>
+          </section>
 
-          <Section title="Payments">
-            Payments may be processed through third-party payment providers
-            such as Stripe. CrewCall does not store full payment card numbers
-            on its own servers.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              7. Data Retention
+            </h2>
+            <p>
+              We retain personal information for as long as reasonably
+              necessary to provide CrewCall, maintain business and transaction
+              records, resolve disputes, enforce agreements, prevent fraud,
+              and comply with legal obligations.
+            </p>
+          </section>
 
-          <Section title="Uploaded Files">
-            Users may upload profile photos, compliance documents, job files,
-            certifications, and other materials. Users are responsible for
-            having permission to upload and share these materials.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              8. Data Security
+            </h2>
+            <p>
+              We use reasonable administrative, technical, and organizational
+              safeguards designed to protect information. No method of
+              electronic transmission or storage, however, can be guaranteed
+              to be completely secure.
+            </p>
+          </section>
 
-          <Section title="Sharing Information">
-            Information may be shared with other CrewCall users when required
-            for platform functionality, including worker profiles, company
-            profiles, job postings, applications, reviews, and messages.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              9. Your Choices
+            </h2>
+            <p>
+              You may update certain account information and permissions
+              through CrewCall or your device settings. You may also contact
+              us regarding access, correction, or deletion of personal
+              information, subject to applicable legal and record-retention
+              requirements.
+            </p>
+          </section>
 
-          <Section title="Data Security">
-            We use reasonable technical and organizational safeguards to
-            protect user information. However, no online service can guarantee
-            complete security.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              10. Children's Privacy
+            </h2>
+            <p>
+              CrewCall is intended for adults and is not directed to children
+              under 13. We do not knowingly collect personal information from
+              children under 13.
+            </p>
+          </section>
 
-          <Section title="Your Choices">
-            Users may update profile information, control available settings,
-            manage location permissions, and request assistance with their
-            account information.
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              11. Changes to This Policy
+            </h2>
+            <p>
+              We may update this Privacy Policy periodically. When we make
+              changes, we may update the effective date displayed on this
+              page. Continued use of CrewCall after an updated policy becomes
+              effective constitutes acceptance of the updated policy to the
+              extent permitted by law.
+            </p>
+          </section>
 
-            Users may request account deletion by contacting support.
-          </Section>
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-white">
+              12. Contact Us
+            </h2>
+            <p>
+              If you have questions about this Privacy Policy or CrewCall's
+              privacy practices, please contact CrewCall through the support
+              options provided within the application or website.
+            </p>
+          </section>
+        </div>
 
-          <Section title="Contact">
-            Questions about this Privacy Policy can be sent to:
-            support@crewcall.app
-          </Section>
+        <div className="mt-14 border-t border-slate-800 pt-8 text-sm text-slate-500">
+          © 2026 CrewCall. All rights reserved.
         </div>
       </div>
     </main>
-  )
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <section>
-      <h2 className="text-2xl font-black text-white">{title}</h2>
-      <p className="mt-3 leading-8">{children}</p>
-    </section>
   )
 }
