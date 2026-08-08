@@ -822,17 +822,28 @@ export default function CrewCallNav() {
         ) : null}
 
         {role === 'admin' ? (
-          <NavLink
-            href="/admin"
-            onClick={onNavigate}
-            active={
-              pathname === '/admin' ||
-              pathname.startsWith('/admin/')
-            }
-            accent="admin"
-          >
-            Admin
-          </NavLink>
+          <>
+            <NavLink
+              href="/admin"
+              onClick={onNavigate}
+              active={
+                pathname === '/admin' ||
+                pathname.startsWith('/admin/')
+              }
+              accent="admin"
+            >
+              Admin
+            </NavLink>
+
+            <NavLink
+              href="/admin/release"
+              onClick={onNavigate}
+              active={pathname.startsWith('/admin/release')}
+              accent="admin"
+            >
+              🚀 Release Center
+            </NavLink>
+          </>
         ) : null}
 
         {userId ? (
@@ -930,17 +941,15 @@ export default function CrewCallNav() {
               onClick={closeMobileMenu}
               className="group flex min-w-0 items-center gap-3 no-underline"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-cyan-400 to-blue-500 text-lg font-black !text-slate-950 shadow-xl shadow-cyan-500/25 transition group-hover:scale-[1.04]">
-                C
-              </div>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081328] shadow-xl shadow-blue-900/20 transition group-hover:scale-105"><img src="/brand/crewcall-mark.svg" alt="CrewCall" className="h-8 w-8" /></div>
 
               <div className="min-w-0 leading-tight">
                 <div className="truncate text-xl font-black tracking-tight !text-white">
                   CrewCall
                 </div>
 
-                <div className="truncate text-xs font-black uppercase tracking-wide !text-cyan-200/80">
-                  Skilled labor, on demand
+                <div className="truncate text-xs font-black uppercase tracking-wide !text-blue-100/80">
+                  The Skilled Trades Network
                 </div>
               </div>
             </Link>
@@ -952,7 +961,7 @@ export default function CrewCallNav() {
                   onClick={() =>
                     setCommandPaletteOpen(true)
                   }
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-800/95 px-4 py-2 text-sm font-black text-white shadow-md shadow-black/20 transition hover:border-cyan-400/50 hover:bg-slate-700 hover:text-cyan-200"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-800/95 px-4 py-2 text-sm font-black text-white shadow-md shadow-black/20 transition hover:border-blue-600/50 hover:bg-slate-700 hover:text-blue-100"
                   aria-label="Open CrewCall search"
                 >
                   <span aria-hidden="true">⌕</span>
@@ -974,7 +983,7 @@ export default function CrewCallNav() {
                     setMobileMenuOpen(false)
                     setCommandPaletteOpen(true)
                   }}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-800 text-lg font-black text-white shadow-md shadow-black/20 transition hover:border-cyan-400/50 hover:bg-slate-700 hover:text-cyan-200"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-800 text-lg font-black text-white shadow-md shadow-black/20 transition hover:border-blue-600/50 hover:bg-slate-700 hover:text-blue-100"
                   aria-label="Open CrewCall search"
                 >
                   ⌕
@@ -1005,7 +1014,7 @@ export default function CrewCallNav() {
                     (current) => !current
                   )
                 }
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-slate-800 px-4 text-sm font-black !text-white shadow-md shadow-black/20 transition hover:border-cyan-400/50 hover:bg-slate-700 hover:!text-cyan-200"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-slate-800 px-4 text-sm font-black !text-white shadow-md shadow-black/20 transition hover:border-blue-600/50 hover:bg-slate-700 hover:!text-blue-100"
                 aria-expanded={mobileMenuOpen}
                 aria-controls="crewcall-mobile-menu"
                 aria-label={
@@ -1027,7 +1036,7 @@ export default function CrewCallNav() {
 
           {loading ? (
             <div className="mt-3 flex items-center gap-2 text-xs font-bold !text-slate-400 lg:hidden">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-600" />
               Restoring your CrewCall session...
             </div>
           ) : null}
@@ -1077,11 +1086,11 @@ function NavLink({
       `
       : `
         border
-        border-cyan-400/50
-        bg-cyan-400/15
-        !text-cyan-200
+        border-blue-600/50
+        bg-blue-600/15
+        !text-blue-100
         shadow-lg
-        shadow-cyan-500/10
+        shadow-blue-700/10
       `
 
   const inactiveClasses =
@@ -1104,9 +1113,9 @@ function NavLink({
         !text-white
         shadow-md
         shadow-black/20
-        hover:border-cyan-400/50
+        hover:border-blue-600/50
         hover:bg-slate-700
-        hover:!text-cyan-200
+        hover:!text-blue-100
       `
 
   return (

@@ -1481,7 +1481,7 @@ export default function ApplicantsPage() {
                                   >
                                     {actionLoadingId === applicant.id
                                       ? 'Hiring...'
-                                      : 'Hire at Agreed Rate'}
+                                      : 'Hire Worker'}
                                   </button>
                                 )}
 
@@ -1699,7 +1699,7 @@ export default function ApplicantsPage() {
                                       {workingId ===
                                       `accept-${applicant.id}`
                                         ? 'Accepting...'
-                                        : 'Accept Worker Offer'}
+                                        : 'Accept Rate'}
                                     </button>
                                   )}
 

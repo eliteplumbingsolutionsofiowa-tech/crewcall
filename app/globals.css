@@ -1,31 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f6f8fc;
+  --surface: #ffffff;
+
+  --foreground: #081328;
+  --muted: #64748b;
+
+  --primary: #1e63ff;
+  --primary-dark: #164ed8;
+
+  --border: #e5e7eb;
+
+  --radius: 18px;
 }
 
 html,
 body {
-  min-height: 100%;
   width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.08), transparent 30%),
-    var(--background);
-
   color: var(--foreground);
+
+  background:
+    radial-gradient(circle at top left, rgba(30,99,255,.08), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(30,99,255,.04), transparent 35%),
+    var(--background);
 
   font-family:
     Inter,
-    Arial,
-    Helvetica,
+    system-ui,
     sans-serif;
 
   -webkit-font-smoothing: antialiased;
@@ -36,7 +45,6 @@ body {
 
 * {
   box-sizing: border-box;
-  min-width: 0;
 }
 
 img,
@@ -50,27 +58,26 @@ canvas {
 a {
   color: inherit;
   text-decoration: none;
-  transition:
-    color 0.2s ease,
-    opacity 0.2s ease,
-    background-color 0.2s ease;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
 }
 
 button {
   cursor: pointer;
+  transition: .25s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
 }
 
 input,
 textarea,
 select {
   width: 100%;
+  font: inherit;
 }
 
 textarea {
@@ -78,35 +85,62 @@ textarea {
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgba(30,99,255,.18);
 }
 
 ::-webkit-scrollbar {
   width: 10px;
-  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #e2e8f0;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
+  background: #cbd5e1;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #94a3b8;
 }
 
-@media (max-width: 640px) {
-  body {
-    font-size: 15px;
-  }
+.card {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid rgba(15,23,42,.06);
+  box-shadow:
+    0 10px 40px rgba(8,19,40,.06);
 }
 
-@media (max-width: 480px) {
-  body {
-    font-size: 14px;
+.primary-button {
+  background: linear-gradient(
+    180deg,
+    #2d7cff,
+    #1e63ff
+  );
+
+  color: white;
+
+  border: none;
+
+  border-radius: 16px;
+
+  padding: 14px 22px;
+
+  font-weight: 600;
+
+  box-shadow:
+    0 12px 30px rgba(30,99,255,.28);
+}
+
+.primary-button:hover {
+  box-shadow:
+    0 18px 40px rgba(30,99,255,.34);
+}
+
+@media (max-width:640px){
+  body{
+    font-size:15px;
   }
 }

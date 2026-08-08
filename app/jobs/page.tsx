@@ -209,6 +209,8 @@ export default function JobsPage() {
           created_at
         `
         )
+        .eq('status','open')
+        .is('assigned_worker_id', null)
         .order('created_at', {
           ascending: false,
         })) as unknown as JobResult

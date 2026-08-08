@@ -127,6 +127,12 @@ export default function JobDetailsPage() {
   const [messageTone, setMessageTone] =
     useState<NoticeTone>('info')
 
+  const [alreadyApplied, setAlreadyApplied] =
+    useState(false)
+
+  const [workerApplication, setWorkerApplication] =
+    useState<Applicant | null>(null)
+
   useEffect(() => {
     void loadPage()
 
@@ -379,6 +385,22 @@ export default function JobDetailsPage() {
       })
 
     setJobFiles((fileData as JobFile[]) || [])
+
+    if (profileData.role === 'worker') {
+      const { data: existingApplication } = await supabase
+        .from('applications')
+        .select(
+          'id, status, requested_pay_rate, company_counter_offer, negotiation_status, negotiation_message, created_at'
+        )
+        .eq('job_id', jobId)
+        .eq('worker_id', user.id)
+        .maybeSingle()
+
+      setAlreadyApplied(!!existingApplication)
+      setWorkerApplication(
+        (existingApplication as Applicant | null) || null
+      )
+    }
 
     const isOwner =
       profileData.role === 'company' &&
@@ -715,7 +737,8 @@ export default function JobDetailsPage() {
   const canApply =
     isWorker &&
     currentStatus === 'open' &&
-    !isAssigned
+    !isAssigned &&
+    !alreadyApplied
 
   const canSeeViews = isCompany && isOwner
 
@@ -808,7 +831,29 @@ export default function JobDetailsPage() {
                   />
                 </div>
 
-                {canApply ? (
+                {isWorker && workerApplication ? (
+          <section className="rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-5 shadow-xl shadow-emerald-950/20 sm:p-6">
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                Application Submitted
+              </p>
+
+              <h2 className="text-2xl font-black text-white">
+                Status: {cleanStatus(workerApplication.status || 'pending')}
+              </h2>
+
+              <p className="text-sm text-emerald-100/80">
+                Requested Pay: {workerApplication.requested_pay_rate || job.pay_rate || 'Not specified'}
+              </p>
+
+              {workerApplication.company_counter_offer ? (
+                <p className="text-sm font-bold text-cyan-300">
+                  Company Counter Offer: {workerApplication.company_counter_offer}
+                </p>
+              ) : null}
+            </div>
+          </section>
+        ) : canApply ? (
                   <div className="mt-7">
                     <Link
                       href={`/jobs/${job.id}/apply`}
