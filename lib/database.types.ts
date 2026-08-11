@@ -358,6 +358,7 @@ export type Database = {
       }
       job_files: {
         Row: {
+          category: string | null
           created_at: string | null
           file_name: string | null
           file_type: string | null
@@ -367,6 +368,7 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string | null
           file_name?: string | null
           file_type?: string | null
@@ -376,6 +378,7 @@ export type Database = {
           uploaded_by?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string | null
           file_name?: string | null
           file_type?: string | null
@@ -595,6 +598,10 @@ export type Database = {
           boost_expires_at: string | null
           company_id: string
           completed_at: string | null
+          completion_approved_at: string | null
+          completion_notes: string | null
+          completion_status: string | null
+          completion_submitted_at: string | null
           created_at: string | null
           description: string | null
           escrow_amount_cents: number | null
@@ -646,6 +653,10 @@ export type Database = {
           boost_expires_at?: string | null
           company_id: string
           completed_at?: string | null
+          completion_approved_at?: string | null
+          completion_notes?: string | null
+          completion_status?: string | null
+          completion_submitted_at?: string | null
           created_at?: string | null
           description?: string | null
           escrow_amount_cents?: number | null
@@ -697,6 +708,10 @@ export type Database = {
           boost_expires_at?: string | null
           company_id?: string
           completed_at?: string | null
+          completion_approved_at?: string | null
+          completion_notes?: string | null
+          completion_status?: string | null
+          completion_submitted_at?: string | null
           created_at?: string | null
           description?: string | null
           escrow_amount_cents?: number | null

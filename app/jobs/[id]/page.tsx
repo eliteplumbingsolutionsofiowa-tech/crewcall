@@ -23,6 +23,10 @@ type Job = {
   company_id: string
   assigned_worker_id: string | null
   assigned_application_id: string | null
+  completion_status: string | null
+  completion_notes: string | null
+  completion_submitted_at: string | null
+  completion_approved_at: string | null
 }
 
 type Profile = {
@@ -337,7 +341,11 @@ export default function JobDetailsPage() {
         payout_status,
         company_id,
         assigned_worker_id,
-        assigned_application_id
+        assigned_application_id,
+        completion_status,
+        completion_notes,
+        completion_submitted_at,
+        completion_approved_at
       `
       )
       .eq('id', jobId)
@@ -1191,6 +1199,7 @@ export default function JobDetailsPage() {
             onPayWorker={() => void payWorker()}
             onReleasePayment={() => void releasePayment()}
             jobPayoutStatus={job.payout_status}
+            completionStatus={job.completion_status}
             jobId={job.id}
             assignedWorkerId={job.assigned_worker_id}
           />
@@ -1549,6 +1558,7 @@ function CompanyActions({
   onPayWorker,
   onReleasePayment,
   jobPayoutStatus,
+  completionStatus,
   jobId,
   assignedWorkerId,
 }: {
@@ -1560,6 +1570,7 @@ function CompanyActions({
   onPayWorker: () => void
   onReleasePayment: () => void
   jobPayoutStatus: string | null
+  completionStatus: string | null
   jobId: string
   assignedWorkerId: string | null
 }) {
@@ -1621,8 +1632,8 @@ function CompanyActions({
             <ActionButton
               label={
                 workingId === 'pay'
-                  ? 'Opening Stripe...'
-                  : 'Pay Worker'
+                  ? 'Opening Secure Checkout...'
+                  : 'Fund Job'
               }
               disabled={workingId === 'pay'}
               onClick={onPayWorker}
@@ -1631,10 +1642,12 @@ function CompanyActions({
           ) : (
             <>
               <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
-                Worker Paid
+                🔒 Funds Secured
               </div>
 
-              {completed && jobPayoutStatus !== 'released' ? (
+              {completionStatus === 'approved' &&
+              completed &&
+              jobPayoutStatus !== 'released' ? (
                 <ActionButton
                   label={
                     workingId === 'release'
@@ -1647,11 +1660,19 @@ function CompanyActions({
                   onClick={onReleasePayment}
                   tone="green"
                 />
-              ) : completed ? (
+              ) : jobPayoutStatus === 'released' ? (
                 <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
                   ✓ Payout Released
                 </div>
-              ) : null}
+              ) : completionStatus === 'submitted' ? (
+                <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200">
+                  Review Work Before Payout
+                </div>
+              ) : (
+                <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-slate-300">
+                  Waiting for Worker Completion
+                </div>
+              )}
             </>
           )}
         </div>

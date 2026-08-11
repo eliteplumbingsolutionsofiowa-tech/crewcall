@@ -131,7 +131,10 @@ export default function SubscriptionGate({
          * Administrators always retain access to protected
          * company pages, regardless of subscription status.
          */
-        if (profile?.role === 'admin') {
+        if (
+          profile?.role === 'admin' ||
+          profile?.role === 'worker'
+        ) {
           if (!active) {
             return
           }

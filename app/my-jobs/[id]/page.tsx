@@ -16,6 +16,20 @@ type Job = {
   payout_status: string | null
   assigned_worker_id: string | null
   company_id: string | null
+  completion_status: string | null
+  completion_notes: string | null
+  completion_submitted_at: string | null
+  completion_approved_at: string | null
+}
+
+type JobFile = {
+  id: string
+  file_name: string | null
+  file_url: string | null
+  file_type: string | null
+  category: string | null
+  uploaded_by: string | null
+  created_at: string | null
 }
 
 type Profile = {
@@ -200,10 +214,12 @@ export default function JobDetailPage() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [matches, setMatches] = useState<JobMatch[]>([])
   const [assignedWorker, setAssignedWorker] = useState<Profile | null>(null)
+  const [jobFiles, setJobFiles] = useState<JobFile[]>([])
 
   const [loading, setLoading] = useState(true)
   const [matchLoading, setMatchLoading] = useState(false)
   const [payLoading, setPayLoading] = useState(false)
+  const [approvalLoading, setApprovalLoading] = useState(false)
   const [invitingWorkerId, setInvitingWorkerId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
@@ -255,7 +271,11 @@ export default function JobDetailPage() {
         payment_status,
         payout_status,
         assigned_worker_id,
-        company_id
+        company_id,
+        completion_status,
+        completion_notes,
+        completion_submitted_at,
+        completion_approved_at
       `
       )
       .eq('id', jobId)
@@ -269,6 +289,25 @@ export default function JobDetailPage() {
 
     setJob((jobData as Job | null) || null)
     setAssignedWorker(null)
+
+    const { data: rawJobFiles, error: jobFilesError } =
+      await supabase
+        .from('job_files')
+        .select(
+          'id, file_name, file_url, file_type, category, uploaded_by, created_at'
+        )
+        .eq('job_id', jobId)
+        .order('created_at', {
+          ascending: false,
+        })
+
+    if (jobFilesError) {
+      setMessage(jobFilesError.message)
+    }
+
+    setJobFiles(
+      (rawJobFiles || []) as JobFile[]
+    )
 
     const { data: rawApps, error: appsError } = await supabase
       .from('applications')
@@ -515,6 +554,132 @@ export default function JobDetailPage() {
     setMatchLoading(false)
   }
 
+  async function approveCompletedWork() {
+    if (!job || !currentUserId) return
+
+    if (job.completion_status !== 'submitted') {
+      setMessage(
+        'The worker has not submitted this job for approval yet.'
+      )
+      return
+    }
+
+    const completionPhotos =
+      jobFiles.filter(
+        (file) =>
+          file.category ===
+            'completion_photo' &&
+          file.uploaded_by ===
+            job.assigned_worker_id
+      )
+
+    if (completionPhotos.length === 0) {
+      setMessage(
+        'The worker must upload at least one completion photo before the work can be approved.'
+      )
+      return
+    }
+
+    if (job.payment_status !== 'paid') {
+      setMessage(
+        'Job funding must be secured before completed work can be approved.'
+      )
+      return
+    }
+
+    setApprovalLoading(true)
+    setMessage('Approving completed work...')
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setMessage(
+          'Your login session expired. Please log in again.'
+        )
+        return
+      }
+
+      const response = await fetch(
+        '/api/jobs/complete',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            jobId: job.id,
+            companyId: currentUserId,
+          }),
+        }
+      )
+
+      const result =
+        await response
+          .json()
+          .catch(() => null)
+
+      if (!response.ok) {
+        setMessage(
+          result?.error ||
+            'Unable to approve completed work.'
+        )
+        return
+      }
+
+      const approvedAt =
+        new Date().toISOString()
+
+      const { error: approvalError } =
+        await supabase
+          .from('jobs')
+          .update({
+            completion_status:
+              'approved',
+            completion_approved_at:
+              approvedAt,
+          })
+          .eq('id', job.id)
+          .eq(
+            'company_id',
+            currentUserId
+          )
+
+      if (approvalError) {
+        setMessage(
+          `Job completed, but CrewCall could not save the approval status: ${approvalError.message}`
+        )
+        await load()
+        return
+      }
+
+      setMessage(
+        'Work approved. The job is now completed.'
+      )
+
+      window.dispatchEvent(
+        new Event(
+          'crewcall-refresh-nav'
+        )
+      )
+
+      await load()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to approve completed work.'
+      )
+    } finally {
+      setApprovalLoading(false)
+    }
+  }
+
   async function payWorker() {
     if (!job) return
 
@@ -631,6 +796,195 @@ export default function JobDetailPage() {
           )}
         </div>
 
+        {assignedWorker &&
+        (
+          job.completion_status ===
+            'submitted' ||
+          job.completion_status ===
+            'approved'
+        ) ? (
+          <section className="rounded-[2rem] border border-cyan-400/20 bg-cyan-500/10 p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                  Completion Package
+                </p>
+
+                <h2 className="mt-3 text-3xl font-black text-white">
+                  Review Completed Work
+                </h2>
+
+                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-cyan-100/70">
+                  Review the worker's completion photos, inspection reports, and notes before approving the job.
+                </p>
+              </div>
+
+              <StatusPill
+                value={
+                  job.completion_status
+                }
+              />
+            </div>
+
+            {job.completion_notes ? (
+              <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/50 p-5">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                  Worker Completion Notes
+                </p>
+
+                <p className="mt-3 whitespace-pre-wrap text-sm font-semibold leading-7 text-slate-200">
+                  {job.completion_notes}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="mt-6">
+              <p className="text-sm font-black text-white">
+                Completion Photos
+              </p>
+
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {jobFiles
+                  .filter(
+                    (file) =>
+                      file.category ===
+                        'completion_photo' &&
+                      file.uploaded_by ===
+                        job.assigned_worker_id
+                  )
+                  .map((file) => (
+                    <a
+                      key={file.id}
+                      href={
+                        file.file_url || '#'
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60 transition hover:border-cyan-400/40"
+                    >
+                      {file.file_url ? (
+                        <img
+                          src={
+                            file.file_url
+                          }
+                          alt={
+                            file.file_name ||
+                            'Completion photo'
+                          }
+                          className="h-56 w-full object-cover"
+                        />
+                      ) : null}
+
+                      <div className="p-4">
+                        <p className="truncate text-sm font-black text-white">
+                          {file.file_name ||
+                            'Completion photo'}
+                        </p>
+                      </div>
+                    </a>
+                  ))}
+              </div>
+            </div>
+
+            {jobFiles.some(
+              (file) =>
+                file.category ===
+                  'inspection_report' &&
+                file.uploaded_by ===
+                  job.assigned_worker_id
+            ) ? (
+              <div className="mt-6">
+                <p className="text-sm font-black text-white">
+                  Inspection Reports
+                </p>
+
+                <div className="mt-3 grid gap-3">
+                  {jobFiles
+                    .filter(
+                      (file) =>
+                        file.category ===
+                          'inspection_report' &&
+                        file.uploaded_by ===
+                          job.assigned_worker_id
+                    )
+                    .map((file) => (
+                      <a
+                        key={file.id}
+                        href={
+                          file.file_url ||
+                          '#'
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 p-4 transition hover:border-cyan-400/40"
+                      >
+                        <div>
+                          <p className="text-sm font-black text-white">
+                            {file.file_name ||
+                              'Inspection report'}
+                          </p>
+
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                            Open document
+                          </p>
+                        </div>
+
+                        <span className="text-xl">
+                          ↗
+                        </span>
+                      </a>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+
+            {job.completion_status ===
+            'submitted' ? (
+              <div className="mt-7 rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-5">
+                <p className="text-sm font-black text-emerald-200">
+                  Ready for Your Review
+                </p>
+
+                <p className="mt-2 text-sm font-semibold leading-6 text-emerald-100/70">
+                  Approving confirms that you accept the submitted work and marks this job completed. Payment release remains a separate step.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={
+                    approveCompletedWork
+                  }
+                  disabled={
+                    approvalLoading ||
+                    !jobFiles.some(
+                      (file) =>
+                        file.category ===
+                          'completion_photo' &&
+                        file.uploaded_by ===
+                          job.assigned_worker_id
+                    )
+                  }
+                  className="mt-5 w-full rounded-2xl bg-emerald-400 px-5 py-4 text-sm font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                >
+                  {approvalLoading
+                    ? 'Approving Work...'
+                    : 'Approve Work'}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-7 rounded-3xl border border-emerald-400/30 bg-emerald-500/15 p-5">
+                <p className="text-sm font-black text-emerald-200">
+                  ✓ Work Approved
+                </p>
+
+                <p className="mt-2 text-sm font-semibold text-emerald-100/70">
+                  This completion package has been approved.
+                </p>
+              </div>
+            )}
+          </section>
+        ) : null}
+
         {assignedWorker ? (
           <div className="rounded-[2rem] border border-emerald-400/20 bg-emerald-400/10 p-6 shadow-2xl">
             <h2 className="text-xl font-black text-white">Assigned Worker</h2>
@@ -659,15 +1013,28 @@ export default function JobDetailPage() {
                 View Profile
               </Link>
 
-              {job.payment_status !== 'paid' && (
+              {job.payment_status !== 'paid' ? (
                 <button
                   type="button"
                   onClick={payWorker}
                   disabled={payLoading}
                   className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {payLoading ? 'Opening Stripe...' : 'Pay Worker'}
+                  {payLoading
+                    ? 'Opening Secure Checkout...'
+                    : job.payment_status === 'pending'
+                      ? 'Continue Funding Job'
+                      : 'Fund Job'}
                 </button>
+              ) : (
+                <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-5 py-3">
+                  <p className="text-sm font-black text-emerald-200">
+                    🔒 Funds Secured
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-emerald-100/70">
+                    CrewCall has confirmed funding for this job. Payment has not yet been released to the worker.
+                  </p>
+                </div>
               )}
 
               {job.status === 'completed' && (

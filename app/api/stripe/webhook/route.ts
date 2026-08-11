@@ -121,6 +121,19 @@ export async function POST(request: Request) {
             break
           }
 
+          if (session.payment_status !== 'paid') {
+            console.log(
+              'CrewCall checkout completed but payment is not yet secured:',
+              {
+                jobId,
+                sessionId: session.id,
+                paymentStatus: session.payment_status,
+              }
+            )
+
+            break
+          }
+
           const { error } =
             await supabase
               .from('jobs')
@@ -142,7 +155,7 @@ export async function POST(request: Request) {
           }
 
           console.log(
-            'CrewCall job marked PAID:',
+            'CrewCall job funds secured:',
             jobId
           )
 
