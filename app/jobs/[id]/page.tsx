@@ -1004,7 +1004,13 @@ export default function JobDetailsPage() {
                     </p>
                   ) : null}
 
-                  {workerApplication.negotiation_status === 'accepted' ? (
+                  {job.assigned_worker_id === profile?.id ? (
+                    <div className="mt-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/15 p-4">
+                      <p className="text-sm font-black text-emerald-200">
+                        ✓ You Are Hired — Job Assigned to You
+                      </p>
+                    </div>
+                  ) : workerApplication.negotiation_status === 'accepted' ? (
                     <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
                       <p className="text-sm font-black text-emerald-200">
                         Rate Accepted — Waiting for Company to Hire

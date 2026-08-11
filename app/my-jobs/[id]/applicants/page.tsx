@@ -388,6 +388,7 @@ export default function ApplicantsPage() {
         title,
         trade,
         location,
+        pay_rate,
         status,
         company_id,
         assigned_worker_id,
