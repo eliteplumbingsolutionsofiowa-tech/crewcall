@@ -78,6 +78,15 @@ type JobView = {
 
 type NoticeTone = 'error' | 'success' | 'info'
 
+type NotificationInsert = {
+  user_id: string
+  title: string
+  body: string
+  link_url: string
+  read: boolean
+  is_read: boolean
+}
+
 const FLOW_STEPS = [
   'open',
   'assigned',
@@ -102,6 +111,10 @@ function cleanStatus(value: string | null | undefined) {
 
 function getInitial(value: string | null | undefined) {
   return String(value || 'W').charAt(0).toUpperCase()
+}
+
+function notificationsTable() {
+  return supabase.from('notifications')
 }
 
 export default function JobDetailsPage() {
@@ -723,6 +736,23 @@ export default function JobDetailsPage() {
         throw error
       }
 
+      const { error: notificationError } = await notificationsTable()
+        .insert({
+          user_id: job!.company_id,
+          title: 'Worker Accepted Your Counter Offer',
+          body: `Your counter offer of $${agreedRate} for "${job!.title}" was accepted.`,
+          link_url: `/my-jobs/${job!.id}/applicants`,
+          read: false,
+          is_read: false,
+        })
+
+      if (notificationError) {
+        console.warn(
+          'Unable to create company acceptance notification:',
+          notificationError
+        )
+      }
+
       setMessage(
         `You accepted the company counter offer of ${agreedRate}. Waiting for the company to hire you.`
       )
@@ -766,6 +796,23 @@ export default function JobDetailsPage() {
 
       if (error) {
         throw error
+      }
+
+      const { error: notificationError } = await notificationsTable()
+        .insert({
+          user_id: job!.company_id,
+          title: 'Worker Declined Your Counter Offer',
+          body: `Your counter offer for "${job!.title}" was declined.`,
+          link_url: `/my-jobs/${job!.id}/applicants`,
+          read: false,
+          is_read: false,
+        })
+
+      if (notificationError) {
+        console.warn(
+          'Unable to create company decline notification:',
+          notificationError
+        )
       }
 
       setMessage('Company counter offer declined.')
@@ -1247,7 +1294,7 @@ export default function JobDetailsPage() {
               }`}
               action={
                 <Link
-                  href={`/my-jobs/${job.id}/applicants`}
+                  href={`/my-jobs/${job!.id}/applicants`}
                   className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15"
                 >
                   Manage Applicants
