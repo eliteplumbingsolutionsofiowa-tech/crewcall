@@ -941,7 +941,7 @@ export default function CrewCallNav() {
               onClick={closeMobileMenu}
               className="group flex min-w-0 items-center gap-3 no-underline"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081328] shadow-xl shadow-blue-900/20 transition group-hover:scale-105"><img src="/brand/crewcall-mark.svg" alt="CrewCall" className="h-8 w-8" /></div>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081328] shadow-xl shadow-blue-900/20 transition group-hover:scale-105"><img src="/brand/crewcall-icon.png" alt="CrewCall" className="h-8 w-8 rounded-lg object-cover" /></div>
 
               <div className="min-w-0 leading-tight">
                 <div className="truncate text-xl font-black tracking-tight !text-white">
