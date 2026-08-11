@@ -22,17 +22,36 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
+  const [resetMode, setResetMode] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  async function handleForgotPassword() {
+  function openResetMode() {
+    setResetMode(true)
+    setPassword('')
+    setMessage(null)
+    setSuccessMessage(null)
+  }
+
+  function closeResetMode() {
+    setResetMode(false)
+    setPassword('')
+    setMessage(null)
+    setSuccessMessage(null)
+  }
+
+  async function handleForgotPassword(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault()
+
     if (loading || resetLoading) return
 
     const cleanEmail = email.trim().toLowerCase()
 
     if (!cleanEmail) {
       setSuccessMessage(null)
-      setMessage('Enter your email address first, then tap Forgot Password.')
+      setMessage('Enter your email address.')
       return
     }
 
@@ -41,14 +60,16 @@ export default function LoginPage() {
     setSuccessMessage(null)
 
     try {
-      const redirectTo = `${window.location.origin}/reset-password`
+      const redirectTo =
+        `${window.location.origin}/reset-password`
 
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        cleanEmail,
-        {
-          redirectTo,
-        }
-      )
+      const { error } =
+        await supabase.auth.resetPasswordForEmail(
+          cleanEmail,
+          {
+            redirectTo,
+          }
+        )
 
       if (error) throw error
 
@@ -56,7 +77,10 @@ export default function LoginPage() {
         'Password reset email sent. Check your inbox and follow the link to choose a new password.'
       )
     } catch (error) {
-      console.error('CrewCall password recovery error:', error)
+      console.error(
+        'CrewCall password recovery error:',
+        error
+      )
 
       setMessage(
         error instanceof Error
@@ -140,7 +164,9 @@ export default function LoginPage() {
       const destination =
         profile?.is_admin
           ? '/admin'
-          : destinationForRole(profile?.role || null)
+          : destinationForRole(
+              profile?.role || null
+            )
 
       console.log(
         'LOGIN DESTINATION:',
@@ -176,109 +202,168 @@ export default function LoginPage() {
             </p>
 
             <h1 className="mt-3 text-3xl font-black">
-              Welcome Back
+              {resetMode
+                ? 'Reset Your Password'
+                : 'Welcome Back'}
             </h1>
 
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-400">
-              Log in to your worker, company, or administrator account.
+              {resetMode
+                ? 'Enter your email and we’ll send you a secure password reset link.'
+                : 'Log in to your worker, company, or administrator account.'}
             </p>
           </div>
 
-          <form
-            onSubmit={handleLogin}
-            className="space-y-5"
-          >
-            <div>
-              <label
-                htmlFor="email"
-                className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
-              >
-                Email
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                disabled={loading || resetLoading}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
-                required
-                placeholder="you@example.com"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
+          {resetMode ? (
+            <form
+              onSubmit={handleForgotPassword}
+              className="space-y-5"
+            >
+              <div>
                 <label
-                  htmlFor="password"
+                  htmlFor="reset-email"
                   className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
                 >
-                  Password
+                  Email
                 </label>
 
+                <input
+                  id="reset-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  disabled={resetLoading}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  required
+                  placeholder="you@example.com"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+
+              {message ? (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+                  {message}
+                </div>
+              ) : null}
+
+              {successMessage ? (
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-200">
+                  {successMessage}
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {resetLoading
+                  ? 'Sending Reset Link...'
+                  : 'Send Reset Link'}
+              </button>
+
+              <button
+                type="button"
+                onClick={closeResetMode}
+                disabled={resetLoading}
+                className="w-full text-sm font-black text-cyan-300 transition hover:text-cyan-200 disabled:opacity-60"
+              >
+                ← Back to Log In
+              </button>
+            </form>
+          ) : (
+            <>
+              <form
+                onSubmit={handleLogin}
+                className="space-y-5"
+              >
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
+                  >
+                    Email
+                  </label>
+
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    disabled={loading}
+                    onChange={(event) =>
+                      setEmail(event.target.value)
+                    }
+                    required
+                    placeholder="you@example.com"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="password"
+                      className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
+                    >
+                      Password
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={openResetMode}
+                      disabled={loading}
+                      className="text-xs font-black text-cyan-300 transition hover:text-cyan-200 disabled:opacity-60"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    disabled={loading}
+                    onChange={(event) =>
+                      setPassword(event.target.value)
+                    }
+                    required
+                    placeholder="Enter your password"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+
+                {message ? (
+                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+                    {message}
+                  </div>
+                ) : null}
+
                 <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  disabled={loading || resetLoading}
-                  className="text-xs font-black text-cyan-300 transition hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {resetLoading
-                    ? 'Sending...'
-                    : 'Forgot Password?'}
+                  {loading
+                    ? 'Logging In...'
+                    : 'Log In'}
                 </button>
-              </div>
+              </form>
 
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                disabled={loading || resetLoading}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
-                required
-                placeholder="Enter your password"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </div>
-
-            {message ? (
-              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
-                {message}
-              </div>
-            ) : null}
-
-            {successMessage ? (
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-200">
-                {successMessage}
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading || resetLoading}
-              className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading
-                ? 'Logging In...'
-                : 'Log In'}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm font-semibold text-slate-500">
-            Don&apos;t have an account?{' '}
-            <Link
-              href="/signup"
-              className="font-black text-cyan-300 hover:text-cyan-200"
-            >
-              Sign up
-            </Link>
-          </p>
+              <p className="mt-6 text-center text-sm font-semibold text-slate-500">
+                Don&apos;t have an account?{' '}
+                <Link
+                  href="/signup"
+                  className="font-black text-cyan-300 hover:text-cyan-200"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </>
+          )}
         </div>
       </section>
     </main>
