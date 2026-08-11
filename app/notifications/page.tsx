@@ -772,7 +772,8 @@ export default function NotificationsPage() {
                                 ? 'Opening...'
                                 : notification.type === 'invite'
                                   ? 'View Invite'
-                                  : notification.type === 'applicant'
+                                  : notification.type === 'applicant' ||
+                                      notification.type === 'application'
                                     ? 'View Applicant'
                                     : 'Open'}
                             </button>

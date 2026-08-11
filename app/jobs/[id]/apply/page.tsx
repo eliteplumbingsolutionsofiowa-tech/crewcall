@@ -49,6 +49,7 @@ type NotificationInsert = {
   type: string
   title: string
   body: string
+  link_url?: string
   is_read: boolean
   read?: boolean
 }
@@ -289,6 +290,7 @@ export default function ApplyPage() {
         type: 'application',
         title: 'New Applicant',
         body: `${profile?.full_name || 'A worker'} applied to your job`,
+        link_url: `/my-jobs/${jobId}/applicants`,
         is_read: false,
         read: false,
       }
