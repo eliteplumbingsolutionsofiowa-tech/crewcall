@@ -10,36 +10,63 @@ type LoginProfile = {
   is_admin: boolean | null
 }
 
-function destinationForRole(
-  role: string | null
-) {
-  if (role === 'admin') {
-    return '/admin'
-  }
-
-  if (role === 'company') {
-    return '/company/dashboard'
-  }
-
-  if (role === 'worker') {
-    return '/worker/dashboard'
-  }
-
+function destinationForRole(role: string | null) {
+  if (role === 'admin') return '/admin'
+  if (role === 'company') return '/company/dashboard'
+  if (role === 'worker') return '/worker/dashboard'
   return '/profile'
 }
 
 export default function LoginPage() {
-  const [email, setEmail] =
-    useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const [password, setPassword] =
-    useState('')
+  async function handleForgotPassword() {
+    if (loading || resetLoading) return
 
-  const [loading, setLoading] =
-    useState(false)
+    const cleanEmail = email.trim().toLowerCase()
 
-  const [message, setMessage] =
-    useState<string | null>(null)
+    if (!cleanEmail) {
+      setSuccessMessage(null)
+      setMessage('Enter your email address first, then tap Forgot Password.')
+      return
+    }
+
+    setResetLoading(true)
+    setMessage(null)
+    setSuccessMessage(null)
+
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`
+
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        cleanEmail,
+        {
+          redirectTo,
+        }
+      )
+
+      if (error) throw error
+
+      setSuccessMessage(
+        'Password reset email sent. Check your inbox and follow the link to choose a new password.'
+      )
+    } catch (error) {
+      console.error('CrewCall password recovery error:', error)
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to send password reset email. Please try again.'
+      )
+    } finally {
+      setResetLoading(false)
+    }
+  }
 
   async function handleLogin(
     event: React.FormEvent<HTMLFormElement>
@@ -48,47 +75,34 @@ export default function LoginPage() {
 
     if (loading) return
 
-    const cleanEmail = email
-      .trim()
-      .toLowerCase()
+    const cleanEmail = email.trim().toLowerCase()
 
     if (!cleanEmail) {
-      setMessage(
-        'Enter your email address.'
-      )
+      setMessage('Enter your email address.')
       return
     }
 
     if (!password) {
-      setMessage(
-        'Enter your password.'
-      )
+      setMessage('Enter your password.')
       return
     }
 
     setLoading(true)
     setMessage(null)
+    setSuccessMessage(null)
 
     try {
       const {
         data: loginData,
         error: loginError,
-      } =
-        await supabase.auth.signInWithPassword(
-          {
-            email: cleanEmail,
-            password,
-          }
-        )
+      } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      })
 
-      if (loginError) {
-        throw loginError
-      }
+      if (loginError) throw loginError
 
-      if (
-        !loginData.user ||
-        !loginData.session
-      ) {
+      if (!loginData.user || !loginData.session) {
         throw new Error(
           'Login succeeded, but no authenticated session was created.'
         )
@@ -97,12 +111,9 @@ export default function LoginPage() {
       const {
         data: sessionData,
         error: sessionError,
-      } =
-        await supabase.auth.getSession()
+      } = await supabase.auth.getSession()
 
-      if (sessionError) {
-        throw sessionError
-      }
+      if (sessionError) throw sessionError
 
       if (!sessionData.session) {
         throw new Error(
@@ -119,9 +130,7 @@ export default function LoginPage() {
         .eq('id', loginData.user.id)
         .maybeSingle<LoginProfile>()
 
-      if (profileError) {
-        throw profileError
-      }
+      if (profileError) throw profileError
 
       console.log(
         'LOGIN PROFILE CHECK:',
@@ -131,20 +140,13 @@ export default function LoginPage() {
       const destination =
         profile?.is_admin
           ? '/admin'
-          : destinationForRole(
-              profile?.role || null
-            )
+          : destinationForRole(profile?.role || null)
 
       console.log(
         'LOGIN DESTINATION:',
         destination
       )
 
-      /*
-       * Use a full browser navigation after login.
-       * This forces the navbar, layouts, and protected
-       * pages to reload using the newly saved session.
-       */
       window.location.assign(destination)
     } catch (error) {
       console.error(
@@ -178,9 +180,7 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-400">
-              Log in to your worker,
-              company, or administrator
-              account.
+              Log in to your worker, company, or administrator account.
             </p>
           </div>
 
@@ -201,11 +201,9 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 value={email}
-                disabled={loading}
+                disabled={loading || resetLoading}
                 onChange={(event) =>
-                  setEmail(
-                    event.target.value
-                  )
+                  setEmail(event.target.value)
                 }
                 required
                 placeholder="you@example.com"
@@ -214,23 +212,34 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
-              >
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
+                >
+                  Password
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading || resetLoading}
+                  className="text-xs font-black text-cyan-300 transition hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resetLoading
+                    ? 'Sending...'
+                    : 'Forgot Password?'}
+                </button>
+              </div>
 
               <input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
-                disabled={loading}
+                disabled={loading || resetLoading}
                 onChange={(event) =>
-                  setPassword(
-                    event.target.value
-                  )
+                  setPassword(event.target.value)
                 }
                 required
                 placeholder="Enter your password"
@@ -244,9 +253,15 @@ export default function LoginPage() {
               </div>
             ) : null}
 
+            {successMessage ? (
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-200">
+                {successMessage}
+              </div>
+            ) : null}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || resetLoading}
               className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading
