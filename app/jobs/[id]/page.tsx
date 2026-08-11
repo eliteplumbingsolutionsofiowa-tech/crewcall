@@ -696,6 +696,97 @@ export default function JobDetailsPage() {
     return index <= Math.max(0, currentIndex)
   }
 
+
+  async function acceptCompanyCounter() {
+    if (!workerApplication?.company_counter_offer) {
+      setMessage('No company counter offer is available.')
+      setMessageTone('error')
+      return
+    }
+
+    setWorkingId(workerApplication.id)
+    setMessage(null)
+
+    try {
+      const agreedRate =
+        workerApplication.company_counter_offer
+
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          requested_pay_rate: agreedRate,
+          negotiation_status: 'accepted',
+        })
+        .eq('id', workerApplication.id)
+
+      if (error) {
+        throw error
+      }
+
+      setMessage(
+        `You accepted the company counter offer of ${agreedRate}. Waiting for the company to hire you.`
+      )
+      setMessageTone('success')
+
+      await loadPage(true)
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to accept the counter offer.'
+      )
+      setMessageTone('error')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
+  async function declineCompanyCounter() {
+    if (!workerApplication) return
+
+    const confirmed = window.confirm(
+      'Decline this company counter offer?'
+    )
+
+    if (!confirmed) return
+
+    setWorkingId(workerApplication.id)
+    setMessage(null)
+
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          negotiation_status: 'declined',
+        })
+        .eq('id', workerApplication.id)
+
+      if (error) {
+        throw error
+      }
+
+      setMessage('Company counter offer declined.')
+      setMessageTone('success')
+
+      await loadPage(true)
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to decline the counter offer.'
+      )
+      setMessageTone('error')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
   if (loading) {
     return <LoadingState />
   }
@@ -847,9 +938,60 @@ export default function JobDetailsPage() {
               </p>
 
               {workerApplication.company_counter_offer ? (
-                <p className="text-sm font-bold text-cyan-300">
-                  Company Counter Offer: {workerApplication.company_counter_offer}
-                </p>
+                <>
+                  <p className="text-sm font-bold text-cyan-300">
+                    Company Counter Offer: {workerApplication.company_counter_offer}
+                  </p>
+
+                  {workerApplication.negotiation_message ? (
+                    <p className="text-sm text-slate-300">
+                      {workerApplication.negotiation_message}
+                    </p>
+                  ) : null}
+
+                  {workerApplication.negotiation_status === 'accepted' ? (
+                    <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+                      <p className="text-sm font-black text-emerald-200">
+                        Rate Accepted — Waiting for Company to Hire
+                      </p>
+                    </div>
+                  ) : workerApplication.negotiation_status !== 'declined' ? (
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={acceptCompanyCounter}
+                        disabled={workingId === workerApplication.id}
+                        className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {workingId === workerApplication.id
+                          ? 'Updating...'
+                          : `Accept ${workerApplication.company_counter_offer}`}
+                      </button>
+
+                      <Link
+                        href={`/jobs/${job.id}/apply`}
+                        className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20"
+                      >
+                        Counter Again
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={declineCompanyCounter}
+                        disabled={workingId === workerApplication.id}
+                        className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Decline Counter
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
+                      <p className="text-sm font-black text-red-200">
+                        Counter Offer Declined
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : null}
             </div>
           </section>
