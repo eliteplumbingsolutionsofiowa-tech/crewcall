@@ -869,7 +869,7 @@ export default function CrewCallNav() {
               )}
               pulse={notificationPulse}
             >
-              Alerts
+              Notifications
             </NavLink>
 
             <NavLink
