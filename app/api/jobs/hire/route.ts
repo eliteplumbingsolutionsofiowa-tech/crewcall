@@ -75,6 +75,10 @@ type ApplicationRow = {
   id: string
   worker_id: string
   status: string | null
+  requested_pay: string | null
+  requested_pay_rate: string | null
+  company_counter_offer: string | null
+  negotiation_status: string | null
 }
 
 function getBearerToken(request: Request) {
@@ -338,6 +342,31 @@ export async function POST(req: Request) {
       )
     }
 
+    const hasNegotiatedOffer = Boolean(
+      application.requested_pay_rate ||
+      application.requested_pay ||
+      application.company_counter_offer
+    )
+
+    if (
+      hasNegotiatedOffer &&
+      application.negotiation_status !== 'accepted'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Accept the negotiated rate before hiring this worker.',
+        },
+        { status: 409 }
+      )
+    }
+
+    const finalPay =
+      application.company_counter_offer ||
+      application.requested_pay_rate ||
+      application.requested_pay ||
+      job.pay_rate
+
     const hiredAt = new Date().toISOString()
 
     const {
@@ -347,7 +376,9 @@ export async function POST(req: Request) {
       .from('jobs')
       .update({
         assigned_worker_id: workerId,
+        assigned_application_id: application.id,
         status: 'assigned',
+        pay_rate: finalPay,
       })
       .eq('id', jobId)
       .eq('company_id', user.id)

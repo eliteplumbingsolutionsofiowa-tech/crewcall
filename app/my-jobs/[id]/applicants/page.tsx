@@ -652,7 +652,8 @@ export default function ApplicantsPage() {
 
     const workerSubmittedOffer = Boolean(
       applicant.requested_pay_rate ||
-      applicant.requested_pay
+      applicant.requested_pay ||
+      applicant.company_counter_offer
     )
 
     if (
@@ -678,92 +679,65 @@ export default function ApplicantsPage() {
       return
     }
 
-    const confirmed = window.confirm(`Hire ${getWorkerName(applicant)}?`)
+    const confirmed = window.confirm(
+      `Hire ${getWorkerName(applicant)}?`
+    )
 
     if (!confirmed) return
 
     setActionLoadingId(applicant.id)
     setMessage('')
 
-    const finalPay =
-      applicant.company_counter_offer ||
-      applicant.requested_pay_rate ||
-      applicant.requested_pay ||
-      job.pay_rate
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
 
-    const { error: jobError } = await jobsUpdateTable()
-      .update({
-        assigned_worker_id: applicant.worker_id,
-        assigned_application_id: applicant.id,
-        status: 'assigned',
-        pay_rate: finalPay,
-      })
-      .eq('id', job.id)
-
-    if (jobError) {
-      setMessage(jobError.message)
-      setActionLoadingId(null)
-      return
-    }
-
-    const { error: acceptedError } = await applicationsUpdateTable()
-      .update({
-        status: 'accepted',
-      })
-      .eq('id', applicant.id)
-
-    if (acceptedError) {
-      setMessage(acceptedError.message)
-      setActionLoadingId(null)
-      return
-    }
-
-    await applicationsUpdateWithNeqTable()
-      .update({
-        status: 'rejected',
-      })
-      .eq('job_id', job.id)
-      .neq('id', applicant.id)
-
-    await notificationsTable().insert({
-      user_id: applicant.worker_id,
-      title: 'You were hired',
-      body: `You were hired for ${job.title || 'a job'}.`,
-      link_url: `/jobs/${job.id}`,
-      read: false,
-      is_read: false,
-    })
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (user) {
-      const { data: existingConversation } =
-        await conversationsSelectTable()
-          .select('id')
-          .eq('job_id', job.id)
-          .eq('company_id', user.id)
-          .eq('worker_id', applicant.worker_id)
-          .maybeSingle()
-
-      if (!existingConversation?.id) {
-        await conversationsInsertTable()
-          .insert({
-            job_id: job.id,
-            company_id: user.id,
-            worker_id: applicant.worker_id,
-          })
+      if (sessionError || !session?.access_token) {
+        throw new Error(
+          sessionError?.message || 'You must be logged in to hire a worker.'
+        )
       }
+
+      const response = await fetch('/api/jobs/hire', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+          workerId: applicant.worker_id,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error || 'Unable to hire worker.'
+        )
+      }
+
+      setMessage(
+        result?.message || 'Worker hired successfully.'
+      )
+
+      await loadApplicants()
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to hire worker.'
+      )
+    } finally {
+      setActionLoadingId(null)
     }
-
-    setMessage('Worker hired successfully.')
-
-    await loadApplicants()
-
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
-
-    setActionLoadingId(null)
   }
 
   async function declineApplicant(applicant: Applicant) {
