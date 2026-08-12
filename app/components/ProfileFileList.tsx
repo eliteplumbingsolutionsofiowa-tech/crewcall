@@ -219,7 +219,7 @@ export default function ProfileFileList({
 
       {viewingFile?.file_url && (
         <div className="fixed inset-0 z-[9999] flex h-[100dvh] flex-col overflow-hidden bg-black">
-          <div className="relative z-20 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950 px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))] text-white sm:px-4">
+          <div className="relative z-20 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950 px-3 pb-2 pt-[max(8px,env(safe-area-inset-top))] text-white sm:px-4 sm:pb-3 sm:pt-[max(12px,env(safe-area-inset-top))]">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black">
                 {displayFileName(viewingFile)}
@@ -233,7 +233,7 @@ export default function ProfileFileList({
             <button
               type="button"
               onClick={closeViewer}
-              className="shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-slate-950 shadow-lg"
+              className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-black text-slate-950 shadow-lg sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-sm"
             >
               ← Back
             </button>
@@ -241,11 +241,11 @@ export default function ProfileFileList({
 
           <div className="min-h-0 flex-1 overflow-hidden bg-black">
             {isImageFile(viewingFile) ? (
-              <div className="flex h-full w-full items-center justify-center overflow-auto p-3 sm:p-5">
+              <div className="flex h-full w-full items-center justify-center overflow-auto p-4 sm:p-5">
                 <img
                   src={viewingFile.file_url}
                   alt={displayFileName(viewingFile)}
-                  className="block h-auto max-h-[calc(100dvh-100px)] w-auto max-w-full object-contain"
+                  className="block h-auto max-h-[72dvh] w-auto max-w-[92vw] rounded-lg object-contain sm:max-h-[calc(100dvh-100px)] sm:max-w-full sm:rounded-none"
                 />
               </div>
             ) : (
