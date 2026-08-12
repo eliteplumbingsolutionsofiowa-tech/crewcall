@@ -133,7 +133,7 @@ export default function ProfileFileList({
 
   if (!files.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center sm:rounded-2xl sm:px-5 sm:py-8">
         <p className="text-sm font-bold text-slate-600">
           No documents uploaded yet.
         </p>
@@ -143,9 +143,9 @@ export default function ProfileFileList({
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {message && (
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800 sm:px-4 sm:py-3">
             {message}
           </div>
         )}
@@ -153,56 +153,74 @@ export default function ProfileFileList({
         {files.map((file) => (
           <div
             key={file.id}
-            className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:rounded-2xl sm:p-4"
           >
-            <div className="min-w-0">
+            {file.file_url && isImageFile(file) ? (
+              <button
+                type="button"
+                onClick={() => openFile(file)}
+                className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white sm:h-16 sm:w-16"
+              >
+                <img
+                  src={file.file_url}
+                  alt={displayFileName(file)}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-[11px] font-black text-slate-500 sm:h-16 sm:w-16">
+                FILE
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-slate-950">
                 {displayFileName(file)}
               </p>
 
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-blue-700">
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-700">
                   {categoryLabel(file.category)}
                 </span>
 
                 {file.created_at && (
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-[11px] font-semibold text-slate-500">
                     {new Date(file.created_at).toLocaleDateString()}
                   </span>
                 )}
               </div>
-            </div>
 
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {file.file_url && (
-                <button
-                  type="button"
-                  onClick={() => openFile(file)}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-700"
-                >
-                  View
-                </button>
-              )}
+              <div className="mt-2 flex gap-2">
+                {file.file_url && (
+                  <button
+                    type="button"
+                    onClick={() => openFile(file)}
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-black text-white transition hover:bg-blue-700"
+                  >
+                    View
+                  </button>
+                )}
 
-              {canDelete && (
-                <button
-                  type="button"
-                  onClick={() => deleteFile(file)}
-                  disabled={deletingId === file.id}
-                  className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:opacity-60"
-                >
-                  {deletingId === file.id ? 'Deleting...' : 'Delete'}
-                </button>
-              )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => deleteFile(file)}
+                    disabled={deletingId === file.id}
+                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {deletingId === file.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       {viewingFile?.file_url && (
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-slate-950">
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950 px-4 py-3 text-white">
-            <div className="min-w-0">
+        <div className="fixed inset-0 z-[9999] flex h-[100dvh] flex-col overflow-hidden bg-black">
+          <div className="relative z-20 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950 px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))] text-white sm:px-4">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black">
                 {displayFileName(viewingFile)}
               </p>
@@ -215,26 +233,26 @@ export default function ProfileFileList({
             <button
               type="button"
               onClick={closeViewer}
-              className="shrink-0 rounded-xl bg-white px-4 py-2 text-sm font-black text-slate-950"
+              className="shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-slate-950 shadow-lg"
             >
-              Back to Profile
+              ← Back
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto bg-black">
+          <div className="min-h-0 flex-1 overflow-hidden bg-black">
             {isImageFile(viewingFile) ? (
-              <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
+              <div className="flex h-full w-full items-center justify-center overflow-auto p-3 sm:p-5">
                 <img
                   src={viewingFile.file_url}
                   alt={displayFileName(viewingFile)}
-                  className="block max-h-full max-w-full object-contain"
+                  className="block h-auto max-h-[calc(100dvh-100px)] w-auto max-w-full object-contain"
                 />
               </div>
             ) : (
               <iframe
                 src={viewingFile.file_url}
                 title={displayFileName(viewingFile)}
-                className="h-full min-h-[calc(100dvh-68px)] w-full border-0 bg-white"
+                className="h-full w-full border-0 bg-white"
               />
             )}
           </div>
