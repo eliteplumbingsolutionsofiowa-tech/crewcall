@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type FileCategory = 'profile_photo' | 'certification' | 'license' | 'insurance'
+type FileCategory =
+  | 'profile_photo'
+  | 'certification'
+  | 'license'
+  | 'insurance'
 
 type Props = {
   userId: string
@@ -72,7 +76,9 @@ export default function ProfileFileUpload({
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from('profile-files').getPublicUrl(filePath)
+    } = supabase.storage
+      .from('profile-files')
+      .getPublicUrl(filePath)
 
     const insertPayload: ProfileFileInsert = {
       user_id: userId,
@@ -86,12 +92,17 @@ export default function ProfileFileUpload({
       await profileFilesTable().insert(insertPayload)
 
     if (insertError) {
-      await supabase.storage.from('profile-files').remove([filePath])
+      await supabase.storage
+        .from('profile-files')
+        .remove([filePath])
+
       throw insertError
     }
   }
 
-  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
     const input = event.currentTarget
     const selectedFiles = Array.from(input.files || [])
 
@@ -115,7 +126,9 @@ export default function ProfileFileUpload({
         } catch (error) {
           failures.push(
             `${file.name}: ${
-              error instanceof Error ? error.message : 'Upload failed'
+              error instanceof Error
+                ? error.message
+                : 'Upload failed'
             }`
           )
         }
@@ -145,33 +158,37 @@ export default function ProfileFileUpload({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h3 className="text-base font-black text-slate-950">
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:rounded-2xl sm:p-5">
+      <div className="mb-2 sm:mb-4">
+        <h3 className="text-sm font-black text-slate-950 sm:text-base">
           {label}
         </h3>
 
-        <p className="mt-1 text-sm font-semibold leading-5 text-slate-500">
+        <p className="mt-1 text-xs font-semibold leading-4 text-slate-500 sm:text-sm sm:leading-5">
           {description}
         </p>
       </div>
 
-      <label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-blue-400 hover:bg-blue-50">
-        <div className="mb-2 text-2xl">+</div>
+      <label className="flex min-h-[72px] cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-3 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[120px] sm:flex-col sm:justify-center sm:gap-0 sm:rounded-2xl sm:px-4 sm:py-6 sm:text-center">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xl font-black text-slate-700 shadow-sm sm:mb-2 sm:h-auto sm:w-auto sm:bg-transparent sm:text-2xl sm:shadow-none">
+          +
+        </div>
 
-        <span className="text-sm font-black text-slate-800">
-          {uploading
-            ? 'Uploading...'
-            : allowsMultiple
-              ? 'Choose files'
-              : 'Choose file'}
-        </span>
+        <div className="min-w-0 flex-1 text-left sm:text-center">
+          <span className="block text-sm font-black text-slate-800">
+            {uploading
+              ? 'Uploading...'
+              : allowsMultiple
+                ? 'Choose files'
+                : 'Choose file'}
+          </span>
 
-        <span className="mt-1 text-xs font-semibold text-slate-500">
-          {allowsMultiple
-            ? 'Select one or multiple PDF, image, or document files'
-            : 'Select a profile image'}
-        </span>
+          <span className="mt-0.5 block text-[11px] font-semibold leading-4 text-slate-500 sm:mt-1 sm:text-xs">
+            {allowsMultiple
+              ? 'Select one or multiple files'
+              : 'Select a profile image'}
+          </span>
+        </div>
 
         <input
           type="file"
@@ -184,7 +201,7 @@ export default function ProfileFileUpload({
       </label>
 
       {message && (
-        <p className="mt-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+        <p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 sm:mt-3 sm:rounded-xl sm:text-sm">
           {message}
         </p>
       )}

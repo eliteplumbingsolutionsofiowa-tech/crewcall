@@ -1,4 +1,4 @@
-'use client'
+use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -739,13 +739,13 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl">
-          <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-8 text-white sm:px-8">
+    <main className="min-h-screen bg-slate-50 px-2 py-3 pb-28 text-slate-950 sm:px-4 sm:py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:gap-6">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:rounded-[2rem]">
+          <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-5 text-white sm:px-8 sm:py-8">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 shadow-2xl">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 shadow-2xl sm:h-28 sm:w-28 sm:rounded-[2rem]">
                   {profilePhoto?.file_url ? (
                     <img
                       src={profilePhoto.file_url}
@@ -786,7 +786,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </div>
 
-                  <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
+                  <h1 className="text-2xl font-black tracking-tight sm:text-5xl">
                     {displayName}
                   </h1>
 
@@ -806,7 +806,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:min-w-[420px]">
                 <StatCard label="Score" value={String(crewcallScore)} />
                 <StatCard
                   label="Experience"
@@ -840,12 +840,12 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
             </div>
           )}
 
-          <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr]">
-            <div className="space-y-6">
+          <div className="grid gap-4 p-3 pb-8 sm:gap-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr]">
+            <div className="space-y-4 sm:space-y-6">
               <CrewCard>
-                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-2xl font-black text-slate-950">
+                    <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
                       {isOwnProfile ? 'Edit Worker Passport' : 'Worker Passport'}
                     </h2>
 
@@ -861,7 +861,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                   <FieldBlock label="Full Name">
                     {isOwnProfile ? (
                       <input
@@ -1083,7 +1083,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('bio', event.target.value)
                           updateField('job_experience', event.target.value)
                         }}
-                        className="input min-h-32"
+                        className="input min-h-24 sm:min-h-32"
                         placeholder="Example: Licensed journeyman plumber specializing in commercial rough-ins, service work, hospitals, schools, and tenant improvements."
                       />
                     ) : (
@@ -1103,7 +1103,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           setSkillsText(event.target.value)
                           updateField('skills', inputToArray(event.target.value))
                         }}
-                        className="input min-h-24"
+                        className="input min-h-20 sm:min-h-24"
                         placeholder="Example: Commercial plumbing, Service work, Copper, PVC, Cast Iron"
                       />
                     ) : (
@@ -1122,7 +1122,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                             inputToArray(event.target.value)
                           )
                         }}
-                        className="input min-h-24"
+                        className="input min-h-20 sm:min-h-24"
                         placeholder="Example: Commercial rough-ins, Service calls, Hospitals, Shutdowns"
                       />
                     ) : (
@@ -1134,13 +1134,25 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   </FieldBlock>
                 </div>
 
+                {isOwnProfile && (
+                  <div className="mt-4">
+                    <CrewButton
+                      onClick={saveProfile}
+                      disabled={saving}
+                      fullWidth
+                    >
+                      {saving ? 'Saving...' : 'Save Profile'}
+                    </CrewButton>
+                  </div>
+                )}
+
               </CrewCard>
 
 
               {isOwnProfile ? (
                 <CrewCard>
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-black text-slate-950">
+                  <div className="mb-4 sm:mb-6">
+                    <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
                       Profile Files
                     </h2>
 
@@ -1149,7 +1161,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     </p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                     <ProfileFileUpload
                       userId={profile.id}
                       category="profile_photo"
@@ -1187,7 +1199,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     />
                   </div>
 
-                  <div className="mt-8 border-t border-slate-200 pt-6">
+                  <div className="mt-5 border-t border-slate-200 pt-4 sm:mt-8 sm:pt-6">
                     <h3 className="text-lg font-black text-slate-950">
                       Uploaded Documents
                     </h3>
@@ -1228,7 +1240,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               </CrewCard>
             </div>
 
-            <aside className="space-y-6">
+            <aside className="space-y-4 sm:space-y-6">
               {canInviteWorker && (
                 <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
@@ -1560,12 +1572,12 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 p-4 text-white shadow-xl backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-white/10 p-3 text-white shadow-xl backdrop-blur sm:rounded-2xl sm:p-4">
       <p className="text-xs font-black uppercase tracking-wide text-slate-300">
         {label}
       </p>
 
-      <p className="mt-1 text-2xl font-black">{value}</p>
+      <p className="mt-1 text-lg font-black sm:text-2xl">{value}</p>
     </div>
   )
 }
@@ -1579,7 +1591,7 @@ function FieldBlock({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-black text-slate-700">
+      <span className="mb-1.5 block text-sm font-black text-slate-700 sm:mb-2">
         {label}
       </span>
 
