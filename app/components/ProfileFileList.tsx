@@ -18,6 +18,31 @@ type Props = {
   onDeleteComplete?: () => void
 }
 
+function categoryLabel(category: string | null) {
+  switch (category) {
+    case 'profile_photo':
+      return 'Profile Photo'
+    case 'license':
+      return 'License'
+    case 'certification':
+      return 'Certification'
+    case 'insurance':
+      return 'Insurance'
+    default:
+      return 'Profile Document'
+  }
+}
+
+function displayFileName(file: ProfileFile) {
+  const name = file.file_name?.trim()
+
+  if (!name || name.toLowerCase().startsWith('unknown')) {
+    return categoryLabel(file.category)
+  }
+
+  return name
+}
+
 export default function ProfileFileList({
   files,
   canDelete = false,
@@ -56,9 +81,11 @@ export default function ProfileFileList({
 
       setMessage('File deleted.')
 
-      if (onDeleteComplete) onDeleteComplete()
-    } catch (error: any) {
-      setMessage(error?.message || 'Could not delete file.')
+      onDeleteComplete?.()
+    } catch (error: unknown) {
+      setMessage(
+        error instanceof Error ? error.message : 'Could not delete file.'
+      )
     } finally {
       setDeletingId(null)
     }
@@ -66,8 +93,10 @@ export default function ProfileFileList({
 
   if (!files.length) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-sm text-slate-500">No files uploaded yet.</p>
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+        <p className="text-sm font-bold text-slate-600">
+          No documents uploaded yet.
+        </p>
       </div>
     )
   }
@@ -83,27 +112,35 @@ export default function ProfileFileList({
       {files.map((file) => (
         <div
           key={file.id}
-          className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+          className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <div>
-            <p className="text-sm font-black text-slate-900">
-              {file.file_name || 'Uploaded file'}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black text-slate-950">
+              {displayFileName(file)}
             </p>
 
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {file.category || 'profile file'}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-blue-700">
+                {categoryLabel(file.category)}
+              </span>
+
+              {file.created_at && (
+                <span className="text-xs font-semibold text-slate-500">
+                  {new Date(file.created_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex shrink-0 flex-wrap gap-2">
             {file.file_url && (
               <a
                 href={file.file_url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-700"
               >
-                View file
+                View
               </a>
             )}
 
@@ -112,7 +149,7 @@ export default function ProfileFileList({
                 type="button"
                 onClick={() => deleteFile(file)}
                 disabled={deletingId === file.id}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white hover:bg-red-700 disabled:opacity-60"
+                className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-600 transition hover:bg-red-50 disabled:opacity-60"
               >
                 {deletingId === file.id ? 'Deleting...' : 'Delete'}
               </button>

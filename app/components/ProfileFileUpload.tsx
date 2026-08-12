@@ -105,14 +105,22 @@ export default function ProfileFileUpload({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3">
-        <h3 className="text-sm font-black text-slate-900">{label}</h3>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4">
+        <h3 className="text-base font-black text-slate-950">
+          {label}
+        </h3>
 
-        <p className="mt-1 text-sm text-slate-600">{description}</p>
+        <p className="mt-1 text-sm font-semibold leading-5 text-slate-500">
+          {description}
+        </p>
       </div>
 
-      <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-blue-400 hover:bg-blue-50">
+      <label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-blue-400 hover:bg-blue-50">
+        <div className="mb-2 text-2xl">
+          +
+        </div>
+
         <span className="text-sm font-black text-slate-800">
           {uploading ? 'Uploading...' : 'Choose file'}
         </span>
