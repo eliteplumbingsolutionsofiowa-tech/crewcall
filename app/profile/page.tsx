@@ -1319,15 +1319,88 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   Verification
                 </h2>
 
-                <div className="mt-5 grid gap-3">
-                  {verificationBadges.map((badge) => (
-                    <StatusRow
-                      key={badge.label}
-                      label={badge.label}
-                      value={badge.active ? 'Added' : 'Missing'}
-                      active={badge.active}
-                    />
-                  ))}
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Keep your credentials current so companies can quickly verify your qualifications.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  <StatusRow
+                    label="Licensed"
+                    value={
+                      Boolean(profile.license_number) || licenseFiles.length > 0
+                        ? 'Added'
+                        : 'Missing'
+                    }
+                    active={
+                      Boolean(profile.license_number) || licenseFiles.length > 0
+                    }
+                  />
+
+                  <StatusRow
+                    label="Insured"
+                    value={
+                      Boolean(profile.insurance_provider) || insuranceFiles.length > 0
+                        ? 'Added'
+                        : 'Missing'
+                    }
+                    active={
+                      Boolean(profile.insurance_provider) || insuranceFiles.length > 0
+                    }
+                  />
+
+                  {isOwnProfile ? (
+                    <>
+                      {[
+                        ['OSHA 10', 'osha10'],
+                        ['OSHA 30', 'osha30'],
+                        ['Med Gas', 'med_gas'],
+                        ['Background', 'background_verified'],
+                        ['Drug Tested', 'drug_tested'],
+                        ['Liability', 'liability_form_signed'],
+                      ].map(([label, field]) => (
+                        <label
+                          key={field}
+                          className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                          <span className="text-sm font-black text-slate-700">
+                            {label}
+                          </span>
+
+                          <input
+                            type="checkbox"
+                            checked={Boolean(profile[field as keyof Profile])}
+                            onChange={(event) =>
+                              updateField(
+                                field as keyof Profile,
+                                event.target.checked as never
+                              )
+                            }
+                            className="h-5 w-5 shrink-0 accent-blue-600"
+                            style={{ width: '20px' }}
+                          />
+                        </label>
+                      ))}
+
+                      <CrewButton
+                        onClick={saveProfile}
+                        disabled={saving}
+                        fullWidth
+                      >
+                        {saving ? 'Saving...' : 'Update Verification'}
+                      </CrewButton>
+                    </>
+                  ) : (
+                    <>
+                      {verificationBadges.slice(2).map((badge) => (
+                        <StatusRow
+                          key={badge.label}
+                          label={badge.label}
+                          value={badge.active ? 'Added' : 'Missing'}
+                          active={badge.active}
+                        />
+                      ))}
+                    </>
+                  )}
                 </div>
               </CrewCard>
 
