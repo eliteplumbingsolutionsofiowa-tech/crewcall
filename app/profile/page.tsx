@@ -871,7 +871,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('full_name', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="Your name"
                       />
                     ) : (
@@ -886,7 +886,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('company_name', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="Company name"
                       />
                     ) : (
@@ -901,7 +901,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('phone', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="Phone number"
                       />
                     ) : (
@@ -916,7 +916,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('city', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="City"
                       />
                     ) : (
@@ -931,7 +931,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('state', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="State"
                       />
                     ) : (
@@ -946,7 +946,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('trade', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="Plumbing, electrical, HVAC..."
                       />
                     ) : (
@@ -961,7 +961,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('years_experience', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="Example: 8 years"
                       />
                     ) : (
@@ -979,7 +979,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('travel_radius', parseNumber(event.target.value))
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="25"
                       />
                     ) : (
@@ -1004,7 +1004,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                             parseNumber(event.target.value)
                           )
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="40"
                       />
                     ) : (
@@ -1029,7 +1029,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                             parseNumber(event.target.value)
                           )
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="55"
                       />
                     ) : (
@@ -1050,7 +1050,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('license_number', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="License number"
                       />
                     ) : (
@@ -1065,7 +1065,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         onChange={(event) =>
                           updateField('insurance_provider', event.target.value)
                         }
-                        className="input"
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         placeholder="Insurance provider"
                       />
                     ) : (
@@ -1259,7 +1259,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       onChange={(event) =>
                         setSelectedInviteJobId(event.target.value)
                       }
-                      className="input"
+                      className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                     >
                       {companyJobs.length === 0 && (
                         <option value="">No open jobs available</option>
@@ -1458,7 +1458,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                               value !== 'busy' && value !== 'not_available'
                             )
                           }}
-                          className="input"
+                          className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         >
                           {availabilityOptions.map((option) => (
                             <option key={option} value={option}>
@@ -1512,7 +1512,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                               event.target.value || null
                             )
                           }
-                          className="input"
+                          className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                         />
                       </FieldBlock>
 
