@@ -76,6 +76,8 @@ export default function OrganizationPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [branchError, setBranchError] = useState<string | null>(null)
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
 
   const [showBranchForm, setShowBranchForm] = useState(false)
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null)
@@ -426,8 +428,31 @@ export default function OrganizationPage() {
       .trim()
       .toLowerCase()
 
+    setInviteError(null)
+    setInviteMessage(null)
+
     if (!email) {
-      setMessage('Enter an email address.')
+      setInviteError('Enter an email address.')
+      return
+    }
+
+    const emailLooksValid =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+    if (!emailLooksValid) {
+      setInviteError('Enter a valid email address.')
+      return
+    }
+
+    const duplicateInvite = teamMembers.find(
+      (member) =>
+        member.email.trim().toLowerCase() === email
+    )
+
+    if (duplicateInvite) {
+      setInviteError(
+        `${email} has already been invited to this company.`
+      )
       return
     }
 
@@ -454,7 +479,7 @@ export default function OrganizationPage() {
             .includes('duplicate')
         ) {
           throw new Error(
-            'That email has already been invited to this company.'
+            `${email} has already been invited to this company.`
           )
         }
 
@@ -465,13 +490,13 @@ export default function OrganizationPage() {
       setSelectedRole('Admin')
       setSelectedBranchId('')
 
-      setMessage(
-        'Team member invite created successfully.'
+      setInviteMessage(
+        `Invitation created for ${email}.`
       )
 
       await loadOrganization()
     } catch (error) {
-      setMessage(
+      setInviteError(
         error instanceof Error
           ? error.message
           : 'Could not create team member invite.'
@@ -820,9 +845,11 @@ export default function OrganizationPage() {
           <div className="mt-5 grid gap-4 md:grid-cols-4">
             <input
               value={inviteEmail}
-              onChange={(event) =>
+              onChange={(event) => {
                 setInviteEmail(event.target.value)
-              }
+                setInviteError(null)
+                setInviteMessage(null)
+              }}
               placeholder="Email address"
               type="email"
               className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
@@ -876,6 +903,18 @@ export default function OrganizationPage() {
                 : 'Send Invite'}
             </button>
           </div>
+
+          {inviteError && (
+            <div className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200">
+              ⚠ {inviteError}
+            </div>
+          )}
+
+          {inviteMessage && (
+            <div className="mt-4 rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-200">
+              ✓ {inviteMessage}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
