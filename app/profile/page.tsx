@@ -952,28 +952,6 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Availability">
-                    {isOwnProfile ? (
-                      <select
-                        value={profile.availability_status || 'available'}
-                        onChange={(event) =>
-                          updateField('availability_status', event.target.value)
-                        }
-                        className="input"
-                      >
-                        {availabilityOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {cleanStatus(option)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <ReadOnlyValue
-                        value={cleanStatus(profile.availability_status)}
-                      />
-                    )}
-                  </FieldBlock>
-
                   <FieldBlock label="Travel Radius">
                     {isOwnProfile ? (
                       <input
@@ -1358,30 +1336,117 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   Work Status
                 </h2>
 
-                <div className="mt-5 space-y-3">
-                  <StatusRow
-                    label="Availability"
-                    value={cleanStatus(profile.availability_status)}
-                    active={Boolean(profile.available_for_work)}
-                  />
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Keep your availability current so companies know when you can work.
+                </p>
 
-                  <StatusRow
-                    label="Currently Working"
-                    value={profile.currently_working ? 'Yes' : 'No'}
-                    active={Boolean(profile.currently_working)}
-                  />
+                <div className="mt-5 space-y-4">
+                  {isOwnProfile ? (
+                    <>
+                      <FieldBlock label="Availability">
+                        <select
+                          value={profile.availability_status || 'available'}
+                          onChange={(event) => {
+                            const value = event.target.value
+                            updateField('availability_status', value)
+                            updateField(
+                              'available_for_work',
+                              value !== 'busy' && value !== 'not_available'
+                            )
+                          }}
+                          className="input"
+                        >
+                          {availabilityOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {cleanStatus(option)}
+                            </option>
+                          ))}
+                        </select>
+                      </FieldBlock>
 
-                  <StatusRow
-                    label="Willing to Travel"
-                    value={profile.willing_to_travel ? 'Yes' : 'No'}
-                    active={Boolean(profile.willing_to_travel)}
-                  />
+                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <span className="text-sm font-black text-slate-700">
+                          Currently Working
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(profile.currently_working)}
+                          onChange={(event) =>
+                            updateField('currently_working', event.target.checked)
+                          }
+                          className="h-5 w-5 shrink-0 accent-blue-600"
+                          style={{ width: '20px' }}
+                        />
+                      </label>
 
-                  <StatusRow
-                    label="Booked Until"
-                    value={formatDate(profile.booked_until)}
-                    active={Boolean(profile.booked_until)}
-                  />
+                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <span className="text-sm font-black text-slate-700">
+                          Willing to Travel
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(profile.willing_to_travel)}
+                          onChange={(event) =>
+                            updateField('willing_to_travel', event.target.checked)
+                          }
+                          className="h-5 w-5 shrink-0 accent-blue-600"
+                          style={{ width: '20px' }}
+                        />
+                      </label>
+
+                      <FieldBlock label="Booked Until">
+                        <input
+                          type="date"
+                          value={
+                            profile.booked_until
+                              ? inputValue(profile.booked_until).slice(0, 10)
+                              : ''
+                          }
+                          onChange={(event) =>
+                            updateField(
+                              'booked_until',
+                              event.target.value || null
+                            )
+                          }
+                          className="input"
+                        />
+                      </FieldBlock>
+
+                      <CrewButton
+                        onClick={saveProfile}
+                        disabled={saving}
+                        fullWidth
+                      >
+                        {saving ? 'Saving...' : 'Update Work Status'}
+                      </CrewButton>
+                    </>
+                  ) : (
+                    <>
+                      <StatusRow
+                        label="Availability"
+                        value={cleanStatus(profile.availability_status)}
+                        active={Boolean(profile.available_for_work)}
+                      />
+
+                      <StatusRow
+                        label="Currently Working"
+                        value={profile.currently_working ? 'Yes' : 'No'}
+                        active={Boolean(profile.currently_working)}
+                      />
+
+                      <StatusRow
+                        label="Willing to Travel"
+                        value={profile.willing_to_travel ? 'Yes' : 'No'}
+                        active={Boolean(profile.willing_to_travel)}
+                      />
+
+                      <StatusRow
+                        label="Booked Until"
+                        value={formatDate(profile.booked_until)}
+                        active={Boolean(profile.booked_until)}
+                      />
+                    </>
+                  )}
 
                   <StatusRow
                     label="Last Seen"
