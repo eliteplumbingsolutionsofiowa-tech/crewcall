@@ -460,17 +460,20 @@ export default function OrganizationPage() {
     setMessage(null)
 
     try {
-      const { error } = await supabaseAny
-        .from('company_team_members')
-        .insert({
-          company_id: companyId,
-          branch_id: selectedBranchId || null,
-          email,
-          role: selectedRole,
-          status: 'invited',
-          invited_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+      const { data: createdInvite, error } =
+        await supabaseAny
+          .from('company_team_members')
+          .insert({
+            company_id: companyId,
+            branch_id: selectedBranchId || null,
+            email,
+            role: selectedRole,
+            status: 'invited',
+            invited_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single()
 
       if (error) {
         if (
@@ -486,13 +489,50 @@ export default function OrganizationPage() {
         throw error
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error(
+          'Invitation was created, but CrewCall could not verify your session to send the email.'
+        )
+      }
+
+      const emailResponse = await fetch(
+        '/api/company/team-invite',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            inviteId: createdInvite.id,
+          }),
+        }
+      )
+
+      const emailResult =
+        await emailResponse.json()
+
       setInviteEmail('')
       setSelectedRole('Admin')
       setSelectedBranchId('')
 
-      setInviteMessage(
-        `Invitation created for ${email}.`
-      )
+      if (!emailResponse.ok) {
+        setInviteError(
+          `Invitation was created, but the email could not be sent: ${
+            emailResult?.error ||
+            'Unknown email error.'
+          }`
+        )
+      } else {
+        setInviteMessage(
+          `Invitation emailed to ${email}.`
+        )
+      }
 
       await loadOrganization()
     } catch (error) {
