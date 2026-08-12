@@ -739,7 +739,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-2 py-3 pb-28 text-slate-950 sm:px-4 sm:py-8">
+    <main className="min-h-screen bg-slate-50 px-2 py-3 pb-44 text-slate-950 sm:px-4 sm:py-8 sm:pb-8 sm:px-4 sm:py-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:gap-6">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:rounded-[2rem]">
           <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-5 text-white sm:px-8 sm:py-8">
@@ -855,9 +855,11 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   </div>
 
                   {isOwnProfile && (
-                    <CrewButton onClick={saveProfile} disabled={saving}>
-                      {saving ? 'Saving...' : 'Save Profile'}
-                    </CrewButton>
+                    <div className="hidden sm:block">
+                      <CrewButton onClick={saveProfile} disabled={saving}>
+                        {saving ? 'Saving...' : 'Save Profile'}
+                      </CrewButton>
+                    </div>
                   )}
                 </div>
 
@@ -1566,6 +1568,20 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
           </div>
         </section>
       </div>
+
+      {isOwnProfile && (
+        <div className="fixed bottom-[104px] left-3 right-3 z-40 sm:hidden">
+          <div className="mx-auto max-w-xl rounded-2xl bg-white/95 p-2 shadow-2xl backdrop-blur">
+            <CrewButton
+              onClick={saveProfile}
+              disabled={saving}
+              fullWidth
+            >
+              {saving ? 'Saving...' : 'Save Profile'}
+            </CrewButton>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
