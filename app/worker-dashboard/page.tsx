@@ -246,36 +246,67 @@ export default function WorkerDashboard() {
     setRefreshing(false)
   }
 
-  async function markComplete(jobId: string) {
+  async function requestCompletion(job: Job) {
+    if (!job.company_id) {
+      setMessage('This job does not have a company attached.')
+      setMessageTone('error')
+      return
+    }
+
     const confirmed = window.confirm(
-      'Mark this job as completed? The company will be notified that the work is finished.'
+      'Tell the company that this job is ready to be completed?'
     )
 
     if (!confirmed) {
       return
     }
 
-    setBusyJobId(jobId)
+    setBusyJobId(job.id)
     setMessage(null)
 
-    const { error } = await jobsUpdateTable()
-      .update({
-        status: 'completed',
-      })
-      .eq('id', jobId)
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    if (error) {
-      setMessage(error.message)
+      if (userError || !user) {
+        throw new Error(
+          userError?.message || 'You must be logged in.'
+        )
+      }
+
+      const { error } = await (supabase as any)
+        .from('notifications')
+        .insert({
+          user_id: job.company_id,
+          type: 'completion_requested',
+          title: 'Worker says job is complete',
+          body: `The worker assigned to ${job.title || 'your job'} says the work is complete.`,
+          message: `The worker assigned to ${job.title || 'your job'} says the work is complete. Review the job and mark it complete when ready.`,
+          job_id: job.id,
+          link_url: `/my-jobs/${job.id}`,
+          read: false,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+
+      if (error) {
+        throw error
+      }
+
+      setMessage('Completion request sent to the company.')
+      setMessageTone('success')
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not send completion request.'
+      )
       setMessageTone('error')
+    } finally {
       setBusyJobId(null)
-      return
     }
-
-    await loadJobs()
-
-    setMessage('Job marked as completed.')
-    setMessageTone('success')
-    setBusyJobId(null)
   }
 
   if (loading) {
@@ -496,7 +527,7 @@ export default function WorkerDashboard() {
                       key={job.id}
                       job={job}
                       busy={busyJobId === job.id}
-                      onMarkComplete={markComplete}
+                      onRequestCompletion={requestCompletion}
                     />
                   ))}
                 </JobGroup>
@@ -513,7 +544,7 @@ export default function WorkerDashboard() {
                       key={job.id}
                       job={job}
                       busy={busyJobId === job.id}
-                      onMarkComplete={markComplete}
+                      onRequestCompletion={requestCompletion}
                     />
                   ))}
                 </JobGroup>
@@ -584,11 +615,11 @@ function JobGroup({
 function JobCard({
   job,
   busy,
-  onMarkComplete,
+  onRequestCompletion,
 }: {
   job: Job
   busy: boolean
-  onMarkComplete: (jobId: string) => Promise<void>
+  onRequestCompletion: (job: Job) => Promise<void>
 }) {
   const jobStatus = normalize(job.status)
   const paymentStatus = normalize(job.payment_status)
@@ -708,11 +739,11 @@ function JobCard({
             {!isCompleted ? (
               <button
                 type="button"
-                onClick={() => void onMarkComplete(job.id)}
+                onClick={() => void onRequestCompletion(job)}
                 disabled={busy}
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/10 px-5 py-3 text-sm font-black text-amber-200 transition hover:bg-amber-500/15 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy ? 'Completing...' : 'Mark Complete'}
+                {busy ? 'Sending...' : 'Request Completion'}
               </button>
             ) : null}
 
