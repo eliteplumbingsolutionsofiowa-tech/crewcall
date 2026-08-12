@@ -333,6 +333,17 @@ export default function OrganizationPage() {
       return
     }
 
+    const duplicateBranch = branches.find(
+      (branch) =>
+        branch.id !== editingBranchId &&
+        branch.name.trim().toLowerCase() === name.toLowerCase()
+    )
+
+    if (duplicateBranch) {
+      setMessage('A branch with that name already exists.')
+      return
+    }
+
     setSaving(true)
     setMessage(null)
 
