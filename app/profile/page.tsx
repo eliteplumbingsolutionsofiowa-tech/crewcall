@@ -252,6 +252,8 @@ function ProfilePageInner() {
   const [inviting, setInviting] = useState(false)
   const [stripeLoading, setStripeLoading] = useState(false)
   const [message, setMessage] = useState('')
+const [skillsText, setSkillsText] = useState('')
+const [preferredWorkText, setPreferredWorkText] = useState('')
 
   const isOwnProfile = !viewedUserId || viewedUserId === currentUserId
   const isWorkerProfile = profile?.role === 'worker'
@@ -442,10 +444,16 @@ function ProfilePageInner() {
 
     if (error) setMessage(error.message)
 
-    setProfile(
+    const loadedProfile =
       (data as Profile | null) ||
-        (profileId === user.id ? emptyProfile(user.id) : null)
-    )
+      (profileId === user.id ? emptyProfile(user.id) : null)
+
+    setProfile(loadedProfile)
+
+    if (loadedProfile) {
+      setSkillsText(arrayToInput(loadedProfile.skills))
+      setPreferredWorkText(arrayToInput(loadedProfile.preferred_work))
+    }
 
     const { data: files } = await supabaseAny
       .from('profile_files')
@@ -1113,12 +1121,13 @@ function ProfilePageInner() {
                   <FieldBlock label="Skills">
                     {isOwnProfile ? (
                       <textarea
-                        value={arrayToInput(profile.skills)}
-                        onChange={(event) =>
+                        value={skillsText}
+                        onChange={(event) => {
+                          setSkillsText(event.target.value)
                           updateField('skills', inputToArray(event.target.value))
-                        }
+                        }}
                         className="input min-h-24"
-                        placeholder="Commercial, Service, Underground, Copper, Cast Iron"
+                        placeholder="Example: Commercial plumbing, Service work, Copper, PVC, Cast Iron"
                       />
                     ) : (
                       <ChipList items={skills} empty="No skills added yet" />
@@ -1128,15 +1137,16 @@ function ProfilePageInner() {
                   <FieldBlock label="Preferred Work">
                     {isOwnProfile ? (
                       <textarea
-                        value={arrayToInput(profile.preferred_work)}
-                        onChange={(event) =>
+                        value={preferredWorkText}
+                        onChange={(event) => {
+                          setPreferredWorkText(event.target.value)
                           updateField(
                             'preferred_work',
                             inputToArray(event.target.value)
                           )
-                        }
+                        }}
                         className="input min-h-24"
-                        placeholder="Commercial, Piece work, Emergency, Travel, Shutdowns"
+                        placeholder="Example: Commercial rough-ins, Service calls, Hospitals, Shutdowns"
                       />
                     ) : (
                       <ChipList
