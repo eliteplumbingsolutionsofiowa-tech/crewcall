@@ -75,6 +75,7 @@ export default function OrganizationPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [branchError, setBranchError] = useState<string | null>(null)
 
   const [showBranchForm, setShowBranchForm] = useState(false)
   const [editingBranchId, setEditingBranchId] = useState<string | null>(null)
@@ -300,6 +301,7 @@ export default function OrganizationPage() {
     setBranchForm(emptyBranchForm)
     setShowBranchForm(true)
     setMessage(null)
+    setBranchError(null)
   }
 
   function startEditBranch(branch: Branch) {
@@ -315,12 +317,14 @@ export default function OrganizationPage() {
     })
     setShowBranchForm(true)
     setMessage(null)
+    setBranchError(null)
   }
 
   function cancelBranchForm() {
     setShowBranchForm(false)
     setEditingBranchId(null)
     setBranchForm(emptyBranchForm)
+    setBranchError(null)
   }
 
   async function saveBranch() {
@@ -329,7 +333,7 @@ export default function OrganizationPage() {
     const name = branchForm.name.trim()
 
     if (!name) {
-      setMessage('Enter a branch name.')
+      setBranchError('Enter a branch name.')
       return
     }
 
@@ -340,12 +344,15 @@ export default function OrganizationPage() {
     )
 
     if (duplicateBranch) {
-      setMessage('A branch with that name already exists.')
+      setBranchError(
+        `A branch named "${name}" already exists. Choose a different name.`
+      )
       return
     }
 
     setSaving(true)
     setMessage(null)
+    setBranchError(null)
 
     try {
       if (branchForm.is_headquarters) {
@@ -553,12 +560,13 @@ export default function OrganizationPage() {
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <input
                   value={branchForm.name}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setBranchForm((previous) => ({
                       ...previous,
                       name: event.target.value,
                     }))
-                  }
+                    setBranchError(null)
+                  }}
                   placeholder="Branch name"
                   className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
                 />
@@ -627,6 +635,12 @@ export default function OrganizationPage() {
                 />
                 Headquarters
               </label>
+
+              {branchError && (
+                <div className="mt-5 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200">
+                  ⚠ {branchError}
+                </div>
+              )}
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
