@@ -845,24 +845,6 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <FieldBlock label="Role">
-                    {isOwnProfile ? (
-                      <select
-                        value={profile.role || ''}
-                        onChange={(event) =>
-                          updateField('role', event.target.value as Role)
-                        }
-                        className="input"
-                      >
-                        <option value="">Select role</option>
-                        <option value="worker">Worker</option>
-                        <option value="company">Company</option>
-                      </select>
-                    ) : (
-                      <ReadOnlyValue value={profile.role || 'Not added yet'} />
-                    )}
-                  </FieldBlock>
-
                   <FieldBlock label="Full Name">
                     {isOwnProfile ? (
                       <input
@@ -878,7 +860,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Company Name">
+                  <FieldBlock label="Current Company">
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.company_name)}
@@ -1160,15 +1142,15 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               </CrewCard>
 
 
-              {isOwnProfile && (
+              {isOwnProfile ? (
                 <CrewCard>
-                  <div className="mb-5">
+                  <div className="mb-6">
                     <h2 className="text-2xl font-black text-slate-950">
                       Profile Files
                     </h2>
 
-                    <p className="text-sm font-semibold text-slate-500">
-                      Upload your photo, licenses, certifications, and insurance.
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      Upload and manage your photo, licenses, certifications, and insurance.
                     </p>
                   </div>
 
@@ -1209,26 +1191,42 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       onUploadComplete={loadProfile}
                     />
                   </div>
+
+                  <div className="mt-8 border-t border-slate-200 pt-6">
+                    <h3 className="text-lg font-black text-slate-950">
+                      Uploaded Documents
+                    </h3>
+
+                    <p className="mt-1 mb-4 text-sm font-semibold text-slate-500">
+                      Files currently attached to your profile.
+                    </p>
+
+                    <ProfileFileList
+                      files={profileFiles}
+                      canDelete
+                      onDeleteComplete={loadProfile}
+                    />
+                  </div>
+                </CrewCard>
+              ) : (
+                <CrewCard>
+                  <div className="mb-5">
+                    <h2 className="text-2xl font-black text-slate-950">
+                      Documents
+                    </h2>
+
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      Licenses, insurance, certifications, and profile documents.
+                    </p>
+                  </div>
+
+                  <ProfileFileList
+                    files={profileFiles}
+                    canDelete={false}
+                    onDeleteComplete={loadProfile}
+                  />
                 </CrewCard>
               )}
-
-              <CrewCard>
-                <div className="mb-5">
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Uploaded Documents
-                  </h2>
-
-                  <p className="text-sm font-semibold text-slate-500">
-                    Licenses, insurance, certifications, and profile documents.
-                  </p>
-                </div>
-
-                <ProfileFileList
-                  files={profileFiles}
-                  canDelete={isOwnProfile}
-                  onDeleteComplete={loadProfile}
-                />
-              </CrewCard>
 
               <CrewCard>
                 <ProfileReviews profileId={profile.id} />
