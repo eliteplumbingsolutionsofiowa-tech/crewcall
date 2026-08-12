@@ -1137,15 +1137,29 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
 
                 {isOwnProfile && (
-                  <div className="mt-4">
-                    <CrewButton
-                      onClick={saveProfile}
-                      disabled={saving}
-                      fullWidth
-                    >
-                      {saving ? 'Saving...' : 'Save Profile'}
-                    </CrewButton>
-                  </div>
+                  <>
+                    <div className="mt-4 hidden sm:block">
+                      <CrewButton
+                        onClick={saveProfile}
+                        disabled={saving}
+                        fullWidth
+                      >
+                        {saving ? 'Saving...' : 'Save Profile'}
+                      </CrewButton>
+                    </div>
+
+                    <div className="fixed inset-x-3 bottom-[96px] z-40 sm:hidden">
+                      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur">
+                        <CrewButton
+                          onClick={saveProfile}
+                          disabled={saving}
+                          fullWidth
+                        >
+                          {saving ? 'Saving...' : 'Save Profile'}
+                        </CrewButton>
+                      </div>
+                    </div>
+                  </>
                 )}
 
               </CrewCard>
