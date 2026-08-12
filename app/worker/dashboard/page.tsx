@@ -25,10 +25,6 @@ type Stats = {
   unpaid: number
 }
 
-type JobUpdate = {
-  status: string
-}
-
 type QueryError = {
   message: string
 }
@@ -48,24 +44,10 @@ type SelectTable<T> = {
   select: (columns: string) => EqOrderQuery<T>
 }
 
-type UpdateEqQuery = {
-  eq: (
-    column: string,
-    value: string
-  ) => Promise<{ data: null; error: QueryError | null }>
-}
-
-type UpdateTable<TUpdate> = {
-  update: (value: TUpdate) => UpdateEqQuery
-}
-
 function jobsSelectTable() {
   return supabase.from('jobs') as unknown as SelectTable<Job>
 }
 
-function jobsUpdateTable() {
-  return supabase.from('jobs') as unknown as UpdateTable<JobUpdate>
-}
 
 function normalize(value: string | null) {
   return String(value || '').toLowerCase().trim()
@@ -167,30 +149,66 @@ export default function WorkerDashboard() {
     setLoading(false)
   }
 
-  async function markComplete(jobId: string) {
-    const confirmed = window.confirm('Mark this job as completed?')
+  async function requestCompletion(job: Job) {
+    if (!job.company_id) {
+      setMessage('This job does not have a company attached.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Tell the company that this job is ready to be completed?'
+    )
 
     if (!confirmed) {
       return
     }
 
-    setBusyJobId(jobId)
+    setBusyJobId(job.id)
     setMessage(null)
 
-    const { error } = await jobsUpdateTable()
-      .update({
-        status: 'completed',
-      })
-      .eq('id', jobId)
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    if (error) {
-      setMessage(error.message)
+      if (userError || !user) {
+        throw new Error(
+          userError?.message || 'You must be logged in.'
+        )
+      }
+
+      const { error } = await (supabase as any)
+        .from('notifications')
+        .insert({
+          user_id: job.company_id,
+          type: 'completion_requested',
+          title: 'Worker says job is complete',
+          body: `The worker assigned to ${job.title || 'your job'} says the work is complete.`,
+          message: `The worker assigned to ${job.title || 'your job'} says the work is complete. Review the job and mark it complete when ready.`,
+          job_id: job.id,
+          link_url: `/my-jobs/${job.id}`,
+          read: false,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+
+      if (error) {
+        throw error
+      }
+
+      setMessage(
+        'Completion request sent to the company.'
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not send completion request.'
+      )
+    } finally {
       setBusyJobId(null)
-      return
     }
-
-    await loadJobs()
-    setBusyJobId(null)
   }
 
   if (loading) {
@@ -358,13 +376,13 @@ export default function WorkerDashboard() {
                       {canMarkComplete ? (
                         <button
                           type="button"
-                          onClick={() => void markComplete(job.id)}
+                          onClick={() => void requestCompletion(job)}
                           disabled={busyJobId === job.id}
                           className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busyJobId === job.id
-                            ? 'Completing...'
-                            : 'Mark Complete'}
+                            ? 'Sending...'
+                            : 'Request Completion'}
                         </button>
                       ) : null}
 
