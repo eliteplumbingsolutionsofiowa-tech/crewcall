@@ -483,6 +483,25 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
     setLoading(false)
   }, [supabaseAny, viewedUserId])
 
+  const loadProfileFiles = useCallback(async () => {
+    if (!currentUserId) return
+
+    const profileId = viewedUserId || currentUserId
+
+    const { data: files, error } = await supabaseAny
+      .from('profile_files')
+      .select('id,file_name,file_url,file_type,category,created_at')
+      .eq('user_id', profileId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setProfileFiles((files as ProfileFile[]) || [])
+  }, [currentUserId, supabaseAny, viewedUserId])
+
   const updateOnlineStatus = useCallback(
     async (isOnline: boolean) => {
       if (!currentUserId) return
@@ -513,13 +532,11 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
     const handleFocus = () => {
       updateOnlineStatus(true)
-      loadProfile()
     }
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         updateOnlineStatus(true)
-        loadProfile()
       } else {
         updateOnlineStatus(false)
       }
@@ -534,7 +551,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       updateOnlineStatus(false)
     }
-  }, [currentUserId, loadProfile, updateOnlineStatus])
+  }, [currentUserId, updateOnlineStatus])
 
   function updateField(
     field: keyof Profile,
@@ -1139,7 +1156,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       label="Profile Photo"
                       description="Upload a clear photo or company logo."
                       accept="image/*"
-                      onUploadComplete={loadProfile}
+                      onUploadComplete={loadProfileFiles}
                     />
 
                     <ProfileFileUpload
@@ -1148,7 +1165,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       label="License"
                       description="Upload trade licenses or cards."
                       accept="image/*,.pdf"
-                      onUploadComplete={loadProfile}
+                      onUploadComplete={loadProfileFiles}
                     />
 
                     <ProfileFileUpload
@@ -1157,7 +1174,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       label="Certification"
                       description="Upload safety cards, certifications, or training docs."
                       accept="image/*,.pdf"
-                      onUploadComplete={loadProfile}
+                      onUploadComplete={loadProfileFiles}
                     />
 
                     <ProfileFileUpload
@@ -1166,7 +1183,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       label="Insurance"
                       description="Upload insurance documents."
                       accept="image/*,.pdf"
-                      onUploadComplete={loadProfile}
+                      onUploadComplete={loadProfileFiles}
                     />
                   </div>
 
@@ -1182,7 +1199,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     <ProfileFileList
                       files={profileFiles}
                       canDelete
-                      onDeleteComplete={loadProfile}
+                      onDeleteComplete={loadProfileFiles}
                     />
                   </div>
                 </CrewCard>
@@ -1201,7 +1218,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   <ProfileFileList
                     files={profileFiles}
                     canDelete={false}
-                    onDeleteComplete={loadProfile}
+                    onDeleteComplete={loadProfileFiles}
                   />
                 </CrewCard>
               )}
