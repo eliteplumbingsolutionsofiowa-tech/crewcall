@@ -1157,97 +1157,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   </FieldBlock>
                 </div>
 
-                {isOwnProfile && (
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <CheckBoxField
-                      label="Liability signed"
-                      checked={Boolean(profile.liability_form_signed)}
-                      onChange={(checked) =>
-                        updateField('liability_form_signed', checked)
-                      }
-                    />
-
-                    <CheckBoxField
-                      label="Available"
-                      checked={Boolean(profile.available_for_work)}
-                      onChange={(checked) =>
-                        updateField('available_for_work', checked)
-                      }
-                    />
-
-                    <CheckBoxField
-                      label="Currently working"
-                      checked={Boolean(profile.currently_working)}
-                      onChange={(checked) =>
-                        updateField('currently_working', checked)
-                      }
-                    />
-
-                    <CheckBoxField
-                      label="Willing to travel"
-                      checked={Boolean(profile.willing_to_travel)}
-                      onChange={(checked) =>
-                        updateField('willing_to_travel', checked)
-                      }
-                    />
-
-                    <CheckBoxField
-                      label="OSHA 10"
-                      checked={Boolean(profile.osha10)}
-                      onChange={(checked) => updateField('osha10', checked)}
-                    />
-
-                    <CheckBoxField
-                      label="OSHA 30"
-                      checked={Boolean(profile.osha30)}
-                      onChange={(checked) => updateField('osha30', checked)}
-                    />
-
-                    <CheckBoxField
-                      label="Med Gas"
-                      checked={Boolean(profile.med_gas)}
-                      onChange={(checked) => updateField('med_gas', checked)}
-                    />
-
-                    <CheckBoxField
-                      label="Drug Tested"
-                      checked={Boolean(profile.drug_tested)}
-                      onChange={(checked) => updateField('drug_tested', checked)}
-                    />
-                  </div>
-                )}
               </CrewCard>
 
-              <CrewCard>
-                <div className="mb-5">
-                  <h2 className="text-2xl font-black text-slate-950">
-                    Skills & Preferred Work
-                  </h2>
-
-                  <p className="text-sm font-semibold text-slate-500">
-                    Companies can quickly see what kind of work fits you best.
-                  </p>
-                </div>
-
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div>
-                    <p className="mb-3 text-sm font-black text-slate-700">
-                      Skills
-                    </p>
-                    <ChipList items={skills} empty="No skills added yet" />
-                  </div>
-
-                  <div>
-                    <p className="mb-3 text-sm font-black text-slate-700">
-                      Preferred Work
-                    </p>
-                    <ChipList
-                      items={preferredWork}
-                      empty="No preferred work added yet"
-                    />
-                  </div>
-                </div>
-              </CrewCard>
 
               {isOwnProfile && (
                 <CrewCard>
@@ -1426,36 +1337,6 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </CrewCard>
               )}
 
-              <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">
-                  CrewCall Score
-                </h2>
-
-                <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Early trust score based on profile strength and verification.
-                </p>
-
-                <div className="mt-5 rounded-[2rem] bg-gradient-to-br from-slate-950 to-blue-950 p-6 text-center text-white">
-                  <div className="text-6xl font-black">{crewcallScore}</div>
-                  <div className="mt-2 text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-                    Professional Score
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-sm font-black">
-                    <span>{completionScore}% complete</span>
-                    <span>{crewcallScore >= 90 ? 'Strong' : 'Building'}</span>
-                  </div>
-
-                  <div className="h-4 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${completionScore}%` }}
-                    />
-                  </div>
-                </div>
-              </CrewCard>
 
               <CrewCard>
                 <h2 className="text-2xl font-black text-slate-950">
@@ -1516,47 +1397,6 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
               </CrewCard>
 
-              <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">
-                  Quick Details
-                </h2>
-
-                <div className="mt-5 space-y-3">
-                  <InfoLine label="Name" value={profile.full_name} />
-                  <InfoLine label="Company" value={profile.company_name} />
-                  <InfoLine label="Phone" value={profile.phone} />
-                  <InfoLine label="Trade" value={profile.trade} />
-                  <InfoLine
-                    label="Location"
-                    value={[profile.city, profile.state]
-                      .map((item) => inputValue(item).trim())
-                      .filter(Boolean)
-                      .join(', ')}
-                  />
-                  <InfoLine
-                    label="Experience"
-                    value={profile.years_experience}
-                  />
-                  <InfoLine
-                    label="Expected Pay"
-                    value={
-                      profile.expected_pay_min || profile.expected_pay_max
-                        ? `$${profile.expected_pay_min || '?'}-${
-                            profile.expected_pay_max || '?'
-                          }/hr`
-                        : ''
-                    }
-                  />
-                  <InfoLine
-                    label="Travel Radius"
-                    value={
-                      profile.travel_radius
-                        ? `${profile.travel_radius} miles`
-                        : ''
-                    }
-                  />
-                </div>
-              </CrewCard>
             </aside>
           </div>
         </section>
@@ -1676,13 +1516,55 @@ function CheckBoxField({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-800">
+    <label
+      style={{
+        width: '100%',
+        minWidth: 0,
+        minHeight: '64px',
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '14px 16px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        borderRadius: '16px',
+        border: checked ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+        background: checked ? '#eff6ff' : '#ffffff',
+        color: '#0f172a',
+      }}
+    >
       <input
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
+        style={{
+          width: '20px',
+          height: '20px',
+          minWidth: '20px',
+          maxWidth: '20px',
+          margin: 0,
+          flex: '0 0 20px',
+          accentColor: '#2563eb',
+        }}
       />
-      {label}
+
+      <span
+        style={{
+          display: 'block',
+          minWidth: 0,
+          flex: '1 1 auto',
+          overflow: 'hidden',
+          overflowWrap: 'break-word',
+          wordBreak: 'normal',
+          fontSize: '14px',
+          lineHeight: '20px',
+          fontWeight: 800,
+          textAlign: 'left',
+        }}
+      >
+        {label}
+      </span>
     </label>
   )
 }
