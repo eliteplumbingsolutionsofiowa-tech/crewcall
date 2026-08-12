@@ -792,9 +792,10 @@ export default function CrewCallNav() {
             <NavLink
               href="/applications"
               onClick={onNavigate}
-              active={pathname.startsWith(
-                '/applications'
-              )}
+              active={
+                pathname.startsWith('/applications') ||
+                pathname.startsWith('/worker/applications')
+              }
             >
               Applications
             </NavLink>
