@@ -775,25 +775,71 @@ export default function ApplicantsPage() {
     setActionLoadingId(nextStatus)
     setMessage('')
 
-    const { error } = await jobsUpdateTable()
-      .update({
-        status: nextStatus,
-      })
-      .eq('id', job.id)
+    try {
+      if (nextStatus === 'completed') {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
 
-    if (error) {
-      setMessage(error.message)
+        if (sessionError || !session?.access_token) {
+          throw new Error(
+            sessionError?.message ||
+              'You must be logged in to complete this job.'
+          )
+        }
+
+        const response = await fetch('/api/jobs/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            jobId: job.id,
+            companyId: job.company_id,
+          }),
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(
+            result?.error || 'Unable to complete job.'
+          )
+        }
+
+        setMessage(
+          result?.message || 'Job marked completed.'
+        )
+      } else {
+        const { error } = await jobsUpdateTable()
+          .update({
+            status: nextStatus,
+          })
+          .eq('id', job.id)
+
+        if (error) {
+          throw error
+        }
+
+        setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
+      }
+
+      await loadApplicants()
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to update job status.'
+      )
+    } finally {
       setActionLoadingId(null)
-      return
     }
-
-    setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
-
-    await loadApplicants()
-
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
-
-    setActionLoadingId(null)
   }
 
   async function messageWorker(workerId: string) {
