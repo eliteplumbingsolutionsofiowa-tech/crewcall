@@ -15,14 +15,6 @@ type Job = {
   assigned_worker_id: string | null
 }
 
-type JobPaymentUpdate = {
-  payment_status?: string
-  payout_status?: string
-  status?: string
-  paid_at?: string
-  payout_released_at?: string
-}
-
 type QueryError = {
   message: string
 }
@@ -39,23 +31,8 @@ type SelectTable<T> = {
   select: (columns: string) => EqMaybeQuery<T>
 }
 
-type UpdateEqQuery = {
-  eq: (
-    column: string,
-    value: string
-  ) => Promise<{ data: null; error: QueryError | null }>
-}
-
-type UpdateTable<TUpdate> = {
-  update: (value: TUpdate) => UpdateEqQuery
-}
-
 function jobsSelectTable() {
   return supabase.from('jobs') as unknown as SelectTable<Job>
-}
-
-function jobsUpdateTable() {
-  return supabase.from('jobs') as unknown as UpdateTable<JobPaymentUpdate>
 }
 
 function StripeSuccessContent() {
@@ -89,80 +66,79 @@ function StripeSuccessContent() {
       return
     }
 
-    const { data, error } = await jobsSelectTable()
-      .select(
+    const maxAttempts = 10
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const { data, error } = await jobsSelectTable()
+        .select(
+          `
+          id,
+          title,
+          payment_status,
+          payout_status,
+          status,
+          company_id,
+          assigned_worker_id
         `
-        id,
-        title,
-        payment_status,
-        payout_status,
-        status,
-        company_id,
-        assigned_worker_id
-      `
-      )
-      .eq('stripe_checkout_session_id', sessionId)
-      .maybeSingle()
+        )
+        .eq('stripe_checkout_session_id', sessionId)
+        .maybeSingle()
 
-    if (error) {
-      setMessage(error.message)
-      setLoading(false)
-      return
+      if (error) {
+        setMessage(error.message)
+        setLoading(false)
+        return
+      }
+
+      if (!data) {
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          continue
+        }
+
+        setMessage(
+          'Payment finished, but CrewCall could not find the matching job.'
+        )
+        setLoading(false)
+        return
+      }
+
+      setJob(data)
+
+      if (data.payment_status === 'paid') {
+        if (data.payout_status === 'released') {
+          setMessage(
+            'Payment and worker payout already completed successfully.'
+          )
+        } else {
+          setMessage(
+            'Payment confirmed. Worker payment is secured. Complete the job when the work is finished to release payout.'
+          )
+        }
+
+        setSuccess(true)
+        setLoading(false)
+
+        window.dispatchEvent(
+          new Event('crewcall-refresh-nav')
+        )
+
+        return
+      }
+
+      if (attempt < maxAttempts - 1) {
+        setMessage('Payment received. Waiting for Stripe confirmation...')
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000)
+        )
+      }
     }
-
-    if (!data) {
-      setMessage(
-        'Payment finished, but CrewCall could not find the matching job.'
-      )
-      setLoading(false)
-      return
-    }
-
-    const foundJob = data
-    setJob(foundJob)
-
-    if (
-      foundJob.payment_status === 'paid' &&
-      foundJob.payout_status === 'released'
-    ) {
-      setMessage('Payment and worker payout already completed successfully.')
-      setSuccess(true)
-      setLoading(false)
-      return
-    }
-
-    const now = new Date().toISOString()
-
-    const { error: updateError } = await jobsUpdateTable()
-      .update({
-        payment_status: 'paid',
-        payout_status: 'not_released',
-        status: 'completed',
-        paid_at: now,
-      })
-      .eq('id', foundJob.id)
-
-    if (updateError) {
-      setMessage(updateError.message)
-      setLoading(false)
-      return
-    }
-
-    setJob({
-      ...foundJob,
-      payment_status: 'paid',
-      payout_status: 'not_released',
-      status: 'completed',
-    })
 
     setMessage(
-      'Payment confirmed. Worker payment is secured. Complete the job to release payout.'
+      'Stripe is still confirming the payment. Refresh this page in a moment.'
     )
-
-    setSuccess(true)
     setLoading(false)
-
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
   }
 
   const icon = success ? '✓' : loading ? '…' : '!'
