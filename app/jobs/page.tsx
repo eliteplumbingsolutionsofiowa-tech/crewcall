@@ -274,15 +274,21 @@ export default function JobsPage() {
     }
   }
 
-  const trades = useMemo(() => {
-    return Array.from(
-      new Set(
-        jobs
-          .map((job) => job.trade?.trim())
-          .filter((value): value is string => Boolean(value))
-      )
-    ).sort((a, b) => a.localeCompare(b))
-  }, [jobs])
+const trades = useMemo(
+  () => [
+    'Plumbing',
+    'Electrical',
+    'HVAC',
+    'Framing',
+    'Concrete',
+    'Drywall',
+    'Roofing',
+    'Painting',
+    'Flooring',
+    'General Labor',
+  ],
+  []
+)
 
   const locations = useMemo(() => {
     return Array.from(
