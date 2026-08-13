@@ -1,0 +1,18 @@
+{
+  "Common": {
+    "language": "Idioma",
+    "english": "English",
+    "spanish": "Español",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "back": "Atrás"
+  },
+  "Footer": {
+    "terms": "Términos",
+    "privacy": "Privacidad",
+    "contractorAgreement": "Acuerdo del Contratista",
+    "faq": "Preguntas Frecuentes",
+    "contact": "Contacto",
+    "rights": "Todos los derechos reservados."
+  }
+}

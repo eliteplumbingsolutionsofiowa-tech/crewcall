@@ -53,6 +53,9 @@ function SignupForm() {
   const [message, setMessage] =
     useState<string | null>(null)
 
+  const [existingAccount, setExistingAccount] =
+    useState(false)
+
   const acceptingTeamInvite =
     Boolean(inviteCode)
 
@@ -191,6 +194,83 @@ function SignupForm() {
     inviteCode,
   ])
 
+  async function handleExistingUserSignIn(
+    e: React.FormEvent
+  ) {
+    e.preventDefault()
+
+    setLoading(true)
+    setMessage(null)
+
+    const cleanEmail =
+      email.trim().toLowerCase()
+
+    if (
+      invitedEmail &&
+      cleanEmail !==
+        invitedEmail
+          .trim()
+          .toLowerCase()
+    ) {
+      setMessage(
+        `This invitation was sent to ${invitedEmail}.`
+      )
+      setLoading(false)
+      return
+    }
+
+    const {
+      data,
+      error,
+    } =
+      await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      })
+
+    if (error) {
+      setMessage(
+        error.message ===
+          'Invalid login credentials'
+          ? 'Incorrect email or password. Please try again.'
+          : error.message
+      )
+      setLoading(false)
+      return
+    }
+
+    if (
+      inviteCode &&
+      data.session?.access_token
+    ) {
+      try {
+        setMessage(
+          'Signing in and joining your company team...'
+        )
+
+        await acceptTeamInvite(
+          data.session.access_token,
+          inviteCode
+        )
+
+        window.location.assign(
+          '/profile?teamInvite=accepted'
+        )
+        return
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : 'Signed in, but the team invitation could not be accepted.'
+        )
+        setLoading(false)
+        return
+      }
+    }
+
+    window.location.assign('/profile')
+  }
+
   async function handleSignup(
     e: React.FormEvent
   ) {
@@ -250,6 +330,33 @@ function SignupForm() {
       })
 
     if (error) {
+      const errorText =
+        error.message.toLowerCase()
+
+      const userAlreadyExists =
+        errorText.includes(
+          'already registered'
+        ) ||
+        errorText.includes(
+          'already been registered'
+        ) ||
+        errorText.includes(
+          'user already exists'
+        )
+
+      if (
+        acceptingTeamInvite &&
+        userAlreadyExists
+      ) {
+        setExistingAccount(true)
+        setPassword('')
+        setMessage(
+          'An account already exists for this email. Sign in below to accept your company invitation.'
+        )
+        setLoading(false)
+        return
+      }
+
       setMessage(error.message)
       setLoading(false)
       return
@@ -326,15 +433,19 @@ function SignupForm() {
         </p>
 
         <h1 className="mt-4 text-3xl font-black tracking-tight text-white">
-          {acceptingTeamInvite
-            ? 'Join your company team'
-            : 'Create your account'}
+          {existingAccount
+            ? 'Sign in to join your team'
+            : acceptingTeamInvite
+              ? 'Join your company team'
+              : 'Create your account'}
         </h1>
 
         <p className="mt-2 text-sm font-semibold text-slate-400">
-          {acceptingTeamInvite
-            ? 'Create or confirm your CrewCall account to accept this company invitation.'
-            : 'Sign up as a worker or company.'}
+          {existingAccount
+            ? 'This email already has a CrewCall account. Sign in with your existing password to accept the invitation.'
+            : acceptingTeamInvite
+              ? 'Create or confirm your CrewCall account to accept this company invitation.'
+              : 'Sign up as a worker or company.'}
         </p>
 
         {message && (
@@ -343,126 +454,196 @@ function SignupForm() {
           </div>
         )}
 
-        <form
-          onSubmit={handleSignup}
-          className="mt-8 space-y-5"
-        >
-          <Field
-            label="Full Name"
-            htmlFor="fullName"
+        {existingAccount ? (
+          <form
+            onSubmit={handleExistingUserSignIn}
+            className="mt-8 space-y-5"
           >
-            <input
-              id="fullName"
-              type="text"
-              value={fullName}
-              onChange={(e) =>
-                setFullName(
-                  e.target.value
-                )
-              }
-              required
-              className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
-            />
-          </Field>
-
-          <Field
-            label="Phone"
-            htmlFor="phone"
-          >
-            <input
-              id="phone"
-              type="text"
-              value={phone}
-              onChange={(e) =>
-                setPhone(
-                  e.target.value
-                )
-              }
-              placeholder="515-555-1234"
-              className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
-            />
-          </Field>
-
-          {!acceptingTeamInvite && (
             <Field
-              label="Role"
-              htmlFor="role"
+              label="Email"
+              htmlFor="existingEmail"
             >
-              <select
-                id="role"
-                value={role}
+              <input
+                id="existingEmail"
+                type="email"
+                value={email}
                 onChange={(e) =>
-                  setRole(
-                    e.target
-                      .value as Role
+                  setEmail(
+                    e.target.value
                   )
                 }
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
-              >
-                <option value="worker">
-                  Worker
-                </option>
-                <option value="company">
-                  Company
-                </option>
-              </select>
+                readOnly={
+                  Boolean(invitedEmail)
+                }
+                required
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400 read-only:opacity-70"
+              />
             </Field>
-          )}
 
-          <Field
-            label="Email"
-            htmlFor="email"
-          >
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) =>
-                setEmail(
-                  e.target.value
-                )
-              }
-              readOnly={
-                Boolean(invitedEmail)
-              }
-              required
-              className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400 read-only:opacity-70"
-            />
-          </Field>
+            <Field
+              label="Password"
+              htmlFor="existingPassword"
+            >
+              <input
+                id="existingPassword"
+                type="password"
+                value={password}
+                onChange={(e) =>
+                  setPassword(
+                    e.target.value
+                  )
+                }
+                required
+                minLength={6}
+                autoFocus
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </Field>
 
-          <Field
-            label="Password"
-            htmlFor="password"
-          >
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) =>
-                setPassword(
-                  e.target.value
-                )
-              }
-              required
-              minLength={6}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
-            />
-          </Field>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading
-              ? acceptingTeamInvite
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
                 ? 'Joining team...'
-                : 'Creating account...'
-              : acceptingTeamInvite
-                ? 'Create Account & Join Team'
-                : 'Create Account'}
-          </button>
-        </form>
+                : 'Sign In & Join Team'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setExistingAccount(false)
+                setPassword('')
+                setMessage(null)
+              }}
+              className="w-full rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-slate-300 transition hover:bg-white/5"
+            >
+              Back to Create Account
+            </button>
+          </form>
+        ) : (
+          <form
+            onSubmit={handleSignup}
+            className="mt-8 space-y-5"
+          >
+            <Field
+              label="Full Name"
+              htmlFor="fullName"
+            >
+              <input
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(e) =>
+                  setFullName(
+                    e.target.value
+                  )
+                }
+                required
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </Field>
+
+            <Field
+              label="Phone"
+              htmlFor="phone"
+            >
+              <input
+                id="phone"
+                type="text"
+                value={phone}
+                onChange={(e) =>
+                  setPhone(
+                    e.target.value
+                  )
+                }
+                placeholder="515-555-1234"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </Field>
+
+            {!acceptingTeamInvite && (
+              <Field
+                label="Role"
+                htmlFor="role"
+              >
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) =>
+                    setRole(
+                      e.target
+                        .value as Role
+                    )
+                  }
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
+                >
+                  <option value="worker">
+                    Worker
+                  </option>
+                  <option value="company">
+                    Company
+                  </option>
+                </select>
+              </Field>
+            )}
+
+            <Field
+              label="Email"
+              htmlFor="email"
+            >
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) =>
+                  setEmail(
+                    e.target.value
+                  )
+                }
+                readOnly={
+                  Boolean(invitedEmail)
+                }
+                required
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400 read-only:opacity-70"
+              />
+            </Field>
+
+            <Field
+              label="Password"
+              htmlFor="password"
+            >
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) =>
+                  setPassword(
+                    e.target.value
+                  )
+                }
+                required
+                minLength={6}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
+              />
+            </Field>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? acceptingTeamInvite
+                  ? 'Joining team...'
+                  : 'Creating account...'
+                : acceptingTeamInvite
+                  ? 'Create Account & Join Team'
+                  : 'Create Account'}
+            </button>
+          </form>
+        )}
       </div>
     </main>
   )

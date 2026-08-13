@@ -1,0 +1,18 @@
+{
+  "Common": {
+    "language": "Language",
+    "english": "English",
+    "spanish": "Español",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back"
+  },
+  "Footer": {
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "contractorAgreement": "Contractor Agreement",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "rights": "All rights reserved."
+  }
+}

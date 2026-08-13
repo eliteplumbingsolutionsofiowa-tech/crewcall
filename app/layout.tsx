@@ -1,11 +1,14 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 import CrewCallNav from './components/CrewCallNav'
 import CrewCallPresence from './components/CrewCallPresence'
 import ToastProvider from './components/ToastProvider'
 import LiveNotificationSound from './components/LiveNotificationSound'
 import MobileBottomNav from './components/MobileBottomNav'
+import LanguageSwitcher from './components/LanguageSwitcher'
 
 export const metadata: Metadata = {
   title: 'CrewCall',
@@ -19,10 +22,14 @@ export const viewport: Viewport = {
   themeColor: '#020617',
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+  const tFooter = await getTranslations('Footer')
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang={locale} data-scroll-behavior="smooth">
       <body className="min-h-screen bg-slate-950 text-white antialiased">
+        <NextIntlClientProvider messages={messages}>
         <CrewCallPresence />
         <ToastProvider />
         <LiveNotificationSound />
@@ -32,6 +39,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:48px_48px] opacity-30" />
 
         <div className="flex min-h-screen flex-col pb-28 md:pb-0">
+          <div className="mx-auto flex w-full max-w-7xl justify-end px-4 pt-3">
+            <LanguageSwitcher />
+          </div>
+
           <CrewCallNav />
 
           <main className="flex-1">{children}</main>
@@ -75,12 +86,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
 
             <p className="mt-4 text-center text-xs font-bold text-slate-600">
-              © {new Date().getFullYear()} CrewCall. All rights reserved.
+              © {new Date().getFullYear()} CrewCall. {tFooter('rights')}
             </p>
           </footer>
 
           <MobileBottomNav />
         </div>
+        </NextIntlClientProvider>
       </body>
     </html>
   )

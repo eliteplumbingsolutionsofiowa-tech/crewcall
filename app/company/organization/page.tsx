@@ -444,14 +444,17 @@ export default function OrganizationPage() {
       return
     }
 
-    const duplicateInvite = teamMembers.find(
+    const existingMember = teamMembers.find(
       (member) =>
         member.email.trim().toLowerCase() === email
     )
 
-    if (duplicateInvite) {
+    if (
+      existingMember &&
+      existingMember.status !== 'invited'
+    ) {
       setInviteError(
-        `${email} has already been invited to this company.`
+        `${email} is already a member of this company.`
       )
       return
     }
@@ -460,33 +463,51 @@ export default function OrganizationPage() {
     setMessage(null)
 
     try {
-      const { data: createdInvite, error } =
-        await supabaseAny
-          .from('company_team_members')
-          .insert({
-            company_id: companyId,
-            branch_id: selectedBranchId || null,
-            email,
-            role: selectedRole,
-            status: 'invited',
-            invited_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select('id')
-          .single()
+      let inviteId: string
 
-      if (error) {
-        if (
-          String(error.message || '')
-            .toLowerCase()
-            .includes('duplicate')
-        ) {
-          throw new Error(
-            `${email} has already been invited to this company.`
-          )
+      if (
+        existingMember &&
+        existingMember.status === 'invited'
+      ) {
+        const { data: updatedInvite, error } =
+          await supabaseAny
+            .from('company_team_members')
+            .update({
+              branch_id: selectedBranchId || null,
+              role: selectedRole,
+              invited_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingMember.id)
+            .select('id')
+            .single()
+
+        if (error) {
+          throw error
         }
 
-        throw error
+        inviteId = updatedInvite.id
+      } else {
+        const { data: createdInvite, error } =
+          await supabaseAny
+            .from('company_team_members')
+            .insert({
+              company_id: companyId,
+              branch_id: selectedBranchId || null,
+              email,
+              role: selectedRole,
+              status: 'invited',
+              invited_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single()
+
+        if (error) {
+          throw error
+        }
+
+        inviteId = createdInvite.id
       }
 
       const {
@@ -495,7 +516,7 @@ export default function OrganizationPage() {
 
       if (!session?.access_token) {
         throw new Error(
-          'Invitation was created, but CrewCall could not verify your session to send the email.'
+          'Invitation was saved, but CrewCall could not verify your session to send the email.'
         )
       }
 
@@ -509,7 +530,7 @@ export default function OrganizationPage() {
               `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            inviteId: createdInvite.id,
+            inviteId,
           }),
         }
       )
@@ -523,14 +544,16 @@ export default function OrganizationPage() {
 
       if (!emailResponse.ok) {
         setInviteError(
-          `Invitation was created, but the email could not be sent: ${
+          `Invitation was saved, but the email could not be sent: ${
             emailResult?.error ||
             'Unknown email error.'
           }`
         )
       } else {
         setInviteMessage(
-          `Invitation emailed to ${email}.`
+          existingMember
+            ? `Invitation re-sent to ${email}.`
+            : `Invitation emailed to ${email}.`
         )
       }
 

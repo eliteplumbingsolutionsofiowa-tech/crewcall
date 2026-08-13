@@ -603,7 +603,8 @@ export default function WorkerApplicationsPage() {
                               }
                             </p>
 
-                            {(app.requested_pay_rate ||
+                            {!hired &&
+                              (app.requested_pay_rate ||
                               app.company_counter_offer ||
                               app.negotiation_status) && (
                               <div className="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
@@ -639,7 +640,8 @@ export default function WorkerApplicationsPage() {
 
                                 </div>
 
-                                {app.company_counter_offer &&
+                                 {!hired &&
+                                  app.company_counter_offer &&
                                   app.negotiation_status !== 'hired' && (
                                   <div className="mt-4 flex flex-wrap gap-3">
 
@@ -662,7 +664,8 @@ export default function WorkerApplicationsPage() {
                                   </div>
                                 )}
 
-                                {app.negotiation_status !== 'hired' &&
+                                 {!hired &&
+                                  app.negotiation_status !== 'hired' &&
                                   app.negotiation_status !== 'declined' && (
                                   <div className="mt-5 space-y-3">
 
