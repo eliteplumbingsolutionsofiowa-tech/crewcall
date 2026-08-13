@@ -44,7 +44,7 @@ const authClient = createClient(
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://crewcall.app'
+  'https://usecrewcall.com'
 
 type InviteRequest = {
   inviteId?: string
@@ -225,9 +225,9 @@ export async function POST(req: Request) {
       escapeHtml(branchName)
 
     const openCrewCallUrl =
-      `${appUrl}/signup?email=${encodeURIComponent(
-        invite.email
-      )}`
+      `${appUrl}/signup?invite=${encodeURIComponent(
+        invite.id
+      )}&email=${encodeURIComponent(invite.email)}`
 
     const result = await sendCrewCallEmail({
       to: invite.email,
