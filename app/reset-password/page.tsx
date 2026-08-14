@@ -38,8 +38,50 @@ export default function ResetPasswordPage() {
             window.location.search
           )
 
+        const tokenHash =
+          params.get('token_hash')
+
+        const type =
+          params.get('type')
+
         const code =
           params.get('code')
+
+        if (
+          tokenHash &&
+          type === 'recovery'
+        ) {
+          const {
+            data,
+            error,
+          } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          })
+
+          if (error) {
+            throw error
+          }
+
+          if (!data.session) {
+            throw new Error(
+              'CrewCall could not open this password reset session.'
+            )
+          }
+
+          window.history.replaceState(
+            {},
+            '',
+            '/reset-password'
+          )
+
+          if (active) {
+            setReady(true)
+            setMessage(null)
+          }
+
+          return
+        }
 
         if (code) {
           const { error } =
@@ -49,12 +91,6 @@ export default function ResetPasswordPage() {
           if (error) {
             throw error
           }
-
-          window.history.replaceState(
-            {},
-            '',
-            '/reset-password'
-          )
         }
 
         const {
