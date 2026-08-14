@@ -118,6 +118,31 @@ function SignupForm() {
         return
       }
 
+      const sessionEmail =
+        session.user.email
+          ?.trim()
+          .toLowerCase() || ''
+
+      const targetEmail =
+        invitedEmail
+          .trim()
+          .toLowerCase()
+
+      if (
+        targetEmail &&
+        sessionEmail !== targetEmail
+      ) {
+        await supabase.auth.signOut()
+
+        if (!active) return
+
+        setMessage(
+          `This invitation is for ${invitedEmail}. Sign in or create an account with that email to continue.`
+        )
+        setLoading(false)
+        return
+      }
+
       try {
         setLoading(true)
         setMessage(
@@ -192,6 +217,7 @@ function SignupForm() {
   }, [
     acceptTeamInvite,
     inviteCode,
+    invitedEmail,
   ])
 
   async function handleExistingUserSignIn(
