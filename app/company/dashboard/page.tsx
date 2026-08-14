@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 import SubscriptionGate from '@/app/components/SubscriptionGate'
 
 import GlassCard from '@/app/components/ui/GlassCard'
@@ -152,10 +153,26 @@ export default function CompanyDashboardPage() {
         return
       }
 
+      const companyContext =
+        await resolveCompanyContext(
+          supabase,
+          user.id
+        )
+
+      if (!companyContext.companyId) {
+        setError(
+          'You are not connected to a company account.'
+        )
+        return
+      }
+
+      const companyId =
+        companyContext.companyId
+
       const { data: jobsData, error: jobsError } = await supabase
         .from('jobs')
         .select('*')
-        .eq('company_id', user.id)
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false })
 
       if (jobsError) {
@@ -183,7 +200,7 @@ export default function CompanyDashboardPage() {
         supabase
           .from('reviews')
           .select('id, rating, created_at')
-          .eq('reviewee_id', user.id),
+          .eq('reviewee_id', companyId),
 
         supabase
           .from('profiles')
@@ -197,7 +214,7 @@ export default function CompanyDashboardPage() {
         supabase
           .from('profiles')
           .select('company_name, full_name, city, state')
-          .eq('id', user.id)
+          .eq('id', companyId)
           .maybeSingle(),
       ])
 
