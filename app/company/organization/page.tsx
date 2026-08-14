@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Branch = {
   id: string
@@ -104,52 +105,35 @@ export default function OrganizationPage() {
       return
     }
 
-    setCompanyId(user.id)
+    const companyContext =
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+    if (!companyContext.companyId) {
+      setCompanyId(null)
+      setMessage(
+        'Create or join a company before managing an organization.'
+      )
+      setLoading(false)
+      return
+    }
+
+    const resolvedCompanyId =
+      companyContext.companyId
+
+    setCompanyId(resolvedCompanyId)
 
     const { data: profile, error: profileError } =
       await supabaseAny
         .from('profiles')
         .select('id, role, company_name, full_name')
-        .eq('id', user.id)
+        .eq('id', resolvedCompanyId)
         .maybeSingle()
 
     if (profileError) {
       setMessage(profileError.message)
-      setLoading(false)
-      return
-    }
-
-    let isCompanyAccount =
-      profile?.role === 'company' ||
-      profile?.role === 'admin'
-
-    if (!isCompanyAccount) {
-      const [{ data: ownedBranch }, { data: ownedJob }] =
-        await Promise.all([
-          supabaseAny
-            .from('company_branches')
-            .select('id')
-            .eq('company_id', user.id)
-            .limit(1)
-            .maybeSingle(),
-
-          supabaseAny
-            .from('jobs')
-            .select('id')
-            .eq('company_id', user.id)
-            .limit(1)
-            .maybeSingle(),
-        ])
-
-      isCompanyAccount =
-        Boolean(ownedBranch) || Boolean(ownedJob)
-    }
-
-    if (!isCompanyAccount) {
-      setCompanyId(null)
-      setMessage(
-        'Create or join a company before managing an organization.'
-      )
       setLoading(false)
       return
     }
@@ -181,7 +165,7 @@ export default function OrganizationPage() {
           updated_at
           `
         )
-        .eq('company_id', user.id)
+        .eq('company_id', resolvedCompanyId)
         .order('is_headquarters', { ascending: false })
         .order('name', { ascending: true }),
 
@@ -200,13 +184,13 @@ export default function OrganizationPage() {
           joined_at
           `
         )
-        .eq('company_id', user.id)
+        .eq('company_id', resolvedCompanyId)
         .order('invited_at', { ascending: false }),
 
       supabaseAny
         .from('jobs')
         .select('id, status')
-        .eq('company_id', user.id),
+        .eq('company_id', resolvedCompanyId),
     ])
 
     if (branchesResult.error) {
