@@ -61,7 +61,7 @@ export default function LoginPage() {
 
     try {
       const redirectTo =
-        `${window.location.origin}/reset-password`
+        'https://usecrewcall.com/reset-password'
 
       const { error } =
         await supabase.auth.resetPasswordForEmail(
