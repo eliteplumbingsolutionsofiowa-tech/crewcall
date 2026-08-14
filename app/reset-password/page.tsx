@@ -15,38 +15,70 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let active = true
 
+    const {
+      data: authListener,
+    } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!active) return
+
+        if (
+          event === 'PASSWORD_RECOVERY' &&
+          session
+        ) {
+          setReady(true)
+          setMessage(null)
+        }
+      }
+    )
+
     async function prepareRecoverySession() {
       try {
-        const params = new URLSearchParams(window.location.search)
-        const code = params.get('code')
+        const params =
+          new URLSearchParams(
+            window.location.search
+          )
+
+        const code =
+          params.get('code')
 
         if (code) {
           const { error } =
-            await supabase.auth.exchangeCodeForSession(code)
+            await supabase.auth
+              .exchangeCodeForSession(code)
 
           if (error) {
             throw error
           }
+
+          window.history.replaceState(
+            {},
+            '',
+            '/reset-password'
+          )
         }
 
         const {
           data,
           error,
-        } = await supabase.auth.getSession()
+        } =
+          await supabase.auth.getSession()
 
         if (error) {
           throw error
         }
 
-        if (!data.session) {
-          throw new Error(
-            'This password reset link is invalid or has expired. Please request a new one.'
-          )
+        if (data.session) {
+          if (active) {
+            setReady(true)
+            setMessage(null)
+          }
+          return
         }
 
         if (active) {
-          setReady(true)
-          setMessage(null)
+          setMessage(
+            'This password reset link is invalid or has expired. Please request a new one.'
+          )
         }
       } catch (error) {
         console.error(
@@ -64,10 +96,11 @@ export default function ResetPasswordPage() {
       }
     }
 
-    prepareRecoverySession()
+    void prepareRecoverySession()
 
     return () => {
       active = false
+      authListener.subscription.unsubscribe()
     }
   }, [])
 
@@ -78,15 +111,19 @@ export default function ResetPasswordPage() {
 
     if (loading) return
 
-    if (password.length < 8) {
+    if (password.length < 10) {
       setMessage(
-        'Your new password must be at least 8 characters.'
+        'Your new password must be at least 10 characters.'
       )
       return
     }
 
-    if (password !== confirmPassword) {
-      setMessage('The passwords do not match.')
+    if (
+      password !== confirmPassword
+    ) {
+      setMessage(
+        'The passwords do not match.'
+      )
       return
     }
 
@@ -173,11 +210,13 @@ export default function ResetPasswordPage() {
                   value={password}
                   disabled={!ready || loading}
                   onChange={(event) =>
-                    setPassword(event.target.value)
+                    setPassword(
+                      event.target.value
+                    )
                   }
                   required
-                  minLength={8}
-                  placeholder="At least 8 characters"
+                  minLength={10}
+                  placeholder="At least 10 characters"
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
@@ -197,10 +236,12 @@ export default function ResetPasswordPage() {
                   value={confirmPassword}
                   disabled={!ready || loading}
                   onChange={(event) =>
-                    setConfirmPassword(event.target.value)
+                    setConfirmPassword(
+                      event.target.value
+                    )
                   }
                   required
-                  minLength={8}
+                  minLength={10}
                   placeholder="Enter it again"
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                 />
