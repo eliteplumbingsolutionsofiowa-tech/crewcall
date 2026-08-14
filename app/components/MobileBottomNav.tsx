@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -13,6 +14,7 @@ type Profile = {
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
+  const t = useTranslations('MobileNav')
 
   const [role, setRole] = useState<Role>(null)
   const [unreadMessages, setUnreadMessages] = useState(0)
@@ -92,7 +94,10 @@ export default function MobileBottomNav() {
   }, [loadCounts])
 
   const jobsHref = role === 'company' ? '/my-jobs' : '/jobs'
-  const jobsLabel = role === 'company' ? 'My Jobs' : 'Jobs'
+  const jobsLabel =
+    role === 'company'
+      ? t('myJobs')
+      : t('jobs')
   const alertTotal = unreadMessages + unreadNotifications
 
   return (
@@ -100,7 +105,7 @@ export default function MobileBottomNav() {
       <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
         <MobileTab
           href="/dashboard"
-          label="Home"
+          label={t('home')}
           icon="⌂"
           active={pathname === '/dashboard'}
         />
@@ -118,7 +123,7 @@ export default function MobileBottomNav() {
 
         <MobileTab
           href="/messages"
-          label="Messages"
+          label={t('messages')}
           icon="✉"
           count={unreadMessages}
           active={pathname.startsWith('/messages')}
@@ -126,7 +131,7 @@ export default function MobileBottomNav() {
 
         <MobileTab
           href="/notifications"
-          label="Alerts"
+          label={t('alerts')}
           icon="!"
           count={alertTotal}
           active={pathname.startsWith('/notifications')}
@@ -134,7 +139,7 @@ export default function MobileBottomNav() {
 
         <MobileTab
           href="/profile"
-          label="Profile"
+          label={t('profile')}
           icon="●"
           active={pathname.startsWith('/profile')}
         />

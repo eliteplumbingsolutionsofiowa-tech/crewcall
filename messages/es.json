@@ -39,5 +39,13 @@
     "loggingOut": "Cerrando sesión...",
     "logOut": "Cerrar Sesión",
     "login": "Iniciar Sesión"
+  },
+  "MobileNav": {
+    "home": "Inicio",
+    "jobs": "Trabajos",
+    "myJobs": "Mis Trabajos",
+    "messages": "Mensajes",
+    "alerts": "Alertas",
+    "profile": "Perfil"
   }
 }

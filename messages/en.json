@@ -39,5 +39,13 @@
     "loggingOut": "Logging Out...",
     "logOut": "Log Out",
     "login": "Login"
+  },
+  "MobileNav": {
+    "home": "Home",
+    "jobs": "Jobs",
+    "myJobs": "My Jobs",
+    "messages": "Messages",
+    "alerts": "Alerts",
+    "profile": "Profile"
   }
 }
