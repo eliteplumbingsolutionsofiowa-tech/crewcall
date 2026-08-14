@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type PaymentRow = {
   id: string
@@ -102,6 +103,21 @@ export default function CompanyPaymentsPage() {
         return
       }
 
+      const companyContext =
+        await resolveCompanyContext(
+          supabase,
+          user.id
+        )
+
+      if (!companyContext.companyId) {
+        setPayments([])
+        setLoading(false)
+        return
+      }
+
+      const companyId =
+        companyContext.companyId
+
       const { data, error } = await supabase
         .from('jobs')
         .select(
@@ -116,7 +132,7 @@ export default function CompanyPaymentsPage() {
           stripe_transfer_id
           `
         )
-        .eq('company_id', user.id)
+        .eq('company_id', companyId)
         .eq('payment_status', 'paid')
         .order('payout_released_at', {
           ascending: false,
