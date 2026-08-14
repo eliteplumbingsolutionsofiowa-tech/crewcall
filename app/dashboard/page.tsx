@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Job = {
   id: string
@@ -267,6 +268,20 @@ export default function CompanyDashboardPage() {
       return
     }
 
+    const companyContext =
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+    if (!companyContext.companyId) {
+      window.location.assign('/worker/dashboard')
+      return
+    }
+
+    const companyId =
+      companyContext.companyId
+
     const { data: jobData, error: jobsError } = await supabase
       .from('jobs')
       .select(`
@@ -284,7 +299,7 @@ export default function CompanyDashboardPage() {
         created_at,
         assigned_worker_id
       `)
-      .eq('company_id', user.id)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false })
 
     if (jobsError) {
@@ -324,13 +339,13 @@ export default function CompanyDashboardPage() {
     const { data: reviewData } = await supabase
       .from('reviews')
       .select('id, rating, created_at')
-      .eq('reviewee_id', user.id)
+      .eq('reviewee_id', companyId)
       .order('created_at', { ascending: false })
 
     const { count: savedCount } = await supabase
       .from('saved_workers')
       .select('id', { count: 'exact', head: true })
-      .eq('company_id', user.id)
+      .eq('company_id', companyId)
 
     setSavedWorkers(savedCount ?? 0)
     setJobs(loadedJobs)
