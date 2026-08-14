@@ -14,5 +14,30 @@
     "faq": "Preguntas Frecuentes",
     "contact": "Contacto",
     "rights": "Todos los derechos reservados."
+  },
+  "Nav": {
+    "dashboard": "Panel",
+    "operations": "Operaciones",
+    "payments": "Pagos",
+    "organization": "Organización",
+    "schedule": "Calendario",
+    "aiRecruiting": "Reclutamiento con IA",
+    "postJob": "Publicar Trabajo",
+    "myJobs": "Mis Trabajos",
+    "invites": "Invitaciones",
+    "applicants": "Solicitantes",
+    "findWorkers": "Buscar Trabajadores",
+    "saved": "Guardados",
+    "browseJobs": "Buscar Trabajos",
+    "applications": "Solicitudes",
+    "myWork": "Mi Trabajo",
+    "admin": "Administrador",
+    "releaseCenter": "🚀 Centro de Lanzamiento",
+    "messages": "Mensajes",
+    "notifications": "Notificaciones",
+    "profile": "Perfil",
+    "loggingOut": "Cerrando sesión...",
+    "logOut": "Cerrar Sesión",
+    "login": "Iniciar Sesión"
   }
 }

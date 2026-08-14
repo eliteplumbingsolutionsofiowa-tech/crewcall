@@ -14,5 +14,30 @@
     "faq": "FAQ",
     "contact": "Contact",
     "rights": "All rights reserved."
+  },
+  "Nav": {
+    "dashboard": "Dashboard",
+    "operations": "Operations",
+    "payments": "Payments",
+    "organization": "Organization",
+    "schedule": "Schedule",
+    "aiRecruiting": "AI Recruiting",
+    "postJob": "Post Job",
+    "myJobs": "My Jobs",
+    "invites": "Invites",
+    "applicants": "Applicants",
+    "findWorkers": "Find Workers",
+    "saved": "Saved",
+    "browseJobs": "Browse Jobs",
+    "applications": "Applications",
+    "myWork": "My Work",
+    "admin": "Admin",
+    "releaseCenter": "🚀 Release Center",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "loggingOut": "Logging Out...",
+    "logOut": "Log Out",
+    "login": "Login"
   }
 }

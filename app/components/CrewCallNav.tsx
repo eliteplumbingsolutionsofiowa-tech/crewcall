@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   type ReactNode,
@@ -42,6 +43,7 @@ const FALLBACK_REFRESH_INTERVAL = 30_000
 export default function CrewCallNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const tNav = useTranslations('Nav')
 
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
@@ -890,8 +892,8 @@ export default function CrewCallNav() {
               className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-red-400/30 bg-red-500/15 px-4 py-2 text-sm font-black !text-red-100 shadow-md shadow-black/20 transition-all duration-200 hover:border-red-300/60 hover:bg-red-500/25 hover:!text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loggingOut
-                ? 'Logging Out...'
-                : 'Log Out'}
+                ? tNav('loggingOut')
+                : tNav('logOut')}
             </button>
           </>
         ) : null}
