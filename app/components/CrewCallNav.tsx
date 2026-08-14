@@ -13,6 +13,7 @@ import {
 import CrewCallToast from '@/app/components/CrewCallToast'
 import CommandPalette from '@/app/components/search/CommandPalette'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Role = 'company' | 'worker' | 'admin' | null
 
@@ -140,12 +141,34 @@ export default function CrewCallNav() {
 
       console.log('CREWCALL NAV PROFILE', profile)
 
-      const userRole =
-        profile?.is_admin
-          ? 'admin'
-          : profile?.role ?? null
+      const companyContext =
+        await resolveCompanyContext(
+          supabase,
+          user.id
+        )
 
-      console.log('CREWCALL NAV ROLE', userRole)
+      if (
+        requestId !== loadRequestRef.current
+      ) {
+        return
+      }
+
+      const userRole: Role =
+        companyContext.isPlatformAdmin
+          ? 'admin'
+          : companyContext.companyId
+            ? 'company'
+            : profile?.role ?? null
+
+      console.log(
+        'CREWCALL NAV COMPANY CONTEXT',
+        companyContext
+      )
+
+      console.log(
+        'CREWCALL NAV ROLE',
+        userRole
+      )
 
       setRole(userRole)
 
@@ -194,7 +217,11 @@ export default function CrewCallNav() {
             count: 'exact',
             head: true,
           })
-          .eq('company_id', user.id)
+          .eq(
+            'company_id',
+            companyContext.companyId ||
+              user.id
+          )
 
         if (requestId !== loadRequestRef.current) {
           return
