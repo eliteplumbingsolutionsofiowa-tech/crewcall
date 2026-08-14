@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 import AIRecruiterHeartbeat from '@/app/components/AIRecruiterHeartbeat'
 
 import GlassCard from '@/app/components/ui/GlassCard'
@@ -177,32 +178,36 @@ export default function CompanyOperationsPage() {
 
         setCurrentUserId(user.id)
 
+        const companyContext =
+          await resolveCompanyContext(
+            supabase,
+            user.id
+          )
+
+        if (!companyContext.companyId) {
+          setError(
+            'This page is only available to company accounts or joined company team members.',
+          )
+          return
+        }
+
+        const companyId =
+          companyContext.companyId
+
         const { data: companyProfile, error: companyProfileError } =
           await supabase
             .from('profiles')
             .select('id, role, full_name, company_name')
-            .eq('id', user.id)
+            .eq('id', companyId)
             .maybeSingle()
 
         if (companyProfileError) {
           throw companyProfileError
         }
 
-        const allowedCompanyRoles = ['company', 'admin']
-
-        if (
-          !companyProfile?.role ||
-          !allowedCompanyRoles.includes(companyProfile.role)
-        ) {
-          setError(
-            'This page is only available to company or admin accounts.',
-          )
-          return
-        }
-
         setCompanyName(
-          companyProfile.company_name ||
-            companyProfile.full_name ||
+          companyProfile?.company_name ||
+            companyProfile?.full_name ||
             'Your Company',
         )
 
@@ -227,7 +232,7 @@ export default function CompanyOperationsPage() {
               is_featured
             `,
           )
-          .eq('company_id', user.id)
+          .eq('company_id', companyId)
           .order('created_at', { ascending: false })
 
         if (jobsError) {
