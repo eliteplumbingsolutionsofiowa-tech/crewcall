@@ -124,19 +124,6 @@ export async function POST(req: Request) {
       )
     }
 
-    if (
-      requestedCompanyId &&
-      requestedCompanyId !== user.id
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'You cannot complete a job for another company.',
-        },
-        { status: 403 }
-      )
-    }
-
     const { data: job, error: jobError } =
       await adminClient
         .from('jobs')
@@ -167,9 +154,18 @@ export async function POST(req: Request) {
       )
     }
 
-    if (job.company_id !== user.id) {
+    const isCompanyUser =
+      job.company_id === user.id
+
+    const isAssignedWorker =
+      job.assigned_worker_id === user.id
+
+    if (!isCompanyUser && !isAssignedWorker) {
       return NextResponse.json(
-        { error: 'You do not own this job.' },
+        {
+          error:
+            'You do not have permission to complete this job.',
+        },
         { status: 403 }
       )
     }
@@ -233,7 +229,6 @@ export async function POST(req: Request) {
         completed_at: completedAt,
       })
       .eq('id', jobId)
-      .eq('company_id', user.id)
       .in('status', ['assigned', 'in_progress'])
       .select(
         'id, company_id, assigned_worker_id, status, completed_at'
@@ -257,36 +252,40 @@ export async function POST(req: Request) {
       )
     }
 
-    const notificationResults = await Promise.allSettled([
-      adminClient.from('notifications').insert({
-        user_id: job.assigned_worker_id,
-        type: 'job_completed',
-        title: 'Job completed',
-        body: 'The company marked your job as completed.',
-        message:
-          'The company marked your job as completed.',
-        job_id: jobId,
-        link_url: `/jobs/${jobId}`,
-        read: false,
-        is_read: false,
-        created_at: completedAt,
-      } as never),
-
-      adminClient.from('notifications').insert({
-        user_id: user.id,
-        type: 'job_completed',
-        title: 'Job completed',
-        body:
-          'The job was marked completed successfully.',
-        message:
-          'The job was marked completed successfully.',
-        job_id: jobId,
-        link_url: `/my-jobs/${jobId}`,
-        read: false,
-        is_read: false,
-        created_at: completedAt,
-      } as never),
-    ])
+    const notificationResults =
+      isAssignedWorker
+        ? await Promise.allSettled([
+            adminClient.from('notifications').insert({
+              user_id: job.company_id,
+              type: 'job_completed',
+              title: 'Worker completed job',
+              body:
+                'The assigned worker marked the job as completed.',
+              message:
+                'The assigned worker marked the job as completed.',
+              job_id: jobId,
+              link_url: `/my-jobs/${jobId}`,
+              read: false,
+              is_read: false,
+              created_at: completedAt,
+            } as never),
+          ])
+        : await Promise.allSettled([
+            adminClient.from('notifications').insert({
+              user_id: job.assigned_worker_id,
+              type: 'job_completed',
+              title: 'Job completed',
+              body:
+                'The company marked your job as completed.',
+              message:
+                'The company marked your job as completed.',
+              job_id: jobId,
+              link_url: `/jobs/${jobId}`,
+              read: false,
+              is_read: false,
+              created_at: completedAt,
+            } as never),
+          ])
 
     for (const result of notificationResults) {
       if (
