@@ -1191,6 +1191,35 @@ export default function JobDetailsPage() {
           </section>
         ) : null}
 
+        {isWorker &&
+        job.assigned_worker_id === profile.id &&
+        currentStatus !== 'completed' ? (
+          <section className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+              Worker Actions
+            </p>
+
+            <h2 className="mt-2 text-2xl font-black text-white">
+              Job Progress
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-emerald-100/70">
+              Mark the job complete when your work is finished.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => void updateJobStatus('completed')}
+              disabled={workingId === 'completed'}
+              className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {workingId === 'completed'
+                ? 'Updating...'
+                : 'Mark Complete'}
+            </button>
+          </section>
+        ) : null}
+
         {isCompany && isOwner && isAssigned ? (
           <CompanyActions
             currentStatus={currentStatus}
