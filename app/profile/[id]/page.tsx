@@ -9,7 +9,7 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ProfileReviews from '@/app/components/ProfileReviews'
 import ProfileFileUpload from '@/app/components/ProfileFileUpload'
@@ -181,6 +181,7 @@ function getInitial(value: string | null | undefined) {
 
 function ProfilePageInner() {
   const params = useParams()
+  const router = useRouter()
   const searchParams = useSearchParams()
 
   const routeUserId = String(params.id || '')
@@ -871,12 +872,13 @@ function ProfilePageInner() {
 
       <div className="relative mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <Link
-            href={isOwnProfile ? '/dashboard' : '/workers'}
+          <button
+            type="button"
+            onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
-            ← {isOwnProfile ? 'Back to Dashboard' : 'Back to Workers'}
-          </Link>
+            ← Back
+          </button>
 
           <button
             type="button"
