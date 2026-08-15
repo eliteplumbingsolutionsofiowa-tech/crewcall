@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 import { resolveCompanyContext } from '@/lib/company-context'
 import { formatMoney } from '@/lib/formatMoney'
 
@@ -505,7 +506,7 @@ export default function ApplicantsPage() {
       const { data: sessionData } = await supabase.auth.getSession()
 
       if (sessionData.session?.access_token) {
-        await fetch('/api/jobs/match', {
+        await crewCallAuthedFetch('/api/jobs/match', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -916,7 +917,7 @@ export default function ApplicantsPage() {
         throw new Error('Authentication required.')
       }
 
-      const matchResponse = await fetch('/api/jobs/match', {
+      const matchResponse = await crewCallAuthedFetch('/api/jobs/match', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1086,7 +1087,7 @@ export default function ApplicantsPage() {
                     setInviteMessage('')
 
                     try {
-                      const response = await fetch('/api/jobs/match', {
+                      const response = await crewCallAuthedFetch('/api/jobs/match', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',

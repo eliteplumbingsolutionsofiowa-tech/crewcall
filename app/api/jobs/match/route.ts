@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Job = {
   id: string
@@ -64,12 +65,45 @@ type RankedMatch = MatchInsert & {
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabaseAdmin =
   supabaseUrl && serviceRoleKey
-    ? createClient(supabaseUrl, serviceRoleKey)
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      })
     : null
+
+const authClient =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      })
+    : null
+
+function getBearerToken(request: Request) {
+  const authorization =
+    request.headers.get('authorization')
+
+  if (
+    !authorization?.startsWith('Bearer ')
+  ) {
+    return null
+  }
+
+  return authorization
+    .slice('Bearer '.length)
+    .trim()
+}
 
 const STOP_WORDS = new Set([
   'and',
@@ -650,13 +684,35 @@ async function createWorkerNotifications(
 
 export async function POST(req: Request) {
   try {
-    if (!supabaseAdmin) {
+    if (!supabaseAdmin || !authClient) {
       return NextResponse.json(
         {
           error:
-            'Supabase service role is not configured. Check SUPABASE_SERVICE_ROLE_KEY.',
+            'Supabase authentication is not fully configured.',
         },
         { status: 500 }
+      )
+    }
+
+    const token =
+      getBearerToken(req)
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Authentication required.' },
+        { status: 401 }
+      )
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await authClient.auth.getUser(token)
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid or expired session.' },
+        { status: 401 }
       )
     }
 
@@ -687,6 +743,27 @@ export async function POST(req: Request) {
           error: jobError?.message || 'Job not found.',
         },
         { status: 404 }
+      )
+    }
+
+    const companyContext =
+      await resolveCompanyContext(
+        supabaseAdmin,
+        user.id
+      )
+
+    const authorizedForJob =
+      companyContext.isPlatformAdmin ||
+      companyContext.companyId ===
+        job.company_id
+
+    if (!authorizedForJob) {
+      return NextResponse.json(
+        {
+          error:
+            'You do not have permission to run matching for this job.',
+        },
+        { status: 403 }
       )
     }
 

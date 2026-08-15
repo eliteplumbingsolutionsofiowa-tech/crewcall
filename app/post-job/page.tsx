@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 import { resolveCompanyContext } from '@/lib/company-context'
 
 type Role = 'company' | 'worker' | 'admin' | null
@@ -271,7 +272,7 @@ export default function PostJobPage() {
 
   async function generateMatches(jobId: string) {
     try {
-      const response = await fetch('/api/jobs/match', {
+      const response = await crewCallAuthedFetch('/api/jobs/match', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

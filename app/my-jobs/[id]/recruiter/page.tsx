@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 
 type Job = {
   id: string
@@ -254,7 +255,7 @@ export default function AiRecruiterPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/jobs/match', {
+      const response = await crewCallAuthedFetch('/api/jobs/match', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
