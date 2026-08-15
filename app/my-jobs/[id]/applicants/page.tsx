@@ -1591,16 +1591,13 @@ export default function ApplicantsPage() {
                                   <p className="mt-1 text-sm font-semibold text-slate-400">
                                     {[
                                       worker?.trade,
-                                      worker?.city,
-                                      worker?.state,
+                                      [worker?.city, worker?.state]
+                                        .filter(Boolean)
+                                        .join(', '),
                                     ]
-                                      .filter(
-                                        Boolean
-                                      )
-                                      .join(
-                                        ' • '
-                                      ) ||
-                                      'Profile incomplete'}
+                                      .filter(Boolean)
+                                      .join(' • ') ||
+                                      'Available CrewCall worker'}
                                   </p>
 
                                   {match.reason && (
