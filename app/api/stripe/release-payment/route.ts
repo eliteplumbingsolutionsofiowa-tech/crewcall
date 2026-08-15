@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -218,11 +219,32 @@ export async function POST(req: Request) {
 
     const job = jobData
 
-    if (job.company_id !== user.id) {
+    const companyContext =
+      await resolveCompanyContext(
+        adminClient,
+        user.id
+      )
+
+    const canReleasePayment =
+      companyContext.isPlatformAdmin ||
+      companyContext.isCompanyOwner ||
+      (
+        companyContext.isTeamMember &&
+        companyContext.companyId === job.company_id &&
+        companyContext.teamRole === 'admin'
+      )
+
+    if (
+      !canReleasePayment ||
+      (
+        !companyContext.isPlatformAdmin &&
+        companyContext.companyId !== job.company_id
+      )
+    ) {
       return NextResponse.json(
         {
           error:
-            'You do not own this job.',
+            'You do not have permission to release payment for this job.',
         },
         { status: 403 }
       )
@@ -389,7 +411,7 @@ export async function POST(req: Request) {
         payout_status: 'processing',
       })
       .eq('id', job.id)
-      .eq('company_id', user.id)
+      .eq('company_id', job.company_id)
       .eq('status', 'completed')
       .eq('payment_status', 'paid')
       .is('stripe_transfer_id', null)
@@ -458,7 +480,8 @@ export async function POST(req: Request) {
           }`,
           metadata: {
             job_id: job.id,
-            company_id: user.id,
+            company_id: job.company_id || user.id,
+            actor_user_id: user.id,
             worker_id:
               job.assigned_worker_id,
             gross_amount_cents: String(
@@ -520,7 +543,7 @@ export async function POST(req: Request) {
         payout_released_at: releasedAt,
       })
       .eq('id', job.id)
-      .eq('company_id', user.id)
+      .eq('company_id', job.company_id)
       .eq('payout_status', 'processing')
       .is('stripe_transfer_id', null)
       .select(
