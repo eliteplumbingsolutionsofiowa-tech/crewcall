@@ -48,6 +48,8 @@ type Profile = {
   available_for_work: boolean | null
   is_online: boolean | null
   last_seen: string | null
+  stripe_account_id: string | null
+  stripe_onboarding_complete: boolean | null
 }
 
 type ApplicationRow = {
@@ -386,7 +388,9 @@ export default function JobDetailPage() {
           availability_status,
           available_for_work,
           is_online,
-          last_seen
+          last_seen,
+          stripe_account_id,
+          stripe_onboarding_complete
         `
         )
         .in('id', workerIds)
@@ -972,6 +976,19 @@ export default function JobDetailPage() {
               {assignedWorker.trade || 'Trade not listed'} ·{' '}
               {locationText(assignedWorker)}
             </p>
+
+            <div className="mt-3">
+              {assignedWorker.stripe_account_id &&
+              assignedWorker.stripe_onboarding_complete ? (
+                <span className="inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-200">
+                  ✓ Payout Ready
+                </span>
+              ) : (
+                <span className="inline-flex rounded-full border border-orange-400/30 bg-orange-500/15 px-3 py-1 text-xs font-black text-orange-200">
+                  ⚠ Payout Setup Required
+                </span>
+              )}
+            </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
