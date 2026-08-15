@@ -435,45 +435,51 @@ export default function JobDetailPage() {
 
     setMessage('Hiring worker...')
 
-    const { error: jobError } = await supabase
-      .from('jobs')
-      .update({
-        status: 'assigned',
-        assigned_worker_id: workerId,
-      })
-      .eq('id', job.id)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    if (jobError) {
-      setMessage(jobError.message)
-      return
-    }
-
-    if (applicationId) {
-      const { error: appError } = await supabase
-        .from('applications')
-        .update({
-          status: 'hired',
-        })
-        .eq('id', applicationId)
-
-      if (appError) {
-        setMessage(appError.message)
+      if (!session?.access_token) {
+        setMessage('Your login session expired. Please log in again.')
         return
       }
+
+      const response = await fetch('/api/jobs/hire', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+          workerId,
+          applicationId,
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        setMessage(
+          data?.error || 'Unable to hire this worker.'
+        )
+        return
+      }
+
+      setMessage('Worker hired successfully.')
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+
+      await load()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to hire this worker.'
+      )
     }
-
-    await supabase.from('notifications').insert({
-      user_id: workerId,
-      title: 'You were hired',
-      body: `You were hired for ${job.title || 'a CrewCall job'}.`,
-      link_url: `/jobs/${job.id}`,
-      read: false,
-      is_read: false,
-    })
-
-    setMessage('Worker hired successfully.')
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
-    await load()
   }
 
   async function inviteMatchedWorker(match: JobMatch) {

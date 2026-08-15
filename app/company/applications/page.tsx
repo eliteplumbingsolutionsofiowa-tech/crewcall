@@ -282,45 +282,58 @@ export default function CompanyApplicationsPage() {
     setMessage(null)
     setSuccessMessage(null)
 
-    const { error: jobError } = await supabase
-      .from('jobs')
-      .update({
-        status: 'assigned',
-        assigned_worker_id: app.worker_id,
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setMessage(
+          'Your login session expired. Please log in again.'
+        )
+        return
+      }
+
+      const response = await fetch('/api/jobs/hire', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: app.job_id,
+          workerId: app.worker_id,
+          applicationId: app.id,
+        }),
       })
-      .eq('id', app.job_id)
 
-    if (jobError) {
-      setMessage(jobError.message)
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        setMessage(
+          data?.error || 'Unable to hire this worker.'
+        )
+        return
+      }
+
+      setSuccessMessage(
+        `${app.worker_name || 'Worker'} hired successfully.`
+      )
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+
+      await loadApplications()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to hire this worker.'
+      )
+    } finally {
       setActionLoading(null)
-      return
     }
-
-    await supabase
-      .from('applications')
-      .update({ status: 'accepted' })
-      .eq('id', app.id)
-
-    await supabase
-      .from('applications')
-      .update({ status: 'rejected' })
-      .eq('job_id', app.job_id)
-      .neq('id', app.id)
-
-    await supabase.from('notifications').insert({
-      user_id: app.worker_id,
-      type: 'application',
-      title: 'You were hired',
-      body: `You were hired for ${app.job_title || 'a job'}.`,
-      link_url: `/jobs/${app.job_id}`,
-      is_read: false,
-      read: false,
-    })
-
-    setSuccessMessage(`${app.worker_name || 'Worker'} hired successfully.`)
-    setActionLoading(null)
-
-    await loadApplications()
   }
 
   async function reject(app: Application) {
