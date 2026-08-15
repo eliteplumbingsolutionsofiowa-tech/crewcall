@@ -93,21 +93,39 @@ export default function MobileBottomNav() {
     }
   }, [loadCounts])
 
-  const jobsHref = role === 'company' ? '/my-jobs' : '/jobs'
+  const homeHref =
+    role === 'company'
+      ? '/company/dashboard'
+      : role === 'worker'
+        ? '/worker/dashboard'
+        : '/dashboard'
+
+  const jobsHref =
+    role === 'company'
+      ? '/my-jobs'
+      : role === 'worker'
+        ? '/my-work'
+        : '/jobs'
+
   const jobsLabel =
     role === 'company'
       ? t('myJobs')
-      : t('jobs')
+      : role === 'worker'
+        ? 'My Work'
+        : t('jobs')
   const alertTotal = unreadMessages + unreadNotifications
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-2xl shadow-black/40 backdrop-blur-xl md:hidden">
       <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
         <MobileTab
-          href="/dashboard"
+          href={homeHref}
           label={t('home')}
           icon="⌂"
-          active={pathname === '/dashboard'}
+          active={
+            pathname === homeHref ||
+            pathname === '/dashboard'
+          }
         />
 
         <MobileTab
@@ -117,7 +135,9 @@ export default function MobileBottomNav() {
           active={
             role === 'company'
               ? pathname.startsWith('/my-jobs')
-              : pathname.startsWith('/jobs')
+              : role === 'worker'
+                ? pathname.startsWith('/my-work')
+                : pathname.startsWith('/jobs')
           }
         />
 
