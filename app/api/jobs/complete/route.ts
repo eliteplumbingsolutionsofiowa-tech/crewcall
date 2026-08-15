@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -154,17 +155,32 @@ export async function POST(req: Request) {
       )
     }
 
-    const isCompanyUser =
-      job.company_id === user.id
+    const companyContext =
+      await resolveCompanyContext(
+        adminClient,
+        user.id
+      )
 
-    const isAssignedWorker =
-      job.assigned_worker_id === user.id
+    const canCompleteJob =
+      companyContext.isPlatformAdmin ||
+      companyContext.isCompanyOwner ||
+      (
+        companyContext.isTeamMember &&
+        companyContext.companyId === job.company_id &&
+        companyContext.teamRole === 'admin'
+      )
 
-    if (!isCompanyUser && !isAssignedWorker) {
+    if (
+      !canCompleteJob ||
+      (
+        !companyContext.isPlatformAdmin &&
+        companyContext.companyId !== job.company_id
+      )
+    ) {
       return NextResponse.json(
         {
           error:
-            'You do not have permission to complete this job.',
+            'Only an authorized company user can approve completion of this job.',
         },
         { status: 403 }
       )
@@ -255,39 +271,22 @@ export async function POST(req: Request) {
     }
 
     const notificationResults =
-      isAssignedWorker
-        ? await Promise.allSettled([
-            adminClient.from('notifications').insert({
-              user_id: job.company_id,
-              type: 'job_completed',
-              title: 'Worker completed job',
-              body:
-                'The assigned worker marked the job as completed.',
-              message:
-                'The assigned worker marked the job as completed.',
-              job_id: jobId,
-              link_url: `/my-jobs/${jobId}`,
-              read: false,
-              is_read: false,
-              created_at: completedAt,
-            } as never),
-          ])
-        : await Promise.allSettled([
-            adminClient.from('notifications').insert({
-              user_id: job.assigned_worker_id,
-              type: 'job_completed',
-              title: 'Job completed',
-              body:
-                'The company marked your job as completed.',
-              message:
-                'The company marked your job as completed.',
-              job_id: jobId,
-              link_url: `/jobs/${jobId}`,
-              read: false,
-              is_read: false,
-              created_at: completedAt,
-            } as never),
-          ])
+      await Promise.allSettled([
+        adminClient.from('notifications').insert({
+          user_id: job.assigned_worker_id,
+          type: 'job_completed',
+          title: 'Job completed',
+          body:
+            'The company approved your work and marked the job as completed.',
+          message:
+            'The company approved your work and marked the job as completed.',
+          job_id: jobId,
+          link_url: `/jobs/${jobId}`,
+          read: false,
+          is_read: false,
+          created_at: completedAt,
+        } as never),
+      ])
 
     for (const result of notificationResults) {
       if (
