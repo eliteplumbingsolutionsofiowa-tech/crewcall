@@ -1578,6 +1578,25 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
               </CrewCard>
 
+              {isOwnProfile && (
+                <CrewCard>
+                  <h2 className="text-2xl font-black text-slate-950">
+                    Account
+                  </h2>
+
+                  <p className="mt-2 text-sm font-semibold text-slate-500">
+                    Manage your CrewCall account and personal data.
+                  </p>
+
+                  <a
+                    href="/delete-account"
+                    className="mt-5 flex min-h-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-700 transition hover:bg-red-100"
+                  >
+                    Delete Account
+                  </a>
+                </CrewCard>
+              )}
+
             </aside>
           </div>
         </section>
