@@ -252,51 +252,40 @@ export default function ApplyPage() {
       return
     }
 
-    const insertPayload: ApplicationInsert = {
-      job_id: jobId,
-      worker_id: user.id,
-      status: 'pending',
-      requested_pay_rate: cleanedRate,
-      negotiation_message: cleanedMessage,
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    const { data: newApplication, error } = await supabase
-      .from('applications')
-      .insert(insertPayload)
-      .select(
-        `
-        id,
-        requested_pay_rate,
-        negotiation_message
-      `
-      )
-      .single<ExistingApplication>()
-
-    if (error) {
-      setMessage(error.message)
+    if (!session?.access_token) {
+      setMessage('Your login session expired. Please log in again.')
       setSubmitting(false)
       return
     }
 
-    const { data: companyJob } = await supabase
-      .from('jobs')
-      .select('company_id, title')
-      .eq('id', jobId)
-      .maybeSingle<CompanyJob>()
+    const response = await fetch('/api/applications/apply', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        jobId,
+        requestedPayRate: cleanedRate,
+        negotiationMessage: cleanedMessage,
+      }),
+    })
 
-    if (companyJob?.company_id) {
-      const notificationPayload: NotificationInsert = {
-        user_id: companyJob.company_id,
-        type: 'application',
-        title: 'New Applicant',
-        body: `${profile?.full_name || 'A worker'} applied to your job`,
-        link_url: `/my-jobs/${jobId}/applicants`,
-        is_read: false,
-        read: false,
-      }
+    const result = await response.json().catch(() => null)
 
-      await supabase.from('notifications').insert(notificationPayload)
+    if (!response.ok) {
+      setMessage(
+        result?.error || 'Unable to submit application.'
+      )
+      setSubmitting(false)
+      return
     }
+
+    const newApplication = result?.application || null
 
     setAlreadyApplied(true)
     setApplicationId(newApplication?.id || null)
