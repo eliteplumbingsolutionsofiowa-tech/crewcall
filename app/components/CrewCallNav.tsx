@@ -60,6 +60,7 @@ export default function CrewCallNav() {
 
   const [userId, setUserId] = useState<string | null>(null)
   const [role, setRole] = useState<Role>(null)
+  const [canSwitchWorkspace, setCanSwitchWorkspace] = useState(false)
 
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
@@ -81,6 +82,7 @@ export default function CrewCallNav() {
   const resetNavState = useCallback(() => {
     setUserId(null)
     setRole(null)
+    setCanSwitchWorkspace(false)
     setUnreadMessages(0)
     setUnreadNotifications(0)
     setSavedWorkers(0)
@@ -169,6 +171,12 @@ export default function CrewCallNav() {
                 isCompanyWorkspace
               ? 'company'
               : profile?.role ?? null
+
+      setCanSwitchWorkspace(
+        profile?.role === 'worker' &&
+          companyContext.isTeamMember &&
+          Boolean(companyContext.companyId)
+      )
 
       console.log(
         'CREWCALL NAV COMPANY CONTEXT',
@@ -674,6 +682,16 @@ export default function CrewCallNav() {
 
   const logoHref = userId ? dashboardHref : '/'
 
+  const workspaceSwitchHref =
+    role === 'company'
+      ? '/worker/dashboard'
+      : '/company/dashboard'
+
+  const workspaceSwitchLabel =
+    role === 'company'
+      ? 'Switch to Worker'
+      : 'Switch to Company'
+
   const alertTotal =
     unreadMessages + unreadNotifications
 
@@ -699,6 +717,16 @@ export default function CrewCallNav() {
             }
           >
             Dashboard
+          </NavLink>
+        ) : null}
+
+        {userId && canSwitchWorkspace ? (
+          <NavLink
+            href={workspaceSwitchHref}
+            onClick={onNavigate}
+            active={false}
+          >
+            {workspaceSwitchLabel}
           </NavLink>
         ) : null}
 
