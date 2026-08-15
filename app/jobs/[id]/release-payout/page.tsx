@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type JobRow = {
   id: string
@@ -91,9 +92,19 @@ export default function ReleasePayoutPage() {
         )
       }
 
-      if (data.company_id !== user.id) {
+      const companyContext =
+        await resolveCompanyContext(
+          supabase,
+          user.id
+        )
+
+      if (
+        !companyContext.companyId ||
+        data.company_id !==
+          companyContext.companyId
+      ) {
         throw new Error(
-          'You do not own this job.'
+          'You do not have permission to release payout for this job.'
         )
       }
 

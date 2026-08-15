@@ -580,6 +580,80 @@ export default function JobDetailsPage() {
     }
   }
 
+  async function submitWorkForApproval() {
+    if (!job || !profile) {
+      return
+    }
+
+    const completionPhotos = jobFiles.filter(
+      (file: any) =>
+        file.category === 'completion_photo' &&
+        file.uploaded_by === profile.id
+    )
+
+    if (completionPhotos.length === 0) {
+      setMessage(
+        'Upload at least one completion photo before submitting your work.'
+      )
+      setMessageTone('error')
+      return
+    }
+
+    setWorkingId('submit_completion')
+    setMessage(null)
+
+    try {
+      const submittedAt = new Date().toISOString()
+
+      const { error } = await supabase
+        .from('jobs')
+        .update({
+          completion_status: 'submitted',
+          completion_submitted_at: submittedAt,
+        } as never)
+        .eq('id', job.id)
+        .eq('assigned_worker_id', profile.id)
+
+      if (error) {
+        setMessage(error.message)
+        setMessageTone('error')
+        return
+      }
+
+      await supabase.from('notifications').insert({
+        user_id: job.company_id,
+        type: 'completion_submitted',
+        title: 'Work ready for approval',
+        body: `${job.title || 'A CrewCall job'} has been submitted for approval.`,
+        message: `${job.title || 'A CrewCall job'} has been submitted for approval.`,
+        job_id: job.id,
+        link_url: `/my-jobs/${job.id}`,
+        read: false,
+        is_read: false,
+      } as never)
+
+      setMessage(
+        'Work submitted successfully. The company can now review and approve it.'
+      )
+      setMessageTone('success')
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+
+      await loadPage(true)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit completed work.'
+      )
+      setMessageTone('error')
+    } finally {
+      setWorkingId(null)
+    }
+  }
+
   async function payWorker() {
     if (!job) {
       return
@@ -1246,27 +1320,60 @@ export default function JobDetailsPage() {
         currentStatus !== 'completed' ? (
           <section className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-5">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-              Worker Actions
+              Worker Completion
             </p>
 
             <h2 className="mt-2 text-2xl font-black text-white">
-              Job Progress
+              Finish This Job
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-emerald-100/70">
-              Mark the job complete when your work is finished.
-            </p>
+            {job.completion_status === 'submitted' ? (
+              <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-5">
+                <p className="font-black text-cyan-200">
+                  ✓ Work Submitted
+                </p>
 
-            <button
-              type="button"
-              onClick={() => void updateJobStatus('completed')}
-              disabled={workingId === 'completed'}
-              className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {workingId === 'completed'
-                ? 'Updating...'
-                : 'Mark Complete'}
-            </button>
+                <p className="mt-2 text-sm font-semibold leading-6 text-cyan-100/70">
+                  Your completion package is waiting for company approval.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="mt-2 text-sm leading-6 text-emerald-100/70">
+                  Upload at least one photo showing the completed work, then submit the job for company approval.
+                </p>
+
+                <div className="mt-5">
+                  <JobFileUpload
+                    jobId={job.id}
+                    userId={profile.id}
+                    category="completion_photo"
+                    title="Completion Photos"
+                    description="Upload photos showing the finished work."
+                    accept="image/*"
+                    buttonLabel="Upload Photos"
+                    onUploadComplete={() =>
+                      void loadPage(true)
+                    }
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void submitWorkForApproval()
+                  }
+                  disabled={
+                    workingId === 'submit_completion'
+                  }
+                  className="mt-5 inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {workingId === 'submit_completion'
+                    ? 'Submitting...'
+                    : 'Submit Work for Approval'}
+                </button>
+              </>
+            )}
           </section>
         ) : null}
 
