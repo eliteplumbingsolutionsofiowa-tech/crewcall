@@ -633,32 +633,6 @@ export default function JobDetailPage() {
         return
       }
 
-      const approvedAt =
-        new Date().toISOString()
-
-      const { error: approvalError } =
-        await supabase
-          .from('jobs')
-          .update({
-            completion_status:
-              'approved',
-            completion_approved_at:
-              approvedAt,
-          })
-          .eq('id', job.id)
-          .eq(
-            'company_id',
-            currentUserId
-          )
-
-      if (approvalError) {
-        setMessage(
-          `Job completed, but CrewCall could not save the approval status: ${approvalError.message}`
-        )
-        await load()
-        return
-      }
-
       setMessage(
         'Work approved. The job is now completed.'
       )

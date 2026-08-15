@@ -227,6 +227,8 @@ export async function POST(req: Request) {
       .update({
         status: 'completed',
         completed_at: completedAt,
+        completion_status: 'approved',
+        completion_approved_at: completedAt,
       })
       .eq('id', jobId)
       .in('status', ['assigned', 'in_progress'])
