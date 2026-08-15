@@ -9,7 +9,7 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ProfileReviews from '@/app/components/ProfileReviews'
 import ProfileFileUpload from '@/app/components/ProfileFileUpload'
@@ -180,8 +180,12 @@ function getInitial(value: string | null | undefined) {
 }
 
 function ProfilePageInner() {
+  const params = useParams()
   const searchParams = useSearchParams()
-  const viewedUserId = searchParams.get('user')
+
+  const routeUserId = String(params.id || '')
+  const viewedUserId =
+    searchParams.get('user') || routeUserId || null
 
   const supabaseAny = supabase as any
 
