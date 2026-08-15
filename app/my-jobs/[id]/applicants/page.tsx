@@ -1708,8 +1708,10 @@ export default function ApplicantsPage() {
 
                     const agreedRate =
                       applicant.negotiation_status === 'accepted'
-                        ? applicant.company_counter_offer || workerOffer
-                        : null
+                        ? applicant.company_counter_offer || workerOffer || job.pay_rate
+                        : isAssigned
+                          ? applicant.company_counter_offer || workerOffer || job.pay_rate
+                          : null
 
                     return (
                       <article
@@ -1979,7 +1981,9 @@ export default function ApplicantsPage() {
                                   Pay Negotiation
                                 </p>
                                 <h5 className="mt-2 text-xl font-black text-white">
-                                  Set the final rate before hiring
+                                  {isAssigned
+                                    ? 'Final Pay Agreement'
+                                    : 'Set the final rate before hiring'}
                                 </h5>
                               </div>
 
