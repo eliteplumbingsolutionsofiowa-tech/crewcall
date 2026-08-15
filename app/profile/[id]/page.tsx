@@ -205,6 +205,8 @@ function ProfilePageInner() {
   const [stripeLoading, setStripeLoading] = useState(false)
 
   const [message, setMessage] = useState('')
+  const [blocked, setBlocked] = useState(false)
+  const [blockLoading, setBlockLoading] = useState(false)
   const [messageTone, setMessageTone] =
     useState<NoticeTone>('info')
 
@@ -760,6 +762,99 @@ function ProfilePageInner() {
     )
   }
 
+  useEffect(() => {
+    let active = true
+
+    async function loadBlockStatus() {
+      if (!profile?.id || isOwnProfile) {
+        return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data } = await (supabase as any)
+        .from('user_blocks')
+        .select('id')
+        .eq('blocker_id', user.id)
+        .eq('blocked_id', profile.id)
+        .maybeSingle()
+
+      if (active) {
+        setBlocked(Boolean(data))
+      }
+    }
+
+    void loadBlockStatus()
+
+    return () => {
+      active = false
+    }
+  }, [profile?.id, isOwnProfile])
+
+  async function toggleBlockUser() {
+    if (!profile?.id || isOwnProfile) return
+
+    setBlockLoading(true)
+    setMessage('')
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        throw new Error('You must be logged in.')
+      }
+
+      if (blocked) {
+        const { error } = await (supabase as any)
+          .from('user_blocks')
+          .delete()
+          .eq('blocker_id', user.id)
+          .eq('blocked_id', profile.id)
+
+        if (error) throw error
+
+        setBlocked(false)
+        setMessage('User unblocked.')
+      } else {
+        const confirmed = window.confirm(
+          `Block ${displayName}? They will remain blocked until you unblock them.`
+        )
+
+        if (!confirmed) {
+          setBlockLoading(false)
+          return
+        }
+
+        const { error } = await (supabase as any)
+          .from('user_blocks')
+          .insert({
+            blocker_id: user.id,
+            blocked_id: profile.id,
+          })
+
+        if (error) throw error
+
+        setBlocked(true)
+        setMessage('User blocked.')
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not update block status.'
+      )
+    } finally {
+      setBlockLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6 sm:py-8 lg:px-8">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -899,6 +994,19 @@ function ProfilePageInner() {
       targetId={profile.id}
       targetName={displayName}
     />
+
+    <button
+      type="button"
+      onClick={() => void toggleBlockUser()}
+      disabled={blockLoading}
+      className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-500/10 px-4 py-2 text-sm font-black text-orange-200 transition hover:bg-orange-500/20 disabled:opacity-50"
+    >
+      {blockLoading
+        ? 'Updating...'
+        : blocked
+          ? 'Unblock User'
+          : 'Block User'}
+    </button>
   </>
 ) : null}
                   </div>
