@@ -44,7 +44,8 @@ function money(value: number) {
   return value.toLocaleString(undefined, {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
 }
 
@@ -421,7 +422,14 @@ export default function CompletedJobsPage() {
                       </p>
 
                       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <Info label="Pay" value={job.pay_rate || 'Not listed'} />
+                        <Info
+                          label="Pay"
+                          value={
+                            job.pay_rate
+                              ? money(parsePay(job.pay_rate))
+                              : 'Not listed'
+                          }
+                        />
                         <Info label="Start" value={formatDate(job.start_date)} />
                         <Info
                           label="Completed"
