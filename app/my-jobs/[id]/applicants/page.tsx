@@ -34,6 +34,18 @@ type WorkerProfile = {
   liability_form_signed: boolean | null
 }
 
+type RecommendedWorker = {
+  worker_id: string
+  match_score: number
+  reason: string | null
+  trade_score: number | null
+  location_score: number | null
+  availability_score: number | null
+  certification_score: number | null
+  pay_score: number | null
+  worker: WorkerProfile | null
+}
+
 type Applicant = {
   id: string
   job_id: string
@@ -257,6 +269,8 @@ export default function ApplicantsPage() {
   const [message, setMessage] = useState('')
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
   const [matchByWorkerId, setMatchByWorkerId] = useState<Record<string, any>>({})
+  const [recommendedWorkers, setRecommendedWorkers] =
+    useState<RecommendedWorker[]>([])
   const [showComparison, setShowComparison] = useState(false)
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteMessage, setInviteMessage] = useState('')
@@ -486,14 +500,18 @@ export default function ApplicantsPage() {
 
     setApplicants(safeApplicants)
 
+    let resolvedMatches: any[] = []
+
     const { data: matchData } = await supabase
       .from('job_matches')
       .select(
-        'worker_id, match_score, reason, trade_score, location_score, availability_score, certification_score'
+        'worker_id, match_score, reason, trade_score, location_score, availability_score, certification_score, pay_score'
       )
       .eq('job_id', jobId)
 
     if (matchData && matchData.length > 0) {
+      resolvedMatches = matchData
+
       setMatchByWorkerId(
         Object.fromEntries(
           matchData.map((match) => [
@@ -503,46 +521,128 @@ export default function ApplicantsPage() {
         )
       )
     } else {
-      const { data: sessionData } = await supabase.auth.getSession()
+      try {
+        const response = await crewCallAuthedFetch(
+          '/api/jobs/match',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              jobId,
+            }),
+          }
+        )
 
-      if (sessionData.session?.access_token) {
-        await crewCallAuthedFetch('/api/jobs/match', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-          body: JSON.stringify({
-            jobId,
-          }),
-        })
+        if (response.ok) {
+          const { data: refreshedMatches } = await supabase
+            .from('job_matches')
+            .select(
+              'worker_id, match_score, reason, trade_score, location_score, availability_score, certification_score, pay_score'
+            )
+            .eq('job_id', jobId)
 
-        const { data: refreshedMatches } = await supabase
-          .from('job_matches')
-          .select(
-            'worker_id, match_score, reason, trade_score, location_score, availability_score, certification_score, pay_score'
-          )
-          .eq('job_id', jobId)
+          resolvedMatches = refreshedMatches || []
 
-        if (refreshedMatches) {
           setMatchByWorkerId(
             Object.fromEntries(
-              refreshedMatches.map((match) => [
+              resolvedMatches.map((match) => [
                 match.worker_id,
                 match,
               ])
             )
           )
         }
+      } catch (error) {
+        console.warn(
+          'Unable to automatically refresh worker matches:',
+          error
+        )
       }
     }
 
-    const workerIds = Array.from(
+    const matchedWorkerIds = Array.from(
       new Set(
-        safeApplicants
-          .map((applicant) => applicant.worker_id)
-          .filter((workerId): workerId is string => Boolean(workerId))
+        resolvedMatches
+          .map((match) => match.worker_id)
+          .filter(Boolean)
       )
+    )
+
+    let matchedProfiles: WorkerProfile[] = []
+
+    if (matchedWorkerIds.length > 0) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select(
+          `
+          id,
+          full_name,
+          company_name,
+          trade,
+          city,
+          state,
+          years_experience,
+          insurance_provider,
+          liability_form_signed
+          `
+        )
+        .in('id', matchedWorkerIds)
+
+      matchedProfiles =
+        (profileData || []) as WorkerProfile[]
+    }
+
+    const matchedProfileMap =
+      new Map(
+        matchedProfiles.map((worker) => [
+          worker.id,
+          worker,
+        ])
+      )
+
+    const applicantWorkerIds =
+      new Set(
+        safeApplicants.map(
+          (applicant) =>
+            applicant.worker_id
+        )
+      )
+
+    const recommended =
+      resolvedMatches
+        .filter(
+          (match) =>
+            !applicantWorkerIds.has(
+              match.worker_id
+            )
+        )
+        .sort(
+          (a, b) =>
+            Number(b.match_score || 0) -
+            Number(a.match_score || 0)
+        )
+        .slice(0, 10)
+        .map((match) => ({
+          ...match,
+          worker:
+            matchedProfileMap.get(
+              match.worker_id
+            ) || null,
+        })) as RecommendedWorker[]
+
+    setRecommendedWorkers(recommended)
+
+    const workerIds = Array.from(
+      new Set([
+        ...safeApplicants
+          .map((applicant) => applicant.worker_id)
+          .filter((workerId): workerId is string => Boolean(workerId)),
+        ...recommended
+          .map((match) => match.worker_id)
+          .filter((workerId): workerId is string => Boolean(workerId)),
+      ])
     )
 
     if (workerIds.length > 0) {
@@ -902,6 +1002,67 @@ export default function ApplicantsPage() {
     window.location.href = `/messages/${newConversation.id}`
   }
 
+  async function inviteRecommendedWorker(
+    workerId: string
+  ) {
+    if (!job?.id) return false
+
+    setActionLoadingId(
+      `invite-${workerId}`
+    )
+
+    try {
+      const response =
+        await crewCallAuthedFetch(
+          `/api/jobs/${job.id}/invite`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              workerId,
+            }),
+          }
+        )
+
+      const result =
+        await response
+          .json()
+          .catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            'Unable to invite worker.'
+        )
+      }
+
+      setInviteMessage(
+        'Worker invited successfully.'
+      )
+
+      window.dispatchEvent(
+        new Event(
+          'crewcall-refresh-nav'
+        )
+      )
+
+      return true
+    } catch (error) {
+      setInviteMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to invite worker.'
+      )
+
+      return false
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
   async function inviteTopMatches() {
     if (!job?.id) return
 
@@ -937,9 +1098,13 @@ export default function ApplicantsPage() {
 
       await loadApplicants()
 
-      const topWorkers = sortedApplicants
-        .slice(0, 3)
-        .map((applicant) => applicant.worker_id)
+      const topWorkers =
+        recommendedWorkers
+          .slice(0, 3)
+          .map(
+            (match) =>
+              match.worker_id
+          )
 
       let invited = 0
 
@@ -1311,6 +1476,179 @@ export default function ApplicantsPage() {
                 </div>
               )}
 
+              <section className="mb-8 rounded-[1.75rem] border border-cyan-300/20 bg-cyan-400/[0.045] p-5 md:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                      CrewCall AI
+                    </p>
+
+                    <h3 className="mt-2 text-2xl font-black text-white">
+                      AI Recommended Workers
+                    </h3>
+
+                    <p className="mt-2 text-sm font-semibold text-slate-400">
+                      Workers matched to this job before they apply.
+                    </p>
+                  </div>
+
+                  {recommendedWorkers.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={inviteTopMatches}
+                      disabled={inviteLoading}
+                      className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                    >
+                      {inviteLoading
+                        ? 'Inviting...'
+                        : 'Invite Top 3'}
+                    </button>
+                  )}
+                </div>
+
+                {recommendedWorkers.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-7 text-center">
+                    <p className="font-black text-white">
+                      No AI recommendations yet
+                    </p>
+
+                    <p className="mt-2 text-sm text-slate-400">
+                      Run AI Match to find and rank available workers.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    {recommendedWorkers.map(
+                      (match, index) => {
+                        const worker =
+                          match.worker
+
+                        const name =
+                          worker?.full_name ||
+                          worker?.company_name ||
+                          'CrewCall Worker'
+
+                        const photo =
+                          getWorkerPhoto(
+                            match.worker_id
+                          )
+
+                        return (
+                          <article
+                            key={
+                              match.worker_id
+                            }
+                            className="rounded-3xl border border-white/10 bg-slate-950/40 p-5"
+                          >
+                            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="flex min-w-0 items-center gap-4">
+                                <Link
+                                  href={`/profile?user=${match.worker_id}`}
+                                  className="shrink-0"
+                                >
+                                  {photo ? (
+                                    <img
+                                      src={photo}
+                                      alt={name}
+                                      className="h-20 w-20 rounded-2xl border border-white/10 object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-3xl font-black text-slate-950">
+                                      {name.charAt(
+                                        0
+                                      )}
+                                    </div>
+                                  )}
+                                </Link>
+
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black text-cyan-100">
+                                      #
+                                      {index +
+                                        1}
+                                    </span>
+
+                                    <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-black text-emerald-200">
+                                      {Math.round(
+                                        Number(
+                                          match.match_score ||
+                                            0
+                                        )
+                                      )}
+                                      % MATCH
+                                    </span>
+                                  </div>
+
+                                  <Link
+                                    href={`/profile?user=${match.worker_id}`}
+                                  >
+                                    <h4 className="mt-2 truncate text-2xl font-black text-white hover:text-cyan-200">
+                                      {name}
+                                    </h4>
+                                  </Link>
+
+                                  <p className="mt-1 text-sm font-semibold text-slate-400">
+                                    {[
+                                      worker?.trade,
+                                      worker?.city,
+                                      worker?.state,
+                                    ]
+                                      .filter(
+                                        Boolean
+                                      )
+                                      .join(
+                                        ' • '
+                                      ) ||
+                                      'Profile incomplete'}
+                                  </p>
+
+                                  {match.reason && (
+                                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+                                      {
+                                        match.reason
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex shrink-0 flex-wrap gap-3">
+                                <Link
+                                  href={`/profile?user=${match.worker_id}`}
+                                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
+                                >
+                                  View Profile
+                                </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    inviteRecommendedWorker(
+                                      match.worker_id
+                                    )
+                                  }
+                                  disabled={
+                                    actionLoadingId ===
+                                    `invite-${match.worker_id}`
+                                  }
+                                  className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                                >
+                                  {actionLoadingId ===
+                                  `invite-${match.worker_id}`
+                                    ? 'Inviting...'
+                                    : 'Invite Worker'}
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        )
+                      }
+                    )}
+                  </div>
+                )}
+              </section>
+
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
@@ -1322,18 +1660,6 @@ export default function ApplicantsPage() {
                   </h3>
                 </div>
 
-                {sortedApplicants.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={inviteTopMatches}
-                    disabled={inviteLoading}
-                    className="rounded-2xl border border-purple-300/20 bg-purple-400/10 px-5 py-3 text-sm font-black text-purple-100 transition hover:bg-purple-400/20 disabled:opacity-60"
-                  >
-                    {inviteLoading
-                      ? 'Inviting...'
-                      : 'Invite Top AI Matches'}
-                  </button>
-                )}
               </div>
 
               {sortedApplicants.length === 0 ? (
