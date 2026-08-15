@@ -71,15 +71,27 @@ export default function WorkerApplicationsPage() {
     if (!app.company_counter_offer) return
 
     setWorkingId(app.id)
+    setMessage(null)
 
-    await supabase
+    const { error } = await supabase
       .from('applications')
       .update({
         requested_pay_rate: app.company_counter_offer,
-        negotiation_status: 'hired',
-        status: 'accepted',
+        negotiation_status: 'accepted',
+        negotiation_message:
+          'Worker accepted the company counter offer.',
       })
       .eq('id', app.id)
+
+    if (error) {
+      setMessage(error.message)
+      setWorkingId(null)
+      return
+    }
+
+    setMessage(
+      `Rate accepted at $${app.company_counter_offer}. Waiting for the company to hire you.`
+    )
 
     await loadApplications()
 
