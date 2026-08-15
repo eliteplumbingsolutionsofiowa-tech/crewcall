@@ -57,7 +57,10 @@ export async function resolveCompanyContext(
       isPlatformAdmin,
       isCompanyOwner: false,
       isTeamMember: true,
-      teamRole: membership.role || null,
+      teamRole:
+        typeof membership.role === 'string'
+          ? membership.role.trim().toLowerCase()
+          : null,
     }
   }
 
