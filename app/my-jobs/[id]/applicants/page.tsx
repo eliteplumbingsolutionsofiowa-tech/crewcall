@@ -32,6 +32,8 @@ type WorkerProfile = {
   years_experience: string | null
   insurance_provider: string | null
   liability_form_signed: boolean | null
+  stripe_account_id: string | null
+  stripe_onboarding_complete: boolean | null
 }
 
 type RecommendedWorker = {
@@ -471,7 +473,9 @@ export default function ApplicantsPage() {
             state,
             years_experience,
             insurance_provider,
-            liability_form_signed
+            liability_form_signed,
+            stripe_account_id,
+            stripe_onboarding_complete
           )
         `
         )
@@ -585,7 +589,9 @@ export default function ApplicantsPage() {
           state,
           years_experience,
           insurance_provider,
-          liability_form_signed
+          liability_form_signed,
+          stripe_account_id,
+          stripe_onboarding_complete
           `
         )
         .in('id', matchedWorkerIds)
@@ -1676,6 +1682,11 @@ export default function ApplicantsPage() {
                     const workerName = getWorkerName(applicant)
                     const workerPhoto = getWorkerPhoto(applicant.worker_id)
 
+                    const payoutReady = Boolean(
+                      worker?.stripe_account_id &&
+                        worker?.stripe_onboarding_complete
+                    )
+
                     const isAssigned =
                       job.assigned_worker_id === applicant.worker_id ||
                       job.assigned_application_id === applicant.id ||
@@ -1782,6 +1793,16 @@ export default function ApplicantsPage() {
                                     <WorkerBadge>
                                       ✓ Liability complete
                                     </WorkerBadge>
+                                  )}
+
+                                  {payoutReady ? (
+                                    <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-200">
+                                      ✓ Payout Ready
+                                    </span>
+                                  ) : (
+                                    <span className="rounded-full border border-orange-400/30 bg-orange-500/15 px-3 py-1 text-xs font-black text-orange-200">
+                                      ⚠ Payout Setup Required
+                                    </span>
                                   )}
 
                                   {aiMatch && (
