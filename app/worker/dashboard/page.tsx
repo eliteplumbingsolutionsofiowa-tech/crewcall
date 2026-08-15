@@ -236,8 +236,8 @@ export default function WorkerDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 px-6 py-10">
-        <div className="mx-auto max-w-5xl text-gray-600">
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
+        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300 shadow-2xl backdrop-blur">
           Loading worker dashboard...
         </div>
       </main>
@@ -245,34 +245,52 @@ export default function WorkerDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-10">
-      <div className="mx-auto max-w-5xl">
-        <section className="mb-8 rounded-2xl border bg-white p-8 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 pb-28 text-white md:px-6 md:py-10">
+      <div className="mx-auto max-w-6xl">
+        <section className="mb-8 overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl backdrop-blur">
+          <div className="flex flex-col gap-6 bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/10 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-950">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                CrewCall Worker
+              </p>
+
+              <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl">
                 Worker Dashboard
               </h1>
 
-              <p className="mt-2 text-gray-600">
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
                 Track assigned jobs, completed work, payments, and your
                 live availability.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
               <Link
                 href="/jobs"
-                className="w-fit rounded-xl border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-4 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15"
               >
                 Browse Jobs
               </Link>
 
               <Link
                 href="/worker/invites"
-                className="w-fit rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
               >
-                View Invites
+                Invites
+              </Link>
+
+              <Link
+                href="/my-work"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/15"
+              >
+                My Work
+              </Link>
+
+              <Link
+                href="/worker/payments"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-200 transition hover:bg-emerald-500/15"
+              >
+                Payments
               </Link>
             </div>
           </div>
@@ -291,11 +309,13 @@ export default function WorkerDashboard() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="rounded-2xl border bg-white p-6 text-center shadow-sm"
+              className="rounded-3xl border border-white/10 bg-white/5 p-5 text-center shadow-xl backdrop-blur"
             >
-              <p className="text-sm text-gray-500">{stat.label}</p>
+              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                {stat.label}
+              </p>
 
-              <p className="mt-2 text-2xl font-bold text-slate-950">
+              <p className="mt-2 text-3xl font-black text-white">
                 {stat.value}
               </p>
             </div>
