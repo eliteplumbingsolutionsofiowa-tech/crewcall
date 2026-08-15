@@ -323,20 +323,20 @@ export default function WorkerDashboard() {
         </div>
 
         {message ? (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          <div className="mb-6 rounded-2xl border border-orange-400/20 bg-orange-500/10 p-4 text-sm font-bold text-orange-100">
             {message}
           </div>
         ) : null}
 
         {jobs.length === 0 ? (
-          <div className="rounded-2xl border bg-white p-8 text-center text-gray-500 shadow-sm">
-            <p className="font-semibold text-slate-700">
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-400 shadow-2xl backdrop-blur">
+            <p className="font-black text-white">
               No assigned work yet.
             </p>
 
             <Link
               href="/jobs"
-              className="mt-4 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="mt-5 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
             >
               Find Work
             </Link>
@@ -352,7 +352,7 @@ export default function WorkerDashboard() {
               return (
                 <article
                   key={job.id}
-                  className="rounded-2xl border bg-white p-6 shadow-sm"
+                  className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur sm:p-6"
                 >
                   <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -366,25 +366,25 @@ export default function WorkerDashboard() {
                         </span>
                       </div>
 
-                      <h2 className="text-xl font-bold text-slate-950">
+                      <h2 className="text-2xl font-black text-white">
                         {job.title || 'Untitled Job'}
                       </h2>
 
-                      <p className="text-sm text-gray-600">
+                      <p className="mt-1 text-sm font-semibold text-slate-400">
                         {job.trade || 'Trade not set'} •{' '}
                         {job.location || 'Location not set'}
                       </p>
 
-                      <p className="mt-2 text-sm text-slate-700">
+                      <p className="mt-3 text-sm font-semibold text-slate-300">
                         Pay: {job.pay_rate || 'Not set'}
                       </p>
 
-                      <p className="text-sm text-slate-700">
+                      <p className="text-sm font-semibold text-slate-300">
                         Start: {formatDate(job.start_date)}
                       </p>
 
                       {payStatus === 'paid' ? (
-                        <p className="mt-2 text-sm font-semibold text-green-700">
+                        <p className="mt-3 text-sm font-black text-emerald-300">
                           Paid
                           {job.paid_at
                             ? ` on ${formatDate(job.paid_at)}`
@@ -393,7 +393,7 @@ export default function WorkerDashboard() {
                       ) : null}
 
                       {isCompleted && payStatus !== 'paid' ? (
-                        <p className="mt-2 text-sm font-semibold text-yellow-700">
+                        <p className="mt-3 text-sm font-black text-orange-300">
                           Completed — waiting for company payment.
                         </p>
                       ) : null}
@@ -402,7 +402,7 @@ export default function WorkerDashboard() {
                     <div className="flex flex-wrap gap-3 md:justify-end">
                       <Link
                         href={`/jobs/${job.id}`}
-                        className="rounded-xl border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                        className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15"
                       >
                         View Job
                       </Link>
@@ -410,7 +410,7 @@ export default function WorkerDashboard() {
                       {job.company_id ? (
                         <Link
                           href={`/messages?start=${job.company_id}`}
-                          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                          className="rounded-2xl bg-blue-500 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-400"
                         >
                           Message Company
                         </Link>
@@ -421,7 +421,7 @@ export default function WorkerDashboard() {
                           type="button"
                           onClick={() => void requestCompletion(job)}
                           disabled={busyJobId === job.id}
-                          className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busyJobId === job.id
                             ? 'Sending...'
@@ -434,7 +434,7 @@ export default function WorkerDashboard() {
                       !reviewedJobIds.has(job.id) ? (
                         <Link
                           href={`/jobs/${job.id}/review?to=${job.company_id}`}
-                          className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
+                          className="rounded-2xl bg-gradient-to-r from-orange-400 to-yellow-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:opacity-90"
                         >
                           Leave Review
                         </Link>
