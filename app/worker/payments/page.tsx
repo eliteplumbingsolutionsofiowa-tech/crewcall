@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/lib/formatMoney'
 
+type WorkerProfile = {
+  id: string
+  stripe_account_id: string | null
+  stripe_onboarding_complete: boolean | null
+}
+
 type PaymentRow = {
   id: string
   title: string | null
@@ -16,7 +22,10 @@ type PaymentRow = {
 
 export default function WorkerPaymentsPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([])
+  const [profile, setProfile] = useState<WorkerProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [connectingStripe, setConnectingStripe] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadPayments() {
@@ -33,14 +42,18 @@ export default function WorkerPaymentsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select(
+          'id, stripe_account_id, stripe_onboarding_complete'
+        )
         .eq('id', user.id)
-        .single()
+        .single<WorkerProfile>()
 
       if (!profile) {
         setLoading(false)
         return
       }
+
+      setProfile(profile)
 
       const { data, error } = await supabase
         .from('jobs')
@@ -81,6 +94,56 @@ export default function WorkerPaymentsPage() {
     0
   )
 
+  const stripeConnected = Boolean(
+    profile?.stripe_account_id &&
+      profile?.stripe_onboarding_complete
+  )
+
+  async function connectStripe() {
+    setConnectingStripe(true)
+    setMessage(null)
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setMessage(
+          'Your login session expired. Please log in again.'
+        )
+        return
+      }
+
+      const response = await fetch('/api/stripe/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.url) {
+        setMessage(
+          data.error || 'Unable to connect Stripe.'
+        )
+        return
+      }
+
+      window.location.href = data.url
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to connect Stripe.'
+      )
+    } finally {
+      setConnectingStripe(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
       <div className="mx-auto max-w-6xl">
@@ -92,6 +155,51 @@ export default function WorkerPaymentsPage() {
         <p className="mt-2 text-slate-300">
           Track your CrewCall earnings and payouts.
         </p>
+
+        <div className="mt-8 rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-6 sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+                Payout Account
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-white">
+                {stripeConnected
+                  ? 'Stripe Connected'
+                  : 'Set Up Worker Payouts'}
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+                {stripeConnected
+                  ? 'Your Stripe payout account is connected and ready to receive released CrewCall payments.'
+                  : 'Connect Stripe so companies can release your CrewCall payments directly to your payout account.'}
+              </p>
+
+              {message ? (
+                <p className="mt-3 text-sm font-bold text-orange-300">
+                  {message}
+                </p>
+              ) : null}
+            </div>
+
+            {stripeConnected ? (
+              <div className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-6 py-3 text-sm font-black text-emerald-200">
+                ✓ Ready for Payouts
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void connectStripe()}
+                disabled={connectingStripe}
+                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {connectingStripe
+                  ? 'Opening Stripe...'
+                  : 'Set Up Payouts'}
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <p className="text-sm text-slate-400">
