@@ -508,26 +508,76 @@ export default function JobDetailsPage() {
     setWorkingId(nextStatus)
     setMessage(null)
 
-    const { error } = await supabase
-      .from('jobs')
-      .update({
-        status: nextStatus,
-      } as never)
-      .eq('id', job.id)
-      .eq('company_id', profile.id)
+    try {
+      if (nextStatus === 'completed') {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-    if (error) {
-      setMessage(error.message)
+        if (!session?.access_token) {
+          setMessage('Your login session expired. Please log in again.')
+          setMessageTone('error')
+          return
+        }
+
+        const response = await fetch('/api/jobs/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            jobId: job.id,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setMessage(data.error || 'Unable to complete job.')
+          setMessageTone('error')
+          return
+        }
+
+        setMessage('Job marked completed.')
+        setMessageTone('success')
+
+        await loadPage(true)
+        window.dispatchEvent(
+          new Event('crewcall-refresh-nav')
+        )
+
+        return
+      }
+
+      const { error } = await supabase
+        .from('jobs')
+        .update({
+          status: nextStatus,
+        } as never)
+        .eq('id', job.id)
+        .eq('company_id', profile.id)
+
+      if (error) {
+        setMessage(error.message)
+        setMessageTone('error')
+        return
+      }
+
+      setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
+      setMessageTone('success')
+
+      await loadPage(true)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to update job.'
+      )
       setMessageTone('error')
+    } finally {
       setWorkingId(null)
-      return
     }
-
-    setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
-    setMessageTone('success')
-
-    await loadPage(true)
-    setWorkingId(null)
   }
 
   async function payWorker() {
