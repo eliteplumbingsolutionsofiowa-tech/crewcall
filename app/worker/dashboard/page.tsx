@@ -14,6 +14,7 @@ type Job = {
   start_date: string | null
   status: string | null
   payment_status: string | null
+  payout_status: string | null
   paid_at: string | null
   company_id: string | null
 }
@@ -113,6 +114,7 @@ export default function WorkerDashboard() {
         start_date,
         status,
         payment_status,
+        payout_status,
         paid_at,
         company_id
       `
@@ -346,6 +348,7 @@ export default function WorkerDashboard() {
             {jobs.map((job) => {
               const jobStatus = normalize(job.status)
               const payStatus = normalize(job.payment_status)
+              const payoutStatus = normalize(job.payout_status)
               const isCompleted = jobStatus === 'completed'
               const canMarkComplete = !isCompleted
 
@@ -364,6 +367,12 @@ export default function WorkerDashboard() {
                         <span className={paymentClass(payStatus)}>
                           {payStatus || 'unpaid'}
                         </span>
+
+                        {payoutStatus === 'released' ? (
+                          <span className="rounded-full border border-cyan-300/20 bg-cyan-400/15 px-3 py-1 text-xs font-semibold capitalize text-cyan-100">
+                            released
+                          </span>
+                        ) : null}
                       </div>
 
                       <h2 className="text-2xl font-black text-white">
