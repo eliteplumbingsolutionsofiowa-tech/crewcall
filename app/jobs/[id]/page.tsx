@@ -62,6 +62,8 @@ type JobFile = {
   file_name: string | null
   file_url: string | null
   file_type: string | null
+  category: string | null
+  uploaded_by: string | null
   created_at: string
 }
 
@@ -398,7 +400,7 @@ export default function JobDetailsPage() {
     const { data: fileData } = await supabase
       .from('job_files')
       .select(
-        'id, file_name, file_url, file_type, created_at'
+        'id, file_name, file_url, file_type, category, uploaded_by, created_at'
       )
       .eq('job_id', jobId)
       .order('created_at', {
@@ -586,7 +588,7 @@ export default function JobDetailsPage() {
     }
 
     const completionPhotos = jobFiles.filter(
-      (file: any) =>
+      (file) =>
         file.category === 'completion_photo' &&
         file.uploaded_by === profile.id
     )
