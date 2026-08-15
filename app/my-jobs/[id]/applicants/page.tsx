@@ -1998,37 +1998,58 @@ export default function ApplicantsPage() {
                               />
                             </div>
 
-                            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                              <OfferCard
-                                label="Worker Request"
-                                value={
-                                  workerOffer
-                                    ? formatMoney(workerOffer)
-                                    : 'Not submitted'
-                                }
-                                tone="orange"
-                              />
-                              <OfferCard
-                                label="Company Counter"
-                                value={
-                                  applicant.company_counter_offer
-                                    ? formatMoney(
-                                        applicant.company_counter_offer
-                                      )
-                                    : 'Not sent'
-                                }
-                                tone="cyan"
-                              />
-                              <OfferCard
-                                label="Agreed Rate"
-                                value={
-                                  agreedRate
-                                    ? formatMoney(agreedRate)
-                                    : 'Not agreed'
-                                }
-                                tone="green"
-                              />
-                            </div>
+                            {isAssigned &&
+                            !workerOffer &&
+                            !applicant.company_counter_offer ? (
+                              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                <OfferCard
+                                  label="Original Job Rate"
+                                  value={formatMoney(job.pay_rate)}
+                                  tone="cyan"
+                                />
+                                <OfferCard
+                                  label="Final Agreed Rate"
+                                  value={
+                                    agreedRate
+                                      ? formatMoney(agreedRate)
+                                      : formatMoney(job.pay_rate)
+                                  }
+                                  tone="green"
+                                />
+                              </div>
+                            ) : (
+                              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                                <OfferCard
+                                  label="Worker Request"
+                                  value={
+                                    workerOffer
+                                      ? formatMoney(workerOffer)
+                                      : 'Not submitted'
+                                  }
+                                  tone="orange"
+                                />
+                                <OfferCard
+                                  label="Company Counter"
+                                  value={
+                                    applicant.company_counter_offer
+                                      ? formatMoney(
+                                          applicant.company_counter_offer
+                                        )
+                                      : 'Not sent'
+                                  }
+                                  tone="cyan"
+                                />
+                                <OfferCard
+                                  label="Agreed Rate"
+                                  value={
+                                    agreedRate
+                                      ? formatMoney(agreedRate)
+                                      : 'Not agreed'
+                                  }
+                                  tone="green"
+                                />
+                              </div>
+                            )}
 
                             {!isAssigned && !isRejected && (
                               <div className="mt-5 space-y-3">
