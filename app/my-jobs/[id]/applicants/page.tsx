@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 import { formatMoney } from '@/lib/formatMoney'
 
 type Job = {
@@ -412,8 +413,20 @@ export default function ApplicantsPage() {
       return
     }
 
-    if (jobData.company_id !== user.id) {
-      setMessage('You do not have permission to view applicants for this job.')
+    const companyContext =
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+    if (
+      !companyContext.companyId ||
+      jobData.company_id !==
+        companyContext.companyId
+    ) {
+      setMessage(
+        'You do not have permission to view applicants for this job.'
+      )
       setLoading(false)
       return
     }
