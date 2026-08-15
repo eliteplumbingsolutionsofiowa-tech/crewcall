@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type JobRow = {
   id: string
@@ -260,7 +261,18 @@ export default function CompanyRecruitingPage() {
           throw new Error('Please sign in to view recruiting analytics.')
         }
 
-        const resolvedCompanyId = session.user.id
+        const companyContext = await resolveCompanyContext(
+          supabase,
+          session.user.id,
+        )
+
+        if (!companyContext.companyId) {
+          throw new Error(
+            'You are not connected to a company account.',
+          )
+        }
+
+        const resolvedCompanyId = companyContext.companyId
         setCompanyId(resolvedCompanyId)
 
         const { data: jobsData, error: jobsError } =
