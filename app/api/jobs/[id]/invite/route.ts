@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type RouteContext = {
   params: Promise<{
@@ -142,15 +143,6 @@ export async function POST(
       )
     }
 
-    if (workerId === user.id) {
-      return NextResponse.json(
-        {
-          error: 'Cannot invite yourself.',
-        },
-        { status: 400 }
-      )
-    }
-
     const { data: job, error: jobError } = await adminClient
       .from('jobs')
       .select(
@@ -168,10 +160,21 @@ export async function POST(
       )
     }
 
-    if (job.company_id !== user.id) {
+    const companyContext =
+      await resolveCompanyContext(
+        adminClient,
+        user.id
+      )
+
+    const authorizedForCompany =
+      companyContext.isPlatformAdmin ||
+      companyContext.companyId === job.company_id
+
+    if (!authorizedForCompany) {
       return NextResponse.json(
         {
-          error: 'You do not own this job.',
+          error:
+            'You do not have permission to invite workers for this job.',
         },
         { status: 403 }
       )
@@ -201,7 +204,7 @@ export async function POST(
       )
       .eq('job_id', jobId)
       .eq('worker_id', workerId)
-      .eq('company_id', user.id)
+      .eq('company_id', job.company_id)
       .maybeSingle()
 
     if (existingInvite) {
@@ -234,7 +237,7 @@ export async function POST(
         .insert({
           job_id: job.id,
           worker_id: workerId,
-          company_id: user.id,
+          company_id: job.company_id,
           status: 'pending',
           worker_seen: false,
           company_seen: true,
