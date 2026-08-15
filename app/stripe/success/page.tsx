@@ -214,7 +214,11 @@ function StripeSuccessContent() {
               {success && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">
-                    ✓ Completed
+                    {job?.status === 'completed'
+                      ? '✓ Completed'
+                      : job?.status === 'in_progress'
+                        ? '✓ In Progress'
+                        : '✓ Assigned'}
                   </span>
 
                   <span className="inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-sm font-bold text-cyan-700">
