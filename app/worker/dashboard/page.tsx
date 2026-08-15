@@ -79,6 +79,9 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true)
   const [busyJobId, setBusyJobId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
+    () => new Set()
+  )
 
   useEffect(() => {
     void loadJobs()
@@ -125,6 +128,26 @@ export default function WorkerDashboard() {
     }
 
     const jobList = (data || []).filter(Boolean)
+
+    const jobIds = jobList.map((job) => job.id)
+
+    if (jobIds.length > 0) {
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('job_id')
+        .eq('reviewer_id', user.id)
+        .in('job_id', jobIds)
+
+      setReviewedJobIds(
+        new Set(
+          (reviewsData || [])
+            .map((review) => review.job_id)
+            .filter((jobId): jobId is string => Boolean(jobId))
+        )
+      )
+    } else {
+      setReviewedJobIds(new Set())
+    }
 
     setJobs(jobList)
 
@@ -386,9 +409,11 @@ export default function WorkerDashboard() {
                         </button>
                       ) : null}
 
-                      {isCompleted && job.company_id ? (
+                      {isCompleted &&
+                      job.company_id &&
+                      !reviewedJobIds.has(job.id) ? (
                         <Link
-                          href={`/reviews/new?jobId=${job.id}&revieweeId=${job.company_id}`}
+                          href={`/jobs/${job.id}/review?to=${job.company_id}`}
                           className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
                         >
                           Leave Review

@@ -1040,7 +1040,7 @@ export default function JobDetailPage() {
 
               {job.status === 'completed' && (
                 <Link
-                  href={`/reviews/new?jobId=${job.id}&revieweeId=${assignedWorker.id}`}
+                  href={`/jobs/${job.id}/review?to=${assignedWorker.id}`}
                   className="rounded-2xl bg-gradient-to-r from-orange-400 to-yellow-300 px-5 py-3 text-sm font-black text-slate-950"
                 >
                   Leave Review

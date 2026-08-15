@@ -83,6 +83,9 @@ export default function CompletedJobsPage() {
   const [message, setMessage] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
+  const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
+    () => new Set()
+  )
 
   const loadCompletedJobs = useCallback(async () => {
     setRefreshing(true)
@@ -169,6 +172,26 @@ export default function CompletedJobsPage() {
       company: Array.isArray(job.company) ? job.company[0] : job.company,
       worker: Array.isArray(job.worker) ? job.worker[0] : job.worker,
     }))
+
+    const completedJobIds = cleaned.map((job) => job.id)
+
+    if (completedJobIds.length > 0) {
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('job_id')
+        .eq('reviewer_id', user.id)
+        .in('job_id', completedJobIds)
+
+      setReviewedJobIds(
+        new Set(
+          (reviewsData || [])
+            .map((review) => review.job_id)
+            .filter((jobId): jobId is string => Boolean(jobId))
+        )
+      )
+    } else {
+      setReviewedJobIds(new Set())
+    }
 
     setJobs(cleaned as Job[])
 
@@ -392,7 +415,9 @@ export default function CompletedJobsPage() {
                   ? job.assigned_worker_id
                   : job.company_id
 
-              const canLeaveReview = Boolean(reviewTargetId)
+              const canLeaveReview =
+                Boolean(reviewTargetId) &&
+                !reviewedJobIds.has(job.id)
 
               return (
                 <div
