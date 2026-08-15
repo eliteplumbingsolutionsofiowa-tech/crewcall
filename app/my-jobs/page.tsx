@@ -561,7 +561,10 @@ export default function MyJobsPage() {
             const payoutReleased = job.payout_status === 'released'
             const canPay = !isPaid && Boolean(job.assigned_worker_id)
             const canReleasePayout = isPaid && isCompleted && !payoutReleased
-            const canReview = isCompleted && Boolean(job.assigned_worker_id)
+            const canReview =
+              isCompleted &&
+              payoutReleased &&
+              Boolean(job.assigned_worker_id)
 
             return (
               <div
@@ -667,7 +670,7 @@ export default function MyJobsPage() {
                         href={`/jobs/${job.id}/pay`}
                         className="rounded-2xl bg-green-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-green-500"
                       >
-                        Pay Worker
+                        Fund Job
                       </Link>
                     )}
 

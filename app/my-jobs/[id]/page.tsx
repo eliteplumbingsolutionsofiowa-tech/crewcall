@@ -1018,6 +1018,15 @@ export default function JobDetailPage() {
                       ? 'Continue Funding Job'
                       : 'Fund Job'}
                 </button>
+              ) : job.payout_status === 'released' ? (
+                <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-5 py-3">
+                  <p className="text-sm font-black text-emerald-200">
+                    ✓ Payout Released
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-emerald-100/70">
+                    CrewCall has released this payment to the worker.
+                  </p>
+                </div>
               ) : (
                 <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-5 py-3">
                   <p className="text-sm font-black text-emerald-200">

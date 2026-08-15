@@ -1249,56 +1249,59 @@ export default function ApplicantsPage() {
                   View Job
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!job?.id) return
+                {!job.assigned_worker_id &&
+                normalizedStatus !== 'completed' ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!job?.id) return
 
-                    setInviteLoading(true)
-                    setInviteMessage('')
+                      setInviteLoading(true)
+                      setInviteMessage('')
 
-                    try {
-                      const response = await crewCallAuthedFetch('/api/jobs/match', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          jobId: job.id,
-                        }),
-                      })
+                      try {
+                        const response = await crewCallAuthedFetch('/api/jobs/match', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            jobId: job.id,
+                          }),
+                        })
 
-                      if (!response.ok) {
-                        const result = await response.json()
-                        throw new Error(
-                          result?.error || 'Unable to run AI matching.'
+                        if (!response.ok) {
+                          const result = await response.json()
+                          throw new Error(
+                            result?.error || 'Unable to run AI matching.'
+                          )
+                        }
+
+                        await loadApplicants()
+                        setShowComparison(true)
+                      } catch (error) {
+                        setInviteMessage(
+                          error instanceof Error
+                            ? error.message
+                            : 'Unable to run AI matching.'
                         )
+                      } finally {
+                        setInviteLoading(false)
                       }
-
-                      await loadApplicants()
-                      setShowComparison(true)
-                    } catch (error) {
-                      setInviteMessage(
-                        error instanceof Error
-                          ? error.message
-                          : 'Unable to run AI matching.'
-                      )
-                    } finally {
-                      setInviteLoading(false)
-                    }
-                  }}
-                  disabled={inviteLoading}
-                  className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] disabled:opacity-60"
-                >
-                  {inviteLoading ? 'Running AI...' : 'Run AI Match'}
-                </button>
+                    }}
+                    disabled={inviteLoading}
+                    className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] disabled:opacity-60"
+                  >
+                    {inviteLoading ? 'Running AI...' : 'Run AI Match'}
+                  </button>
+                ) : null}
 
                 {canPayWorker && (
                   <Link
                     href={`/jobs/${job.id}/pay`}
                     className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-black text-white transition hover:bg-green-500"
                   >
-                    Pay Worker
+                    Fund Job
                   </Link>
                 )}
 
@@ -1397,14 +1400,6 @@ export default function ApplicantsPage() {
                           }
                           onClick={() => updateJobStatus('in_progress')}
                         />
-
-                        <LifecycleButton
-                          label="Mark Complete"
-                          disabled={
-                            actionLoadingId === 'completed'
-                          }
-                          onClick={() => updateJobStatus('completed')}
-                        />
                       </div>
                     ) : null}
                   </div>
@@ -1482,7 +1477,9 @@ export default function ApplicantsPage() {
                 </div>
               )}
 
-              <section className="mb-8 rounded-[1.75rem] border border-cyan-300/20 bg-cyan-400/[0.045] p-5 md:p-6">
+              {!job.assigned_worker_id &&
+              normalizedStatus !== 'completed' ? (
+                <section className="mb-8 rounded-[1.75rem] border border-cyan-300/20 bg-cyan-400/[0.045] p-5 md:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
@@ -1650,7 +1647,8 @@ export default function ApplicantsPage() {
                     )}
                   </div>
                 )}
-              </section>
+                </section>
+              ) : null}
 
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
