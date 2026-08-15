@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Role = 'company' | 'worker' | 'admin' | null
 
@@ -137,9 +138,30 @@ export default function PostJobPage() {
         return
       }
 
+      const companyContext =
+        await resolveCompanyContext(
+          supabase,
+          user.id
+        )
+
+      if (!active) {
+        return
+      }
+
+      const resolvedCompanyId =
+        companyContext.companyId ||
+        (companyContext.isPlatformAdmin
+          ? user.id
+          : null)
+
+      if (!resolvedCompanyId) {
+        router.replace('/worker/dashboard')
+        return
+      }
+
       const { data, error } = await profilesTable()
         .select('id, role, company_name, full_name')
-        .eq('id', user.id)
+        .eq('id', resolvedCompanyId)
         .maybeSingle()
 
       if (!active) {
@@ -153,16 +175,22 @@ export default function PostJobPage() {
       }
 
       if (!data) {
-        router.replace('/profile')
+        setMessage(
+          'CrewCall could not load the company profile.'
+        )
+        setLoading(false)
         return
       }
 
-      if (data.role !== 'company' && data.role !== 'admin') {
-        router.replace('/worker/dashboard')
-        return
-      }
+      setProfile({
+        ...data,
+        role:
+          companyContext.isPlatformAdmin &&
+          !companyContext.companyId
+            ? 'admin'
+            : 'company',
+      })
 
-      setProfile(data)
       setLoading(false)
     }
 
