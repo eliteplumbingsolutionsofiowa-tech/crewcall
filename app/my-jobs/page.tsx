@@ -105,6 +105,9 @@ export default function MyJobsPage() {
   const router = useRouter()
 
   const [jobs, setJobs] = useState<Job[]>([])
+  const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
+    () => new Set()
+  )
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -201,6 +204,26 @@ export default function MyJobsPage() {
           (viewMap.get(view.job_id) || 0) + 1
         )
       })
+    }
+
+    if (jobIds.length > 0) {
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('job_id')
+        .eq('reviewer_id', user.id)
+        .in('job_id', jobIds)
+
+      setReviewedJobIds(
+        new Set(
+          (reviewsData || [])
+            .map((review) => review.job_id)
+            .filter((reviewJobId): reviewJobId is string =>
+              Boolean(reviewJobId)
+            )
+        )
+      )
+    } else {
+      setReviewedJobIds(new Set())
     }
 
     const workerIds = cleanJobs
@@ -692,7 +715,8 @@ export default function MyJobsPage() {
                           View Completed
                         </Link>
 
-                        {canReview && (
+                        {canReview &&
+                          !reviewedJobIds.has(job.id) && (
                           <Link
                             href={`/jobs/${job.id}/review?to=${job.assigned_worker_id}`}
                             className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-orange-400"

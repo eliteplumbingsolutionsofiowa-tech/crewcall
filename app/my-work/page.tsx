@@ -89,6 +89,9 @@ function paymentTone(value: string | null) {
 
 export default function MyWorkPage() {
   const [jobs, setJobs] = useState<Job[]>([])
+  const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
+    () => new Set()
+  )
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -147,6 +150,28 @@ export default function MyWorkPage() {
         ? job.company[0]
         : job.company,
     }))
+
+    const jobIds = cleaned.map((job) => job.id)
+
+    if (jobIds.length > 0) {
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('job_id')
+        .eq('reviewer_id', user.id)
+        .in('job_id', jobIds)
+
+      setReviewedJobIds(
+        new Set(
+          (reviewsData || [])
+            .map((review) => review.job_id)
+            .filter((reviewJobId): reviewJobId is string =>
+              Boolean(reviewJobId)
+            )
+        )
+      )
+    } else {
+      setReviewedJobIds(new Set())
+    }
 
     setJobs(cleaned)
 
@@ -575,7 +600,8 @@ export default function MyWorkPage() {
 
                       {job.status ===
                         'completed' &&
-                        job.company_id && (
+                        job.company_id &&
+                        !reviewedJobIds.has(job.id) && (
                           <Link
                             href={`/jobs/${job.id}/review?to=${job.company_id}`}
                             className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-orange-400"
