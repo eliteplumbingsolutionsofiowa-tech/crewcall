@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Job = {
   id: string
@@ -125,6 +126,20 @@ export default function MyJobsPage() {
       return
     }
 
+    const companyContext =
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+    if (!companyContext.companyId) {
+      router.push('/worker/dashboard')
+      return
+    }
+
+    const companyId =
+      companyContext.companyId
+
     const { data: jobsData, error: jobsError } = await supabase
       .from('jobs')
       .select(
@@ -144,7 +159,7 @@ export default function MyJobsPage() {
         created_at
       `
       )
-      .eq('company_id', user.id)
+      .eq('company_id', companyId)
       .order('created_at', {
         ascending: false,
       })
