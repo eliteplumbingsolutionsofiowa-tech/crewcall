@@ -41,12 +41,17 @@ export async function POST(req: Request) {
       profile.stripe_account_id
     )
 
+    const onboardingComplete =
+      Boolean(account.details_submitted) &&
+      Boolean(account.payouts_enabled)
+
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({
-        stripe_charges_enabled: account.charges_enabled || false,
-        stripe_payouts_enabled: account.payouts_enabled || false,
-        stripe_details_submitted: account.details_submitted || false,
+        stripe_charges_enabled: Boolean(account.charges_enabled),
+        stripe_payouts_enabled: Boolean(account.payouts_enabled),
+        stripe_details_submitted: Boolean(account.details_submitted),
+        stripe_onboarding_complete: onboardingComplete,
       })
       .eq('id', userId)
 
@@ -62,6 +67,7 @@ export async function POST(req: Request) {
       charges_enabled: account.charges_enabled,
       payouts_enabled: account.payouts_enabled,
       details_submitted: account.details_submitted,
+      onboarding_complete: onboardingComplete,
     })
 
   } catch (error: any) {
