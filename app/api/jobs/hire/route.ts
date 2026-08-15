@@ -407,6 +407,42 @@ export async function POST(req: Request) {
     }
 
     const {
+      error: hiredApplicationError,
+    } = await adminClient
+      .from('applications')
+      .update({ status: 'hired' })
+      .eq('id', application.id)
+      .eq('worker_id', workerId)
+
+    if (hiredApplicationError) {
+      const { error: rollbackError } = await adminClient
+        .from('jobs')
+        .update({
+          assigned_worker_id: null,
+          assigned_application_id: null,
+          status: 'open',
+          pay_rate: job.pay_rate,
+        })
+        .eq('id', jobId)
+        .eq('assigned_worker_id', workerId)
+
+      if (rollbackError) {
+        console.error(
+          'Unable to roll back failed hire:',
+          rollbackError
+        )
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            'CrewCall could not finish the hire. The job was restored so you can try again.',
+        },
+        { status: 500 }
+      )
+    }
+
+    const {
       error: rejectedApplicationsError,
     } = await adminClient
       .from('applications')
@@ -418,21 +454,6 @@ export async function POST(req: Request) {
       console.error(
         'Unable to reject other applications:',
         rejectedApplicationsError
-      )
-    }
-
-    const {
-      error: hiredApplicationError,
-    } = await adminClient
-      .from('applications')
-      .update({ status: 'hired' })
-      .eq('id', application.id)
-      .eq('worker_id', workerId)
-
-    if (hiredApplicationError) {
-      console.error(
-        'Unable to mark application as hired:',
-        hiredApplicationError
       )
     }
 
@@ -508,7 +529,7 @@ export async function POST(req: Request) {
               companyProfile.full_name ||
               'A company',
             jobTitle: job.title,
-            payRate: job.pay_rate,
+            payRate: finalPay,
             startDate: job.start_date,
             location: job.location,
             actionUrl: `${appUrl}/jobs/${jobId}`,
