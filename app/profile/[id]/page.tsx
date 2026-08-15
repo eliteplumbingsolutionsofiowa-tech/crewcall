@@ -737,31 +737,6 @@ function ProfilePageInner() {
     setStripeLoading(false)
   }
 
-  if (loading) {
-    return <LoadingState />
-  }
-
-  if (!profile) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 text-red-200">
-            <p className="text-lg font-black">
-              {message || 'Profile not found.'}
-            </p>
-
-            <Link
-              href="/jobs"
-              className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
-            >
-              Back to Jobs
-            </Link>
-          </div>
-        </div>
-      </main>
-    )
-  }
-
   useEffect(() => {
     let active = true
 
@@ -794,6 +769,31 @@ function ProfilePageInner() {
       active = false
     }
   }, [profile?.id, isOwnProfile])
+
+  if (loading) {
+    return <LoadingState />
+  }
+
+  if (!profile) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 text-red-200">
+            <p className="text-lg font-black">
+              {message || 'Profile not found.'}
+            </p>
+
+            <Link
+              href="/jobs"
+              className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
+            >
+              Back to Jobs
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   async function toggleBlockUser() {
     if (!profile?.id || isOwnProfile) return
