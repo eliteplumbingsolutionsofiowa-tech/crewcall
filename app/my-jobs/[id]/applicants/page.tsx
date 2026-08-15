@@ -1387,26 +1387,26 @@ export default function ApplicantsPage() {
                       )}
                     </p>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <LifecycleButton
-                        label="Mark In Progress"
-                        disabled={
-                          actionLoadingId === 'in_progress' ||
-                          job.status === 'in_progress' ||
-                          job.status === 'completed'
-                        }
-                        onClick={() => updateJobStatus('in_progress')}
-                      />
+                    {job.status !== 'completed' ? (
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <LifecycleButton
+                          label="Mark In Progress"
+                          disabled={
+                            actionLoadingId === 'in_progress' ||
+                            job.status === 'in_progress'
+                          }
+                          onClick={() => updateJobStatus('in_progress')}
+                        />
 
-                      <LifecycleButton
-                        label="Mark Complete"
-                        disabled={
-                          actionLoadingId === 'completed' ||
-                          job.status === 'completed'
-                        }
-                        onClick={() => updateJobStatus('completed')}
-                      />
-                    </div>
+                        <LifecycleButton
+                          label="Mark Complete"
+                          disabled={
+                            actionLoadingId === 'completed'
+                          }
+                          onClick={() => updateJobStatus('completed')}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
