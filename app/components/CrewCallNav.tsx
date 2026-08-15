@@ -153,12 +153,22 @@ export default function CrewCallNav() {
         return
       }
 
+      const isCompanyWorkspace =
+        pathname.startsWith('/company/') ||
+        pathname === '/company' ||
+        pathname.startsWith('/post-job') ||
+        pathname.startsWith('/my-jobs') ||
+        pathname.startsWith('/completed-jobs')
+
       const userRole: Role =
         companyContext.isPlatformAdmin
           ? 'admin'
-          : companyContext.companyId
+          : companyContext.isCompanyOwner
             ? 'company'
-            : profile?.role ?? null
+            : companyContext.isTeamMember &&
+                isCompanyWorkspace
+              ? 'company'
+              : profile?.role ?? null
 
       console.log(
         'CREWCALL NAV COMPANY CONTEXT',
@@ -245,7 +255,7 @@ export default function CrewCallNav() {
         setLoading(false)
       }
     }
-  }, [resetNavState])
+  }, [pathname, resetNavState])
 
   const triggerNotificationPulse = useCallback(() => {
     if (notificationPulseTimerRef.current) {
