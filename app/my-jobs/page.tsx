@@ -656,7 +656,7 @@ export default function MyJobsPage() {
                     )}
 
                     <Link
-                      href={`/jobs/${job.id}`}
+                      href={`/my-jobs/${job.id}`}
                       className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
                     >
                       View Job
