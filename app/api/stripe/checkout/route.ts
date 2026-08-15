@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -202,9 +203,33 @@ export async function POST(req: Request) {
       )
     }
 
-    if (job.company_id !== user.id) {
+    const companyContext =
+      await resolveCompanyContext(
+        adminClient,
+        user.id
+      )
+
+    const canManagePayments =
+      companyContext.isPlatformAdmin ||
+      companyContext.isCompanyOwner ||
+      (
+        companyContext.isTeamMember &&
+        companyContext.companyId === job.company_id &&
+        companyContext.teamRole === 'admin'
+      )
+
+    if (
+      !canManagePayments ||
+      (
+        !companyContext.isPlatformAdmin &&
+        companyContext.companyId !== job.company_id
+      )
+    ) {
       return NextResponse.json(
-        { error: 'You do not own this job.' },
+        {
+          error:
+            'You do not have permission to pay for this job.',
+        },
         { status: 403 }
       )
     }
@@ -337,7 +362,8 @@ export async function POST(req: Request) {
           ],
           metadata: {
             jobId: job.id,
-            companyId: user.id,
+            companyId: job.company_id || user.id,
+            actorUserId: user.id,
             workerId:
               job.assigned_worker_id,
             amountCents: String(
@@ -347,7 +373,8 @@ export async function POST(req: Request) {
           payment_intent_data: {
             metadata: {
               jobId: job.id,
-              companyId: user.id,
+              companyId: job.company_id || user.id,
+              actorUserId: user.id,
               workerId:
                 job.assigned_worker_id,
               amountCents: String(
@@ -373,7 +400,7 @@ export async function POST(req: Request) {
             session.id,
         })
         .eq('id', job.id)
-        .eq('company_id', user.id)
+        .eq('company_id', job.company_id)
         .neq('payment_status', 'paid')
 
     if (updateError) {
