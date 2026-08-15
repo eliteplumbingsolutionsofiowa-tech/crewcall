@@ -203,27 +203,43 @@ export default function WorkerDashboard() {
         )
       }
 
-      const { error } = await (supabase as any)
-        .from('notifications')
-        .insert({
-          user_id: job.company_id,
-          type: 'completion_requested',
-          title: 'Worker says job is complete',
-          body: `The worker assigned to ${job.title || 'your job'} says the work is complete.`,
-          message: `The worker assigned to ${job.title || 'your job'} says the work is complete. Review the job and mark it complete when ready.`,
-          job_id: job.id,
-          link_url: `/my-jobs/${job.id}`,
-          read: false,
-          is_read: false,
-          created_at: new Date().toISOString(),
-        })
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      if (error) {
-        throw error
+      if (!session?.access_token) {
+        throw new Error(
+          'Your login session expired. Please log in again.'
+        )
+      }
+
+      const response = await fetch(
+        '/api/jobs/request-completion',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            jobId: job.id,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            'Could not send completion request.'
+        )
       }
 
       setMessage(
-        'Completion request sent to the company.'
+        data.message ||
+          'Completion request sent to the company.'
       )
     } catch (error) {
       setMessage(
