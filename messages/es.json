@@ -85,5 +85,29 @@
     "sending": "Enviando...",
     "requestCompletion": "Solicitar Finalización",
     "leaveReview": "Dejar Reseña"
+  },
+  "WorkerLocation": {
+    "title": "Ubicación del Trabajador",
+    "description": "Comparte tu ubicación actual para que las empresas cercanas puedan verte en el mapa de CrewCall e invitarte a trabajar.",
+    "locationOn": "Ubicación Activada",
+    "locationOff": "Ubicación Desactivada",
+    "updating": "Actualizando...",
+    "updateLocation": "Actualizar Ubicación",
+    "hideLocation": "Ocultar Mi Ubicación",
+    "requestingLocation": "Solicitando Ubicación...",
+    "shareLocation": "Compartir Mi Ubicación",
+    "privacyNote": "Al desactivar la ubicación, tus coordenadas se eliminan de CrewCall y tu marcador desaparece de los mapas de las empresas.",
+    "geolocationUnsupported": "Este navegador no admite la geolocalización.",
+    "requestingCurrent": "Solicitando tu ubicación actual...",
+    "visibleMessage": "Tu ubicación es visible para las empresas cercanas en el mapa de trabajadores de CrewCall.",
+    "accessDenied": "Se denegó el acceso a tu ubicación. Permite el acceso a la ubicación en la configuración de tu navegador e inténtalo de nuevo.",
+    "couldNotDetermine": "No se pudo determinar tu ubicación. Revisa la configuración de ubicación de tu dispositivo.",
+    "timedOut": "La solicitud de ubicación agotó el tiempo de espera. Revisa tu señal e inténtalo de nuevo.",
+    "couldNotUpdate": "No se pudo actualizar tu ubicación.",
+    "hideConfirm": "¿Ocultar tu ubicación de las empresas cercanas?",
+    "hiding": "Ocultando tu ubicación...",
+    "couldNotTurnOff": "No se pudo desactivar el uso compartido de ubicación.",
+    "hiddenMessage": "Tu ubicación está oculta. Las empresas no pueden verte en el mapa de trabajadores.",
+    "hiddenShareMessage": "Tu ubicación está oculta. Compártela cuando quieras que las empresas cercanas puedan encontrarte."
   }
 }

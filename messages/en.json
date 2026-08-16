@@ -85,5 +85,29 @@
     "sending": "Sending...",
     "requestCompletion": "Request Completion",
     "leaveReview": "Leave Review"
+  },
+  "WorkerLocation": {
+    "title": "Worker Location",
+    "description": "Share your current location so nearby companies can see you on the CrewCall map and invite you to work.",
+    "locationOn": "Location On",
+    "locationOff": "Location Off",
+    "updating": "Updating...",
+    "updateLocation": "Update Location",
+    "hideLocation": "Hide My Location",
+    "requestingLocation": "Requesting Location...",
+    "shareLocation": "Share My Location",
+    "privacyNote": "Turning location off removes your coordinates from CrewCall and removes your marker from company maps.",
+    "geolocationUnsupported": "Geolocation is not supported by this browser.",
+    "requestingCurrent": "Requesting your current location...",
+    "visibleMessage": "Your location is visible to nearby companies on the CrewCall worker map.",
+    "accessDenied": "Location access was denied. Allow location access in your browser settings and try again.",
+    "couldNotDetermine": "Your location could not be determined. Check your device location settings.",
+    "timedOut": "The location request timed out. Check your signal and try again.",
+    "couldNotUpdate": "Your location could not be updated.",
+    "hideConfirm": "Hide your location from nearby companies?",
+    "hiding": "Hiding your location...",
+    "couldNotTurnOff": "Location sharing could not be turned off.",
+    "hiddenMessage": "Your location is hidden. Companies cannot see you on the worker map.",
+    "hiddenShareMessage": "Your location is hidden. Share it when you want nearby companies to find you."
   }
 }

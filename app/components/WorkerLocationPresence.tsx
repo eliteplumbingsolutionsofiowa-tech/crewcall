@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 const db = supabase as any
@@ -29,6 +30,7 @@ const LOCATION_UPDATE_INTERVAL = 5 * 60 * 1000
 const LOCATION_MAXIMUM_AGE = 2 * 60 * 1000
 
 export default function WorkerLocationPresence() {
+  const t = useTranslations('WorkerLocation')
   const [status, setStatus] = useState<LocationStatus>('idle')
   const [message, setMessage] = useState('')
   const [locationVisible, setLocationVisible] = useState(false)
@@ -56,7 +58,7 @@ export default function WorkerLocationPresence() {
   const getBrowserCoordinates = useCallback((): Promise<Coordinates> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by this browser.'))
+        reject(new Error(t('geolocationUnsupported')))
         return
       }
 
@@ -111,7 +113,7 @@ export default function WorkerLocationPresence() {
 
         if (showRequestMessage) {
           setStatus('requesting')
-          setMessage('Requesting your current location...')
+          setMessage(t('requestingCurrent'))
         }
 
         const coordinates = await getBrowserCoordinates()
@@ -129,7 +131,7 @@ export default function WorkerLocationPresence() {
         setLocationVisibility(true)
         setStatus('active')
         setMessage(
-          'Your location is visible to nearby companies on the CrewCall worker map.'
+          t('visibleMessage')
         )
 
         return true
@@ -146,7 +148,7 @@ export default function WorkerLocationPresence() {
         if (locationError.code === 1) {
           setStatus('denied')
           setMessage(
-            'Location access was denied. Allow location access in your browser settings and try again.'
+            t('accessDenied')
           )
           return false
         }
@@ -154,7 +156,7 @@ export default function WorkerLocationPresence() {
         if (locationError.code === 2) {
           setStatus('unavailable')
           setMessage(
-            'Your location could not be determined. Check your device location settings.'
+            t('couldNotDetermine')
           )
           return false
         }
@@ -162,14 +164,14 @@ export default function WorkerLocationPresence() {
         if (locationError.code === 3) {
           setStatus('unavailable')
           setMessage(
-            'The location request timed out. Check your signal and try again.'
+            t('timedOut')
           )
           return false
         }
 
         setStatus('error')
         setMessage(
-          locationError.message || 'Your location could not be updated.'
+          locationError.message || t('couldNotUpdate')
         )
 
         return false
@@ -198,7 +200,7 @@ export default function WorkerLocationPresence() {
     }
 
     const confirmed = window.confirm(
-      'Hide your location from nearby companies?'
+      t('hideConfirm')
     )
 
     if (!confirmed) {
@@ -207,7 +209,7 @@ export default function WorkerLocationPresence() {
 
     clearLocationInterval()
     setSaving(true)
-    setMessage('Hiding your location...')
+    setMessage(t('hiding'))
 
     const { error } = await db
       .from('profiles')
@@ -222,7 +224,7 @@ export default function WorkerLocationPresence() {
     if (error) {
       if (mountedRef.current) {
         setStatus('error')
-        setMessage('Location sharing could not be turned off.')
+        setMessage(t('couldNotTurnOff'))
         setSaving(false)
       }
 
@@ -233,7 +235,7 @@ export default function WorkerLocationPresence() {
       setLocationVisibility(false)
       setStatus('idle')
       setMessage(
-        'Your location is hidden. Companies cannot see you on the worker map.'
+        t('hiddenMessage')
       )
       setSaving(false)
     }
@@ -298,12 +300,12 @@ export default function WorkerLocationPresence() {
       if (profile.location_visible === true) {
         setStatus('active')
         setMessage(
-          'Your location is visible to nearby companies on the CrewCall worker map.'
+          t('visibleMessage')
         )
       } else {
         setStatus('idle')
         setMessage(
-          'Your location is hidden. Share it when you want nearby companies to find you.'
+          t('hiddenShareMessage')
         )
       }
 
@@ -379,13 +381,12 @@ export default function WorkerLocationPresence() {
               />
 
               <h2 className="text-xl font-black text-white">
-                Worker Location
+                {t('title')}
               </h2>
             </div>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              Share your current location so nearby companies can see you on
-              the CrewCall map and invite you to work.
+              {t('description')}
             </p>
           </div>
 
@@ -396,7 +397,7 @@ export default function WorkerLocationPresence() {
                 : 'border border-white/10 bg-white/10 text-slate-300'
             }`}
           >
-            {locationVisible ? 'Location On' : 'Location Off'}
+            {locationVisible ? t('locationOn') : t('locationOff')}
           </span>
         </div>
       </div>
@@ -417,7 +418,7 @@ export default function WorkerLocationPresence() {
                 disabled={saving}
                 className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? 'Updating...' : 'Update Location'}
+                {saving ? t('updating') : t('updateLocation')}
               </button>
 
               <button
@@ -426,7 +427,7 @@ export default function WorkerLocationPresence() {
                 disabled={saving}
                 className="rounded-2xl border border-red-400/30 bg-red-400/10 px-5 py-3 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Hide My Location
+                {t('hideLocation')}
               </button>
             </>
           ) : (
@@ -436,15 +437,14 @@ export default function WorkerLocationPresence() {
               disabled={saving}
               className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? 'Requesting Location...' : 'Share My Location'}
+              {saving ? t('requestingLocation') : t('shareLocation')}
             </button>
           )}
         </div>
 
         <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3">
           <p className="text-xs leading-5 text-cyan-100">
-            Turning location off removes your coordinates from CrewCall and
-            removes your marker from company maps.
+            {t('privacyNote')}
           </p>
         </div>
       </div>
