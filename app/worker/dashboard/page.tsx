@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import WorkerLocationPresence from '@/app/components/WorkerLocationPresence'
 import { supabase } from '@/lib/supabase'
 
@@ -54,21 +55,23 @@ function normalize(value: string | null) {
   return String(value || '').toLowerCase().trim()
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, fallback: string) {
   if (!value) {
-    return 'Not scheduled'
+    return fallback
   }
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'Not scheduled'
+    return fallback
   }
 
   return date.toLocaleDateString()
 }
 
 export default function WorkerDashboard() {
+  const t = useTranslations('WorkerDashboard')
+
   const [jobs, setJobs] = useState<Job[]>([])
   const [stats, setStats] = useState<Stats>({
     assigned: 0,
@@ -98,7 +101,7 @@ export default function WorkerDashboard() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('You need to log in as a worker to view this page.')
+      setMessage(t('loginRequired'))
       setLoading(false)
       return
     }
@@ -176,12 +179,12 @@ export default function WorkerDashboard() {
 
   async function requestCompletion(job: Job) {
     if (!job.company_id) {
-      setMessage('This job does not have a company attached.')
+      setMessage(t('noCompany'))
       return
     }
 
     const confirmed = window.confirm(
-      'Tell the company that this job is ready to be completed?'
+      t('confirmCompletion')
     )
 
     if (!confirmed) {
@@ -199,7 +202,7 @@ export default function WorkerDashboard() {
 
       if (userError || !user) {
         throw new Error(
-          userError?.message || 'You must be logged in.'
+          userError?.message || t('mustLogin')
         )
       }
 
@@ -209,7 +212,7 @@ export default function WorkerDashboard() {
 
       if (!session?.access_token) {
         throw new Error(
-          'Your login session expired. Please log in again.'
+          t('sessionExpired')
         )
       }
 
@@ -233,19 +236,19 @@ export default function WorkerDashboard() {
       if (!response.ok) {
         throw new Error(
           data.error ||
-            'Could not send completion request.'
+            t('completionFailed')
         )
       }
 
       setMessage(
         data.message ||
-          'Completion request sent to the company.'
+          t('completionSent')
       )
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Could not send completion request.'
+          : t('completionFailed')
       )
     } finally {
       setBusyJobId(null)
@@ -256,7 +259,7 @@ export default function WorkerDashboard() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/5 p-8 text-slate-300 shadow-2xl backdrop-blur">
-          Loading worker dashboard...
+          {t('loading')}
         </div>
       </main>
     )
@@ -269,16 +272,15 @@ export default function WorkerDashboard() {
           <div className="flex flex-col gap-6 bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/10 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                CrewCall Worker
+                {t('eyebrow')}
               </p>
 
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white sm:text-5xl">
-                Worker Dashboard
+                {t('title')}
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                Track assigned jobs, completed work, payments, and your
-                live availability.
+                {t('subtitle')}
               </p>
             </div>
 
@@ -287,28 +289,28 @@ export default function WorkerDashboard() {
                 href="/jobs"
                 className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-4 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15"
               >
-                Browse Jobs
+                {t('browseJobs')}
               </Link>
 
               <Link
                 href="/worker/invites"
                 className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
               >
-                Invites
+                {t('invites')}
               </Link>
 
               <Link
                 href="/my-work"
                 className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/15"
               >
-                My Work
+                {t('myWork')}
               </Link>
 
               <Link
                 href="/worker/payments"
                 className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-200 transition hover:bg-emerald-500/15"
               >
-                Payments
+                {t('payments')}
               </Link>
             </div>
           </div>
@@ -320,10 +322,10 @@ export default function WorkerDashboard() {
 
         <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
-            { label: 'Assigned', value: stats.assigned },
-            { label: 'Completed', value: stats.completed },
-            { label: 'Paid', value: stats.paid },
-            { label: 'Unpaid', value: stats.unpaid },
+            { label: t('assigned'), value: stats.assigned },
+            { label: t('completed'), value: stats.completed },
+            { label: t('paid'), value: stats.paid },
+            { label: t('unpaid'), value: stats.unpaid },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -349,14 +351,14 @@ export default function WorkerDashboard() {
         {jobs.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center text-slate-400 shadow-2xl backdrop-blur">
             <p className="font-black text-white">
-              No assigned work yet.
+              {t('noWork')}
             </p>
 
             <Link
               href="/jobs"
               className="mt-5 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
             >
-              Find Work
+              {t('findWork')}
             </Link>
           </div>
         ) : (
@@ -377,49 +379,48 @@ export default function WorkerDashboard() {
                     <div>
                       <div className="mb-2 flex flex-wrap gap-2">
                         <span className={statusClass(isCompleted)}>
-                          {isCompleted ? 'completed' : 'assigned'}
+                          {isCompleted ? t('completed') : t('assigned')}
                         </span>
 
                         <span className={paymentClass(payStatus)}>
-                          {payStatus || 'unpaid'}
+                          {payStatus === 'paid' ? t('paid') : t('unpaid')}
                         </span>
 
                         {payoutStatus === 'released' ? (
                           <span className="rounded-full border border-cyan-300/20 bg-cyan-400/15 px-3 py-1 text-xs font-semibold capitalize text-cyan-100">
-                            released
+                            {t('released')}
                           </span>
                         ) : null}
                       </div>
 
                       <h2 className="text-2xl font-black text-white">
-                        {job.title || 'Untitled Job'}
+                        {job.title || t('untitledJob')}
                       </h2>
 
                       <p className="mt-1 text-sm font-semibold text-slate-400">
-                        {job.trade || 'Trade not set'} •{' '}
-                        {job.location || 'Location not set'}
+                        {job.trade || t('tradeNotSet')} •{' '}
+                        {job.location || t('locationNotSet')}
                       </p>
 
                       <p className="mt-3 text-sm font-semibold text-slate-300">
-                        Pay: {job.pay_rate || 'Not set'}
+                        {t('pay')}: {job.pay_rate || t('notSet')}
                       </p>
 
                       <p className="text-sm font-semibold text-slate-300">
-                        Start: {formatDate(job.start_date)}
+                        {t('start')}: {formatDate(job.start_date, t('notScheduled'))}
                       </p>
 
                       {payStatus === 'paid' ? (
                         <p className="mt-3 text-sm font-black text-emerald-300">
-                          Paid
                           {job.paid_at
-                            ? ` on ${formatDate(job.paid_at)}`
-                            : ''}
+                            ? t('paidOn', { date: formatDate(job.paid_at, t('notScheduled')) })
+                            : t('paid')}
                         </p>
                       ) : null}
 
                       {isCompleted && payStatus !== 'paid' ? (
                         <p className="mt-3 text-sm font-black text-orange-300">
-                          Completed — waiting for company payment.
+                          {t('completedWaiting')}
                         </p>
                       ) : null}
                     </div>
@@ -429,7 +430,7 @@ export default function WorkerDashboard() {
                         href={`/jobs/${job.id}`}
                         className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15"
                       >
-                        View Job
+                        {t('viewJob')}
                       </Link>
 
                       {job.company_id ? (
@@ -437,7 +438,7 @@ export default function WorkerDashboard() {
                           href={`/messages?start=${job.company_id}`}
                           className="rounded-2xl bg-blue-500 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-400"
                         >
-                          Message Company
+                          {t('messageCompany')}
                         </Link>
                       ) : null}
 
@@ -449,8 +450,8 @@ export default function WorkerDashboard() {
                           className="rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busyJobId === job.id
-                            ? 'Sending...'
-                            : 'Request Completion'}
+                            ? t('sending')
+                            : t('requestCompletion')}
                         </button>
                       ) : null}
 
@@ -461,7 +462,7 @@ export default function WorkerDashboard() {
                           href={`/jobs/${job.id}/review?to=${job.company_id}`}
                           className="rounded-2xl bg-gradient-to-r from-orange-400 to-yellow-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:opacity-90"
                         >
-                          Leave Review
+                          {t('leaveReview')}
                         </Link>
                       ) : null}
                     </div>
