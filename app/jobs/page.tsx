@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type UserRole = 'worker' | 'company' | null
@@ -58,33 +59,37 @@ function normalize(value: string | null | undefined) {
   return String(value || '').toLowerCase().trim()
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, fallback: string, locale: string) {
   if (!value) {
-    return 'Start date not set'
+    return fallback
   }
 
   const parsed = new Date(value)
 
   if (Number.isNaN(parsed.getTime())) {
-    return 'Start date not set'
+    return fallback
   }
 
-  return parsed.toLocaleDateString(undefined, {
+  return parsed.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 }
 
-function formatPostedDate(value: string | null) {
+function formatPostedDate(
+  value: string | null,
+  t: ReturnType<typeof useTranslations>,
+  locale: string
+) {
   if (!value) {
-    return 'Recently posted'
+    return t('recentlyPosted')
   }
 
   const parsed = new Date(value)
 
   if (Number.isNaN(parsed.getTime())) {
-    return 'Recently posted'
+    return t('recentlyPosted')
   }
 
   const now = new Date()
@@ -94,25 +99,27 @@ function formatPostedDate(value: string | null) {
   const days = Math.floor(difference / 86400000)
 
   if (minutes < 1) {
-    return 'Posted just now'
+    return t('postedJustNow')
   }
 
   if (minutes < 60) {
-    return `Posted ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+    return t('postedMinutesAgo', { count: minutes })
   }
 
   if (hours < 24) {
-    return `Posted ${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+    return t('postedHoursAgo', { count: hours })
   }
 
   if (days < 7) {
-    return `Posted ${days} ${days === 1 ? 'day' : 'days'} ago`
+    return t('postedDaysAgo', { count: days })
   }
 
-  return `Posted ${parsed.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })}`
+  return t('postedOn', {
+    date: parsed.toLocaleDateString(locale, {
+      month: 'short',
+      day: 'numeric',
+    }),
+  })
 }
 
 function cleanStatus(value: string | null) {
@@ -126,6 +133,9 @@ function cleanStatus(value: string | null) {
 }
 
 export default function JobsPage() {
+  const t = useTranslations('Jobs')
+  const locale = t('locale')
+
   const [currentProfile, setCurrentProfile] =
     useState<CurrentProfile | null>(null)
 
@@ -255,14 +265,14 @@ export default function JobsPage() {
       setCompanyMap(nextCompanyMap)
 
       if (showRefreshState) {
-        setMessage('Job listings refreshed.')
+        setMessage(t('refreshed'))
         setMessageTone('success')
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Unable to load jobs.'
+          : t('loadFailed')
 
       setMessage(errorMessage)
       setMessageTone('error')
@@ -423,11 +433,11 @@ const trades = useMemo(
 
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                    CrewCall Marketplace
+                    {t('marketplace')}
                   </p>
 
                   <p className="mt-1 text-lg font-bold text-white">
-                    Loading available jobs...
+                    {t('loadingJobs')}
                   </p>
                 </div>
               </div>
@@ -476,24 +486,22 @@ const trades = useMemo(
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
                     <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                    CrewCall Marketplace
+                    {t('marketplace')}
                   </span>
 
                   {isWorker ? (
                     <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300">
-                      Worker View
+                      {t('workerView')}
                     </span>
                   ) : null}
                 </div>
 
                 <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
-                  Find trade work fast
+                  {t('title')}
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-                  Search open jobs, compare pay, review hiring companies,
-                  and apply when the opportunity fits your trade and
-                  schedule.
+                  {t('subtitle')}
                 </p>
               </div>
 
@@ -503,14 +511,14 @@ const trades = useMemo(
                     href="/post-job"
                     className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
                   >
-                    Post a Job
+                    {t('postJob')}
                   </Link>
                 ) : (
                   <Link
                     href="/worker/dashboard"
                     className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
                   >
-                    Worker Dashboard
+                    {t('workerDashboard')}
                   </Link>
                 )}
 
@@ -520,7 +528,7 @@ const trades = useMemo(
                   disabled={refreshing}
                   className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.065] px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {refreshing ? 'Refreshing...' : 'Refresh Jobs'}
+                  {refreshing ? t('refreshing') : t('refreshJobs')}
                 </button>
               </div>
             </div>
@@ -533,33 +541,33 @@ const trades = useMemo(
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MarketplaceStat
-            label="Open Jobs"
+            label={t('openJobs')}
             value={openJobsCount}
-            description="Available now"
+            description={t('availableNow')}
             tone="cyan"
             icon="O"
           />
 
           <MarketplaceStat
-            label="Verified Listings"
+            label={t('verifiedListings')}
             value={verifiedJobsCount}
-            description="Verified companies"
+            description={t('verifiedCompanies')}
             tone="green"
             icon="V"
           />
 
           <MarketplaceStat
-            label="Assigned Jobs"
+            label={t('assignedJobs')}
             value={assignedJobsCount}
-            description="Already matched"
+            description={t('alreadyMatched')}
             tone="blue"
             icon="A"
           />
 
           <MarketplaceStat
-            label="Showing"
+            label={t('showing')}
             value={filteredJobs.length}
-            description="Current results"
+            description={t('currentResults')}
             tone="violet"
             icon="S"
           />
@@ -570,15 +578,15 @@ const trades = useMemo(
             <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                  Search and Filters
+                  {t('searchAndFilters')}
                 </p>
 
                 <h2 className="mt-2 text-2xl font-black text-white">
-                  Find the right opportunity
+                  {t('findRightOpportunity')}
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Search by job title, trade, company, location, or pay.
+                  {t('searchDescription')}
                 </p>
               </div>
 
@@ -587,7 +595,7 @@ const trades = useMemo(
                 onClick={clearFilters}
                 className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.065] px-5 py-3 text-sm font-black text-white transition hover:bg-white/[0.11]"
               >
-                Clear Filters ({activeFilterCount})
+                {t('clearFilters')} ({activeFilterCount})
               </button>
             </div>
           </div>
@@ -599,7 +607,7 @@ const trades = useMemo(
                   htmlFor="job-search"
                   className="text-xs font-black uppercase tracking-[0.16em] text-slate-400"
                 >
-                  Search Jobs
+                  {t('searchJobs')}
                 </label>
 
                 <div className="relative mt-2">
@@ -614,7 +622,7 @@ const trades = useMemo(
                     onChange={(event) =>
                       setSearch(event.target.value)
                     }
-                    placeholder="Plumber, HVAC, Des Moines, $40/hr..."
+                    placeholder={t('searchPlaceholder')}
                     className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/80 py-3 pl-11 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/5"
                   />
                 </div>
@@ -636,7 +644,7 @@ const trades = useMemo(
                   }
                   className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/5"
                 >
-                  <option value="">All trades</option>
+                  <option value="">{t('allTrades')}</option>
 
                   {trades.map((item) => (
                     <option key={item} value={item}>
@@ -662,7 +670,7 @@ const trades = useMemo(
                   }
                   className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-400/50 focus:ring-4 focus:ring-cyan-400/5"
                 >
-                  <option value="">All locations</option>
+                  <option value="">{t('allLocations')}</option>
 
                   {locations.map((item) => (
                     <option key={item} value={item}>
@@ -677,15 +685,15 @@ const trades = useMemo(
               <FilterToggle
                 checked={openOnly}
                 onChange={setOpenOnly}
-                label="Open jobs only"
-                description="Hide assigned and closed work"
+                label={t('openJobsOnly')}
+                description={t('hideAssignedClosed')}
               />
 
               <FilterToggle
                 checked={verifiedOnly}
                 onChange={setVerifiedOnly}
-                label="Verified companies only"
-                description="Show verified hiring companies"
+                label={t('verifiedCompaniesOnly')}
+                description={t('showVerifiedCompanies')}
               />
             </div>
           </div>
@@ -695,24 +703,24 @@ const trades = useMemo(
           <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                Available Work
+                {t('availableWork')}
               </p>
 
               <h2 className="mt-2 text-2xl font-black text-white">
                 {filteredJobs.length}{' '}
                 {filteredJobs.length === 1
-                  ? 'job found'
-                  : 'jobs found'}
+                  ? t('jobFound')
+                  : t('jobsFound')}
               </h2>
             </div>
 
             {search || trade || location || verifiedOnly ? (
               <p className="text-sm text-slate-400">
-                Results are filtered based on your selections.
+                {t('filteredResults')}
               </p>
             ) : (
               <p className="text-sm text-slate-400">
-                Newest listings appear first.
+                {t('newestFirst')}
               </p>
             )}
           </div>
@@ -729,7 +737,7 @@ const trades = useMemo(
                 const companyName =
                   company?.company_name ||
                   company?.full_name ||
-                  'CrewCall Company'
+                  t('crewCallCompany')
 
                 const isOpen =
                   normalize(job.status) === 'open' &&
@@ -767,6 +775,8 @@ function JobCard({
   isOpen: boolean
   isWorker: boolean
 }) {
+  const t = useTranslations('Jobs')
+  const locale = t('locale')
   const initial = companyName.charAt(0).toUpperCase() || 'C'
 
   return (
@@ -784,18 +794,18 @@ function JobCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge
-                label={cleanStatus(job.status)}
+                label={t(`status.${normalize(job.status || 'open')}`)}
                 tone={isOpen ? 'cyan' : 'slate'}
               />
 
               <StatusBadge
-                label={job.trade || 'Trade not listed'}
+                label={job.trade || t('tradeNotListed')}
                 tone="violet"
               />
 
               {company?.company_verified ? (
                 <StatusBadge
-                  label="Verified Company"
+                  label={t('verifiedCompany')}
                   tone="green"
                 />
               ) : null}
@@ -808,7 +818,7 @@ function JobCard({
 
               <div className="min-w-0">
                 <h3 className="text-2xl font-black leading-tight text-white transition group-hover:text-cyan-200 sm:text-3xl">
-                  {job.title || 'Untitled Job'}
+                  {job.title || t('untitledJob')}
                 </h3>
 
                 <p className="mt-1 text-sm font-black text-cyan-300">
@@ -816,33 +826,31 @@ function JobCard({
                 </p>
 
                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                  {formatPostedDate(job.created_at)}
+                  {formatPostedDate(job.created_at, t, locale)}
                 </p>
               </div>
             </div>
 
             <p className="mt-5 line-clamp-3 max-w-4xl text-sm leading-7 text-slate-300 sm:text-base">
-              {job.description || 'No description provided.'}
+              {job.description || t('noDescription')}
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <JobInfo
-                label="Location"
-                value={job.location || 'Not provided'}
+                label={t('location')}
+                value={job.location || t('notProvided')}
                 icon="L"
               />
 
               <JobInfo
-                label="Start Date"
-                value={formatDate(job.start_date)}
+                label={t('startDate')}
+                value={formatDate(job.start_date, t('startDateNotSet'), locale)}
                 icon="D"
               />
 
               <JobInfo
-                label="Payment Status"
-                value={cleanStatus(
-                  job.payment_status || 'unpaid'
-                )}
+                label={t('paymentStatus')}
+                value={t(`status.${normalize(job.payment_status || 'unpaid')}`)}
                 icon="$"
               />
             </div>
@@ -851,15 +859,15 @@ function JobCard({
           <div className="shrink-0 xl:w-64">
             <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-5 text-center xl:text-left">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
-                Posted Pay
+                {t('postedPay')}
               </p>
 
               <p className="mt-2 break-words text-3xl font-black tracking-tight text-white">
-                {job.pay_rate || 'Not listed'}
+                {job.pay_rate || t('notListed')}
               </p>
 
               <p className="mt-2 text-xs font-semibold text-cyan-200/60">
-                Confirm final terms with the company.
+                {t('confirmTerms')}
               </p>
             </div>
 
@@ -869,8 +877,8 @@ function JobCard({
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
               >
                 {isWorker && isOpen
-                  ? 'View and Apply'
-                  : 'View Job'}
+                  ? t('viewAndApply')
+                  : t('viewJob')}
               </Link>
 
               {job.company_id ? (
@@ -878,7 +886,7 @@ function JobCard({
                   href={`/companies/${job.company_id}`}
                   className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.065] px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/[0.11]"
                 >
-                  View Company
+                  {t('viewCompany')}
                 </Link>
               ) : null}
             </div>
@@ -1102,6 +1110,8 @@ function EmptyJobs({
 }: {
   onClear: () => void
 }) {
+  const t = useTranslations('Jobs')
+
   return (
     <div className="rounded-[2rem] border border-dashed border-white/15 bg-white/[0.035] px-6 py-14 text-center shadow-xl shadow-black/10">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-cyan-400/20 bg-cyan-500/10 text-2xl font-black text-cyan-300">
@@ -1109,12 +1119,11 @@ function EmptyJobs({
       </div>
 
       <h3 className="mt-6 text-2xl font-black text-white">
-        No jobs match these filters
+        {t('noJobsMatch')}
       </h3>
 
       <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-400">
-        Clear the current filters or refresh the marketplace to
-        check for newly posted opportunities.
+        {t('emptyDescription')}
       </p>
 
       <button
@@ -1122,7 +1131,7 @@ function EmptyJobs({
         onClick={onClear}
         className="mt-7 inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
       >
-        Clear All Filters
+        {t('clearAllFilters')}
       </button>
     </div>
   )
