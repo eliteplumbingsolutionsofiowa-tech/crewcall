@@ -689,8 +689,8 @@ export default function CrewCallNav() {
 
   const workspaceSwitchLabel =
     role === 'company'
-      ? 'Switch to Worker'
-      : 'Switch to Company'
+      ? tNav('switchToWorker')
+      : tNav('switchToCompany')
 
   const alertTotal =
     unreadMessages + unreadNotifications
@@ -716,7 +716,7 @@ export default function CrewCallNav() {
               pathname === '/worker/dashboard'
             }
           >
-            Dashboard
+            {tNav('dashboard')}
           </NavLink>
         ) : null}
 
@@ -739,7 +739,7 @@ export default function CrewCallNav() {
                 '/company/operations'
               )}
             >
-              Operations
+              {tNav('operations')}
             </NavLink>
 
             <NavLink
@@ -749,7 +749,7 @@ export default function CrewCallNav() {
                 '/company/payments'
               )}
             >
-              Payments
+              {tNav('payments')}
             </NavLink>
 
 
@@ -760,7 +760,7 @@ export default function CrewCallNav() {
                 '/company/organization'
               )}
             >
-              Organization
+              {tNav('organization')}
             </NavLink>
 
             <NavLink
@@ -770,7 +770,7 @@ export default function CrewCallNav() {
                 '/company/schedule'
               )}
             >
-              Schedule
+              {tNav('schedule')}
             </NavLink>
 
             <NavLink
@@ -780,7 +780,7 @@ export default function CrewCallNav() {
                 '/company/recruiting'
               )}
             >
-              AI Recruiting
+              {tNav('aiRecruiting')}
             </NavLink>
 
             <NavLink
@@ -790,7 +790,7 @@ export default function CrewCallNav() {
                 '/post-job'
               )}
             >
-              Post Job
+              {tNav('postJob')}
             </NavLink>
 
             <NavLink
@@ -800,7 +800,7 @@ export default function CrewCallNav() {
                 '/my-jobs'
               )}
             >
-              My Jobs
+              {tNav('myJobs')}
             </NavLink>
 
             <NavLink
@@ -810,7 +810,7 @@ export default function CrewCallNav() {
                 '/company/invites'
               )}
             >
-              Invites
+              {tNav('invites')}
             </NavLink>
 
             <NavLink
@@ -820,7 +820,7 @@ export default function CrewCallNav() {
                 '/company/applications'
               )}
             >
-              Applicants
+              {tNav('applicants')}
             </NavLink>
 
             <NavLink
@@ -830,7 +830,7 @@ export default function CrewCallNav() {
                 '/company/worker-map'
               )}
             >
-              Find Workers
+              {tNav('findWorkers')}
             </NavLink>
 
             <NavLink
@@ -841,7 +841,7 @@ export default function CrewCallNav() {
                 '/saved-workers'
               )}
             >
-              Saved
+              {tNav('saved')}
             </NavLink>
           </>
         ) : null}
@@ -853,7 +853,7 @@ export default function CrewCallNav() {
               onClick={onNavigate}
               active={pathname.startsWith('/jobs')}
             >
-              Browse Jobs
+              {tNav('browseJobs')}
             </NavLink>
 
             <NavLink
@@ -861,7 +861,7 @@ export default function CrewCallNav() {
               onClick={onNavigate}
               active={pathname.startsWith('/worker/applications')}
             >
-              Applications
+              {tNav('applications')}
             </NavLink>
 
             <NavLink
@@ -871,7 +871,7 @@ export default function CrewCallNav() {
                 '/my-work'
               )}
             >
-              My Work
+              {tNav('myWork')}
             </NavLink>
 
             <NavLink
@@ -881,7 +881,7 @@ export default function CrewCallNav() {
                 '/worker/payments'
               )}
             >
-              Payments
+              {tNav('payments')}
             </NavLink>
           </>
         ) : null}
@@ -897,7 +897,7 @@ export default function CrewCallNav() {
               }
               accent="admin"
             >
-              Admin
+              {tNav('admin')}
             </NavLink>
 
             <NavLink
@@ -906,7 +906,7 @@ export default function CrewCallNav() {
               active={pathname.startsWith('/admin/release')}
               accent="admin"
             >
-              🚀 Release Center
+              {tNav('releaseCenter')}
             </NavLink>
           </>
         ) : null}
@@ -922,7 +922,7 @@ export default function CrewCallNav() {
               )}
               pulse={messagePulse}
             >
-              Messages
+              {tNav('messages')}
             </NavLink>
 
             <NavLink
@@ -934,7 +934,7 @@ export default function CrewCallNav() {
               )}
               pulse={notificationPulse}
             >
-              Notifications
+              {tNav('notifications')}
             </NavLink>
 
             <NavLink
@@ -944,7 +944,7 @@ export default function CrewCallNav() {
                 '/profile'
               )}
             >
-              Profile
+              {tNav('profile')}
             </NavLink>
 
             <button
@@ -969,7 +969,7 @@ export default function CrewCallNav() {
             onClick={onNavigate}
             active={pathname.startsWith('/login')}
           >
-            Login
+            {tNav('login')}
           </NavLink>
         ) : null}
       </>
@@ -1030,7 +1030,7 @@ export default function CrewCallNav() {
                   aria-label="Open CrewCall search"
                 >
                   <span aria-hidden="true">⌕</span>
-                  <span>Search</span>
+                  <span>{tNav('search')}</span>
                   <span className="rounded-md border border-white/10 bg-slate-950/60 px-1.5 py-0.5 text-[10px] text-slate-400">
                     ⌘K
                   </span>
@@ -1084,8 +1084,8 @@ export default function CrewCallNav() {
                 aria-controls="crewcall-mobile-menu"
                 aria-label={
                   mobileMenuOpen
-                    ? 'Close navigation menu'
-                    : 'Open navigation menu'
+                    ? tNav('closeNavigationMenu')
+                    : tNav('openNavigationMenu')
                 }
               >
                 <span className="text-lg leading-none">
@@ -1093,7 +1093,7 @@ export default function CrewCallNav() {
                 </span>
 
                 <span>
-                  {mobileMenuOpen ? 'Close' : 'Menu'}
+                  {mobileMenuOpen ? tNav('close') : tNav('menu')}
                 </span>
               </button>
             </div>

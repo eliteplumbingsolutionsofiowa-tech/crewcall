@@ -38,7 +38,14 @@
     "profile": "Perfil",
     "loggingOut": "Cerrando sesión...",
     "logOut": "Cerrar Sesión",
-    "login": "Iniciar Sesión"
+    "login": "Iniciar Sesión",
+    "switchToWorker": "Cambiar a Trabajador",
+    "switchToCompany": "Cambiar a Empresa",
+    "search": "Buscar",
+    "menu": "Menú",
+    "close": "Cerrar",
+    "closeNavigationMenu": "Cerrar menú de navegación",
+    "openNavigationMenu": "Abrir menú de navegación"
   },
   "MobileNav": {
     "home": "Inicio",

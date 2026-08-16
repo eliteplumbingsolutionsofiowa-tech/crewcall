@@ -38,7 +38,14 @@
     "profile": "Profile",
     "loggingOut": "Logging Out...",
     "logOut": "Log Out",
-    "login": "Login"
+    "login": "Login",
+    "switchToWorker": "Switch to Worker",
+    "switchToCompany": "Switch to Company",
+    "search": "Search",
+    "menu": "Menu",
+    "close": "Close",
+    "closeNavigationMenu": "Close navigation menu",
+    "openNavigationMenu": "Open navigation menu"
   },
   "MobileNav": {
     "home": "Home",
