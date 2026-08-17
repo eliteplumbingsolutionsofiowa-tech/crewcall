@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useTranslations } from 'next-intl'
 
 type Profile = {
   id: string
@@ -57,6 +58,7 @@ type NotificationInsert = {
 export default function ApplyPage() {
   const params = useParams()
   const router = useRouter()
+  const t = useTranslations('ApplyJob')
 
   const jobId = String(params.id || '')
 
@@ -90,7 +92,7 @@ export default function ApplyPage() {
     }
 
     if (!user) {
-      setMessage('You must be logged in to apply.')
+      setMessage(t('mustBeLoggedInToApply'))
       setLoading(false)
       return
     }
@@ -131,7 +133,7 @@ export default function ApplyPage() {
     }
 
     if (!jobData) {
-      setMessage('Job not found.')
+      setMessage(t('jobNotFound'))
       setLoading(false)
       return
     }
@@ -188,19 +190,19 @@ export default function ApplyPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage(userError?.message || 'You must be logged in.')
+      setMessage(userError?.message || t('mustBeLoggedIn'))
       setSubmitting(false)
       return
     }
 
     if (profile?.role !== 'worker') {
-      setMessage('Only worker accounts can apply.')
+      setMessage(t('workersOnly'))
       setSubmitting(false)
       return
     }
 
     if (!job || job.status !== 'open') {
-      setMessage('This job is no longer accepting applications.')
+      setMessage(t('notAccepting'))
       setSubmitting(false)
       return
     }
@@ -237,7 +239,7 @@ export default function ApplyPage() {
       }
 
       if (!data) {
-        setMessage('Application was not found. Try again.')
+        setMessage(t('applicationNotFound'))
         setAlreadyApplied(false)
         setApplicationId(null)
         setSubmitting(false)
@@ -247,7 +249,7 @@ export default function ApplyPage() {
       setApplicationId(data.id)
       setRequestedPayRate(data.requested_pay_rate || job.pay_rate || '')
       setNegotiationMessage(data.negotiation_message || '')
-      setMessage('Application updated successfully.')
+      setMessage(t('updatedSuccessfully'))
       setSubmitting(false)
       return
     }
@@ -257,7 +259,7 @@ export default function ApplyPage() {
     } = await supabase.auth.getSession()
 
     if (!session?.access_token) {
-      setMessage('Your login session expired. Please log in again.')
+      setMessage(t('sessionExpired'))
       setSubmitting(false)
       return
     }
@@ -279,7 +281,7 @@ export default function ApplyPage() {
 
     if (!response.ok) {
       setMessage(
-        result?.error || 'Unable to submit application.'
+        result?.error || t('unableToSubmit')
       )
       setSubmitting(false)
       return
@@ -291,7 +293,7 @@ export default function ApplyPage() {
     setApplicationId(newApplication?.id || null)
     setRequestedPayRate(newApplication?.requested_pay_rate || job.pay_rate || '')
     setNegotiationMessage(newApplication?.negotiation_message || '')
-    setMessage('Application submitted successfully.')
+    setMessage(t('submittedSuccessfully'))
     setSubmitting(false)
 
     window.dispatchEvent(new Event('crewcall-refresh-nav'))
@@ -303,7 +305,7 @@ export default function ApplyPage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading application...</p>
+          <p className="text-lg font-black">{t('loading')}</p>
         </div>
       </main>
     )
@@ -318,16 +320,15 @@ export default function ApplyPage() {
               href={`/jobs/${jobId}`}
               className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
             >
-              ← Back to Job
+              {t('backToJob')}
             </Link>
 
             <h1 className="mt-4 text-5xl font-black tracking-tight text-white">
-              {alreadyApplied ? 'Update Application' : 'Apply / Negotiate'}
+              {alreadyApplied ? t('updateApplication') : t('applyNegotiate')}
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-              Submit your requested pay, availability, certifications,
-              negotiation details, and experience for this CrewCall job.
+              {t('intro')}
             </p>
           </div>
 
@@ -335,7 +336,7 @@ export default function ApplyPage() {
             href="/jobs"
             className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-sm font-black text-white transition hover:bg-white/20"
           >
-            Browse More Jobs
+            {t('browseMoreJobs')}
           </Link>
         </div>
 
@@ -350,28 +351,28 @@ export default function ApplyPage() {
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">
-                  Job Application
+                  {t('jobApplication')}
                 </p>
 
                 <h2 className="mt-3 text-4xl font-black tracking-tight text-white">
-                  {job?.title || 'Untitled Job'}
+                  {job?.title || t('untitledJob')}
                 </h2>
 
                 <p className="mt-3 text-sm font-semibold text-slate-300">
-                  {job?.trade || 'Trade not listed'} •{' '}
-                  {job?.location || 'Location not listed'}
+                  {job?.trade || t('tradeNotListed')} •{' '}
+                  {job?.location || t('locationNotListed')}
                 </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <PayCard
-                  label="Posted Pay"
-                  value={job?.pay_rate || 'Not listed'}
+                  label={t('postedPay')}
+                  value={job?.pay_rate || t('notListed')}
                   tone="cyan"
                 />
 
                 <PayCard
-                  label="Status"
+                  label={t('status')}
                   value={cleanStatus(job?.status || 'open')}
                   tone="orange"
                 />
@@ -384,8 +385,8 @@ export default function ApplyPage() {
               <div className="rounded-3xl border border-red-400/20 bg-red-400/10 p-5">
                 <p className="text-sm font-black text-red-100">
                   {profile?.role !== 'worker'
-                    ? 'Only worker accounts can apply.'
-                    : 'This job is no longer accepting applications.'}
+                    ? t('workersOnly')
+                    : t('notAccepting')}
                 </p>
               </div>
             )}
@@ -393,13 +394,12 @@ export default function ApplyPage() {
             {alreadyApplied && (
               <div className="rounded-3xl border border-orange-400/20 bg-orange-400/10 p-5">
                 <p className="text-sm font-black text-orange-100">
-                  You already applied for this job. You can still update your
-                  negotiation details and requested pay.
+                  {t('alreadyApplied')}
                 </p>
 
                 {applicationId && (
                   <p className="mt-2 text-xs font-bold uppercase tracking-wide text-orange-200">
-                    Application ID: {applicationId}
+                    {t('applicationId')}: {applicationId}
                   </p>
                 )}
               </div>
@@ -408,56 +408,55 @@ export default function ApplyPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-6">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-                  Requested Pay
+                  {t('requestedPay')}
                 </p>
 
                 <input
                   value={requestedPayRate}
                   onChange={(event) => setRequestedPayRate(event.target.value)}
-                  placeholder="Example: $45/hr or $400/day"
+                  placeholder={t('payPlaceholder')}
                   className="mt-4 w-full rounded-2xl border border-cyan-300/20 bg-slate-950/50 px-5 py-4 text-lg font-black text-white outline-none placeholder:text-slate-500 focus:border-cyan-300"
                 />
 
                 <p className="mt-4 text-sm font-semibold leading-6 text-cyan-100/80">
-                  Negotiate your preferred rate based on travel, certifications,
-                  tools, overtime, or experience.
+                  {t('payHelp')}
                 </p>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-6">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                  Quick Tips
+                  {t('quickTips')}
                 </p>
 
                 <ul className="mt-5 space-y-4 text-sm font-semibold leading-6 text-slate-300">
-                  <li>• Mention licenses or certifications</li>
-                  <li>• Explain travel radius and availability</li>
-                  <li>• Include tools or specialty experience</li>
-                  <li>• Mention overtime or shift flexibility</li>
+                  <li>• {t('tipLicenses')}</li>
+                  <li>• {t('tipTravel')}</li>
+                  <li>• {t('tipTools')}</li>
+                  <li>• {t('tipOvertime')}</li>
                 </ul>
               </div>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-6">
               <label className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                Negotiation Message
+                {t('negotiationMessage')}
               </label>
 
               <textarea
                 value={negotiationMessage}
                 onChange={(event) => setNegotiationMessage(event.target.value)}
                 rows={8}
-                placeholder="Tell the company why you're a good fit, certifications, experience, travel ability, availability, leadership skills, equipment, or anything important..."
+                placeholder={t('messagePlaceholder')}
                 className="mt-4 w-full rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-base leading-relaxed text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
               />
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-slate-400">
-                  Companies review your requested pay and message before hiring.
+                  {t('reviewHelp')}
                 </p>
 
                 <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-cyan-200">
-                  {negotiationMessage.length} characters
+                  {negotiationMessage.length} {t('characters')}
                 </div>
               </div>
             </div>
@@ -471,18 +470,18 @@ export default function ApplyPage() {
               >
                 {submitting
                   ? alreadyApplied
-                    ? 'Updating...'
-                    : 'Submitting...'
+                    ? t('updating')
+                    : t('submitting')
                   : alreadyApplied
-                    ? 'Update Application'
-                    : 'Submit Application'}
+                    ? t('updateApplication')
+                    : t('submitApplication')}
               </button>
 
               <Link
                 href="/applications"
                 className="rounded-2xl border border-white/10 bg-white/10 px-7 py-4 text-sm font-black text-white transition hover:bg-white/20"
               >
-                My Applications
+                {t('myApplications')}
               </Link>
             </div>
           </div>

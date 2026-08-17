@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import JobFileList from '@/app/components/JobFileList'
 import JobFileUpload from '@/app/components/JobFileUpload'
 import { supabase } from '@/lib/supabase'
@@ -126,6 +127,7 @@ function notificationsTable() {
 export default function JobDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const t = useTranslations('JobDetail')
   const jobId = String(params.id || '')
 
   const [job, setJob] = useState<Job | null>(null)
@@ -319,7 +321,7 @@ export default function JobDetailsPage() {
         .maybeSingle()
 
     if (profileError || !profileData) {
-      setMessage(profileError?.message || 'Profile not found.')
+      setMessage(profileError?.message || t('profileNotFound'))
       setMessageTone('error')
       setLoading(false)
       setRefreshing(false)
@@ -355,7 +357,7 @@ export default function JobDetailsPage() {
       .maybeSingle()
 
     if (jobError || !jobData) {
-      setMessage(jobError?.message || 'Job not found.')
+      setMessage(jobError?.message || t('jobNotFound'))
       setMessageTone('error')
       setLoading(false)
       setRefreshing(false)
@@ -517,7 +519,7 @@ export default function JobDetailsPage() {
         } = await supabase.auth.getSession()
 
         if (!session?.access_token) {
-          setMessage('Your login session expired. Please log in again.')
+          setMessage(t('sessionExpired'))
           setMessageTone('error')
           return
         }
@@ -536,12 +538,12 @@ export default function JobDetailsPage() {
         const data = await response.json()
 
         if (!response.ok) {
-          setMessage(data.error || 'Unable to complete job.')
+          setMessage(data.error || t('unableComplete'))
           setMessageTone('error')
           return
         }
 
-        setMessage('Job marked completed.')
+        setMessage(t('markedCompleted'))
         setMessageTone('success')
 
         await loadPage(true)
@@ -595,7 +597,7 @@ export default function JobDetailsPage() {
 
     if (completionPhotos.length === 0) {
       setMessage(
-        'Upload at least one completion photo before submitting your work.'
+        t('uploadCompletionPhoto')
       )
       setMessageTone('error')
       return
@@ -635,7 +637,7 @@ export default function JobDetailsPage() {
       } as never)
 
       setMessage(
-        'Work submitted successfully. The company can now review and approve it.'
+        t('workSubmitted')
       )
       setMessageTone('success')
 
@@ -670,7 +672,7 @@ export default function JobDetailsPage() {
       } = await supabase.auth.getSession()
 
       if (!session?.access_token) {
-        setMessage('Your login session expired. Please log in again.')
+        setMessage(t('sessionExpired'))
         setMessageTone('error')
         setWorkingId(null)
         return
@@ -694,7 +696,7 @@ export default function JobDetailsPage() {
 
       if (!response.ok || !data.url) {
         setMessage(
-          data.error || 'Unable to start Stripe Checkout.'
+          data.error || t('unableCheckout')
         )
         setMessageTone('error')
         setWorkingId(null)
@@ -703,7 +705,7 @@ export default function JobDetailsPage() {
 
       window.location.href = data.url
     } catch {
-      setMessage('Unable to start Stripe Checkout.')
+      setMessage(t('unableCheckout'))
       setMessageTone('error')
       setWorkingId(null)
     }
@@ -723,7 +725,7 @@ export default function JobDetailsPage() {
       } = await supabase.auth.getSession()
 
       if (!session?.access_token) {
-        setMessage('Your login session expired. Please log in again.')
+        setMessage(t('sessionExpired'))
         setMessageTone('error')
         setWorkingId(null)
         return
@@ -744,7 +746,7 @@ export default function JobDetailsPage() {
 
       if (!response.ok) {
         setMessage(
-          data.error || 'Unable to release worker payout.'
+          data.error || t('unableReleasePayout')
         )
         setMessageTone('error')
         setWorkingId(null)
@@ -756,7 +758,7 @@ export default function JobDetailsPage() {
 
       await loadPage(true)
     } catch {
-      setMessage('Unable to release worker payout.')
+      setMessage(t('unableReleasePayout'))
       setMessageTone('error')
     } finally {
       setWorkingId(null)
@@ -846,7 +848,7 @@ export default function JobDetailsPage() {
 
   async function acceptCompanyCounter() {
     if (!workerApplication?.company_counter_offer) {
-      setMessage('No company counter offer is available.')
+      setMessage(t('noCounterOffer'))
       setMessageTone('error')
       return
     }
@@ -888,7 +890,7 @@ export default function JobDetailsPage() {
       }
 
       setMessage(
-        `You accepted the company counter offer of ${agreedRate}. Waiting for the company to hire you.`
+        t('counterAccepted', { rate: agreedRate })
       )
       setMessageTone('success')
 
@@ -900,7 +902,7 @@ export default function JobDetailsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to accept the counter offer.'
+          : t('unableAcceptCounter')
       )
       setMessageTone('error')
     } finally {
@@ -912,7 +914,7 @@ export default function JobDetailsPage() {
     if (!workerApplication) return
 
     const confirmed = window.confirm(
-      'Decline this company counter offer?'
+      t('declineCounterConfirm')
     )
 
     if (!confirmed) return
@@ -949,7 +951,7 @@ export default function JobDetailsPage() {
         )
       }
 
-      setMessage('Company counter offer declined.')
+      setMessage(t('counterDeclinedMessage'))
       setMessageTone('success')
 
       await loadPage(true)
@@ -960,7 +962,7 @@ export default function JobDetailsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to decline the counter offer.'
+          : t('unableDeclineCounter')
       )
       setMessageTone('error')
     } finally {
@@ -978,14 +980,14 @@ export default function JobDetailsPage() {
         <div className="mx-auto max-w-5xl">
           <div className="rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 text-red-200">
             <p className="text-lg font-black">
-              {message || 'Job not found.'}
+              {message || t('jobNotFound')}
             </p>
 
             <Link
               href="/jobs"
               className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
             >
-              Back to Jobs
+              {t('backToJobs')}
             </Link>
           </div>
         </div>
@@ -1028,7 +1030,7 @@ export default function JobDetailsPage() {
             href="/jobs"
             className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
-            ← Back to Jobs
+            ← {t('backToJobs')}
           </Link>
 
           <button
@@ -1037,7 +1039,7 @@ export default function JobDetailsPage() {
             disabled={refreshing}
             className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-black text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {refreshing ? 'Refreshing...' : 'Refresh Job'}
+            {refreshing ? t('refreshing') : t('refreshJob')}
           </button>
         </div>
 
@@ -1067,7 +1069,7 @@ export default function JobDetailsPage() {
                   />
 
                   <StatusBadge
-                    label={job.trade || 'Trade not listed'}
+                    label={job.trade || t('tradeNotListed')}
                     tone="violet"
                   />
 
@@ -1084,7 +1086,7 @@ export default function JobDetailsPage() {
                 </div>
 
                 <p className="mt-5 text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                  CrewCall Job
+                  {t('crewCallJob')}
                 </p>
 
                 <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -1093,13 +1095,13 @@ export default function JobDetailsPage() {
 
                 <div className="mt-5 flex flex-wrap gap-3">
                   <DetailChip
-                    label="Location"
-                    value={job.location || 'Not listed'}
+                    label={t('location')}
+                    value={job.location || t('notListed')}
                   />
 
                   <DetailChip
                     label="Trade"
-                    value={job.trade || 'Not listed'}
+                    value={job.trade || t('notListed')}
                   />
                 </div>
 
@@ -1107,7 +1109,7 @@ export default function JobDetailsPage() {
           <section className="rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-5 shadow-xl shadow-emerald-950/20 sm:p-6">
             <div className="flex flex-col gap-3">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-                Application Submitted
+                {t('applicationSubmitted')}
               </p>
 
               <h2 className="text-2xl font-black text-white">
@@ -1115,13 +1117,13 @@ export default function JobDetailsPage() {
               </h2>
 
               <p className="text-sm text-emerald-100/80">
-                Requested Pay: {workerApplication.requested_pay_rate || job.pay_rate || 'Not specified'}
+                {t('requestedPay')}: {workerApplication.requested_pay_rate || job.pay_rate || t('notSpecified')}
               </p>
 
               {workerApplication.company_counter_offer ? (
                 <>
                   <p className="text-sm font-bold text-cyan-300">
-                    Company Counter Offer: {workerApplication.company_counter_offer}
+                    {t('companyCounterOffer')}: {workerApplication.company_counter_offer}
                   </p>
 
                   {workerApplication.negotiation_message ? (
@@ -1133,13 +1135,13 @@ export default function JobDetailsPage() {
                   {job.assigned_worker_id === profile?.id ? (
                     <div className="mt-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/15 p-4">
                       <p className="text-sm font-black text-emerald-200">
-                        ✓ You Are Hired — Job Assigned to You
+                        ✓ {t('youAreHired')}
                       </p>
                     </div>
                   ) : workerApplication.negotiation_status === 'accepted' ? (
                     <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
                       <p className="text-sm font-black text-emerald-200">
-                        Rate Accepted — Waiting for Company to Hire
+                        {t('rateAcceptedWaiting')}
                       </p>
                     </div>
                   ) : workerApplication.negotiation_status !== 'declined' ? (
@@ -1159,7 +1161,7 @@ export default function JobDetailsPage() {
                         href={`/jobs/${job.id}/apply`}
                         className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20"
                       >
-                        Counter Again
+                        {t('counterAgain')}
                       </Link>
 
                       <button
@@ -1168,13 +1170,13 @@ export default function JobDetailsPage() {
                         disabled={workingId === workerApplication.id}
                         className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Decline Counter
+                        {t('declineCounter')}
                       </button>
                     </div>
                   ) : (
                     <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4">
                       <p className="text-sm font-black text-red-200">
-                        Counter Offer Declined
+                        {t('counterOfferDeclined')}
                       </p>
                     </div>
                   )}
@@ -1188,7 +1190,7 @@ export default function JobDetailsPage() {
                       href={`/jobs/${job.id}/apply`}
                       className="inline-flex min-h-13 w-full items-center justify-center rounded-2xl bg-cyan-400 px-7 py-4 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300 sm:w-auto"
                     >
-                      Apply for This Job
+                      {t('applyForJob')}
                     </Link>
                   </div>
                 ) : null}
@@ -1197,11 +1199,11 @@ export default function JobDetailsPage() {
               <div className="w-full shrink-0 xl:w-80">
                 <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-6">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
-                    Posted Pay
+                    {t('postedPay')}
                   </p>
 
                   <p className="mt-3 break-words text-4xl font-black tracking-tight text-white">
-                    {job.pay_rate || 'Not listed'}
+                    {job.pay_rate || t('notListed')}
                   </p>
 
                   <p className="mt-3 text-sm leading-6 text-cyan-100/60">
@@ -1212,19 +1214,19 @@ export default function JobDetailsPage() {
 
                 <div className="mt-3 grid gap-3">
                   <SummaryCard
-                    label="Job Status"
+                    label={t('jobStatus')}
                     value={cleanStatus(currentStatus)}
                   />
 
                   <SummaryCard
-                    label="Payment"
+                    label={t('payment')}
                     value={cleanStatus(
                       job.payment_status || 'unpaid'
                     )}
                   />
 
                   <SummaryCard
-                    label="Payout"
+                    label={t('payout')}
                     value={cleanStatus(
                       job.payout_status || 'not released'
                     )}
@@ -1282,11 +1284,11 @@ export default function JobDetailsPage() {
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                  Open Opportunity
+                  {t('openOpportunity')}
                 </p>
 
                 <h2 className="mt-2 text-2xl font-black text-white">
-                  Interested in this job?
+                  {t('interested')}
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-cyan-100/70">
@@ -1299,7 +1301,7 @@ export default function JobDetailsPage() {
                 href={`/jobs/${job.id}/apply`}
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-7 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
               >
-                Apply Now
+                {t('applyNow')}
               </Link>
             </div>
           </section>
@@ -1608,7 +1610,7 @@ export default function JobDetailsPage() {
 
                                 <p className="mt-2 text-sm font-semibold text-slate-400">
                                   {applicant.worker?.trade ||
-                                    'Trade not listed'}
+                                    t('tradeNotListed')}
                                   {' • '}
                                   {workerLocation ||
                                     'Location not listed'}
@@ -1706,6 +1708,8 @@ export default function JobDetailsPage() {
 }
 
 function LoadingState() {
+  const t = useTranslations('JobDetail')
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -1721,7 +1725,7 @@ function LoadingState() {
 
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                  CrewCall Job
+                  {t('crewCallJob')}
                 </p>
 
                 <p className="mt-1 text-lg font-bold text-white">
