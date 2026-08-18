@@ -12,13 +12,13 @@ export default function DeleteAccountPage() {
 
   async function requestDeletion() {
     const confirmed = window.confirm(
-      'Request permanent deletion of your CrewCall account and associated data?'
+      'Permanently delete your CrewCall account and associated data?'
     )
 
     if (!confirmed) return
 
     const secondConfirmation = window.confirm(
-      'This action cannot be undone after your deletion request is processed. Continue?'
+      'This action cannot be undone. Your account will be permanently deleted. Continue?'
     )
 
     if (!secondConfirmation) return
@@ -59,7 +59,7 @@ export default function DeleteAccountPage() {
 
       setMessage(
         data?.message ||
-          'Your account deletion request has been submitted.'
+          'Your CrewCall account has been permanently deleted.'
       )
 
       await supabase.auth.signOut()
@@ -89,8 +89,8 @@ export default function DeleteAccountPage() {
         </h1>
 
         <p className="mt-5 text-slate-300">
-          You can initiate permanent deletion of your CrewCall
-          account directly from this screen.
+          You can permanently delete your CrewCall
+          account directly from this screen. This action cannot be undone.
         </p>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/70 p-5">
@@ -117,7 +117,7 @@ export default function DeleteAccountPage() {
         </div>
 
         <p className="mt-5 text-sm font-semibold text-slate-300">
-          Deletion requests are processed within 30 days.
+          Your account and associated personal data will be permanently deleted immediately.
         </p>
 
         {message ? (
@@ -133,8 +133,8 @@ export default function DeleteAccountPage() {
           className="mt-7 w-full rounded-2xl bg-red-600 px-5 py-4 text-sm font-black text-white transition hover:bg-red-500 disabled:opacity-60"
         >
           {deleting
-            ? 'Submitting deletion request...'
-            : 'Request Account Deletion'}
+            ? 'Deleting Account...'
+            : 'Permanently Delete Account'}
         </button>
 
         <button
