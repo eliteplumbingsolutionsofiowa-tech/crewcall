@@ -59,9 +59,10 @@ export default function HomePage() {
   async function loadHome() {
     setLoading(true)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
     const [
       companiesRes,
@@ -137,7 +138,6 @@ export default function HomePage() {
     setFeaturedJobs(activeFeatured)
 
     if (!user) {
-      setLoading(false)
       return
     }
 
@@ -168,7 +168,11 @@ export default function HomePage() {
       setMyJobsCount(count || 0)
     }
 
-    setLoading(false)
+    } catch (error) {
+      console.error('Home page failed to load:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const displayName =
@@ -510,31 +514,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-white/5 p-8">
-          <SectionHeader
-            eyebrow="Early Feedback"
-            title="What contractors want CrewCall to solve"
-            text="Real testimonials will go here after launch. For now, this section shows the problems CrewCall is built to fix."
-          />
-
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <Testimonial
-              quote="We need a faster way to find qualified help when jobs stack up."
-              name="Commercial Plumbing Contractor"
-            />
-            <Testimonial
-              quote="Texting around for available workers takes too much time."
-              name="Mechanical Contractor"
-            />
-            <Testimonial
-              quote="I want to see work history, reviews, and trade experience before I hire."
-              name="Hiring Manager"
-            />
-          </div>
-        </div>
-      </section>
-
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 p-10 text-center">
           <h2 className="text-4xl font-black">
@@ -686,17 +665,6 @@ function PriceCard({
           <li key={item}>✓ {item}</li>
         ))}
       </ul>
-    </div>
-  )
-}
-
-function Testimonial({ quote, name }: { quote: string; name: string }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-6">
-      <p className="text-lg font-bold leading-8 text-slate-200">“{quote}”</p>
-      <p className="mt-5 text-sm font-black uppercase tracking-wide text-cyan-300">
-        {name}
-      </p>
     </div>
   )
 }

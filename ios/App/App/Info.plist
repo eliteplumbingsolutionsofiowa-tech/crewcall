@@ -66,5 +66,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+<key>NSCameraUsageDescription</key>
+<string>CrewCall uses the camera so users can take profile photos and upload job, license, certification, insurance, and completed-work photos.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>CrewCall uses your photo library so you can select profile photos and upload job, license, certification, insurance, and completed-work images.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>CrewCall may save photos you capture for profile and job documentation.</string>
+
 </dict>
 </plist>
