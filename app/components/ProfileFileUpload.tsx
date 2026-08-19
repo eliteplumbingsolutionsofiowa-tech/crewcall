@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Camera, MediaTypeSelection } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
 
 import { supabase } from '@/lib/supabase'
@@ -106,65 +106,152 @@ export default function ProfileFileUpload({
     }
   }
 
-  async function uploadNativePhoto(source: CameraSource) {
+  async function mediaResultToFile(
+    media: { webPath?: string; metadata?: { format?: string } },
+    index = 0
+  ) {
+    if (!media.webPath) {
+      throw new Error('No photo was returned.')
+    }
+
+    const response = await fetch(media.webPath)
+    const blob = await response.blob()
+
+    const rawFormat = media.metadata?.format?.toLowerCase() || ''
+    const extension =
+      rawFormat === 'png'
+        ? 'png'
+        : rawFormat === 'gif'
+          ? 'gif'
+          : rawFormat === 'heic' || rawFormat === 'heif'
+            ? rawFormat
+            : 'jpg'
+
+    const contentType =
+      blob.type ||
+      (extension === 'png'
+        ? 'image/png'
+        : extension === 'gif'
+          ? 'image/gif'
+          : extension === 'heic'
+            ? 'image/heic'
+            : extension === 'heif'
+              ? 'image/heif'
+              : 'image/jpeg')
+
+    return new File(
+      [blob],
+      `CrewCall-${category}-${Date.now()}-${index}.${extension}`,
+      { type: contentType }
+    )
+  }
+
+  function isCancelledError(error: unknown) {
+    const text =
+      error instanceof Error
+        ? error.message.toLowerCase()
+        : String(error).toLowerCase()
+
+    return text.includes('cancel')
+  }
+
+  async function takeNativePhoto() {
     setUploading(true)
     setMessage(null)
 
     try {
-      const photo = await Camera.getPhoto({
-        source,
-        resultType: CameraResultType.Uri,
+      const photo = await Camera.takePhoto({
         quality: 85,
-        allowEditing: false,
         saveToGallery: false,
         correctOrientation: true,
+        editable: 'no',
+        includeMetadata: true,
       })
 
-      if (!photo.webPath) {
-        throw new Error('No photo was returned.')
-      }
-
-      const response = await fetch(photo.webPath)
-      const blob = await response.blob()
-
-      const extension =
-        photo.format === 'png'
-          ? 'png'
-          : photo.format === 'gif'
-            ? 'gif'
-            : 'jpg'
-
-      const contentType =
-        blob.type ||
-        (extension === 'png'
-          ? 'image/png'
-          : extension === 'gif'
-            ? 'image/gif'
-            : 'image/jpeg')
-
-      const file = new File(
-        [blob],
-        `CrewCall-${category}-${Date.now()}.${extension}`,
-        { type: contentType }
-      )
-
+      const file = await mediaResultToFile(photo)
       await uploadOneFile(file)
 
       setMessage(t('uploadedSuccessfully'))
       onUploadComplete?.()
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Photo upload failed.'
-
-      if (
-        errorMessage.toLowerCase().includes('cancel') ||
-        errorMessage.toLowerCase().includes('user cancelled')
-      ) {
+      if (isCancelledError(error)) {
         setMessage(null)
       } else {
-        setMessage(errorMessage)
+        setMessage(
+          error instanceof Error ? error.message : 'Photo upload failed.'
+        )
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function chooseNativePhotos() {
+    setUploading(true)
+    setMessage(null)
+
+    try {
+      const selected = await Camera.chooseFromGallery({
+        mediaType: MediaTypeSelection.Photo,
+        allowMultipleSelection: allowsMultiple,
+        limit: allowsMultiple ? 0 : 1,
+        quality: 85,
+        correctOrientation: true,
+        editable: 'no',
+        includeMetadata: true,
+      })
+
+      const mediaResults = allowsMultiple
+        ? selected.results
+        : selected.results.slice(0, 1)
+
+      if (!mediaResults.length) {
+        setMessage(null)
+        return
+      }
+
+      let uploadedCount = 0
+      const failures: string[] = []
+
+      for (let index = 0; index < mediaResults.length; index += 1) {
+        try {
+          const file = await mediaResultToFile(mediaResults[index], index)
+          await uploadOneFile(file)
+          uploadedCount += 1
+        } catch (error) {
+          failures.push(
+            error instanceof Error ? error.message : 'Upload failed'
+          )
+        }
+      }
+
+      if (uploadedCount > 0) {
+        onUploadComplete?.()
+      }
+
+      if (failures.length === 0) {
+        setMessage(
+          uploadedCount === 1
+            ? t('uploadedSuccessfully')
+            : t('filesUploadedSuccessfully', { count: uploadedCount })
+        )
+      } else if (uploadedCount > 0) {
+        setMessage(
+          t('uploadedWithFailures', {
+            uploaded: uploadedCount,
+            failed: failures.length,
+          })
+        )
+      } else {
+        setMessage(failures[0] || t('uploadFailed'))
+      }
+    } catch (error) {
+      if (isCancelledError(error)) {
+        setMessage(null)
+      } else {
+        setMessage(
+          error instanceof Error ? error.message : 'Photo upload failed.'
+        )
       }
     } finally {
       setUploading(false)
@@ -244,7 +331,7 @@ export default function ProfileFileUpload({
         <div className="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
-            onClick={() => void uploadNativePhoto(CameraSource.Camera)}
+            onClick={() => void takeNativePhoto()}
             disabled={uploading}
             className="min-h-[72px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[100px]"
           >
@@ -253,11 +340,11 @@ export default function ProfileFileUpload({
 
           <button
             type="button"
-            onClick={() => void uploadNativePhoto(CameraSource.Photos)}
+            onClick={() => void chooseNativePhotos()}
             disabled={uploading}
             className="min-h-[72px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[100px]"
           >
-            {uploading ? 'Working...' : 'Choose Photo'}
+            {uploading ? 'Working...' : allowsMultiple ? 'Choose Photos' : 'Choose Photo'}
           </button>
 
           {acceptsPdf ? (
