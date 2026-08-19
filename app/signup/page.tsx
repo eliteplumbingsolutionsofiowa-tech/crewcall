@@ -436,6 +436,11 @@ function SignupForm() {
       )
     }
 
+    if (data.session?.access_token && !inviteCode) {
+      window.location.assign('/profile')
+      return
+    }
+
     if (inviteCode) {
       setMessage(
         'Account created. Check your email to confirm your account, then CrewCall will finish accepting your team invitation.'
