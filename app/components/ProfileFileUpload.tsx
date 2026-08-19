@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
 
@@ -52,6 +53,7 @@ export default function ProfileFileUpload({
   accept,
   onUploadComplete,
 }: Props) {
+  const t = useTranslations('ProfileFiles')
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -148,7 +150,7 @@ export default function ProfileFileUpload({
 
       await uploadOneFile(file)
 
-      setMessage('File uploaded successfully.')
+      setMessage(t('uploadedSuccessfully'))
       onUploadComplete?.()
     } catch (error) {
       const errorMessage =
@@ -210,15 +212,15 @@ export default function ProfileFileUpload({
       if (failures.length === 0) {
         setMessage(
           uploadedCount === 1
-            ? 'File uploaded successfully.'
-            : `${uploadedCount} files uploaded successfully.`
+            ? t('uploadedSuccessfully')
+            : t('filesUploadedSuccessfully', { count: uploadedCount })
         )
       } else if (uploadedCount > 0) {
         setMessage(
-          `${uploadedCount} uploaded. ${failures.length} failed.`
+          t('uploadedWithFailures', { uploaded: uploadedCount, failed: failures.length })
         )
       } else {
-        setMessage(failures[0] || 'Upload failed.')
+        setMessage(failures[0] || t('uploadFailed'))
       }
     } finally {
       setUploading(false)
@@ -281,16 +283,16 @@ export default function ProfileFileUpload({
           <div className="min-w-0 flex-1 text-left sm:text-center">
             <span className="block text-sm font-black text-slate-800">
               {uploading
-                ? 'Uploading...'
+                ? t('uploading')
                 : allowsMultiple
-                  ? 'Choose files'
-                  : 'Choose file'}
+                  ? t('chooseFiles')
+                  : t('chooseFile')}
             </span>
 
             <span className="mt-0.5 block text-[11px] font-semibold leading-4 text-slate-500 sm:mt-1 sm:text-xs">
               {allowsMultiple
-                ? 'Select one or multiple files'
-                : 'Select a profile image'}
+                ? t('selectMultiple')
+                : t('selectProfileImage')}
             </span>
           </div>
 

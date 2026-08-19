@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { CrewCard } from '@/app/components/CrewCard'
 import { CrewButton } from '@/app/components/CrewButton'
@@ -237,6 +238,7 @@ function isRecentlyOnline(value: unknown) {
 }
 
 function ProfilePageInner() {
+  const t = useTranslations('Profile')
   const searchParams = useSearchParams()
   const viewedUserId = searchParams.get('user')
   const supabaseAny = supabase as any
@@ -773,9 +775,9 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white">
                       {profile.role === 'company'
-                        ? 'Company'
+                        ? t('company')
                         : profile.role === 'worker'
-                          ? 'Worker Passport'
+                          ? t('workerPassport')
                           : 'Role not set'}
                     </span>
 
@@ -795,7 +797,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     {[profile.city, profile.state]
                       .map((item) => inputValue(item).trim())
                       .filter(Boolean)
-                      .join(', ') || 'Location not added yet'}
+                      .join(', ') || t('locationNotAdded')}
                   </p>
 
                   {isWorkerProfile && (
@@ -846,7 +848,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
-                      {isOwnProfile ? 'Edit Worker Passport' : 'Worker Passport'}
+                      {isOwnProfile ? t('editWorkerPassport') : t('workerPassport')}
                     </h2>
 
                     <p className="text-sm font-semibold text-slate-500">
@@ -857,14 +859,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   {isOwnProfile && (
                     <div className="hidden sm:block">
                       <CrewButton onClick={saveProfile} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save Profile'}
+                        {saving ? t('saving') : t('saveProfile')}
                       </CrewButton>
                     </div>
                   )}
                 </div>
 
                 <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-                  <FieldBlock label="Full Name">
+                  <FieldBlock label={t('fullName')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.full_name)}
@@ -879,7 +881,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Current Company">
+                  <FieldBlock label={t('currentCompany')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.company_name)}
@@ -887,14 +889,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('company_name', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="Company name"
+                        placeholder={t('companyName')}
                       />
                     ) : (
                       <ReadOnlyValue value={textValue(profile.company_name)} />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Phone">
+                  <FieldBlock label={t('phone')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.phone)}
@@ -902,14 +904,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('phone', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="Phone number"
+                        placeholder={t('phoneNumber')}
                       />
                     ) : (
                       <ReadOnlyValue value={textValue(profile.phone)} />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="City">
+                  <FieldBlock label={t('city')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.city)}
@@ -917,14 +919,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('city', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="City"
+                        placeholder={t('city')}
                       />
                     ) : (
                       <ReadOnlyValue value={textValue(profile.city)} />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="State">
+                  <FieldBlock label={t('state')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.state)}
@@ -932,14 +934,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('state', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="State"
+                        placeholder={t('state')}
                       />
                     ) : (
                       <ReadOnlyValue value={textValue(profile.state)} />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Trade">
+                  <FieldBlock label={t('trade')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.trade)}
@@ -954,7 +956,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Years Experience">
+                  <FieldBlock label={t('yearsExperience')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.years_experience)}
@@ -971,7 +973,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Travel Radius">
+                  <FieldBlock label={t('travelRadius')}>
                     {isOwnProfile ? (
                       <input
                         type="number"
@@ -986,14 +988,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       <ReadOnlyValue
                         value={
                           profile.travel_radius
-                            ? `${profile.travel_radius} miles`
-                            : 'Not added yet'
+                            ? t('miles', { count: profile.travel_radius })
+                            : t('notAddedYet')
                         }
                       />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Expected Pay Min">
+                  <FieldBlock label={t('expectedPayMin')}>
                     {isOwnProfile ? (
                       <input
                         type="number"
@@ -1012,13 +1014,13 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         value={
                           profile.expected_pay_min
                             ? `$${profile.expected_pay_min}/hr`
-                            : 'Not added yet'
+                            : t('notAddedYet')
                         }
                       />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Expected Pay Max">
+                  <FieldBlock label={t('expectedPayMax')}>
                     {isOwnProfile ? (
                       <input
                         type="number"
@@ -1037,13 +1039,13 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         value={
                           profile.expected_pay_max
                             ? `$${profile.expected_pay_max}/hr`
-                            : 'Not added yet'
+                            : t('notAddedYet')
                         }
                       />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="License Number">
+                  <FieldBlock label={t('licenseNumber')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.license_number)}
@@ -1051,14 +1053,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('license_number', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="License number"
+                        placeholder={t('licenseNumber')}
                       />
                     ) : (
                       <ReadOnlyValue value={textValue(profile.license_number)} />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Insurance Provider">
+                  <FieldBlock label={t('insuranceProvider')}>
                     {isOwnProfile ? (
                       <input
                         value={inputValue(profile.insurance_provider)}
@@ -1066,7 +1068,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('insurance_provider', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="Insurance provider"
+                        placeholder={t('insuranceProvider')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1077,7 +1079,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
 
                 <div className="mt-4">
-                  <FieldBlock label="About Me">
+                  <FieldBlock label={t('aboutMe')}>
                     {isOwnProfile ? (
                       <textarea
                         value={inputValue(profile.bio || profile.job_experience)}
@@ -1097,7 +1099,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <FieldBlock label="Skills">
+                  <FieldBlock label={t('skills')}>
                     {isOwnProfile ? (
                       <textarea
                         value={skillsText}
@@ -1113,7 +1115,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Preferred Work">
+                  <FieldBlock label={t('preferredWork')}>
                     {isOwnProfile ? (
                       <textarea
                         value={preferredWorkText}
@@ -1144,7 +1146,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         disabled={saving}
                         fullWidth
                       >
-                        {saving ? 'Saving...' : 'Save Profile'}
+                        {saving ? t('saving') : t('saveProfile')}
                       </CrewButton>
                     </div>
 
@@ -1158,11 +1160,11 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 <CrewCard>
                   <div className="mb-4 sm:mb-6">
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
-                      Profile Files
+                      {t('profileFiles')}
                     </h2>
 
                     <p className="mt-1 text-sm font-semibold text-slate-500">
-                      Upload and manage your photo, licenses, certifications, and insurance.
+                      {t('profileFilesDescription')}
                     </p>
                   </div>
 
@@ -1170,8 +1172,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     <ProfileFileUpload
                       userId={profile.id}
                       category="profile_photo"
-                      label="Profile Photo"
-                      description="Upload a clear photo or company logo."
+                      label={t('profilePhoto')}
+                      description={t('profilePhotoDescription')}
                       accept="image/*"
                       onUploadComplete={loadProfileFiles}
                     />
@@ -1179,8 +1181,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     <ProfileFileUpload
                       userId={profile.id}
                       category="license"
-                      label="License"
-                      description="Upload trade licenses or cards."
+                      label={t('license')}
+                      description={t('licenseDescription')}
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfileFiles}
                     />
@@ -1188,8 +1190,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     <ProfileFileUpload
                       userId={profile.id}
                       category="certification"
-                      label="Certification"
-                      description="Upload safety cards, certifications, or training docs."
+                      label={t('certification')}
+                      description={t('certificationDescription')}
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfileFiles}
                     />
@@ -1197,8 +1199,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     <ProfileFileUpload
                       userId={profile.id}
                       category="insurance"
-                      label="Insurance"
-                      description="Upload insurance documents."
+                      label={t('insurance')}
+                      description={t('insuranceDescription')}
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfileFiles}
                     />
@@ -1206,11 +1208,11 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
                   <div className="mt-5 border-t border-slate-200 pt-4 sm:mt-8 sm:pt-6">
                     <h3 className="text-lg font-black text-slate-950">
-                      Uploaded Documents
+                      {t('uploadedDocuments')}
                     </h3>
 
                     <p className="mt-1 mb-4 text-sm font-semibold text-slate-500">
-                      Files currently attached to your profile.
+                      {t('uploadedDocumentsDescription')}
                     </p>
 
                     <ProfileFileList
@@ -1429,7 +1431,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         <StatusRow
                           key={badge.label}
                           label={badge.label}
-                          value={badge.active ? 'Added' : 'Missing'}
+                          value={badge.active ? t('added') : t('missing')}
                           active={badge.active}
                         />
                       ))}
@@ -1444,13 +1446,13 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </h2>
 
                 <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Keep your availability current so companies know when you can work.
+                  {t('workStatusDescription')}
                 </p>
 
                 <div className="mt-5 space-y-4">
                   {isOwnProfile ? (
                     <>
-                      <FieldBlock label="Availability">
+                      <FieldBlock label={t('availability')}>
                         <select
                           value={profile.availability_status || 'available'}
                           onChange={(event) => {
@@ -1501,7 +1503,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         />
                       </label>
 
-                      <FieldBlock label="Booked Until">
+                      <FieldBlock label={t('bookedUntil')}>
                         <input
                           type="date"
                           value={
@@ -1524,26 +1526,26 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         disabled={saving}
                         fullWidth
                       >
-                        {saving ? 'Saving...' : 'Update Work Status'}
+                        {saving ? t('saving') : t('updateWorkStatus')}
                       </CrewButton>
                     </>
                   ) : (
                     <>
                       <StatusRow
-                        label="Availability"
+                        label={t('availability')}
                         value={cleanStatus(profile.availability_status)}
                         active={Boolean(profile.available_for_work)}
                       />
 
                       <StatusRow
-                        label="Currently Working"
-                        value={profile.currently_working ? 'Yes' : 'No'}
+                        label={t('currentlyWorking')}
+                        value={profile.currently_working ? t('yes') : t('no')}
                         active={Boolean(profile.currently_working)}
                       />
 
                       <StatusRow
-                        label="Willing to Travel"
-                        value={profile.willing_to_travel ? 'Yes' : 'No'}
+                        label={t('willingToTravel')}
+                        value={profile.willing_to_travel ? t('yes') : t('no')}
                         active={Boolean(profile.willing_to_travel)}
                       />
 
@@ -1599,7 +1601,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               disabled={saving}
               fullWidth
             >
-              {saving ? 'Saving...' : 'Save Profile'}
+              {saving ? t('saving') : t('saveProfile')}
             </CrewButton>
           </div>
         </div>
