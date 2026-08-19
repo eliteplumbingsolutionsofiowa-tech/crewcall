@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { isNativeIOS } from '@/app/lib/nativePlatform'
 
 const companyFaq = [
   {
@@ -80,6 +83,36 @@ const generalFaq = [
 ]
 
 export default function FAQPage() {
+  const nativeIOS = isNativeIOS()
+
+  const companyFaqItems = nativeIOS
+    ? companyFaq.map((item) => {
+        if (item.question === 'How much does CrewCall cost?') {
+          return {
+            ...item,
+            answer:
+              'Companies can start with a 14-day free trial. No credit card is required to begin.',
+          }
+        }
+
+        if (item.question === 'Can I post unlimited jobs?') {
+          return {
+            ...item,
+            answer:
+              'Company accounts can post jobs and receive applicants while their CrewCall account has active access.',
+          }
+        }
+
+        return item
+      })
+    : companyFaq
+
+  const generalFaqItems = nativeIOS
+    ? generalFaq.filter(
+        (item) => item.question !== 'Can I cancel my subscription?'
+      )
+    : generalFaq
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-10 text-white md:px-6">
       <div className="mx-auto max-w-5xl">
@@ -101,7 +134,7 @@ export default function FAQPage() {
 
         <Section
           title="For Companies"
-          items={companyFaq}
+          items={companyFaqItems}
         />
 
         <Section
@@ -111,7 +144,7 @@ export default function FAQPage() {
 
         <Section
           title="General Questions"
-          items={generalFaq}
+          items={generalFaqItems}
         />
 
         <div className="mt-16 rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-8 text-center">

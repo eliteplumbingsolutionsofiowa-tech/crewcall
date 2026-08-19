@@ -1,6 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Capacitor } from '@capacitor/core'
+
 import { supabase } from '@/lib/supabase'
 
 type FileCategory =
@@ -53,11 +56,12 @@ export default function ProfileFileUpload({
   const [message, setMessage] = useState<string | null>(null)
 
   const allowsMultiple = category !== 'profile_photo'
+  const isNative = Capacitor.isNativePlatform()
+  const acceptsPdf = Boolean(accept?.includes('.pdf'))
 
   async function uploadOneFile(file: File) {
     const fileExt = file.name.split('.').pop() || 'file'
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
-
     const uniquePrefix = `${Date.now()}-${crypto.randomUUID()}`
     const filePath =
       `${userId}/${category}/${uniquePrefix}-${safeFileName}`
@@ -97,6 +101,71 @@ export default function ProfileFileUpload({
         .remove([filePath])
 
       throw insertError
+    }
+  }
+
+  async function uploadNativePhoto(source: CameraSource) {
+    setUploading(true)
+    setMessage(null)
+
+    try {
+      const photo = await Camera.getPhoto({
+        source,
+        resultType: CameraResultType.Uri,
+        quality: 85,
+        allowEditing: false,
+        saveToGallery: false,
+        correctOrientation: true,
+      })
+
+      if (!photo.webPath) {
+        throw new Error('No photo was returned.')
+      }
+
+      const response = await fetch(photo.webPath)
+      const blob = await response.blob()
+
+      const extension =
+        photo.format === 'png'
+          ? 'png'
+          : photo.format === 'gif'
+            ? 'gif'
+            : 'jpg'
+
+      const contentType =
+        blob.type ||
+        (extension === 'png'
+          ? 'image/png'
+          : extension === 'gif'
+            ? 'image/gif'
+            : 'image/jpeg')
+
+      const file = new File(
+        [blob],
+        `CrewCall-${category}-${Date.now()}.${extension}`,
+        { type: contentType }
+      )
+
+      await uploadOneFile(file)
+
+      setMessage('File uploaded successfully.')
+      onUploadComplete?.()
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Photo upload failed.'
+
+      if (
+        errorMessage.toLowerCase().includes('cancel') ||
+        errorMessage.toLowerCase().includes('user cancelled')
+      ) {
+        setMessage(null)
+      } else {
+        setMessage(errorMessage)
+      }
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -169,36 +238,72 @@ export default function ProfileFileUpload({
         </p>
       </div>
 
-      <label className="flex min-h-[72px] cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-3 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[120px] sm:flex-col sm:justify-center sm:gap-0 sm:rounded-2xl sm:px-4 sm:py-6 sm:text-center">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xl font-black text-slate-700 shadow-sm sm:mb-2 sm:h-auto sm:w-auto sm:bg-transparent sm:text-2xl sm:shadow-none">
-          +
+      {isNative ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => void uploadNativePhoto(CameraSource.Camera)}
+            disabled={uploading}
+            className="min-h-[72px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[100px]"
+          >
+            {uploading ? 'Working...' : 'Take Photo'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void uploadNativePhoto(CameraSource.Photos)}
+            disabled={uploading}
+            className="min-h-[72px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[100px]"
+          >
+            {uploading ? 'Working...' : 'Choose Photo'}
+          </button>
+
+          {acceptsPdf ? (
+            <label className="flex min-h-[64px] cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 sm:col-span-2">
+              Choose PDF
+
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                disabled={uploading}
+                onChange={handleUpload}
+                className="hidden"
+              />
+            </label>
+          ) : null}
         </div>
+      ) : (
+        <label className="flex min-h-[72px] cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-3 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[120px] sm:flex-col sm:justify-center sm:gap-0 sm:rounded-2xl sm:px-4 sm:py-6 sm:text-center">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xl font-black text-slate-700 shadow-sm sm:mb-2 sm:h-auto sm:w-auto sm:bg-transparent sm:text-2xl sm:shadow-none">
+            +
+          </div>
 
-        <div className="min-w-0 flex-1 text-left sm:text-center">
-          <span className="block text-sm font-black text-slate-800">
-            {uploading
-              ? 'Uploading...'
-              : allowsMultiple
-                ? 'Choose files'
-                : 'Choose file'}
-          </span>
+          <div className="min-w-0 flex-1 text-left sm:text-center">
+            <span className="block text-sm font-black text-slate-800">
+              {uploading
+                ? 'Uploading...'
+                : allowsMultiple
+                  ? 'Choose files'
+                  : 'Choose file'}
+            </span>
 
-          <span className="mt-0.5 block text-[11px] font-semibold leading-4 text-slate-500 sm:mt-1 sm:text-xs">
-            {allowsMultiple
-              ? 'Select one or multiple files'
-              : 'Select a profile image'}
-          </span>
-        </div>
+            <span className="mt-0.5 block text-[11px] font-semibold leading-4 text-slate-500 sm:mt-1 sm:text-xs">
+              {allowsMultiple
+                ? 'Select one or multiple files'
+                : 'Select a profile image'}
+            </span>
+          </div>
 
-        <input
-          type="file"
-          accept={accept}
-          multiple={allowsMultiple}
-          disabled={uploading}
-          onChange={handleUpload}
-          className="hidden"
-        />
-      </label>
+          <input
+            type="file"
+            accept={accept}
+            multiple={allowsMultiple}
+            disabled={uploading}
+            onChange={handleUpload}
+            className="hidden"
+          />
+        </label>
+      )}
 
       {message && (
         <p className="mt-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 sm:mt-3 sm:rounded-xl sm:text-sm">

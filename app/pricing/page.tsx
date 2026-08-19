@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { isNativeIOS } from '@/app/lib/nativePlatform'
 
 const membershipFeatures = [
   'Unlimited Job Posts',
@@ -47,6 +48,37 @@ const includedFeatures = [
 ]
 
 export default function PricingPage() {
+  const nativeIOS = isNativeIOS()
+
+  if (nativeIOS) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-10 text-white md:px-6">
+        <div className="mx-auto max-w-3xl">
+          <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center shadow-2xl">
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
+              CrewCall
+            </p>
+
+            <h1 className="mt-4 text-4xl font-black">
+              Company Access
+            </h1>
+
+            <p className="mx-auto mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-300">
+              Companies can create an account and use CrewCall during the free trial period.
+            </p>
+
+            <Link
+              href="/signup"
+              className="mt-8 inline-flex rounded-2xl bg-cyan-400 px-6 py-4 text-lg font-black text-slate-950 hover:bg-cyan-300"
+            >
+              Start Free Trial
+            </Link>
+          </section>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-10 text-white md:px-6">
       <div className="mx-auto max-w-7xl space-y-10">

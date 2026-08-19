@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { isNativeIOS } from '@/app/lib/nativePlatform'
 
 type BillingProfile = {
   id: string
@@ -58,6 +59,7 @@ export default function BillingPage() {
 
 function BillingContent() {
   const searchParams = useSearchParams()
+  const nativeIOS = isNativeIOS()
 
   const [profile, setProfile] = useState<BillingProfile | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -205,6 +207,14 @@ function BillingContent() {
 
 
   async function handleStartSubscription() {
+    if (nativeIOS) {
+      setMessage(
+        'Membership purchasing is not available in the iOS app.'
+      )
+      setMessageTone('info')
+      return
+    }
+
     setStartingCheckout(true)
     setMessage('')
 
@@ -516,6 +526,7 @@ function BillingContent() {
                     onOpenCustomerPortal={() =>
                       void openCustomerPortal()
                     }
+                    nativeIOS={nativeIOS}
                   />
                 )}
 
@@ -565,6 +576,7 @@ function CompanyMembershipSection({
   onStartSubscription,
   openingPortal,
   onOpenCustomerPortal,
+  nativeIOS,
 }: {
   subscription: Subscription | null
   membershipActive: boolean
@@ -574,6 +586,7 @@ function CompanyMembershipSection({
   onStartSubscription: () => void
   openingPortal: boolean
   onOpenCustomerPortal: () => void
+  nativeIOS: boolean
 }) {
   const hasPaidStripeSubscription = Boolean(
     subscription?.stripe_subscription_id
@@ -598,14 +611,16 @@ function CompanyMembershipSection({
             </p>
           </div>
 
-          <div className="text-left sm:text-right">
-            <p className="text-5xl font-black text-cyan-300">
-              $29
-            </p>
-            <p className="mt-1 font-bold text-slate-300">
-              per month
-            </p>
-          </div>
+          {!nativeIOS ? (
+            <div className="text-left sm:text-right">
+              <p className="text-5xl font-black text-cyan-300">
+                $29
+              </p>
+              <p className="mt-1 font-bold text-slate-300">
+                per month
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {trialActive && !hasPaidStripeSubscription && (
@@ -617,7 +632,9 @@ function CompanyMembershipSection({
             <p className="mt-2 text-sm font-semibold text-emerald-100/80">
               {trialDaysRemaining}{' '}
               {trialDaysRemaining === 1 ? 'day' : 'days'} remaining.
-              Subscribe now to keep CrewCall active after your trial.
+              {!nativeIOS
+                ? ' Subscribe now to keep CrewCall active after your trial.'
+                : ''}
             </p>
           </div>
         )}
@@ -628,16 +645,18 @@ function CompanyMembershipSection({
               Your CrewCall membership is active
             </p>
 
-            <button
-              type="button"
-              onClick={onOpenCustomerPortal}
-              disabled={openingPortal}
-              className="mt-4 rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20 disabled:opacity-50"
-            >
-              {openingPortal
-                ? 'Opening...'
-                : 'Manage Subscription'}
-            </button>
+            {!nativeIOS ? (
+              <button
+                type="button"
+                onClick={onOpenCustomerPortal}
+                disabled={openingPortal}
+                className="mt-4 rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20 disabled:opacity-50"
+              >
+                {openingPortal
+                  ? 'Opening...'
+                  : 'Manage Subscription'}
+              </button>
+            ) : null}
 
             {subscription?.current_period_ends_at && (
               <p className="mt-2 text-sm font-semibold text-emerald-100/80">
@@ -672,7 +691,21 @@ function CompanyMembershipSection({
           ))}
         </div>
 
-        {!hasPaidStripeSubscription ? (
+        {nativeIOS ? (
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center">
+            <p className="text-lg font-black text-white">
+              {membershipActive
+                ? 'Membership Active'
+                : trialActive
+                  ? 'Free Trial Active'
+                  : 'Membership Status'}
+            </p>
+
+            <p className="mt-2 text-sm font-semibold text-slate-400">
+              View your current CrewCall account access and membership status here.
+            </p>
+          </div>
+        ) : !hasPaidStripeSubscription ? (
           <button
             type="button"
             onClick={onStartSubscription}
@@ -699,9 +732,11 @@ function CompanyMembershipSection({
           </button>
         )}
 
-        <p className="mt-4 text-center text-sm font-bold text-slate-400">
-          Founding Member pricing. Cancel anytime. No contracts.
-        </p>
+        {!nativeIOS ? (
+          <p className="mt-4 text-center text-sm font-bold text-slate-400">
+            Founding Member pricing. Cancel anytime. No contracts.
+          </p>
+        ) : null}
       </div>
 
       <aside className="rounded-[2rem] border border-white/10 bg-slate-950/50 p-7">

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { isNativeIOS } from '@/app/lib/nativePlatform'
 
 const CREWCALL_VIDEO_URL =
   'https://uwegfsuzbnryxxygghiz.supabase.co/storage/v1/object/public/videos/crewcall-launch.mp4'
@@ -38,6 +39,7 @@ type PlatformStats = {
 }
 
 export default function HomePage() {
+  const nativeIOS = isNativeIOS()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [myApplicationsCount, setMyApplicationsCount] = useState(0)
@@ -215,10 +217,12 @@ export default function HomePage() {
               <p className="text-xl font-black text-cyan-100">
                 Start your FREE 14-day trial. No credit card required.
               </p>
-              <p className="mt-2 text-sm font-bold text-slate-300">
-                Founding members lock in $29/month for life. Regular price:
-                $49/month.
-              </p>
+              {!nativeIOS ? (
+                <p className="mt-2 text-sm font-bold text-slate-300">
+                  Founding members lock in $29/month for life. Regular price:
+                  $49/month.
+                </p>
+              ) : null}
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -456,6 +460,8 @@ export default function HomePage() {
         </div>
       </section>
 
+      {!nativeIOS ? (
+        <>
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
@@ -514,6 +520,9 @@ export default function HomePage() {
         </div>
       </section>
 
+        </>
+      ) : null}
+
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 p-10 text-center">
           <h2 className="text-4xl font-black">
@@ -548,7 +557,7 @@ export default function HomePage() {
           <div className="flex flex-wrap gap-4 text-sm font-bold text-slate-300">
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
-            <Link href="/pricing">Pricing</Link>
+            {!nativeIOS ? <Link href="/pricing">Pricing</Link> : null}
             <Link href="/faq">FAQ</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
