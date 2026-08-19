@@ -172,13 +172,15 @@ export default function JobsPage() {
 
     try {
       const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
 
-      if (userError) {
-        throw userError
+      if (sessionError) {
+        throw sessionError
       }
+
+      const user = session?.user ?? null
 
       if (user) {
         const profileResponse = (await supabase
