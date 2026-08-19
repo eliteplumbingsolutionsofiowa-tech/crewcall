@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Camera, MediaTypeSelection } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
 
 import { supabase } from '@/lib/supabase'
@@ -106,158 +105,6 @@ export default function ProfileFileUpload({
     }
   }
 
-  async function mediaResultToFile(
-    media: { webPath?: string; metadata?: { format?: string } },
-    index = 0
-  ) {
-    if (!media.webPath) {
-      throw new Error('No photo was returned.')
-    }
-
-    const response = await fetch(media.webPath)
-    const blob = await response.blob()
-
-    const rawFormat = media.metadata?.format?.toLowerCase() || ''
-    const extension =
-      rawFormat === 'png'
-        ? 'png'
-        : rawFormat === 'gif'
-          ? 'gif'
-          : rawFormat === 'heic' || rawFormat === 'heif'
-            ? rawFormat
-            : 'jpg'
-
-    const contentType =
-      blob.type ||
-      (extension === 'png'
-        ? 'image/png'
-        : extension === 'gif'
-          ? 'image/gif'
-          : extension === 'heic'
-            ? 'image/heic'
-            : extension === 'heif'
-              ? 'image/heif'
-              : 'image/jpeg')
-
-    return new File(
-      [blob],
-      `CrewCall-${category}-${Date.now()}-${index}.${extension}`,
-      { type: contentType }
-    )
-  }
-
-  function isCancelledError(error: unknown) {
-    const text =
-      error instanceof Error
-        ? error.message.toLowerCase()
-        : String(error).toLowerCase()
-
-    return text.includes('cancel')
-  }
-
-  async function takeNativePhoto() {
-    setUploading(true)
-    setMessage(null)
-
-    try {
-      const photo = await Camera.takePhoto({
-        quality: 85,
-        saveToGallery: false,
-        correctOrientation: true,
-        editable: 'no',
-        includeMetadata: true,
-      })
-
-      const file = await mediaResultToFile(photo)
-      await uploadOneFile(file)
-
-      setMessage(t('uploadedSuccessfully'))
-      onUploadComplete?.()
-    } catch (error) {
-      if (isCancelledError(error)) {
-        setMessage(null)
-      } else {
-        setMessage(
-          error instanceof Error ? error.message : 'Photo upload failed.'
-        )
-      }
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  async function chooseNativePhotos() {
-    setUploading(true)
-    setMessage(null)
-
-    try {
-      const selected = await Camera.chooseFromGallery({
-        mediaType: MediaTypeSelection.Photo,
-        allowMultipleSelection: allowsMultiple,
-        limit: allowsMultiple ? 0 : 1,
-        quality: 85,
-        correctOrientation: true,
-        editable: 'no',
-        includeMetadata: true,
-      })
-
-      const mediaResults = allowsMultiple
-        ? selected.results
-        : selected.results.slice(0, 1)
-
-      if (!mediaResults.length) {
-        setMessage(null)
-        return
-      }
-
-      let uploadedCount = 0
-      const failures: string[] = []
-
-      for (let index = 0; index < mediaResults.length; index += 1) {
-        try {
-          const file = await mediaResultToFile(mediaResults[index], index)
-          await uploadOneFile(file)
-          uploadedCount += 1
-        } catch (error) {
-          failures.push(
-            error instanceof Error ? error.message : 'Upload failed'
-          )
-        }
-      }
-
-      if (uploadedCount > 0) {
-        onUploadComplete?.()
-      }
-
-      if (failures.length === 0) {
-        setMessage(
-          uploadedCount === 1
-            ? t('uploadedSuccessfully')
-            : t('filesUploadedSuccessfully', { count: uploadedCount })
-        )
-      } else if (uploadedCount > 0) {
-        setMessage(
-          t('uploadedWithFailures', {
-            uploaded: uploadedCount,
-            failed: failures.length,
-          })
-        )
-      } else {
-        setMessage(failures[0] || t('uploadFailed'))
-      }
-    } catch (error) {
-      if (isCancelledError(error)) {
-        setMessage(null)
-      } else {
-        setMessage(
-          error instanceof Error ? error.message : 'Photo upload failed.'
-        )
-      }
-    } finally {
-      setUploading(false)
-    }
-  }
-
   async function handleUpload(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
@@ -329,28 +176,37 @@ export default function ProfileFileUpload({
 
       {isNative ? (
         <div className="grid gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => void takeNativePhoto()}
-            disabled={uploading}
-            className="min-h-[72px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[100px]"
-          >
+          <label className="flex min-h-[72px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
             {uploading ? 'Working...' : 'Take Photo'}
-          </button>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={uploading}
+              onChange={handleUpload}
+              className="hidden"
+            />
+          </label>
 
-          <button
-            type="button"
-            onClick={() => void chooseNativePhotos()}
-            disabled={uploading}
-            className="min-h-[72px] rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[100px]"
-          >
-            {uploading ? 'Working...' : allowsMultiple ? 'Choose Photos' : 'Choose Photo'}
-          </button>
+          <label className="flex min-h-[72px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
+            {uploading
+              ? 'Working...'
+              : allowsMultiple
+                ? 'Choose Photos'
+                : 'Choose Photo'}
+            <input
+              type="file"
+              accept="image/*"
+              multiple={allowsMultiple}
+              disabled={uploading}
+              onChange={handleUpload}
+              className="hidden"
+            />
+          </label>
 
           {acceptsPdf ? (
             <label className="flex min-h-[64px] cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 sm:col-span-2">
               Choose PDF
-
               <input
                 type="file"
                 accept=".pdf,application/pdf"
