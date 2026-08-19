@@ -1594,8 +1594,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
       </div>
 
       {isOwnProfile && (
-        <div className="fixed bottom-[104px] left-3 right-3 z-40 sm:hidden">
-          <div className="mx-auto max-w-xl rounded-2xl bg-white/95 p-2 shadow-2xl backdrop-blur">
+        <div className="px-3 pb-28 pt-4 sm:hidden">
+          <div className="mx-auto max-w-xl">
             <CrewButton
               onClick={saveProfile}
               disabled={saving}
