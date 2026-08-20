@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { isNativeIOS } from '@/app/lib/nativePlatform'
 
@@ -39,6 +40,7 @@ type PlatformStats = {
 }
 
 export default function HomePage() {
+  const t = useTranslations('Home')
   const nativeIOS = isNativeIOS()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -178,7 +180,7 @@ export default function HomePage() {
   }
 
   const displayName =
-    profile?.company_name || profile?.full_name || 'Welcome to CrewCall'
+    profile?.company_name || profile?.full_name || t('welcomeToCrewCall')
 
   if (loading) {
     return (
@@ -188,7 +190,7 @@ export default function HomePage() {
             <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
               CrewCall
             </p>
-            <h1 className="mt-3 text-3xl font-black">Loading...</h1>
+            <h1 className="mt-3 text-3xl font-black">{t('loading')}</h1>
           </div>
         </div>
       </main>
@@ -201,26 +203,24 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
             <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-200">
-              🚀 Public beta now open in Iowa
+              {t('publicBeta')}
             </div>
 
             <h1 className="mt-6 max-w-4xl text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl">
-              Find Skilled Trades Workers Fast
+              {t('heroTitle')}
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg font-semibold leading-8 text-slate-300">
-              CrewCall connects contractors with qualified plumbers, HVAC techs,
-              electricians, pipefitters, welders, and skilled trades workers.
+              {t('heroDescription')}
             </p>
 
             <div className="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5">
               <p className="text-xl font-black text-cyan-100">
-                Start your FREE 14-day trial. No credit card required.
+                {t('freeTrialBanner')}
               </p>
               {!nativeIOS ? (
                 <p className="mt-2 text-sm font-bold text-slate-300">
-                  Founding members lock in $29/month for life. Regular price:
-                  $49/month.
+                  {t('foundingPrice')}
                 </p>
               ) : null}
             </div>
@@ -229,28 +229,28 @@ export default function HomePage() {
               {profile?.role === 'company' ? (
                 <>
                   <Link href="/company/dashboard" className="primary-btn">
-                    Company Dashboard
+                    {t('companyDashboard')}
                   </Link>
                   <Link href="/post-job" className="secondary-btn">
-                    Post a Job
+                    {t('postJob')}
                   </Link>
                 </>
               ) : profile?.role === 'worker' ? (
                 <>
                   <Link href="/worker/dashboard" className="primary-btn">
-                    Worker Dashboard
+                    {t('workerDashboard')}
                   </Link>
                   <Link href="/jobs" className="secondary-btn">
-                    Browse Jobs
+                    {t('browseJobs')}
                   </Link>
                 </>
               ) : (
                 <>
                   <Link href="/signup" className="primary-btn">
-                    Start Free Trial
+                    {t('startFreeTrial')}
                   </Link>
                   <Link href="/jobs" className="secondary-btn">
-                    Browse Jobs
+                    {t('browseJobs')}
                   </Link>
                 </>
               )}
@@ -258,30 +258,30 @@ export default function HomePage() {
 
             {profile && (
               <p className="mt-5 text-sm font-bold text-slate-400">
-                Welcome back, {displayName}.
+                {t('welcomeBack', { name: displayName })}
               </p>
             )}
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-500/10">
             <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-              Live Snapshot
+              {t('liveSnapshot')}
             </p>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <StatCard label="Companies" value={stats.companies} />
-              <StatCard label="Workers" value={stats.workers} />
-              <StatCard label="Open Jobs" value={stats.openJobs} />
-              <StatCard label="Completed" value={stats.completedJobs} />
-              <StatCard label="Applications" value={stats.applications} />
-              <StatCard label="Reviews" value={stats.reviews} />
+              <StatCard label={t('companies')} value={stats.companies} />
+              <StatCard label={t('workers')} value={stats.workers} />
+              <StatCard label={t('openJobs')} value={stats.openJobs} />
+              <StatCard label={t('completed')} value={stats.completedJobs} />
+              <StatCard label={t('applications')} value={stats.applications} />
+              <StatCard label={t('reviews')} value={stats.reviews} />
 
               {profile?.role === 'worker' && (
-                <StatCard label="My Applications" value={myApplicationsCount} />
+                <StatCard label={t('myApplications')} value={myApplicationsCount} />
               )}
 
               {profile?.role === 'company' && (
-                <StatCard label="My Posted Jobs" value={myJobsCount} />
+                <StatCard label={t('myPostedJobs')} value={myJobsCount} />
               )}
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function HomePage() {
           <div className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-black shadow-2xl shadow-cyan-500/20">
             <div className="border-b border-white/10 bg-slate-950/80 px-5 py-4">
               <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-                Watch CrewCall in Action
+                {t('watchInAction')}
               </p>
             </div>
 
@@ -313,21 +313,21 @@ export default function HomePage() {
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
-            eyebrow="Built For The Trades"
-            title="One platform for the workers who keep projects moving"
-            text="CrewCall is designed around real jobsite needs — fast hiring, direct communication, worker profiles, reviews, job files, and secure payments."
+            eyebrow={t('builtForTrades')}
+            title={t('platformTitle')}
+            text={t('platformText')}
           />
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              'Plumbing',
-              'HVAC',
-              'Electrical',
-              'Pipefitting',
-              'Welding',
-              'Carpentry',
-              'Concrete',
-              'General Labor',
+              t('plumbing'),
+              t('hvac'),
+              t('electrical'),
+              t('pipefitting'),
+              t('welding'),
+              t('carpentry'),
+              t('concrete'),
+              t('generalLabor'),
             ].map((trade) => (
               <div
                 key={trade}
@@ -335,7 +335,7 @@ export default function HomePage() {
               >
                 <p className="text-2xl font-black">{trade}</p>
                 <p className="mt-2 text-sm font-semibold text-slate-400">
-                  Find help, post work, and connect fast.
+                  {t('tradeCardText')}
                 </p>
               </div>
             ))}
@@ -346,29 +346,29 @@ export default function HomePage() {
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
           <HowItWorks
-            title="For Companies"
+            title={t('forCompanies')}
             steps={[
-              'Post a job',
-              'Receive applicants',
-              'Message workers',
-              'Hire the right person',
-              'Pay securely',
+              t('postAJob'),
+              t('receiveApplicants'),
+              t('messageWorkers'),
+              t('hireRightPerson'),
+              t('paySecurely'),
             ]}
             href="/signup"
-            buttonText="Start Company Trial"
+            buttonText={t('startCompanyTrial')}
           />
 
           <HowItWorks
-            title="For Workers"
+            title={t('forWorkers')}
             steps={[
-              'Create your profile',
-              'Browse open jobs',
-              'Apply fast',
-              'Get hired',
-              'Build reviews',
+              t('createProfile'),
+              t('browseOpenJobs'),
+              t('applyFast'),
+              t('getHired'),
+              t('buildReviews'),
             ]}
             href="/jobs"
-            buttonText="Browse Work"
+            buttonText={t('browseWork')}
           />
         </div>
       </section>
@@ -376,21 +376,21 @@ export default function HomePage() {
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl rounded-[2rem] border border-cyan-400/20 bg-cyan-400/10 p-8">
           <SectionHeader
-            eyebrow="Why CrewCall"
-            title="Built to help contractors hire faster"
-            text="Instead of calling everyone you know when you're short-handed, CrewCall gives you one place to post work, find workers, and keep the job moving."
+            eyebrow={t('whyCrewCall')}
+            title={t('hireFasterTitle')}
+            text={t('hireFasterText')}
           />
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              'Hire Faster',
-              'Worker Profiles',
-              'Secure Payments',
-              'Messaging Built In',
-              'Ratings & Reviews',
-              'File Uploads',
-              'Mobile Friendly',
-              'Iowa Based',
+              t('hireFaster'),
+              t('workerProfiles'),
+              t('securePayments'),
+              t('messagingBuiltIn'),
+              t('ratingsReviews'),
+              t('fileUploads'),
+              t('mobileFriendly'),
+              t('iowaBased'),
             ].map((item) => (
               <div
                 key={item}
@@ -408,19 +408,19 @@ export default function HomePage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-                Featured Work
+                {t('featuredWork')}
               </p>
-              <h2 className="mt-2 text-3xl font-black">Boosted open jobs</h2>
+              <h2 className="mt-2 text-3xl font-black">{t('boostedOpenJobs')}</h2>
             </div>
 
             <Link href="/jobs" className="secondary-btn">
-              View All Jobs
+              {t('viewAllJobs')}
             </Link>
           </div>
 
           {featuredJobs.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-dashed border-white/10 bg-slate-950/60 p-6 text-slate-300">
-              No featured jobs are active right now.
+              {t('noFeaturedJobs')}
             </div>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -431,7 +431,7 @@ export default function HomePage() {
                   className="group rounded-3xl border border-white/10 bg-slate-950/60 p-5 transition hover:-translate-y-1 hover:border-cyan-400/60"
                 >
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-yellow-300">
-                    Featured
+                    {t('featured')}
                   </p>
 
                   <h3 className="mt-2 text-xl font-black text-white group-hover:text-cyan-300">
@@ -441,18 +441,18 @@ export default function HomePage() {
                   <p className="mt-3 text-sm font-bold text-slate-400">
                     {job.company?.company_name ||
                       job.company?.full_name ||
-                      'Company'}
+                      t('company')}
                   </p>
 
                   <div className="mt-4 space-y-2 text-sm font-semibold text-slate-300">
-                    <p>{job.trade || 'Trade not listed'}</p>
-                    <p>{job.location || 'Location not listed'}</p>
+                    <p>{job.trade || t('tradeNotListed')}</p>
+                    <p>{job.location || t('locationNotListed')}</p>
                     <p className="text-cyan-300">
-                      {job.pay_rate ? `Pay: ${job.pay_rate}` : 'Pay not listed'}
+                      {job.pay_rate ? t('pay', { pay: job.pay_rate }) : t('payNotListed')}
                     </p>
                   </div>
 
-                  <p className="mt-5 font-black text-cyan-300">View Job →</p>
+                  <p className="mt-5 font-black text-cyan-300">{t('viewJob')}</p>
                 </Link>
               ))}
             </div>
@@ -465,56 +465,56 @@ export default function HomePage() {
       <section className="px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
-            eyebrow="Pricing"
-            title="Start free, then keep it affordable"
-            text="CrewCall is priced for real contractors, not enterprise HR departments."
+            eyebrow={t('pricing')}
+            title={t('pricingTitle')}
+            text={t('pricingText')}
           />
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             <PriceCard
-              title="Free Trial"
+              title={t('freeTrial')}
               price="$0"
-              text="14 days. No credit card required."
+              text={t('trialText')}
               items={[
-                'Unlimited job posts',
-                'Worker search',
-                'Messaging',
-                'Applicants',
-                'Analytics',
+                t('unlimitedJobPosts'),
+                t('workerSearch'),
+                t('messaging'),
+                t('applicants'),
+                t('analytics'),
               ]}
             />
 
             <PriceCard
-              title="Founding Member"
+              title={t('foundingMember')}
               price="$29/mo"
-              text="Lock this in for life during public beta."
+              text={t('foundingMemberText')}
               items={[
-                'Everything in trial',
-                'Company dashboard',
-                'Saved workers',
-                'Reviews',
-                'File uploads',
+                t('everythingInTrial'),
+                t('companyDashboardFeature'),
+                t('savedWorkers'),
+                t('reviews'),
+                t('fileUploads'),
               ]}
               highlight
             />
 
             <PriceCard
-              title="Regular Plan"
+              title={t('regularPlan')}
               price="$49/mo"
-              text="Standard monthly company membership."
+              text={t('regularPlanText')}
               items={[
-                'Unlimited hiring tools',
-                'No contracts',
-                'Cancel anytime',
+                t('unlimitedHiringTools'),
+                t('noContracts'),
+                t('cancelAnytime'),
                 'Featured jobs optional',
-                'Urgent jobs optional',
+                t('urgentJobsOptional'),
               ]}
             />
           </div>
 
           <div className="mt-8 text-center">
             <Link href="/pricing" className="secondary-btn">
-              View Full Pricing
+              {t('viewFullPricing')}
             </Link>
           </div>
         </div>
@@ -526,20 +526,20 @@ export default function HomePage() {
       <section className="px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl rounded-[2rem] border border-cyan-400/20 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 p-10 text-center">
           <h2 className="text-4xl font-black">
-            Ready to hire skilled trades faster?
+            {t('readyTitle')}
           </h2>
 
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold text-slate-300">
-            Start your free 14-day trial today. No credit card required.
+            {t('readyText')}
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link href="/signup" className="primary-btn">
-              Start Free Trial
+              {t('startFreeTrial')}
             </Link>
 
             <Link href="/jobs" className="secondary-btn">
-              Browse Jobs
+              {t('browseJobs')}
             </Link>
           </div>
         </div>
@@ -550,18 +550,18 @@ export default function HomePage() {
           <div>
             <p className="text-xl font-black">CrewCall</p>
             <p className="mt-1 text-sm font-bold text-slate-500">
-              Find help. Find work. Fast.
+              {t('tagline')}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-4 text-sm font-bold text-slate-300">
-            <Link href="/about">About</Link>
-            <Link href="/contact">Contact</Link>
-            {!nativeIOS ? <Link href="/pricing">Pricing</Link> : null}
-            <Link href="/faq">FAQ</Link>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/jobs">Jobs</Link>
+            <Link href="/about">{t('about')}</Link>
+            <Link href="/contact">{t('contact')}</Link>
+            {!nativeIOS ? <Link href="/pricing">{t('pricing')}</Link> : null}
+            <Link href="/faq">{t('faq')}</Link>
+            <Link href="/privacy">{t('privacy')}</Link>
+            <Link href="/terms">{t('terms')}</Link>
+            <Link href="/jobs">{t('jobs')}</Link>
           </div>
         </div>
       </footer>
