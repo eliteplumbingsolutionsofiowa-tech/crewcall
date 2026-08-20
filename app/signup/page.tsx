@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useTranslations } from 'next-intl'
 
 type Role = 'worker' | 'company'
 
@@ -24,6 +25,7 @@ export default function SignupPage() {
 }
 
 function SignupForm() {
+  const t = useTranslations('Signup')
   const searchParams = useSearchParams()
 
   const inviteCode =
@@ -86,7 +88,7 @@ function SignupForm() {
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            'Could not accept team invitation.'
+            t('couldNotAcceptInvitation')
         )
       }
 
@@ -137,7 +139,7 @@ function SignupForm() {
         if (!active) return
 
         setMessage(
-          `This invitation is for ${invitedEmail}. Sign in or create an account with that email to continue.`
+          t('invitationForEmail', { email: invitedEmail })
         )
         setLoading(false)
         return
@@ -146,7 +148,7 @@ function SignupForm() {
       try {
         setLoading(true)
         setMessage(
-          'Accepting your CrewCall team invitation...'
+          t('acceptingInvitation')
         )
 
         await acceptTeamInvite(
@@ -165,7 +167,7 @@ function SignupForm() {
         setMessage(
           error instanceof Error
             ? error.message
-            : 'Could not accept team invitation.'
+            : t('couldNotAcceptInvitation')
         )
 
         setLoading(false)
@@ -202,7 +204,7 @@ function SignupForm() {
             setMessage(
               error instanceof Error
                 ? error.message
-                : 'Could not accept team invitation.'
+                : t('couldNotAcceptInvitation')
             )
             setLoading(false)
           }
@@ -239,7 +241,7 @@ function SignupForm() {
           .toLowerCase()
     ) {
       setMessage(
-        `This invitation was sent to ${invitedEmail}.`
+        t('invitationSentTo', { email: invitedEmail })
       )
       setLoading(false)
       return
@@ -258,7 +260,7 @@ function SignupForm() {
       setMessage(
         error.message ===
           'Invalid login credentials'
-          ? 'Incorrect email or password. Please try again.'
+          ? t('incorrectCredentials')
           : error.message
       )
       setLoading(false)
@@ -271,7 +273,7 @@ function SignupForm() {
     ) {
       try {
         setMessage(
-          'Signing in and joining your company team...'
+          t('signingInJoining')
         )
 
         await acceptTeamInvite(
@@ -287,7 +289,7 @@ function SignupForm() {
         setMessage(
           error instanceof Error
             ? error.message
-            : 'Signed in, but the team invitation could not be accepted.'
+            : t('signedInInviteFailed')
         )
         setLoading(false)
         return
@@ -322,7 +324,7 @@ function SignupForm() {
           .toLowerCase()
     ) {
       setMessage(
-        `This invitation was sent to ${invitedEmail}.`
+        t('invitationSentTo', { email: invitedEmail })
       )
       setLoading(false)
       return
@@ -377,7 +379,7 @@ function SignupForm() {
         setExistingAccount(true)
         setPassword('')
         setMessage(
-          'An account already exists for this email. Sign in below to accept your company invitation.'
+          t('accountAlreadyExists')
         )
         setLoading(false)
         return
@@ -406,7 +408,7 @@ function SignupForm() {
         setMessage(
           error instanceof Error
             ? error.message
-            : 'Account created, but the team invitation could not be accepted.'
+            : t('accountCreatedInviteFailed')
         )
         setLoading(false)
         return
@@ -443,11 +445,11 @@ function SignupForm() {
 
     if (inviteCode) {
       setMessage(
-        'Account created. Check your email to confirm your account, then CrewCall will finish accepting your team invitation.'
+        t('accountCreatedConfirmInvite')
       )
     } else {
       setMessage(
-        'Account created. Check your email to confirm your signup.'
+        t('accountCreatedConfirm')
       )
     }
 
@@ -459,24 +461,24 @@ function SignupForm() {
       <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
           {acceptingTeamInvite
-            ? 'CrewCall Team Invitation'
-            : 'Join CrewCall'}
+            ? t('teamInvitation')
+            : t('joinCrewCall')}
         </p>
 
         <h1 className="mt-4 text-3xl font-black tracking-tight text-white">
           {existingAccount
-            ? 'Sign in to join your team'
+            ? t('signInToJoinTeam')
             : acceptingTeamInvite
-              ? 'Join your company team'
-              : 'Create your account'}
+              ? t('joinCompanyTeam')
+              : t('createYourAccount')}
         </h1>
 
         <p className="mt-2 text-sm font-semibold text-slate-400">
           {existingAccount
-            ? 'This email already has a CrewCall account. Sign in with your existing password to accept the invitation.'
+            ? t('existingAccountDescription')
             : acceptingTeamInvite
-              ? 'Create or confirm your CrewCall account to accept this company invitation.'
-              : 'Sign up as a worker or company.'}
+              ? t('inviteDescription')
+              : t('signupDescription')}
         </p>
 
         {message && (
@@ -491,7 +493,7 @@ function SignupForm() {
             className="mt-8 space-y-5"
           >
             <Field
-              label="Email"
+              label={t('email')}
               htmlFor="existingEmail"
             >
               <input
@@ -512,7 +514,7 @@ function SignupForm() {
             </Field>
 
             <Field
-              label="Password"
+              label={t('password')}
               htmlFor="existingPassword"
             >
               <input
@@ -537,8 +539,8 @@ function SignupForm() {
               className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading
-                ? 'Joining team...'
-                : 'Sign In & Join Team'}
+                ? t('joiningTeam')
+                : t('signInJoinTeam')}
             </button>
 
             <button
@@ -550,7 +552,7 @@ function SignupForm() {
               }}
               className="w-full rounded-2xl border border-white/10 px-5 py-3 text-sm font-bold text-slate-300 transition hover:bg-white/5"
             >
-              Back to Create Account
+              {t('backToCreateAccount')}
             </button>
           </form>
         ) : (
@@ -559,7 +561,7 @@ function SignupForm() {
             className="mt-8 space-y-5"
           >
             <Field
-              label="Full Name"
+              label={t('fullName')}
               htmlFor="fullName"
             >
               <input
@@ -577,7 +579,7 @@ function SignupForm() {
             </Field>
 
             <Field
-              label="Phone"
+              label={t('phone')}
               htmlFor="phone"
             >
               <input
@@ -596,7 +598,7 @@ function SignupForm() {
 
             {!acceptingTeamInvite && (
               <Field
-                label="Role"
+                label={t('role')}
                 htmlFor="role"
               >
                 <select
@@ -611,17 +613,17 @@ function SignupForm() {
                   className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
                 >
                   <option value="worker">
-                    Worker
+                    {t('worker')}
                   </option>
                   <option value="company">
-                    Company
+                    {t('company')}
                   </option>
                 </select>
               </Field>
             )}
 
             <Field
-              label="Email"
+              label={t('email')}
               htmlFor="email"
             >
               <input
@@ -642,7 +644,7 @@ function SignupForm() {
             </Field>
 
             <Field
-              label="Password"
+              label={t('password')}
               htmlFor="password"
             >
               <input
@@ -667,11 +669,11 @@ function SignupForm() {
             >
               {loading
                 ? acceptingTeamInvite
-                  ? 'Joining team...'
-                  : 'Creating account...'
+                  ? t('joiningTeam')
+                  : t('creatingAccount')
                 : acceptingTeamInvite
-                  ? 'Create Account & Join Team'
-                  : 'Create Account'}
+                  ? t('createAccountJoinTeam')
+                  : t('createAccount')}
             </button>
           </form>
         )}
