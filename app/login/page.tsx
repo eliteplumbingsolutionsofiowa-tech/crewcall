@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type LoginProfile = {
@@ -18,6 +19,7 @@ function destinationForRole(role: string | null) {
 }
 
 export default function LoginPage() {
+  const t = useTranslations('Login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -51,7 +53,7 @@ export default function LoginPage() {
 
     if (!cleanEmail) {
       setSuccessMessage(null)
-      setMessage('Enter your email address.')
+      setMessage(t('enterEmail'))
       return
     }
 
@@ -74,7 +76,7 @@ export default function LoginPage() {
       if (error) throw error
 
       setSuccessMessage(
-        'Password reset email sent. Check your inbox and follow the link to choose a new password.'
+        t('resetEmailSent')
       )
     } catch (error) {
       console.error(
@@ -85,7 +87,7 @@ export default function LoginPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to send password reset email. Please try again.'
+          : t('resetEmailFailed')
       )
     } finally {
       setResetLoading(false)
@@ -102,12 +104,12 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase()
 
     if (!cleanEmail) {
-      setMessage('Enter your email address.')
+      setMessage(t('enterEmail'))
       return
     }
 
     if (!password) {
-      setMessage('Enter your password.')
+      setMessage(t('enterPassword'))
       return
     }
 
@@ -128,7 +130,7 @@ export default function LoginPage() {
 
       if (!loginData.user || !loginData.session) {
         throw new Error(
-          'Login succeeded, but no authenticated session was created.'
+          t('sessionNotCreated')
         )
       }
 
@@ -141,7 +143,7 @@ export default function LoginPage() {
 
       if (!sessionData.session) {
         throw new Error(
-          'Your login session could not be saved. Please try again.'
+          t('sessionNotSaved')
         )
       }
 
@@ -183,7 +185,7 @@ export default function LoginPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Login failed. Please try again.'
+          : t('loginFailed')
       )
 
       setLoading(false)
@@ -203,14 +205,14 @@ export default function LoginPage() {
 
             <h1 className="mt-3 text-3xl font-black">
               {resetMode
-                ? 'Reset Your Password'
-                : 'Welcome Back'}
+                ? t('resetPassword')
+                : t('welcomeBack')}
             </h1>
 
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-400">
               {resetMode
-                ? 'Enter your email and we’ll send you a secure password reset link.'
-                : 'Log in to your worker, company, or administrator account.'}
+                ? t('resetDescription')
+                : t('loginDescription')}
             </p>
           </div>
 
@@ -224,7 +226,7 @@ export default function LoginPage() {
                   htmlFor="reset-email"
                   className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
                 >
-                  Email
+                  {t('email')}
                 </label>
 
                 <input
@@ -237,7 +239,7 @@ export default function LoginPage() {
                     setEmail(event.target.value)
                   }
                   required
-                  placeholder="you@example.com"
+                  placeholder={t('emailPlaceholder')}
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
@@ -260,8 +262,8 @@ export default function LoginPage() {
                 className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {resetLoading
-                  ? 'Sending Reset Link...'
-                  : 'Send Reset Link'}
+                  ? t('sendingResetLink')
+                  : t('sendResetLink')}
               </button>
 
               <button
@@ -270,7 +272,7 @@ export default function LoginPage() {
                 disabled={resetLoading}
                 className="w-full text-sm font-black text-cyan-300 transition hover:text-cyan-200 disabled:opacity-60"
               >
-                ← Back to Log In
+                ← {t('backToLogin')}
               </button>
             </form>
           ) : (
@@ -284,7 +286,7 @@ export default function LoginPage() {
                     htmlFor="email"
                     className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
                   >
-                    Email
+                    {t('email')}
                   </label>
 
                   <input
@@ -297,7 +299,7 @@ export default function LoginPage() {
                       setEmail(event.target.value)
                     }
                     required
-                    placeholder="you@example.com"
+                    placeholder={t('emailPlaceholder')}
                     className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
@@ -308,7 +310,7 @@ export default function LoginPage() {
                       htmlFor="password"
                       className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
                     >
-                      Password
+                      {t('password')}
                     </label>
 
                     <button
@@ -317,7 +319,7 @@ export default function LoginPage() {
                       disabled={loading}
                       className="text-xs font-black text-cyan-300 transition hover:text-cyan-200 disabled:opacity-60"
                     >
-                      Forgot Password?
+                      {t('forgotPassword')}
                     </button>
                   </div>
 
@@ -331,7 +333,7 @@ export default function LoginPage() {
                       setPassword(event.target.value)
                     }
                     required
-                    placeholder="Enter your password"
+                    placeholder={t('passwordPlaceholder')}
                     className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                   />
                 </div>
@@ -348,18 +350,18 @@ export default function LoginPage() {
                   className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading
-                    ? 'Logging In...'
-                    : 'Log In'}
+                    ? t('loggingIn')
+                    : t('logIn')}
                 </button>
               </form>
 
               <p className="mt-6 text-center text-sm font-semibold text-slate-500">
-                Don&apos;t have an account?{' '}
+                {t('dontHaveAccount')}{' '}
                 <Link
                   href="/signup"
                   className="font-black text-cyan-300 hover:text-cyan-200"
                 >
-                  Sign up
+                  {t('signUp')}
                 </Link>
               </p>
             </>

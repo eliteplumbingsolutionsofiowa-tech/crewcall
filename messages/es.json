@@ -370,5 +370,30 @@
     "choosePhoto": "Elegir Foto",
     "choosePhotos": "Elegir Fotos",
     "choosePdf": "Elegir PDF"
+  },
+  "Login": {
+    "welcomeBack": "Bienvenido de Nuevo",
+    "loginDescription": "Inicia sesión en tu cuenta de trabajador, empresa o administrador.",
+    "resetPassword": "Restablecer tu Contraseña",
+    "resetDescription": "Ingresa tu correo electrónico y te enviaremos un enlace seguro para restablecer tu contraseña.",
+    "email": "Correo Electrónico",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "forgotPassword": "¿Olvidaste tu Contraseña?",
+    "logIn": "Iniciar Sesión",
+    "loggingIn": "Iniciando Sesión...",
+    "dontHaveAccount": "¿No tienes una cuenta?",
+    "signUp": "Regístrate",
+    "sendResetLink": "Enviar Enlace de Restablecimiento",
+    "sendingResetLink": "Enviando Enlace...",
+    "backToLogin": "Volver a Iniciar Sesión",
+    "enterEmail": "Ingresa tu correo electrónico.",
+    "enterPassword": "Ingresa tu contraseña.",
+    "resetEmailSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada y sigue el enlace para elegir una nueva contraseña.",
+    "resetEmailFailed": "No se pudo enviar el correo para restablecer la contraseña. Inténtalo de nuevo.",
+    "loginFailed": "No se pudo iniciar sesión. Inténtalo de nuevo.",
+    "sessionNotCreated": "Se inició sesión, pero no se creó una sesión autenticada.",
+    "sessionNotSaved": "No se pudo guardar tu sesión. Inténtalo de nuevo."
   }
 }

@@ -370,5 +370,30 @@
     "choosePhoto": "Choose Photo",
     "choosePhotos": "Choose Photos",
     "choosePdf": "Choose PDF"
+  },
+  "Login": {
+    "welcomeBack": "Welcome Back",
+    "loginDescription": "Log in to your worker, company, or administrator account.",
+    "resetPassword": "Reset Your Password",
+    "resetDescription": "Enter your email and we'll send you a secure password reset link.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot Password?",
+    "logIn": "Log In",
+    "loggingIn": "Logging In...",
+    "dontHaveAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "sendResetLink": "Send Reset Link",
+    "sendingResetLink": "Sending Reset Link...",
+    "backToLogin": "Back to Log In",
+    "enterEmail": "Enter your email address.",
+    "enterPassword": "Enter your password.",
+    "resetEmailSent": "Password reset email sent. Check your inbox and follow the link to choose a new password.",
+    "resetEmailFailed": "Unable to send password reset email. Please try again.",
+    "loginFailed": "Login failed. Please try again.",
+    "sessionNotCreated": "Login succeeded, but no authenticated session was created.",
+    "sessionNotSaved": "Your login session could not be saved. Please try again."
   }
 }
