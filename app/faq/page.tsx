@@ -1,116 +1,86 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { isNativeIOS } from '@/app/lib/nativePlatform'
 
-const companyFaq = [
-  {
-    question: 'How does CrewCall work?',
-    answer:
-      'Create a company account, post a job, review applicants, message workers, hire the right person, and pay securely through the platform.',
-  },
-  {
-    question: 'How much does CrewCall cost?',
-    answer:
-      'Companies receive a 14-day free trial. Founding Members can lock in $29/month during beta. Regular pricing is $49/month.',
-  },
-  {
-    question: 'Can I post unlimited jobs?',
-    answer:
-      'Yes. Company memberships include unlimited job postings and unlimited applicants.',
-  },
-  {
-    question: 'Can I hire someone permanently?',
-    answer:
-      'Yes. CrewCall helps companies connect with workers. Any long-term employment relationship is between the company and the worker.',
-  },
-  {
-    question: 'How do payments work?',
-    answer:
-      'Payments are securely processed through Stripe. Companies pay through CrewCall and workers receive payouts after approved job completion.',
-  },
-]
-
-const workerFaq = [
-  {
-    question: 'Is CrewCall free for workers?',
-    answer:
-      'Yes. Workers can create an account, build a profile, browse jobs, and apply at no cost.',
-  },
-  {
-    question: 'How do I get paid?',
-    answer:
-      'Companies pay through CrewCall. Approved payments are released to your connected payout account.',
-  },
-  {
-    question: 'Can I work for multiple companies?',
-    answer:
-      'Absolutely. You control which jobs you apply for and who you work with.',
-  },
-  {
-    question: 'How do reviews work?',
-    answer:
-      'After completed jobs, both companies and workers can leave reviews to help build trust within the marketplace.',
-  },
-  {
-    question: 'Do I need insurance?',
-    answer:
-      'Some jobs may require insurance or additional compliance documents. Companies determine the requirements for their projects.',
-  },
-]
-
-const generalFaq = [
-  {
-    question: 'Where is CrewCall available?',
-    answer:
-      'CrewCall is launching in Iowa and will continue expanding into additional markets.',
-  },
-  {
-    question: 'How do I contact support?',
-    answer:
-      'You can contact our support team through the Contact page or by emailing support@crewcall.app.',
-  },
-  {
-    question: 'Can I cancel my subscription?',
-    answer:
-      'Yes. Company subscriptions can be canceled at any time.',
-  },
-  {
-    question: 'What trades are supported?',
-    answer:
-      'Plumbing, HVAC, Electrical, Pipefitting, Welding, Carpentry, Concrete, General Labor, and many other skilled trades.',
-  },
-]
-
 export default function FAQPage() {
+  const t = useTranslations('FAQ')
   const nativeIOS = isNativeIOS()
 
-  const companyFaqItems = nativeIOS
-    ? companyFaq.map((item) => {
-        if (item.question === 'How much does CrewCall cost?') {
-          return {
-            ...item,
-            answer:
-              'Companies can start with a 14-day free trial. No credit card is required to begin.',
-          }
-        }
+  const companyFaq = [
+    {
+      question: t('companyQ1'),
+      answer: t('companyA1'),
+    },
+    {
+      question: t('companyQ2'),
+      answer: nativeIOS
+        ? t('companyA2Ios')
+        : t('companyA2'),
+    },
+    {
+      question: t('companyQ3'),
+      answer: nativeIOS
+        ? t('companyA3Ios')
+        : t('companyA3'),
+    },
+    {
+      question: t('companyQ4'),
+      answer: t('companyA4'),
+    },
+    {
+      question: t('companyQ5'),
+      answer: t('companyA5'),
+    },
+  ]
 
-        if (item.question === 'Can I post unlimited jobs?') {
-          return {
-            ...item,
-            answer:
-              'Company accounts can post jobs and receive applicants while their CrewCall account has active access.',
-          }
-        }
+  const workerFaq = [
+    {
+      question: t('workerQ1'),
+      answer: t('workerA1'),
+    },
+    {
+      question: t('workerQ2'),
+      answer: t('workerA2'),
+    },
+    {
+      question: t('workerQ3'),
+      answer: t('workerA3'),
+    },
+    {
+      question: t('workerQ4'),
+      answer: t('workerA4'),
+    },
+    {
+      question: t('workerQ5'),
+      answer: t('workerA5'),
+    },
+  ]
 
-        return item
-      })
-    : companyFaq
+  const generalFaq = [
+    {
+      question: t('generalQ1'),
+      answer: t('generalA1'),
+    },
+    {
+      question: t('generalQ2'),
+      answer: t('generalA2'),
+    },
+    {
+      question: t('generalQ3'),
+      answer: t('generalA3'),
+    },
+    {
+      question: t('generalQ4'),
+      answer: t('generalA4'),
+    },
+  ]
+
+  const companyFaqItems = companyFaq
 
   const generalFaqItems = nativeIOS
-    ? generalFaq.filter(
-        (item) => item.question !== 'Can I cancel my subscription?'
-      )
+    ? generalFaq.filter((_, index) => index !== 2)
     : generalFaq
 
   return (
@@ -119,43 +89,41 @@ export default function FAQPage() {
 
         <div className="text-center">
           <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
-            Frequently Asked Questions
+            {t('eyebrow')}
           </p>
 
           <h1 className="mt-4 text-5xl font-black">
-            Everything you need to know
+            {t('title')}
           </h1>
 
           <p className="mx-auto mt-6 max-w-3xl text-lg text-slate-300">
-            Answers to the most common questions from companies and skilled
-            trades workers.
+            {t('description')}
           </p>
         </div>
 
         <Section
-          title="For Companies"
+          title={t('forCompanies')}
           items={companyFaqItems}
         />
 
         <Section
-          title="For Workers"
+          title={t('forWorkers')}
           items={workerFaq}
         />
 
         <Section
-          title="General Questions"
+          title={t('generalQuestions')}
           items={generalFaqItems}
         />
 
         <div className="mt-16 rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-8 text-center">
 
           <h2 className="text-3xl font-black">
-            Still have questions?
+            {t('stillHaveQuestions')}
           </h2>
 
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
-            We're here to help. Reach out anytime and we'll get back to you as
-            quickly as possible.
+            {t('supportText')}
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
@@ -164,14 +132,14 @@ export default function FAQPage() {
               href="/contact"
               className="rounded-2xl bg-cyan-400 px-6 py-4 font-black text-slate-950 hover:bg-cyan-300"
             >
-              Contact Us
+              {t('contactUs')}
             </Link>
 
             <Link
               href="/signup"
               className="rounded-2xl border border-white/20 bg-white/5 px-6 py-4 font-black hover:bg-white/10"
             >
-              Start Free Trial
+              {t('startFreeTrial')}
             </Link>
 
           </div>
