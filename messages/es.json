@@ -668,5 +668,28 @@
     "analyticsText": "Consulta vistas, solicitudes y rendimiento de contratación.",
     "fileUploadsText": "Sube planos, fotos y documentos.",
     "mobileAccessText": "Administra trabajos desde cualquier lugar."
+  },
+  "Terms": {
+    "eyebrow": "Términos de Servicio",
+    "title": "Términos de Servicio",
+    "updated": "Última actualización: julio de 2026",
+    "useTitle": "Uso de CrewCall",
+    "useText": "CrewCall es una plataforma que ayuda a conectar empresas con trabajadores de oficios calificados. Los usuarios son responsables de la exactitud de la información que proporcionan y de cumplir con todas las leyes aplicables.",
+    "accountsTitle": "Cuentas",
+    "accountsText": "Eres responsable de mantener la seguridad de tu cuenta y de toda la actividad realizada bajo tu cuenta.",
+    "jobsTitle": "Trabajos y Solicitudes",
+    "jobsText": "Las empresas son responsables de las publicaciones de trabajos, las decisiones de contratación, los requisitos del lugar de trabajo, las condiciones de pago y el cumplimiento de las leyes laborales y de contratistas. Los trabajadores son responsables de representar con exactitud sus habilidades, experiencia, licencias y disponibilidad.",
+    "paymentsTitle": "Pagos",
+    "paymentsText": "Las funciones de pago, suscripciones, pagos de trabajos y complementos pueden procesarse mediante proveedores de pago externos. Las tarifas, suscripciones y compras adicionales están sujetas a los términos mostrados al momento del pago.",
+    "contentTitle": "Contenido del Usuario",
+    "contentText": "Los usuarios pueden publicar trabajos, perfiles, mensajes, reseñas y subir archivos. Eres responsable de tu contenido y aceptas no subir material falso, ilegal, dañino o que infrinja derechos.",
+    "guaranteeTitle": "Sin Garantía",
+    "guaranteeText": "CrewCall no garantiza que una empresa encontrará trabajadores, que un trabajador será contratado ni que una relación de trabajo será exitosa.",
+    "reviewsTitle": "Reseñas",
+    "reviewsText": "Las reseñas deben ser honestas y basarse en interacciones reales. CrewCall puede eliminar reseñas o contenido que parezca abusivo, falso o que viole las reglas de la plataforma.",
+    "terminationTitle": "Terminación",
+    "terminationText": "CrewCall puede suspender o eliminar cuentas que hagan mal uso de la plataforma, violen estos términos o generen riesgos para otros usuarios.",
+    "contactTitle": "Contacto",
+    "contactText": "Las preguntas sobre estos Términos pueden enviarse a support@crewcall.app."
   }
 }
