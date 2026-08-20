@@ -865,7 +865,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   )}
                 </div>
 
-                <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                <div className="grid gap-2.5 sm:gap-4 md:grid-cols-2">
                   <FieldBlock label={t('fullName')}>
                     {isOwnProfile ? (
                       <input
@@ -1158,7 +1158,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
               {isOwnProfile ? (
                 <CrewCard>
-                  <div className="mb-4 sm:mb-6">
+                  <div className="mb-3 sm:mb-6">
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
                       {t('profileFiles')}
                     </h2>
@@ -1206,12 +1206,12 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     />
                   </div>
 
-                  <div className="mt-5 border-t border-slate-200 pt-4 sm:mt-8 sm:pt-6">
+                  <div className="mt-4 border-t border-slate-200 pt-3 sm:mt-8 sm:pt-6">
                     <h3 className="text-lg font-black text-slate-950">
                       {t('uploadedDocuments')}
                     </h3>
 
-                    <p className="mt-1 mb-4 text-sm font-semibold text-slate-500">
+                    <p className="mt-1 mb-3 text-sm font-semibold text-slate-500">
                       {t('uploadedDocumentsDescription')}
                     </p>
 
