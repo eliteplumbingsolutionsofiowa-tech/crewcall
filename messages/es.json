@@ -548,5 +548,21 @@
     "readyText": "Las empresas pueden comenzar una prueba gratis de 14 días. Los trabajadores pueden crear un perfil y buscar trabajos.",
     "signUp": "Registrarse",
     "viewPricing": "Ver Precios"
+  },
+  "About": {
+    "eyebrow": "Acerca de CrewCall",
+    "title": "Creado para los oficios.",
+    "intro1": "CrewCall ayuda a los contratistas a encontrar trabajadores calificados más rápido y ayuda a los trabajadores a encontrar oportunidades reales de trabajo en su área.",
+    "intro2": "Fue creado para plomeros, técnicos de HVAC, electricistas, instaladores de tuberías, soldadores, carpinteros, trabajadores generales y las empresas que dependen de ellos para mantener los proyectos en marcha.",
+    "forCompanies": "Para Empresas",
+    "forCompaniesText": "Publica trabajos, revisa solicitantes, envía mensajes a trabajadores, contrata y administra el trabajo desde un solo lugar.",
+    "forWorkers": "Para Trabajadores",
+    "forWorkersText": "Crea un perfil, busca trabajos, solicita rápidamente y construye una reputación con reseñas.",
+    "whyItExists": "Por Qué Existe",
+    "whyItExistsText": "Porque encontrar ayuda calificada y confiable no debería requerir interminables llamadas telefónicas y cadenas de mensajes.",
+    "iowaTitle": "Con base en Iowa. Enfocado en los oficios.",
+    "iowaText": "CrewCall está comenzando en Iowa con un enfoque en contratistas reales y trabajadores calificados reales. El objetivo es simple: ayudar a buenas empresas a encontrar buenos trabajadores más rápido.",
+    "startFreeTrial": "Comenzar Prueba Gratis",
+    "browseJobs": "Buscar Trabajos"
   }
 }

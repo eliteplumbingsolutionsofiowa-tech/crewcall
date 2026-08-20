@@ -548,5 +548,21 @@
     "readyText": "Companies can start a free 14-day trial. Workers can create a profile and browse jobs.",
     "signUp": "Sign Up",
     "viewPricing": "View Pricing"
+  },
+  "About": {
+    "eyebrow": "About CrewCall",
+    "title": "Built for the trades.",
+    "intro1": "CrewCall helps contractors find skilled trades workers faster and helps workers find real job opportunities in their area.",
+    "intro2": "It was built for plumbers, HVAC techs, electricians, pipefitters, welders, carpenters, laborers, and the companies that depend on them to keep projects moving.",
+    "forCompanies": "For Companies",
+    "forCompaniesText": "Post jobs, review applicants, message workers, hire, and manage work from one place.",
+    "forWorkers": "For Workers",
+    "forWorkersText": "Create a profile, browse jobs, apply fast, and build a reputation with reviews.",
+    "whyItExists": "Why It Exists",
+    "whyItExistsText": "Because finding reliable skilled help should not require endless phone calls and text chains.",
+    "iowaTitle": "Iowa-based. Trade-focused.",
+    "iowaText": "CrewCall is starting in Iowa with a focus on real contractors and real skilled trades workers. The goal is simple: help good companies find good workers faster.",
+    "startFreeTrial": "Start Free Trial",
+    "browseJobs": "Browse Jobs"
   }
 }
