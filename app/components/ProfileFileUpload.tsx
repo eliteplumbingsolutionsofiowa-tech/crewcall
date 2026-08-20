@@ -176,7 +176,7 @@ export default function ProfileFileUpload({
 
       {isNative ? (
         <div className="grid gap-2 sm:grid-cols-2">
-          <label className="flex min-h-[72px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
+          <label className="flex min-h-[54px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
             {uploading ? 'Working...' : 'Take Photo'}
             <input
               type="file"
@@ -188,7 +188,7 @@ export default function ProfileFileUpload({
             />
           </label>
 
-          <label className="flex min-h-[72px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
+          <label className="flex min-h-[54px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
             {uploading
               ? 'Working...'
               : allowsMultiple
@@ -205,7 +205,7 @@ export default function ProfileFileUpload({
           </label>
 
           {acceptsPdf ? (
-            <label className="flex min-h-[64px] cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 sm:col-span-2">
+            <label className="flex min-h-[50px] cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 sm:col-span-2">
               Choose PDF
               <input
                 type="file"
