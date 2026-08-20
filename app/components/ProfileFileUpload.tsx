@@ -61,6 +61,21 @@ export default function ProfileFileUpload({
   const acceptsPdf = Boolean(accept?.includes('.pdf'))
 
   async function uploadOneFile(file: File) {
+    let oldProfilePhotos: Array<{
+      id: string
+      file_url: string | null
+    }> = []
+
+    if (category === 'profile_photo') {
+      const { data } = await (supabase as any)
+        .from('profile_files')
+        .select('id,file_url')
+        .eq('user_id', userId)
+        .eq('category', 'profile_photo')
+
+      oldProfilePhotos = data || []
+    }
+
     const fileExt = file.name.split('.').pop() || 'file'
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
     const uniquePrefix = `${Date.now()}-${crypto.randomUUID()}`
@@ -102,6 +117,36 @@ export default function ProfileFileUpload({
         .remove([filePath])
 
       throw insertError
+    }
+
+    if (category === 'profile_photo' && oldProfilePhotos.length > 0) {
+      const oldStoragePaths = oldProfilePhotos
+        .map((photo) => {
+          if (!photo.file_url) return null
+
+          try {
+            const url = new URL(photo.file_url)
+            return url.pathname.split('/profile-files/')[1] || null
+          } catch {
+            return null
+          }
+        })
+        .filter((path): path is string => Boolean(path))
+
+      if (oldStoragePaths.length > 0) {
+        await supabase.storage
+          .from('profile-files')
+          .remove(oldStoragePaths)
+      }
+
+      const oldIds = oldProfilePhotos.map((photo) => photo.id)
+
+      if (oldIds.length > 0) {
+        await (supabase as any)
+          .from('profile_files')
+          .delete()
+          .in('id', oldIds)
+      }
     }
   }
 
