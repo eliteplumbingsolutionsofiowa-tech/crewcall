@@ -741,7 +741,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-2 py-3 pb-44 text-slate-950 sm:px-4 sm:py-8 sm:pb-8 sm:px-4 sm:py-8">
+    <main className="min-h-screen bg-slate-50 px-2 py-3 pb-32 text-slate-950 sm:px-4 sm:py-8 sm:pb-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:gap-6">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:rounded-[2rem]">
           <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-5 text-white sm:px-8 sm:py-8">
