@@ -535,5 +535,18 @@
     "terms": "Términos",
     "jobs": "Trabajos",
     "bestLaunchDeal": "MEJOR OFERTA DE LANZAMIENTO"
+  },
+  "Contact": {
+    "eyebrow": "Contacto",
+    "title": "¿Necesitas ayuda con CrewCall?",
+    "description": "¿Tienes alguna pregunta sobre registrarte, publicar trabajos, solicitar trabajo, pagos o tu cuenta? Contáctanos y te ayudaremos.",
+    "generalSupport": "Soporte General",
+    "generalSupportText": "Para ayuda con tu cuenta, preguntas de facturación, comentarios o soporte de la plataforma.",
+    "contractorQuestions": "Preguntas para Contratistas",
+    "contractorQuestionsText": "¿Quieres incorporar tu empresa a CrewCall o preguntar sobre precios?",
+    "readyTitle": "¿Listo para comenzar?",
+    "readyText": "Las empresas pueden comenzar una prueba gratis de 14 días. Los trabajadores pueden crear un perfil y buscar trabajos.",
+    "signUp": "Registrarse",
+    "viewPricing": "Ver Precios"
   }
 }

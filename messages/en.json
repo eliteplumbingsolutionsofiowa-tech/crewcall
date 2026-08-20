@@ -535,5 +535,18 @@
     "terms": "Terms",
     "jobs": "Jobs",
     "bestLaunchDeal": "BEST LAUNCH DEAL"
+  },
+  "Contact": {
+    "eyebrow": "Contact",
+    "title": "Need help with CrewCall?",
+    "description": "Have a question about signing up, posting jobs, applying for work, payments, or your account? Reach out and we'll help.",
+    "generalSupport": "General Support",
+    "generalSupportText": "For account help, billing questions, feedback, or platform support.",
+    "contractorQuestions": "Contractor Questions",
+    "contractorQuestionsText": "Want to bring your company onto CrewCall or ask about pricing?",
+    "readyTitle": "Ready to get started?",
+    "readyText": "Companies can start a free 14-day trial. Workers can create a profile and browse jobs.",
+    "signUp": "Sign Up",
+    "viewPricing": "View Pricing"
   }
 }
