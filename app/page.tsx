@@ -496,6 +496,7 @@ export default function HomePage() {
                 t('fileUploads'),
               ]}
               highlight
+              badgeText={t('bestLaunchDeal')}
             />
 
             <PriceCard
@@ -506,7 +507,7 @@ export default function HomePage() {
                 t('unlimitedHiringTools'),
                 t('noContracts'),
                 t('cancelAnytime'),
-                'Featured jobs optional',
+                t('featuredJobsOptional'),
                 t('urgentJobsOptional'),
               ]}
             />
@@ -644,12 +645,14 @@ function PriceCard({
   text,
   items,
   highlight = false,
+  badgeText,
 }: {
   title: string
   price: string
   text: string
   items: string[]
   highlight?: boolean
+  badgeText?: string
 }) {
   return (
     <div
@@ -661,7 +664,7 @@ function PriceCard({
     >
       {highlight && (
         <div className="mb-4 inline-flex rounded-full bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950">
-          BEST LAUNCH DEAL
+          {badgeText}
         </div>
       )}
 
