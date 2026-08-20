@@ -53,35 +53,35 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 href="/terms"
                 className="transition hover:text-cyan-300"
               >
-                Terms
+                {tFooter('terms')}
               </a>
 
               <a
                 href="/privacy"
                 className="transition hover:text-cyan-300"
               >
-                Privacy
+                {tFooter('privacy')}
               </a>
 
               <a
                 href="/contractor-agreement"
                 className="transition hover:text-cyan-300"
               >
-                Contractor Agreement
+                {tFooter('contractorAgreement')}
               </a>
 
               <a
                 href="/faq"
                 className="transition hover:text-cyan-300"
               >
-                FAQ
+                {tFooter('faq')}
               </a>
 
               <a
                 href="/contact"
                 className="transition hover:text-cyan-300"
               >
-                Contact
+                {tFooter('contact')}
               </a>
             </div>
 
