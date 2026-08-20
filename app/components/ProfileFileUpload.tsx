@@ -240,7 +240,7 @@ export default function ProfileFileUpload({
           }
         >
           <label className="flex min-h-[54px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
-            {uploading ? 'Working...' : 'Take Photo'}
+            {uploading ? t('working') : t('takePhoto')}
             <input
               type="file"
               accept="image/*"
@@ -253,10 +253,10 @@ export default function ProfileFileUpload({
 
           <label className="flex min-h-[54px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
             {uploading
-              ? 'Working...'
+              ? t('working')
               : allowsMultiple
-                ? 'Choose Photos'
-                : 'Choose Photo'}
+                ? t('choosePhotos')
+                : t('choosePhoto')}
             <input
               type="file"
               accept="image/*"
@@ -269,7 +269,7 @@ export default function ProfileFileUpload({
 
           {acceptsPdf ? (
             <label className="flex min-h-[50px] cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-black text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 sm:col-span-2">
-              Choose PDF
+              {t('choosePdf')}
               <input
                 type="file"
                 accept=".pdf,application/pdf"

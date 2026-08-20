@@ -349,35 +349,35 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
   const verificationBadges = useMemo(() => {
     return [
       {
-        label: 'Licensed',
+        label: t('licensed'),
         active: Boolean(profile?.license_number) || licenseFiles.length > 0,
       },
       {
-        label: 'Insured',
+        label: t('insured'),
         active: Boolean(profile?.insurance_provider) || insuranceFiles.length > 0,
       },
       {
-        label: 'OSHA 10',
+        label: t('osha10'),
         active: Boolean(profile?.osha10),
       },
       {
-        label: 'OSHA 30',
+        label: t('osha30'),
         active: Boolean(profile?.osha30),
       },
       {
-        label: 'Med Gas',
+        label: t('medGas'),
         active: Boolean(profile?.med_gas),
       },
       {
-        label: 'Background',
+        label: t('background'),
         active: Boolean(profile?.background_verified),
       },
       {
-        label: 'Drug Tested',
+        label: t('drugTested'),
         active: Boolean(profile?.drug_tested),
       },
       {
-        label: 'Liability',
+        label: t('liability'),
         active: Boolean(profile?.liability_form_signed),
       },
     ]
@@ -1088,7 +1088,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('job_experience', event.target.value)
                         }}
                         className="input min-h-24 sm:min-h-32"
-                        placeholder="Example: Licensed journeyman plumber specializing in commercial rough-ins, service work, hospitals, schools, and tenant improvements."
+                        placeholder={t('aboutMePlaceholder')}
                       />
                     ) : (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-700">
@@ -1292,44 +1292,44 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               {isOwnProfile && isWorkerProfile && (
                 <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
-                    Stripe Payouts
+                    {t('stripePayouts')}
                   </h2>
 
                   <p className="mt-2 text-sm font-semibold text-slate-500">
-                    Connect Stripe so companies can pay you through CrewCall.
+                    {t('stripePayoutsDescription')}
                   </p>
 
                   <div className="mt-5 space-y-3">
                     {stripeConnected && (
                       <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-center">
                         <div className="text-lg font-black text-emerald-700">
-                          ✅ Stripe Connected
+                          ✅ {t('stripeConnected')}
                         </div>
 
                         <div className="mt-1 text-sm font-semibold text-emerald-600">
-                          Your account is ready to receive payouts.
+                          {t('stripeReady')}
                         </div>
                       </div>
                     )}
 
                     <StatusRow
-                      label="Onboarding"
-                      value={stripeOnboardingComplete ? 'Complete' : 'Not complete'}
+                      label={t('onboarding')}
+                      value={stripeOnboardingComplete ? t('complete') : t('notComplete')}
                       active={stripeOnboardingComplete}
                     />
 
                     <StatusRow
-                      label="Charges"
+                      label={t('charges')}
                       value={
-                        profile.stripe_charges_enabled ? 'Enabled' : 'Disabled'
+                        profile.stripe_charges_enabled ? t('enabled') : t('disabled')
                       }
                       active={Boolean(profile.stripe_charges_enabled)}
                     />
 
                     <StatusRow
-                      label="Payouts"
+                      label={t('payouts')}
                       value={
-                        profile.stripe_payouts_enabled ? 'Enabled' : 'Disabled'
+                        profile.stripe_payouts_enabled ? t('enabled') : t('disabled')
                       }
                       active={Boolean(profile.stripe_payouts_enabled)}
                     />
@@ -1340,10 +1340,10 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       fullWidth
                     >
                       {stripeLoading
-                        ? 'Opening Stripe...'
+                        ? t('openingStripe')
                         : stripeConnected
-                          ? 'Manage Stripe Account'
-                          : 'Set Up Stripe'}
+                          ? t('manageStripeAccount')
+                          : t('setUpStripe')}
                     </CrewButton>
                   </div>
                 </CrewCard>
@@ -1352,16 +1352,16 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
               <CrewCard>
                 <h2 className="text-2xl font-black text-slate-950">
-                  Verification
+                  {t('verification')}
                 </h2>
 
                 <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Keep your credentials current so companies can quickly verify your qualifications.
+                  {t('verificationDescription')}
                 </p>
 
                 <div className="mt-5 space-y-3">
                   <StatusRow
-                    label="Licensed"
+                    label={t('licensed')}
                     value={
                       Boolean(profile.license_number) || licenseFiles.length > 0
                         ? 'Added'
@@ -1373,7 +1373,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   />
 
                   <StatusRow
-                    label="Insured"
+                    label={t('insured')}
                     value={
                       Boolean(profile.insurance_provider) || insuranceFiles.length > 0
                         ? 'Added'
@@ -1387,12 +1387,12 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   {isOwnProfile ? (
                     <>
                       {[
-                        ['OSHA 10', 'osha10'],
-                        ['OSHA 30', 'osha30'],
-                        ['Med Gas', 'med_gas'],
-                        ['Background', 'background_verified'],
-                        ['Drug Tested', 'drug_tested'],
-                        ['Liability', 'liability_form_signed'],
+                        [t('osha10'), 'osha10'],
+                        [t('osha30'), 'osha30'],
+                        [t('medGas'), 'med_gas'],
+                        [t('background'), 'background_verified'],
+                        [t('drugTested'), 'drug_tested'],
+                        [t('liability'), 'liability_form_signed'],
                       ].map(([label, field]) => (
                         <label
                           key={field}
@@ -1422,7 +1422,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         disabled={saving}
                         fullWidth
                       >
-                        {saving ? 'Saving...' : 'Update Verification'}
+                        {saving ? t('saving') : t('updateVerification')}
                       </CrewButton>
                     </>
                   ) : (
@@ -1475,7 +1475,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
                       <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:gap-4 sm:rounded-2xl sm:p-4">
                         <span className="text-sm font-black text-slate-700">
-                          Currently Working
+                          {t('currentlyWorking')}
                         </span>
                         <input
                           type="checkbox"
@@ -1490,7 +1490,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
                       <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:gap-4 sm:rounded-2xl sm:p-4">
                         <span className="text-sm font-black text-slate-700">
-                          Willing to Travel
+                          {t('willingToTravel')}
                         </span>
                         <input
                           type="checkbox"
@@ -1550,7 +1550,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       />
 
                       <StatusRow
-                        label="Booked Until"
+                        label={t('bookedUntil')}
                         value={formatDate(profile.booked_until)}
                         active={Boolean(profile.booked_until)}
                       />
@@ -1558,11 +1558,11 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   )}
 
                   <StatusRow
-                    label="Last Seen"
+                    label={t('lastSeen')}
                     value={
                       profile.last_seen
                         ? new Date(inputValue(profile.last_seen)).toLocaleString()
-                        : 'Not available'
+                        : t('notAvailable')
                     }
                     active={onlineNow}
                   />
@@ -1572,18 +1572,18 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               {isOwnProfile && (
                 <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
-                    Account
+                    {t('account')}
                   </h2>
 
                   <p className="mt-2 text-sm font-semibold text-slate-500">
-                    Manage your CrewCall account and personal data.
+                    {t('accountDescription')}
                   </p>
 
                   <a
                     href="/delete-account"
                     className="mt-5 flex min-h-12 items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-700 transition hover:bg-red-100"
                   >
-                    Delete Account
+                    {t('deleteAccount')}
                   </a>
                 </CrewCard>
               )}
