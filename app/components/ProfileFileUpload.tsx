@@ -163,8 +163,20 @@ export default function ProfileFileUpload({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:rounded-2xl sm:p-5">
-      <div className="mb-2 sm:mb-4">
+    <div
+      className={
+        category === 'profile_photo'
+          ? 'rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-5'
+          : 'rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:rounded-2xl sm:p-5'
+      }
+    >
+      <div
+        className={
+          category === 'profile_photo'
+            ? 'mb-1.5 sm:mb-4'
+            : 'mb-2 sm:mb-4'
+        }
+      >
         <h3 className="text-sm font-black text-slate-950 sm:text-base">
           {label}
         </h3>
@@ -175,7 +187,13 @@ export default function ProfileFileUpload({
       </div>
 
       {isNative ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div
+          className={
+            category === 'profile_photo'
+              ? 'grid grid-cols-2 gap-2'
+              : 'grid gap-2 sm:grid-cols-2'
+          }
+        >
           <label className="flex min-h-[54px] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-800 transition hover:border-blue-400 hover:bg-blue-50 sm:min-h-[100px]">
             {uploading ? 'Working...' : 'Take Photo'}
             <input
