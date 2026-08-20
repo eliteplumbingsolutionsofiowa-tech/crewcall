@@ -736,5 +736,20 @@
     "contactTitle": "12. Contact Us",
     "contactText": "If you have questions about this Privacy Policy or CrewCall's privacy practices, please contact CrewCall through the support options provided within the application or website.",
     "rights": "All rights reserved."
+  },
+  "ContractorAgreement": {
+    "eyebrow": "Contractor Agreement",
+    "title": "Independent Contractor Agreement",
+    "updated": "Last updated: July 2026",
+    "relationshipTitle": "Independent Relationship",
+    "relationshipText": "CrewCall is a marketplace platform that connects companies and skilled workers. CrewCall does not employ workers, supervise work, or control the manner in which services are performed.",
+    "workerTitle": "Worker Responsibilities",
+    "workerText": "Workers are responsible for accurately representing their skills, experience, licenses, certifications, insurance status, and ability to perform accepted work.",
+    "taxesTitle": "Taxes and Payments",
+    "taxesText": "Workers are responsible for determining and satisfying their own tax obligations, business expenses, and reporting requirements.",
+    "safetyTitle": "Safety and Compliance",
+    "safetyText": "Workers and companies are responsible for following applicable safety requirements, laws, permits, and jobsite rules.",
+    "employmentTitle": "No Employment Relationship",
+    "employmentText": "Use of CrewCall does not create an employment relationship between CrewCall and any worker or company."
   }
 }

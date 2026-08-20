@@ -736,5 +736,20 @@
     "contactTitle": "12. Contáctanos",
     "contactText": "Si tienes preguntas sobre esta Política de Privacidad o las prácticas de privacidad de CrewCall, comunícate con CrewCall mediante las opciones de soporte disponibles dentro de la aplicación o el sitio web.",
     "rights": "Todos los derechos reservados."
+  },
+  "ContractorAgreement": {
+    "eyebrow": "Acuerdo del Contratista",
+    "title": "Acuerdo de Contratista Independiente",
+    "updated": "Última actualización: julio de 2026",
+    "relationshipTitle": "Relación Independiente",
+    "relationshipText": "CrewCall es una plataforma de mercado que conecta empresas con trabajadores calificados. CrewCall no emplea trabajadores, no supervisa el trabajo ni controla la manera en que se prestan los servicios.",
+    "workerTitle": "Responsabilidades del Trabajador",
+    "workerText": "Los trabajadores son responsables de representar con exactitud sus habilidades, experiencia, licencias, certificaciones, estado del seguro y capacidad para realizar el trabajo aceptado.",
+    "taxesTitle": "Impuestos y Pagos",
+    "taxesText": "Los trabajadores son responsables de determinar y cumplir con sus propias obligaciones fiscales, gastos comerciales y requisitos de declaración.",
+    "safetyTitle": "Seguridad y Cumplimiento",
+    "safetyText": "Los trabajadores y las empresas son responsables de cumplir con los requisitos de seguridad, leyes, permisos y reglas del lugar de trabajo aplicables.",
+    "employmentTitle": "Sin Relación Laboral",
+    "employmentText": "El uso de CrewCall no crea una relación laboral entre CrewCall y ningún trabajador o empresa."
   }
 }
