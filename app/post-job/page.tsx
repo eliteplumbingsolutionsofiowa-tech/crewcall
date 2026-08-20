@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 import { resolveCompanyContext } from '@/lib/company-context'
@@ -91,6 +92,7 @@ function jobsTable() {
 
 export default function PostJobPage() {
   const router = useRouter()
+  const t = useTranslations('PostJob')
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -177,7 +179,7 @@ export default function PostJobPage() {
 
       if (!data) {
         setMessage(
-          'CrewCall could not load the company profile.'
+          t('companyProfileLoadFailed')
         )
         setLoading(false)
         return
@@ -200,7 +202,7 @@ export default function PostJobPage() {
     return () => {
       active = false
     }
-  }, [router])
+  }, [router, t])
 
   async function generateJobWithAi() {
     if (generating) {
@@ -208,17 +210,17 @@ export default function PostJobPage() {
     }
 
     if (!trade.trim()) {
-      setAiMessage('Enter the trade first.')
+      setAiMessage(t('enterTradeFirst'))
       return
     }
 
     if (!location.trim()) {
-      setAiMessage('Enter the location first.')
+      setAiMessage(t('enterLocationFirst'))
       return
     }
 
     setGenerating(true)
-    setAiMessage('CrewCall AI is writing your job posting...')
+    setAiMessage(t('aiWriting'))
 
     try {
       const response = await fetch('/api/ai/generate-job', {
@@ -240,7 +242,7 @@ export default function PostJobPage() {
 
       if (!response.ok || !result?.success || !result.generated) {
         setAiMessage(
-          result?.error || 'CrewCall AI could not generate the job posting.'
+          result?.error || t('aiGenerateFailed')
         )
         setGenerating(false)
         return
@@ -257,13 +259,13 @@ export default function PostJobPage() {
       }
 
       setAiMessage(
-        'Job generated successfully. Review and edit everything before posting.'
+        t('generatedSuccessfully')
       )
     } catch (error) {
       setAiMessage(
         error instanceof Error
           ? error.message
-          : 'CrewCall AI could not generate the job posting.'
+          : t('aiGenerateFailed')
       )
     } finally {
       setGenerating(false)
@@ -301,7 +303,7 @@ export default function PostJobPage() {
     }
 
     if (!profile) {
-      setMessage('Your company profile could not be loaded.')
+      setMessage(t('companyProfileUnavailable'))
       return
     }
 
@@ -311,12 +313,12 @@ export default function PostJobPage() {
     }
 
     if (!canPost) {
-      setMessage('Please fill out every required field.')
+      setMessage(t('fillRequired'))
       return
     }
 
     setSaving(true)
-    setMessage('Posting job...')
+    setMessage(t('postingJob'))
 
     try {
       const payload: JobInsert = {
@@ -342,12 +344,12 @@ export default function PostJobPage() {
       }
 
       if (!data?.id) {
-        setMessage('Job was posted, but CrewCall could not find the new job ID.')
+        setMessage(t('missingJobId'))
         setSaving(false)
         return
       }
 
-      setMessage('Job posted. Finding best worker matches...')
+      setMessage(t('findingMatches'))
 
       await generateMatches(data.id)
 
@@ -356,7 +358,7 @@ export default function PostJobPage() {
       router.replace(`/my-jobs/${data.id}`)
       router.refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Unable to post job.')
+      setMessage(error instanceof Error ? error.message : t('unableToPost'))
       setSaving(false)
     }
   }
@@ -369,10 +371,10 @@ export default function PostJobPage() {
             CrewCall
           </p>
 
-          <h1 className="mt-3 text-3xl font-black">Loading Post Job</h1>
+          <h1 className="mt-3 text-3xl font-black">{t('loadingPostJob')}</h1>
 
           <p className="mt-3 text-slate-300">
-            Checking your company account...
+            {t('checkingAccount')}
           </p>
 
           {message ? (
@@ -390,20 +392,19 @@ export default function PostJobPage() {
       <section className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/15 via-blue-500/10 to-white/5 p-6 shadow-2xl">
           <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-200">
-            CrewCall Company
+            {t('companyEyebrow')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-            Post a Job
+            {t('postJob')}
           </h1>
 
           <p className="mt-3 max-w-2xl text-base font-semibold text-slate-300">
-            Add the trade, location, pay, and scope. CrewCall will automatically
-            find and rank matching workers after the job is posted.
+            {t('postJobDescription')}
           </p>
 
           <div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-bold text-slate-200">
-            Posting as {profile.company_name || profile.full_name || 'Company'}
+            {t('postingAs', { name: profile.company_name || profile.full_name || t('company') })}
           </div>
         </div>
 
@@ -412,17 +413,15 @@ export default function PostJobPage() {
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-purple-200">
-                  CrewCall AI Job Writer
+                  {t('aiWriter')}
                 </p>
 
                 <h2 className="mt-2 text-2xl font-black text-white">
-                  Generate your job posting
+                  {t('generatePosting')}
                 </h2>
 
                 <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Enter the trade and location below, add any rough notes, and
-                  CrewCall AI will create a professional title, scope, skills,
-                  certifications, and hiring estimate.
+                  {t('aiDescription')}
                 </p>
               </div>
 
@@ -433,13 +432,13 @@ export default function PostJobPage() {
 
             <label className="mt-5 block">
               <span className="text-sm font-black text-slate-200">
-                Quick Notes for AI
+                {t('quickNotes')}
               </span>
 
               <textarea
                 value={jobNotes}
                 onChange={(event) => setJobNotes(event.target.value)}
-                placeholder="Example: Commercial rough-in, Monday start, worker should bring hand tools, approximately two weeks of work..."
+                placeholder={t('quickNotesPlaceholder')}
                 rows={4}
                 className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none ring-purple-300/40 placeholder:text-slate-500 focus:ring-4"
               />
@@ -457,7 +456,7 @@ export default function PostJobPage() {
               disabled={generating}
               className="mt-5 w-full rounded-2xl bg-gradient-to-r from-purple-400 via-cyan-300 to-blue-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {generating ? 'Generating Job...' : '✨ Generate With AI'}
+              {generating ? t('generatingJob') : t('generateWithAi')}
             </button>
           </div>
         </section>
@@ -475,25 +474,25 @@ export default function PostJobPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-sm font-black text-slate-200">
-                Job Title
+                {t('jobTitle')}
               </span>
 
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Rough-in help needed"
+                placeholder={t('jobTitlePlaceholder')}
                 autoComplete="off"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-black text-slate-200">Trade</span>
+              <span className="text-sm font-black text-slate-200">{t('trade')}</span>
 
               <input
                 value={trade}
                 onChange={(event) => setTrade(event.target.value)}
-                placeholder="Plumbing, HVAC, Electrical..."
+                placeholder={t('tradePlaceholder')}
                 autoComplete="off"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
@@ -501,13 +500,13 @@ export default function PostJobPage() {
 
             <label className="block">
               <span className="text-sm font-black text-slate-200">
-                Location
+                {t('location')}
               </span>
 
               <input
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
-                placeholder="Ankeny, IA"
+                placeholder={t('locationPlaceholder')}
                 autoComplete="street-address"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
@@ -515,7 +514,7 @@ export default function PostJobPage() {
 
             <label className="block">
               <span className="text-sm font-black text-slate-200">
-                Pay Rate
+                {t('payRate')}
               </span>
 
               <input
@@ -528,7 +527,7 @@ export default function PostJobPage() {
                   }
                 }}
                 inputMode="decimal"
-                placeholder="$500/day, $85/hr, $2,500 total..."
+                placeholder={t('payPlaceholder')}
                 autoComplete="off"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
@@ -537,13 +536,13 @@ export default function PostJobPage() {
 
           <label className="mt-4 block">
             <span className="text-sm font-black text-slate-200">
-              Job Scope
+              {t('jobScope')}
             </span>
 
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Describe the job, schedule, tools needed, expectations, and any special notes."
+              placeholder={t('scopePlaceholder')}
               rows={7}
               className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
             />
@@ -554,37 +553,37 @@ export default function PostJobPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-                    AI Hiring Forecast
+                    {t('aiForecast')}
                   </p>
 
                   <p className="mt-1 text-sm font-semibold text-slate-300">
-                    These are AI suggestions. Review all job terms before posting.
+                    {t('aiSuggestionsNotice')}
                   </p>
                 </div>
 
                 <span className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-white">
-                  {generatedJob.hiringDifficulty} hiring
+                  {t('hiringDifficulty', { difficulty: t(generatedJob.hiringDifficulty.toLowerCase() as 'easy' | 'moderate' | 'difficult') })}
                 </span>
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                    Suggested Pay
+                    {t('suggestedPay')}
                   </p>
 
                   <p className="mt-2 text-lg font-black text-white">
-                    {generatedJob.suggestedPayRange || 'Not estimated'}
+                    {generatedJob.suggestedPayRange || t('notEstimated')}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                    Estimated Matches
+                    {t('estimatedMatches')}
                   </p>
 
                   <p className="mt-2 text-lg font-black text-white">
-                    Approximately {generatedJob.estimatedMatches}
+                    {t('approximately', { count: generatedJob.estimatedMatches })}
                   </p>
                 </div>
               </div>
@@ -592,7 +591,7 @@ export default function PostJobPage() {
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                    Recommended Skills
+                    {t('recommendedSkills')}
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -607,7 +606,7 @@ export default function PostJobPage() {
                       ))
                     ) : (
                       <span className="text-sm font-semibold text-slate-400">
-                        None suggested
+                        {t('noneSuggested')}
                       </span>
                     )}
                   </div>
@@ -615,7 +614,7 @@ export default function PostJobPage() {
 
                 <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                    Recommended Certifications
+                    {t('recommendedCertifications')}
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -632,7 +631,7 @@ export default function PostJobPage() {
                       )
                     ) : (
                       <span className="text-sm font-semibold text-slate-400">
-                        None suggested
+                        {t('noneSuggested')}
                       </span>
                     )}
                   </div>
@@ -643,9 +642,7 @@ export default function PostJobPage() {
 
           <div className="mt-5 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
             <p className="text-sm font-black text-orange-100">
-              After posting, CrewCall will run the matching engine and rank
-              workers by trade fit, location, availability, credentials, online
-              status, and pay fit.
+              {t('matchingNotice')}
             </p>
           </div>
 
@@ -654,7 +651,7 @@ export default function PostJobPage() {
               href="/company/jobs"
               className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
             >
-              Cancel
+              {t('cancel')}
             </Link>
 
             <button
@@ -662,7 +659,7 @@ export default function PostJobPage() {
               disabled={saving || !canPost}
               className="rounded-2xl bg-cyan-300 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 transition hover:bg-cyan-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? 'Posting + Matching...' : 'Post Job + Find Matches'}
+              {saving ? t('postingMatching') : t('postFindMatches')}
             </button>
           </div>
         </form>
