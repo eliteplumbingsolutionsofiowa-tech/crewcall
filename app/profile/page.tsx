@@ -1396,7 +1396,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       ].map(([label, field]) => (
                         <label
                           key={field}
-                          className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:gap-4 sm:rounded-2xl sm:p-4"
                         >
                           <span className="text-sm font-black text-slate-700">
                             {label}
@@ -1473,7 +1473,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         </select>
                       </FieldBlock>
 
-                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:gap-4 sm:rounded-2xl sm:p-4">
                         <span className="text-sm font-black text-slate-700">
                           Currently Working
                         </span>
@@ -1488,7 +1488,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         />
                       </label>
 
-                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:gap-4 sm:rounded-2xl sm:p-4">
                         <span className="text-sm font-black text-slate-700">
                           Willing to Travel
                         </span>
@@ -1658,7 +1658,7 @@ function StatusRow({
   active: boolean
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:gap-4 sm:rounded-2xl sm:p-4">
       <div>
         <p className="text-sm font-black text-slate-900">{label}</p>
 
