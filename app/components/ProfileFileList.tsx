@@ -153,13 +153,13 @@ export default function ProfileFileList({
         {files.map((file) => (
           <div
             key={file.id}
-            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:rounded-2xl sm:p-4"
+            className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:gap-3 sm:rounded-2xl sm:p-4"
           >
             {file.file_url && isImageFile(file) ? (
               <button
                 type="button"
                 onClick={() => openFile(file)}
-                className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white sm:h-16 sm:w-16"
+                className="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white sm:h-16 sm:w-16"
               >
                 <img
                   src={file.file_url}
@@ -168,7 +168,7 @@ export default function ProfileFileList({
                 />
               </button>
             ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-[11px] font-black text-slate-500 sm:h-16 sm:w-16">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-[9px] font-black text-slate-500 sm:h-16 sm:w-16 sm:text-[11px]">
                 FILE
               </div>
             )}
@@ -190,12 +190,12 @@ export default function ProfileFileList({
                 )}
               </div>
 
-              <div className="mt-2 flex gap-2">
+              <div className="mt-1.5 flex gap-1.5 sm:mt-2 sm:gap-2">
                 {file.file_url && (
                   <button
                     type="button"
                     onClick={() => openFile(file)}
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-black text-white transition hover:bg-blue-700"
+                    className="rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-black text-white transition hover:bg-blue-700 sm:px-3 sm:py-1.5 sm:text-xs"
                   >
                     View
                   </button>
@@ -206,7 +206,7 @@ export default function ProfileFileList({
                     type="button"
                     onClick={() => deleteFile(file)}
                     disabled={deletingId === file.id}
-                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-black text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                    className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-[11px] font-black text-red-600 transition hover:bg-red-50 disabled:opacity-60 sm:px-3 sm:py-1.5 sm:text-xs"
                   >
                     {deletingId === file.id ? 'Deleting...' : 'Delete'}
                   </button>
