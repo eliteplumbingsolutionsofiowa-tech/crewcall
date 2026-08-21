@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 import SubscriptionGate from '@/app/components/SubscriptionGate'
@@ -106,6 +107,9 @@ type DashboardStats = {
 }
 
 export default function CompanyDashboardPage() {
+  const t = useTranslations('CompanyDashboard')
+  const locale = useLocale()
+
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -149,7 +153,7 @@ export default function CompanyDashboardPage() {
       } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        setError('Please log in to view your company dashboard.')
+        setError(t('loginRequired'))
         return
       }
 
@@ -161,7 +165,7 @@ export default function CompanyDashboardPage() {
 
       if (!companyContext.companyId) {
         setError(
-          'You are not connected to a company account.'
+          t('notConnected')
         )
         return
       }
@@ -289,7 +293,7 @@ export default function CompanyDashboardPage() {
       setLastUpdated(new Date())
     } catch (err) {
       console.error('Company dashboard error:', err)
-      setError('Could not load the company dashboard.')
+      setError(t('loadFailed'))
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -436,8 +440,8 @@ export default function CompanyDashboardPage() {
     jobsNeedingAttention.slice(0, 3).forEach((job) => {
       alerts.push({
         id: `no-applicants-${job.id}`,
-        title: 'No applicants yet',
-        description: `${job.title || 'Untitled job'} is still open without worker interest.`,
+        title: t('noApplicantsYet'),
+        description: t('noApplicantsDescription', { job: job.title || t('untitledJob') }),
         href: `/my-jobs/${job.id}`,
         tone: 'amber',
       })
@@ -454,8 +458,8 @@ export default function CompanyDashboardPage() {
       .forEach((job) => {
         alerts.push({
           id: `payment-${job.id}`,
-          title: 'Payment still needed',
-          description: `${job.title || 'Untitled job'} is complete but has not been marked paid.`,
+          title: t('paymentNeeded'),
+          description: t('paymentNeededDescription', { job: job.title || t('untitledJob') }),
           href: `/jobs/${job.id}/pay`,
           tone: 'red',
         })
@@ -472,8 +476,8 @@ export default function CompanyDashboardPage() {
       .forEach((job) => {
         alerts.push({
           id: `unassigned-${job.id}`,
-          title: 'Job starts within 24 hours',
-          description: `${job.title || 'Untitled job'} has no assigned worker.`,
+          title: t('startsSoon'),
+          description: t('startsSoonDescription', { job: job.title || t('untitledJob') }),
           href: `/my-jobs/${job.id}`,
           tone: 'red',
         })
@@ -482,17 +486,15 @@ export default function CompanyDashboardPage() {
     if (stats.unreadNotifications > 0) {
       alerts.push({
         id: 'unread-alerts',
-        title: 'Unread account alerts',
-        description: `${stats.unreadNotifications} CrewCall alert${
-          stats.unreadNotifications === 1 ? '' : 's'
-        } need review.`,
+        title: t('unreadAlerts'),
+        description: t('unreadAlertsDescription', { count: stats.unreadNotifications }),
         href: '/notifications',
         tone: 'blue',
       })
     }
 
     return alerts.slice(0, 6)
-  }, [jobs, jobsNeedingAttention, stats.unreadNotifications])
+  }, [jobs, jobsNeedingAttention, stats.unreadNotifications, t])
 
   const recommendedActions = useMemo(() => {
     const actions: Array<{
@@ -507,13 +509,10 @@ export default function CompanyDashboardPage() {
     if (pendingApplications > 0) {
       actions.push({
         id: 'review-applications',
-        title: `Review ${pendingApplications} pending application${
-          pendingApplications === 1 ? '' : 's'
-        }`,
-        description:
-          'Workers are waiting for a response on your active job postings.',
+        title: t('reviewPending', { count: pendingApplications }),
+        description: t('reviewPendingDescription'),
         href: '/company/applications',
-        label: 'Review Applications',
+        label: t('reviewApplications'),
         tone: 'blue',
       })
     }
@@ -521,13 +520,10 @@ export default function CompanyDashboardPage() {
     if (stats.unpaidJobs > 0) {
       actions.push({
         id: 'complete-payments',
-        title: `Complete ${stats.unpaidJobs} outstanding payment${
-          stats.unpaidJobs === 1 ? '' : 's'
-        }`,
-        description:
-          'Keep workers paid promptly and protect your company rating.',
+        title: t('completePayments', { count: stats.unpaidJobs }),
+        description: t('completePaymentsDescription'),
         href: '/company/jobs',
-        label: 'Review Payments',
+        label: t('reviewPayments'),
         tone: 'red',
       })
     }
@@ -535,13 +531,10 @@ export default function CompanyDashboardPage() {
     if (jobsNeedingAttention.length > 0) {
       actions.push({
         id: 'boost-jobs',
-        title: `Improve ${jobsNeedingAttention.length} job posting${
-          jobsNeedingAttention.length === 1 ? '' : 's'
-        }`,
-        description:
-          'These open jobs have not received an application yet.',
+        title: t('improveJobs', { count: jobsNeedingAttention.length }),
+        description: t('improveJobsDescription'),
         href: '/company/jobs',
-        label: 'Manage Jobs',
+        label: t('manageJobs'),
         tone: 'amber',
       })
     }
@@ -549,13 +542,10 @@ export default function CompanyDashboardPage() {
     if (stats.unreadNotifications > 0) {
       actions.push({
         id: 'read-notifications',
-        title: `Read ${stats.unreadNotifications} new notification${
-          stats.unreadNotifications === 1 ? '' : 's'
-        }`,
-        description:
-          'Review recent job, payment, application, and account activity.',
+        title: t('readNotifications', { count: stats.unreadNotifications }),
+        description: t('readNotificationsDescription'),
         href: '/notifications',
-        label: 'Open Notifications',
+        label: t('openNotifications'),
         tone: 'blue',
       })
     }
@@ -563,11 +553,10 @@ export default function CompanyDashboardPage() {
     if (stats.openJobs === 0) {
       actions.push({
         id: 'post-job',
-        title: 'Post your next job',
-        description:
-          'Create a new opportunity and start connecting with available workers.',
+        title: t('postNextJob'),
+        description: t('postNextJobDescription'),
         href: '/post-job',
-        label: 'Post a Job',
+        label: t('postJob'),
         tone: 'green',
       })
     }
@@ -575,11 +564,10 @@ export default function CompanyDashboardPage() {
     if (actions.length === 0) {
       actions.push({
         id: 'all-clear',
-        title: 'Your company is caught up',
-        description:
-          'There are no urgent applications, payments, alerts, or inactive postings.',
+        title: t('companyCaughtUp'),
+        description: t('companyCaughtUpDescription'),
         href: '/workers',
-        label: 'Browse Workers',
+        label: t('browseWorkers'),
         tone: 'green',
       })
     }
@@ -591,15 +579,16 @@ export default function CompanyDashboardPage() {
     stats.openJobs,
     stats.unpaidJobs,
     stats.unreadNotifications,
+    t,
   ])
 
   const activityFeed = useMemo(() => {
     const items = [
       ...notifications.map((notification) => ({
         id: `notification-${notification.id}`,
-        title: notification.title || 'CrewCall update',
+        title: notification.title || t('crewCallUpdate'),
         description:
-          notification.body || 'New activity on your CrewCall account.',
+          notification.body || t('newAccountActivity'),
         created_at: notification.created_at,
         href: notification.link_url || '/notifications',
         tone:
@@ -609,16 +598,16 @@ export default function CompanyDashboardPage() {
       })),
       ...applications.slice(0, 8).map((application) => ({
         id: `application-${application.id}`,
-        title: 'New job application',
-        description: `${getJobTitle(application.job_id)} received an application.`,
+        title: t('newApplication'),
+        description: t('applicationActivity', { job: getJobTitle(application.job_id) }),
         created_at: application.created_at,
         href: `/my-jobs/${application.job_id}/applicants`,
         tone: 'amber',
       })),
       ...messages.slice(0, 8).map((message) => ({
         id: `message-${message.id}`,
-        title: 'New job message',
-        description: `${getJobTitle(message.job_id)} has recent conversation activity.`,
+        title: t('newJobMessage'),
+        description: t('messageActivity', { job: getJobTitle(message.job_id) }),
         created_at: message.created_at,
         href: '/messages',
         tone: 'purple',
@@ -632,7 +621,7 @@ export default function CompanyDashboardPage() {
         return bTime - aTime
       })
       .slice(0, 10)
-  }, [applications, jobs, messages, notifications])
+  }, [applications, jobs, messages, notifications, t])
 
   const revenueSnapshot = useMemo(() => {
     const completed = jobs.filter((job) => job.status === 'completed')
@@ -681,12 +670,12 @@ export default function CompanyDashboardPage() {
     return { score, fillRate, paymentRate }
   }, [jobs, stats.avgRating, stats.completedJobs])
 
-  const greeting = getGreeting()
+  const greeting = getGreeting(t)
 
   const companyDisplayName =
     companyProfile?.company_name?.trim() ||
     companyProfile?.full_name?.trim() ||
-    'Your Company'
+    t('yourCompany')
 
   const companyLocation = [
     companyProfile?.city,
@@ -696,32 +685,32 @@ export default function CompanyDashboardPage() {
     .join(', ')
 
   const lastUpdatedLabel = lastUpdated
-    ? `Updated ${formatRelativeTime(lastUpdated.toISOString())}`
-    : 'Loading latest activity'
+    ? t('updated', { time: formatRelativeTime(lastUpdated.toISOString(), locale, t) })
+    : t('loadingActivity')
 
   function getJobTitle(jobId: string | null) {
     if (!jobId) {
-      return 'Unknown job'
+      return t('unknownJob')
     }
 
     return (
       jobs.find((job) => job.id === jobId)?.title ||
-      'Untitled job'
+      t('untitledJob')
     )
   }
 
   function formatDate(value: string | null) {
     if (!value) {
-      return 'Unknown date'
+      return t('unknownDate')
     }
 
     const date = new Date(value)
 
     if (Number.isNaN(date.getTime())) {
-      return 'Unknown date'
+      return t('unknownDate')
     }
 
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -770,9 +759,9 @@ export default function CompanyDashboardPage() {
 
       <div className="relative mx-auto max-w-7xl space-y-8">
         <PageHeader
-          eyebrow="CrewCall Company Command Center"
+          eyebrow={t('eyebrow')}
           greeting={greeting}
-          title={`${companyDisplayName} Dashboard`}
+          title={t('dashboardTitle', { company: companyDisplayName })}
           description={
             companyLocation
               ? `${companyLocation} • ${lastUpdatedLabel}`
@@ -781,19 +770,19 @@ export default function CompanyDashboardPage() {
           actions={
             <div className="flex flex-wrap gap-3">
               <PrimaryButton href="/post-job">
-                Post a Job
+                {t('postJob')}
               </PrimaryButton>
 
               <SecondaryButton href="/workers">
-                Find Workers
+                {t('findWorkers')}
               </SecondaryButton>
 
               <SecondaryButton href="/company/invites">
-                Invite Workers
+                {t('inviteWorkers')}
               </SecondaryButton>
 
               <SecondaryButton href="/company/analytics">
-                Analytics
+                {t('analytics')}
               </SecondaryButton>
 
               <button
@@ -811,7 +800,7 @@ export default function CompanyDashboardPage() {
                   ↻
                 </span>
 
-                {refreshing ? 'Refreshing…' : 'Refresh'}
+                {refreshing ? t('refreshing') : t('refresh')}
               </button>
             </div>
           }
@@ -825,7 +814,7 @@ export default function CompanyDashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-black text-red-100">
-                  Dashboard unavailable
+                  {t('dashboardUnavailable')}
                 </p>
 
                 <p className="mt-1 text-sm font-semibold text-red-200/80">
@@ -838,7 +827,7 @@ export default function CompanyDashboardPage() {
                 onClick={() => void loadDashboard()}
                 className="rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-red-300/20"
               >
-                Try Again
+                {t('tryAgain')}
               </button>
             </div>
           </GlassCard>
@@ -852,26 +841,24 @@ export default function CompanyDashboardPage() {
               </div>
 
               <p className="mt-6 text-xs font-black uppercase tracking-[0.25em] text-blue-300">
-                Build Your Crew
+                {t('buildCrew')}
               </p>
 
               <h2 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">
-                Start by posting your first job
+                {t('firstJobTitle')}
               </h2>
 
               <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-slate-300">
-                Once your first job is live, this dashboard will show
-                applicants, messages, job views, notifications, payments,
-                worker assignments, and hiring activity.
+                {t('firstJobDescription')}
               </p>
 
               <div className="mt-7 flex flex-wrap justify-center gap-3">
                 <PrimaryButton href="/post-job">
-                  Post Your First Job
+                  {t('postFirstJob')}
                 </PrimaryButton>
 
                 <SecondaryButton href="/workers">
-                  Browse Workers
+                  {t('browseWorkers')}
                 </SecondaryButton>
               </div>
             </div>
@@ -882,78 +869,76 @@ export default function CompanyDashboardPage() {
           <>
             <section>
               <SectionHeader
-                eyebrow="Live Overview"
-                title="Your company at a glance"
-                description="The most important activity across your CrewCall account."
+                eyebrow={t('liveOverview')}
+                title={t('atGlance')}
+                description={t('overviewDescription')}
               />
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
-                  title="Open Jobs"
+                  title={t('openJobs')}
                   value={stats.openJobs}
-                  description="Currently accepting workers"
+                  description={t('acceptingWorkers')}
                   tone="blue"
                   icon={<span aria-hidden="true">▣</span>}
                 />
 
                 <StatCard
-                  title="Applicants"
+                  title={t('applicants')}
                   value={stats.applications}
-                  description="Total job applications"
+                  description={t('totalApplications')}
                   tone="blue"
                   icon={<span aria-hidden="true">◎</span>}
                 />
 
                 <StatCard
-                  title="Assigned Jobs"
+                  title={t('assignedJobs')}
                   value={stats.assignedJobs}
-                  description="Jobs with a selected worker"
+                  description={t('selectedWorker')}
                   tone="purple"
                   icon={<span aria-hidden="true">✓</span>}
                 />
 
                 <StatCard
-                  title="Completed Jobs"
+                  title={t('completedJobs')}
                   value={stats.completedJobs}
-                  description="Successfully completed"
+                  description={t('successfullyCompleted')}
                   tone="green"
                   icon={<span aria-hidden="true">★</span>}
                 />
 
                 <StatCard
-                  title="Job Views"
+                  title={t('jobViews')}
                   value={stats.views}
-                  description="Worker interest across jobs"
+                  description={t('workerInterest')}
                   tone="blue"
                   icon={<span aria-hidden="true">◉</span>}
                 />
 
                 <StatCard
-                  title="Messages"
+                  title={t('messages')}
                   value={stats.messages}
-                  description="Recent job conversation activity"
+                  description={t('conversationActivity')}
                   tone="blue"
                   icon={<span aria-hidden="true">✉</span>}
                 />
 
                 <StatCard
-                  title="Needs Payment"
+                  title={t('needsPayment')}
                   value={stats.unpaidJobs}
-                  description="Assigned jobs not marked paid"
+                  description={t('notMarkedPaid')}
                   tone={stats.unpaidJobs > 0 ? 'amber' : 'green'}
                   icon={<span aria-hidden="true">$</span>}
                 />
 
                 <StatCard
-                  title="Company Rating"
+                  title={t('companyRating')}
                   value={
                     reviews.length > 0
                       ? `${stats.avgRating} ★`
-                      : 'New'
+                      : t('new')
                   }
-                  description={`${reviews.length} company review${
-                    reviews.length === 1 ? '' : 's'
-                  }`}
+                  description={t('companyReviewsCount', { count: reviews.length })}
                   tone="amber"
                   icon={<span aria-hidden="true">★</span>}
                 />
@@ -962,9 +947,9 @@ export default function CompanyDashboardPage() {
 
             <section>
               <SectionHeader
-                eyebrow="Recommended Next Steps"
-                title="Action center"
-                description="The most important things your company can do right now."
+                eyebrow={t('recommendedSteps')}
+                title={t('actionCenter')}
+                description={t('actionDescription')}
               />
 
               <div
@@ -995,12 +980,12 @@ export default function CompanyDashboardPage() {
             <section className="grid gap-6 xl:grid-cols-3">
               <GlassCard padding="lg" accent className="xl:col-span-2">
                 <SectionHeader
-                  eyebrow="Dispatch"
-                  title="Today's schedule"
-                  description="Jobs scheduled for today, assigned workers, and the next action."
+                  eyebrow={t('dispatch')}
+                  title={t('todaysSchedule')}
+                  description={t('scheduleDescription')}
                   action={
                     <SecondaryButton href="/company/operations" size="sm">
-                      Operations Center
+                      {t('operationsCenter')}
                     </SecondaryButton>
                   }
                 />
@@ -1008,8 +993,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {todaysJobs.length === 0 ? (
                     <EmptyState
-                      title="No jobs scheduled for today"
-                      description="Jobs with today's start date will appear here automatically."
+                      title={t('noJobsToday')}
+                      description={t('noJobsTodayDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1026,28 +1011,28 @@ export default function CompanyDashboardPage() {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <StatusBadge tone="cyan" dot>
-                                  {formatTime(job.start_date)}
+                                  {formatTime(job.start_date, locale, t)}
                                 </StatusBadge>
 
                                 <p className="truncate font-black text-white">
-                                  {job.title || 'Untitled job'}
+                                  {job.title || t('untitledJob')}
                                 </p>
 
                                 <JobStatusBadge status={job.status} />
                               </div>
 
                               <p className="mt-2 text-sm font-semibold text-slate-400">
-                                {job.location || 'Location not listed'}
+                                {job.location || t('locationNotListed')}
                               </p>
 
                               {worker && (
                                 <div className="mt-3 inline-flex rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2">
                                   <div>
                                     <div className="text-[10px] font-black uppercase tracking-wide text-emerald-200">
-                                      Assigned Worker
+                                      {t('assignedWorker')}
                                     </div>
                                     <div className="text-sm font-black text-white">
-                                      {worker.full_name || 'Worker'}
+                                      {worker.full_name || t('worker')}
                                     </div>
                                     {worker.trade && (
                                       <div className="text-xs font-bold text-emerald-100">
@@ -1069,7 +1054,7 @@ export default function CompanyDashboardPage() {
                                   rel="noreferrer"
                                   className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10"
                                 >
-                                  Navigate
+                                  {t('navigate')}
                                 </a>
                               ) : null}
 
@@ -1077,14 +1062,14 @@ export default function CompanyDashboardPage() {
                                 href="/messages"
                                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10"
                               >
-                                Message
+                                {t('message')}
                               </Link>
 
                               <Link
                                 href={`/my-jobs/${job.id}`}
                                 className="rounded-xl bg-blue-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-blue-300"
                               >
-                                Open Job
+                                {t('openJob')}
                               </Link>
                             </div>
                           </div>
@@ -1097,26 +1082,26 @@ export default function CompanyDashboardPage() {
 
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Company Health"
+                  eyebrow={t('companyHealth')}
                   title={`${companyHealth.score}/100`}
-                  description="Calculated from fill rate, payments, and reviews."
+                  description={t('healthDescription')}
                 />
 
                 <div className="mt-6 space-y-3">
                   <HealthMetric
-                    label="Job fill rate"
+                    label={t('jobFillRate')}
                     value={`${companyHealth.fillRate}%`}
                   />
                   <HealthMetric
-                    label="Payment completion"
+                    label={t('paymentCompletion')}
                     value={`${companyHealth.paymentRate}%`}
                   />
                   <HealthMetric
-                    label="Company rating"
+                    label={t('companyRating')}
                     value={
                       reviews.length > 0
                         ? `${stats.avgRating} ★`
-                        : 'New'
+                        : t('new')
                     }
                   />
                 </div>
@@ -1133,12 +1118,12 @@ export default function CompanyDashboardPage() {
             <section className="grid gap-6 xl:grid-cols-3">
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Crew Availability"
-                  title="Workers online now"
-                  description="Workers who are online, available, or currently working."
+                  eyebrow={t('crewAvailability')}
+                  title={t('workersOnline')}
+                  description={t('workersOnlineDescription')}
                   action={
                     <SecondaryButton href="/workers" size="sm">
-                      View Workers
+                      {t('viewWorkers')}
                     </SecondaryButton>
                   }
                 />
@@ -1146,8 +1131,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {onlineWorkers.length === 0 ? (
                     <EmptyState
-                      title="No workers online"
-                      description="Available and online workers will appear here."
+                      title={t('noWorkersOnline')}
+                      description={t('noWorkersOnlineDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1168,20 +1153,20 @@ export default function CompanyDashboardPage() {
                               />
 
                               <p className="truncate font-black text-white">
-                                {worker.full_name || 'CrewCall worker'}
+                                {worker.full_name || t('crewCallWorker')}
                               </p>
                             </div>
 
                             <p className="mt-2 truncate text-sm font-semibold text-slate-400">
-                              {worker.trade || 'Trade not listed'} •{' '}
+                              {worker.trade || t('tradeNotListed')} •{' '}
                               {[worker.city, worker.state]
                                 .filter(Boolean)
-                                .join(', ') || 'Location not listed'}
+                                .join(', ') || t('locationNotListed')}
                             </p>
                           </div>
 
                           <span className="text-sm font-black text-blue-300">
-                            View →
+                            {t('view')}
                           </span>
                         </Link>
                       ))}
@@ -1192,27 +1177,27 @@ export default function CompanyDashboardPage() {
 
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Financial Snapshot"
-                  title="Payments and completion"
-                  description="A quick operational view using current job records."
+                  eyebrow={t('financialSnapshot')}
+                  title={t('paymentsCompletion')}
+                  description={t('financialDescription')}
                 />
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                   <RevenueMetric
-                    label="Completed jobs"
+                    label={t('completedJobsMetric')}
                     value={revenueSnapshot.completed}
                   />
                   <RevenueMetric
-                    label="Marked paid"
+                    label={t('markedPaid')}
                     value={revenueSnapshot.paid}
                   />
                   <RevenueMetric
-                    label="Outstanding"
+                    label={t('outstanding')}
                     value={revenueSnapshot.outstanding}
                     tone={revenueSnapshot.outstanding > 0 ? 'amber' : 'default'}
                   />
                   <RevenueMetric
-                    label="Payouts released"
+                    label={t('payoutsReleased')}
                     value={revenueSnapshot.payoutsReleased}
                   />
                 </div>
@@ -1220,12 +1205,12 @@ export default function CompanyDashboardPage() {
 
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Critical Alerts"
-                  title="Needs attention"
-                  description="Items most likely to slow down jobs or payments."
+                  eyebrow={t('criticalAlerts')}
+                  title={t('needsAttention')}
+                  description={t('criticalDescription')}
                   action={
                     <SecondaryButton href="/notifications" size="sm">
-                      View Alerts
+                      {t('viewAlerts')}
                     </SecondaryButton>
                   }
                 />
@@ -1233,8 +1218,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {criticalAlerts.length === 0 ? (
                     <EmptyState
-                      title="No critical alerts"
-                      description="Your active jobs and account activity look healthy."
+                      title={t('noCriticalAlerts')}
+                      description={t('healthyDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1266,12 +1251,12 @@ export default function CompanyDashboardPage() {
 
             <GlassCard padding="lg">
               <SectionHeader
-                eyebrow="Live Activity"
-                title="What is happening now"
-                description="Recent applications, messages, and alerts in one feed."
+                eyebrow={t('liveActivity')}
+                title={t('happeningNow')}
+                description={t('activityDescription')}
                 action={
                   <SecondaryButton href="/company/operations" size="sm">
-                    Open Operations
+                    {t('openOperations')}
                   </SecondaryButton>
                 }
               />
@@ -1280,8 +1265,8 @@ export default function CompanyDashboardPage() {
                 {activityFeed.length === 0 ? (
                   <div className="md:col-span-2">
                     <EmptyState
-                      title="No recent activity"
-                      description="Applications, messages, and notifications will appear here."
+                      title={t('noRecentActivity')}
+                      description={t('noRecentActivityDescription')}
                     />
                   </div>
                 ) : (
@@ -1312,7 +1297,7 @@ export default function CompanyDashboardPage() {
                             {item.description}
                           </p>
                           <p className="mt-3 text-xs font-bold uppercase tracking-[0.15em] text-slate-500">
-                            {formatRelativeTime(item.created_at)}
+                            {formatRelativeTime(item.created_at, locale, t)}
                           </p>
                         </div>
                       </div>
@@ -1324,66 +1309,66 @@ export default function CompanyDashboardPage() {
 
             <section>
               <SectionHeader
-                eyebrow="Quick Actions"
-                title="Keep work moving"
-                description="Jump directly to the tools your company uses most."
+                eyebrow={t('quickActions')}
+                title={t('keepMoving')}
+                description={t('quickActionsDescription')}
               />
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <QuickActionCard
                   href="/post-job"
                   icon="+"
-                  title="Post a Job"
-                  description="Create a new opportunity and start finding skilled workers."
+                  title={t('postJob')}
+                  description={t('postJobDescription')}
                 />
 
                 <QuickActionCard
                   href="/workers"
                   icon="⌖"
-                  title="Find Workers"
-                  description="Browse qualified workers by trade, location, and availability."
+                  title={t('findWorkers')}
+                  description={t('findWorkersDescription')}
                 />
 
                 <QuickActionCard
                   href="/messages"
                   icon="✉"
-                  title="Messages"
-                  description="Continue conversations with applicants and assigned workers."
+                  title={t('messages')}
+                  description={t('messagesDescription')}
                 />
 
                 <QuickActionCard
                   href="/company/worker-map"
                   icon="◎"
-                  title="Worker Map"
-                  description="See available workers and their general work locations."
+                  title={t('workerMap')}
+                  description={t('workerMapDescription')}
                 />
 
                 <QuickActionCard
                   href="/company/jobs"
                   icon="▣"
-                  title="Manage Jobs"
-                  description="Review open, assigned, active, and completed jobs."
+                  title={t('manageJobs')}
+                  description={t('manageJobsDescription')}
                 />
 
                 <QuickActionCard
                   href="/company/applications"
                   icon="✓"
-                  title="Applications"
-                  description="Review workers who have applied to your job postings."
+                  title={t('applications')}
+                  description={t('applicationsDescription')}
                 />
 
                 <QuickActionCard
                   href="/company/invites"
                   icon="➜"
-                  title="Worker Invites"
-                  description="Track pending, accepted, and declined worker invitations."
+                  title={t('workerInvites')}
+                  description={t('workerInvitesDescription')}
                 />
 
                 <QuickActionCard
                   href="/billing"
                   icon="$"
-                  title="Billing"
-                  description="Manage your CrewCall billing and subscription settings."
+                  title={t('billing')}
+                  description={t('billingDescription')}
                 />
               </div>
             </section>
@@ -1391,12 +1376,12 @@ export default function CompanyDashboardPage() {
             <section className="grid gap-6 xl:grid-cols-3">
               <GlassCard padding="lg" accent className="xl:col-span-2">
                 <SectionHeader
-                  eyebrow="Hiring Pipeline"
-                  title="Recent applicants"
-                  description="The newest workers interested in your open jobs."
+                  eyebrow={t('hiringPipeline')}
+                  title={t('recentApplicants')}
+                  description={t('recentApplicantsDescription')}
                   action={
                     <SecondaryButton href="/company/applications" size="sm">
-                      View All
+                      {t('viewAll')}
                     </SecondaryButton>
                   }
                 />
@@ -1404,8 +1389,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {recentApplications.length === 0 ? (
                     <EmptyState
-                      title="No applicants yet"
-                      description="New worker applications will appear here after workers apply to your jobs."
+                      title={t('noApplicants')}
+                      description={t('noApplicantsLongDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1427,13 +1412,12 @@ export default function CompanyDashboardPage() {
                             </div>
 
                             <p className="mt-2 text-sm font-semibold text-slate-400">
-                              Application received{' '}
-                              {formatDate(application.created_at)}
+                              {t('applicationReceived', { date: formatDate(application.created_at) })}
                             </p>
                           </div>
 
                           <span className="shrink-0 text-sm font-black text-blue-300 transition group-hover:translate-x-1">
-                            Review Applicant →
+                            {t('reviewApplicant')}
                           </span>
                         </Link>
                       ))}
@@ -1444,30 +1428,30 @@ export default function CompanyDashboardPage() {
 
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Activity"
-                  title="Account status"
-                  description="Important company totals and alerts."
+                  eyebrow={t('activity')}
+                  title={t('accountStatus')}
+                  description={t('accountStatusDescription')}
                 />
 
                 <div className="mt-6 space-y-3">
                   <ActivityMetric
-                    label="Active jobs"
+                    label={t('activeJobs')}
                     value={activeJobs.length}
                   />
 
                   <ActivityMetric
-                    label="Urgent jobs"
+                    label={t('urgentJobs')}
                     value={stats.urgentJobs}
                     tone={stats.urgentJobs > 0 ? 'amber' : 'default'}
                   />
 
                   <ActivityMetric
-                    label="Featured jobs"
+                    label={t('featuredJobs')}
                     value={stats.featuredJobs}
                   />
 
                   <ActivityMetric
-                    label="Unread alerts"
+                    label={t('unreadAlertsMetric')}
                     value={stats.unreadNotifications}
                     tone={
                       stats.unreadNotifications > 0
@@ -1477,14 +1461,14 @@ export default function CompanyDashboardPage() {
                   />
 
                   <ActivityMetric
-                    label="Company reviews"
+                    label={t('companyReviews')}
                     value={reviews.length}
                   />
                 </div>
 
                 <div className="mt-5">
                   <SecondaryButton href="/notifications">
-                    Open Notifications
+                    {t('openNotifications')}
                   </SecondaryButton>
                 </div>
               </GlassCard>
@@ -1493,12 +1477,12 @@ export default function CompanyDashboardPage() {
             <section className="grid gap-6 xl:grid-cols-2">
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Communication"
-                  title="Recent messages"
-                  description="Newest activity from your job conversations."
+                  eyebrow={t('communication')}
+                  title={t('recentMessages')}
+                  description={t('recentMessagesDescription')}
                   action={
                     <SecondaryButton href="/messages" size="sm">
-                      Open Messages
+                      {t('openMessages')}
                     </SecondaryButton>
                   }
                 />
@@ -1506,8 +1490,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {recentMessages.length === 0 ? (
                     <EmptyState
-                      title="No recent messages"
-                      description="Messages from applicants and hired workers will appear here."
+                      title={t('noRecentMessages')}
+                      description={t('noRecentMessagesDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1524,7 +1508,7 @@ export default function CompanyDashboardPage() {
                               </p>
 
                               <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">
-                                {message.body || 'New job message'}
+                                {message.body || t('newJobMessage')}
                               </p>
                             </div>
 
@@ -1545,12 +1529,12 @@ export default function CompanyDashboardPage() {
 
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Notifications"
-                  title="Recent alerts"
-                  description="The latest updates requiring your attention."
+                  eyebrow={t('notifications')}
+                  title={t('recentAlerts')}
+                  description={t('recentAlertsDescription')}
                   action={
                     <SecondaryButton href="/notifications" size="sm">
-                      View All
+                      {t('viewAll')}
                     </SecondaryButton>
                   }
                 />
@@ -1558,8 +1542,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {notifications.length === 0 ? (
                     <EmptyState
-                      title="No notifications"
-                      description="Important CrewCall activity and account alerts will appear here."
+                      title={t('noNotifications')}
+                      description={t('noNotificationsDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1582,7 +1566,7 @@ export default function CompanyDashboardPage() {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <p className="font-black text-white">
                                     {notification.title ||
-                                      'CrewCall notification'}
+                                      t('crewCallNotification')}
                                   </p>
 
                                   {isUnread && (
@@ -1591,14 +1575,14 @@ export default function CompanyDashboardPage() {
                                       dot
                                       pulse
                                     >
-                                      New
+                                      {t('new')}
                                     </StatusBadge>
                                   )}
                                 </div>
 
                                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">
                                   {notification.body ||
-                                    'You have a new CrewCall update.'}
+                                    t('newUpdate')}
                                 </p>
                               </div>
 
@@ -1622,9 +1606,9 @@ export default function CompanyDashboardPage() {
                 className="xl:col-span-2"
               >
                 <SectionHeader
-                  eyebrow="Needs Attention"
-                  title="Jobs with no applicants"
-                  description="These open jobs may need a boost or additional promotion."
+                  eyebrow={t('needsAttention')}
+                  title={t('jobsNoApplicants')}
+                  description={t('jobsNoApplicantsDescription')}
                   action={
                     <SecondaryButton href="/company/jobs" size="sm">
                       Manage Jobs
@@ -1635,8 +1619,8 @@ export default function CompanyDashboardPage() {
                 <div className="mt-6">
                   {jobsNeedingAttention.length === 0 ? (
                     <EmptyState
-                      title="Everything has activity"
-                      description="Every open job currently has at least one applicant."
+                      title={t('everythingActive')}
+                      description={t('everythingActiveDescription')}
                     />
                   ) : (
                     <div className="space-y-3">
@@ -1650,23 +1634,23 @@ export default function CompanyDashboardPage() {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="truncate font-black text-white">
-                                  {job.title || 'Untitled job'}
+                                  {job.title || t('untitledJob')}
                                 </p>
 
                                 <StatusBadge tone="amber" dot>
-                                  No Applicants
+                                  {t('noApplicantsBadge')}
                                 </StatusBadge>
 
                                 {job.urgent && (
                                   <StatusBadge tone="red">
-                                    Urgent
+                                    {t('urgent')}
                                   </StatusBadge>
                                 )}
                               </div>
 
                               <p className="mt-2 text-sm font-semibold text-amber-100/70">
                                 {job.trade || 'Trade not listed'} •{' '}
-                                {job.location || 'Location not listed'}
+                                {job.location || t('locationNotListed')}
                               </p>
                             </div>
 
@@ -1675,14 +1659,14 @@ export default function CompanyDashboardPage() {
                                 href={`/my-jobs/${job.id}`}
                                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-white transition hover:bg-white/10"
                               >
-                                View
+                                {t('view').replace(' →', '')}
                               </Link>
 
                               <Link
                                 href={`/jobs/${job.id}/boost`}
                                 className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-300"
                               >
-                                Boost Job
+                                {t('boostJob')}
                               </Link>
                             </div>
                           </div>
@@ -1694,40 +1678,40 @@ export default function CompanyDashboardPage() {
 
               <GlassCard padding="lg">
                 <SectionHeader
-                  eyebrow="Performance"
-                  title="Hiring snapshot"
-                  description="A quick view of your hiring funnel."
+                  eyebrow={t('performance')}
+                  title={t('hiringSnapshot')}
+                  description={t('hiringSnapshotDescription')}
                 />
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                   <HiringMetric
-                    label="Job views"
+                    label={t('jobViews')}
                     value={stats.views}
-                    description="Workers viewing your postings"
+                    description={t('workersViewing')}
                   />
 
                   <HiringMetric
-                    label="Applications"
+                    label={t('applications')}
                     value={stats.applications}
-                    description="Workers entering your pipeline"
+                    description={t('workersPipeline')}
                   />
 
                   <HiringMetric
-                    label="Assigned"
+                    label={t('assigned')}
                     value={stats.assignedJobs}
-                    description="Jobs matched with workers"
+                    description={t('jobsMatched')}
                   />
 
                   <HiringMetric
-                    label="Completed"
+                    label={t('completed')}
                     value={stats.completedJobs}
-                    description="Finished CrewCall jobs"
+                    description={t('finishedJobs')}
                   />
                 </div>
 
                 <div className="mt-5">
                   <PrimaryButton href="/company/analytics">
-                    View Full Analytics
+                    {t('viewFullAnalytics')}
                   </PrimaryButton>
                 </div>
               </GlassCard>
@@ -1735,12 +1719,12 @@ export default function CompanyDashboardPage() {
 
             <GlassCard padding="lg">
               <SectionHeader
-                eyebrow="Job Management"
-                title="Recent company jobs"
-                description="Quick access to your newest job postings."
+                eyebrow={t('jobManagement')}
+                title={t('recentCompanyJobs')}
+                description={t('recentCompanyJobsDescription')}
                 action={
                   <SecondaryButton href="/company/jobs" size="sm">
-                    View All Jobs
+                    {t('viewAllJobs')}
                   </SecondaryButton>
                 }
               />
@@ -1761,12 +1745,12 @@ export default function CompanyDashboardPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-lg font-black text-white">
-                            {job.title || 'Untitled job'}
+                            {job.title || t('untitledJob')}
                           </p>
 
                           <p className="mt-2 truncate text-sm font-semibold text-slate-400">
                             {job.trade || 'Trade not listed'} •{' '}
-                            {job.location || 'Location not listed'}
+                            {job.location || t('locationNotListed')}
                           </p>
                         </div>
 
@@ -1776,7 +1760,7 @@ export default function CompanyDashboardPage() {
                       <div className="mt-5 grid grid-cols-2 gap-3">
                         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
                           <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-500">
-                            Applicants
+                            {t('applicants')}
                           </p>
 
                           <p className="mt-2 text-2xl font-black text-white">
@@ -1786,7 +1770,7 @@ export default function CompanyDashboardPage() {
 
                         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
                           <p className="text-xs font-black uppercase tracking-[0.15em] text-slate-500">
-                            Pay Rate
+                            {t('payRate')}
                           </p>
 
                           <p className="mt-2 truncate text-2xl font-black text-white">
@@ -1800,36 +1784,36 @@ export default function CompanyDashboardPage() {
                       <div className="mt-5 flex flex-wrap gap-2">
                         {job.urgent && (
                           <StatusBadge tone="red" dot>
-                            Urgent
+                            {t('urgent')}
                           </StatusBadge>
                         )}
 
                         {job.is_featured && (
                           <StatusBadge tone="purple">
-                            Featured
+                            {t('featured')}
                           </StatusBadge>
                         )}
 
                         {job.assigned_worker_id && (
                           <StatusBadge tone="green">
-                            Worker Assigned
+                            {t('workerAssigned')}
                           </StatusBadge>
                         )}
 
                         {job.payment_status === 'paid' && (
                           <StatusBadge tone="green">
-                            Paid
+                            {t('paid')}
                           </StatusBadge>
                         )}
                       </div>
 
                       <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
                         <span className="text-xs font-bold text-slate-500">
-                          Posted {formatDate(job.created_at)}
+                          {t('posted', { date: formatDate(job.created_at) })}
                         </span>
 
                         <span className="text-sm font-black text-blue-300 transition group-hover:translate-x-1">
-                          Manage →
+                          {t('manage')}
                         </span>
                       </div>
                     </Link>
@@ -1844,18 +1828,20 @@ export default function CompanyDashboardPage() {
   )
 }
 
-function getGreeting() {
+function getGreeting(
+  t: ReturnType<typeof useTranslations>
+) {
   const hour = new Date().getHours()
 
   if (hour < 12) {
-    return 'Good morning'
+    return t('goodMorning')
   }
 
   if (hour < 17) {
-    return 'Good afternoon'
+    return t('goodAfternoon')
   }
 
-  return 'Good evening'
+  return t('goodEvening')
 }
 
 function ActionCenterCard({
@@ -1958,6 +1944,8 @@ function QuickActionCard({
   title: string
   description: string
 }) {
+  const t = useTranslations('CompanyDashboard')
+
   return (
     <Link href={href} className="group block">
       <GlassCard
@@ -1979,7 +1967,7 @@ function QuickActionCard({
           </p>
 
           <span className="mt-5 text-sm font-black text-blue-300 transition group-hover:translate-x-1">
-            Open →
+            {t('open')}
           </span>
         </div>
       </GlassCard>
@@ -2109,6 +2097,7 @@ function ApplicationStatusBadge({
 }: {
   status: string | null
 }) {
+  const t = useTranslations('CompanyDashboard')
   const normalizedStatus = status?.toLowerCase() || 'pending'
 
   if (
@@ -2117,7 +2106,7 @@ function ApplicationStatusBadge({
   ) {
     return (
       <StatusBadge tone="green" dot>
-        {formatStatus(normalizedStatus)}
+        {translatedStatus(normalizedStatus, t)}
       </StatusBadge>
     )
   }
@@ -2129,14 +2118,14 @@ function ApplicationStatusBadge({
   ) {
     return (
       <StatusBadge tone="red">
-        {formatStatus(normalizedStatus)}
+        {translatedStatus(normalizedStatus, t)}
       </StatusBadge>
     )
   }
 
   return (
     <StatusBadge tone="amber" dot>
-      {formatStatus(normalizedStatus)}
+      {translatedStatus(normalizedStatus, t)}
     </StatusBadge>
   )
 }
@@ -2146,12 +2135,13 @@ function JobStatusBadge({
 }: {
   status: string | null
 }) {
+  const t = useTranslations('CompanyDashboard')
   const normalizedStatus = status?.toLowerCase() || 'open'
 
   if (normalizedStatus === 'completed') {
     return (
       <StatusBadge tone="green" dot>
-        Completed
+        {t('statusCompleted')}
       </StatusBadge>
     )
   }
@@ -2159,7 +2149,7 @@ function JobStatusBadge({
   if (normalizedStatus === 'in_progress') {
     return (
       <StatusBadge tone="cyan" dot pulse>
-        In Progress
+        {t('statusInProgress')}
       </StatusBadge>
     )
   }
@@ -2167,7 +2157,7 @@ function JobStatusBadge({
   if (normalizedStatus === 'assigned') {
     return (
       <StatusBadge tone="purple" dot>
-        Assigned
+        {t('statusAssigned')}
       </StatusBadge>
     )
   }
@@ -2178,40 +2168,58 @@ function JobStatusBadge({
   ) {
     return (
       <StatusBadge tone="slate">
-        {formatStatus(normalizedStatus)}
+        {translatedStatus(normalizedStatus, t)}
       </StatusBadge>
     )
   }
 
   return (
     <StatusBadge tone="blue" dot>
-      Open
+      {t('statusOpen')}
     </StatusBadge>
   )
 }
 
-function formatTime(value: string | null | undefined) {
-  if (!value) return 'Time TBD'
+function formatTime(
+  value: string | null | undefined,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (!value) return t('timeTbd')
 
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Time TBD'
 
-  return date.toLocaleTimeString('en-US', {
+  if (Number.isNaN(date.getTime())) return t('timeTbd')
+
+  return date.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
   })
 }
 
-function formatRelativeTime(value: string | null) {
-  if (!value) return 'Recently'
+function formatRelativeTime(
+  value: string | null,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (!value) return t('recently')
 
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Recently'
 
-  const seconds = Math.round((date.getTime() - Date.now()) / 1000)
-  const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+  if (Number.isNaN(date.getTime())) return t('recently')
 
-  const ranges: Array<[number, Intl.RelativeTimeFormatUnit]> = [
+  const seconds = Math.round(
+    (date.getTime() - Date.now()) / 1000
+  )
+
+  const formatter = new Intl.RelativeTimeFormat(
+    locale,
+    { numeric: 'auto' }
+  )
+
+  const ranges: Array<
+    [number, Intl.RelativeTimeFormatUnit]
+  > = [
     [60, 'second'],
     [60, 'minute'],
     [24, 'hour'],
@@ -2225,13 +2233,38 @@ function formatRelativeTime(value: string | null) {
 
   for (const [amount, unit] of ranges) {
     if (Math.abs(duration) < amount) {
-      return formatter.format(Math.round(duration), unit)
+      return formatter.format(
+        Math.round(duration),
+        unit
+      )
     }
 
     duration /= amount
   }
 
-  return 'Recently'
+  return t('recently')
+}
+
+function translatedStatus(
+  value: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  const map: Record<string, string> = {
+    pending: t('statusPending'),
+    hired: t('statusHired'),
+    accepted: t('statusAccepted'),
+    not_selected: t('statusNotSelected'),
+    declined: t('statusDeclined'),
+    withdrawn: t('statusWithdrawn'),
+    completed: t('statusCompleted'),
+    in_progress: t('statusInProgress'),
+    assigned: t('statusAssigned'),
+    closed: t('statusClosed'),
+    cancelled: t('statusCancelled'),
+    open: t('statusOpen'),
+  }
+
+  return map[value] || formatStatus(value)
 }
 
 function formatStatus(value: string) {
