@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 
 type PayrollRow = {
   worker: string
@@ -43,22 +44,24 @@ const payroll: PayrollRow[] = [
 ]
 
 export default function PayrollPage() {
+
+  const t = useTranslations('CompanyPayroll')
   const stats = useMemo(
     () => [
       {
-        label: 'Total Labor This Week',
+        label: t('totalLaborThisWeek'),
         value: '$18,420',
       },
       {
-        label: 'Workers',
+        label: t('workers'),
         value: '42',
       },
       {
-        label: 'Overtime Hours',
+        label: t('overtimeHours'),
         value: '34.5',
       },
       {
-        label: 'Pending Approval',
+        label: t('pendingApproval'),
         value: '8',
       },
     ],
@@ -71,15 +74,15 @@ export default function PayrollPage() {
 
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            Finance
+            {t('finance')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Payroll & Labor Reports
+            {t('title')}
           </h1>
 
           <p className="mt-3 text-slate-400">
-            Review labor costs, approve hours, and export payroll data.
+            {t('description')}
           </p>
         </section>
 
@@ -104,16 +107,16 @@ export default function PayrollPage() {
 
           <div className="flex flex-wrap justify-between gap-4">
             <h2 className="text-2xl font-black">
-              Weekly Payroll
+              {t('weeklyPayroll')}
             </h2>
 
             <div className="flex gap-3">
               <button className="rounded-xl bg-white/10 px-4 py-2 font-bold">
-                Export CSV
+                {t('exportCsv')}
               </button>
 
               <button className="rounded-xl bg-cyan-400 px-4 py-2 font-black text-slate-950">
-                Approve Payroll
+                {t('approvePayroll')}
               </button>
             </div>
           </div>
@@ -151,18 +154,24 @@ export default function PayrollPage() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-4">
 
                   <Stat
-                    label="Regular"
-                    value={`${row.regularHours} hrs`}
+                    label={t('regular')}
+                    value={t('hoursValue', { hours: row.regularHours })}
                   />
 
                   <Stat
-                    label="Overtime"
-                    value={`${row.overtimeHours} hrs`}
+                    label={t('overtime')}
+                    value={t('hoursValue', { hours: row.overtimeHours })}
                   />
 
                   <Stat
-                    label="Status"
-                    value={row.status}
+                    label={t('status')}
+                    value={
+                      row.status === 'Ready'
+                        ? t('ready')
+                        : row.status === 'Approved'
+                          ? t('approved')
+                          : t('review')
+                    }
                   />
 
                   <button className="rounded-xl bg-white/10 font-bold">
@@ -179,20 +188,20 @@ export default function PayrollPage() {
         <section className="rounded-2xl border border-purple-400/20 bg-purple-400/5 p-6">
 
           <h2 className="text-xl font-black">
-            AI Labor Intelligence
+            {t('aiLaborIntelligence')}
           </h2>
 
           <div className="mt-4 space-y-3 text-sm text-slate-300">
             <p>
-              • Overtime is increasing on commercial projects.
+              • {t('insightOvertime')}
             </p>
 
             <p>
-              • Average labor cost is 6% below company target.
+              • {t('insightLaborCost')}
             </p>
 
             <p>
-              • Two crews may need additional staffing next week.
+              • {t('insightStaffing')}
             </p>
           </div>
 
