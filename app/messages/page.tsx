@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   useCallback,
   useEffect,
@@ -73,11 +74,11 @@ function normalizeConversationRow(row: any): Conversation {
   } as Conversation
 }
 
-function getDisplayName(profile: Profile | null) {
+function getDisplayName(profile: Profile | null, t: ReturnType<typeof useTranslations>) {
   return (
     profile?.company_name ||
     profile?.full_name ||
-    'CrewCall User'
+    t('user')
   )
 }
 
@@ -99,11 +100,11 @@ function isActuallyOnline(profile: Profile | null) {
   return Date.now() - lastSeen < 90_000
 }
 
-function formatRelativeTime(value: string) {
+function formatRelativeTime(value: string, t: ReturnType<typeof useTranslations>) {
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'recently'
+    return t('recently')
   }
 
   const diff = Math.max(0, Date.now() - date.getTime())
@@ -113,19 +114,19 @@ function formatRelativeTime(value: string) {
   const days = Math.floor(hours / 24)
 
   if (seconds < 60) {
-    return 'just now'
+    return t('justNow')
   }
 
   if (minutes < 60) {
-    return `${minutes}m ago`
+    return t('minutesAgo', { count: minutes })
   }
 
   if (hours < 24) {
-    return `${hours}h ago`
+    return t('hoursAgo', { count: hours })
   }
 
   if (days < 7) {
-    return `${days}d ago`
+    return t('daysAgo', { count: days })
   }
 
   return date.toLocaleDateString(undefined, {
@@ -165,19 +166,20 @@ function formatMessageTime(value: string | undefined) {
   })
 }
 
-function presenceLabel(profile: Profile | null) {
+function presenceLabel(profile: Profile | null, t: ReturnType<typeof useTranslations>) {
   if (isActuallyOnline(profile)) {
-    return 'Online now'
+    return t('onlineNow')
   }
 
   if (!profile?.last_seen) {
-    return 'Offline'
+    return t('offline')
   }
 
-  return `Last seen ${formatRelativeTime(profile.last_seen)}`
+  return t('lastSeen', { time: formatRelativeTime(profile.last_seen, t) })
 }
 
 export default function MessagesPage() {
+  const t = useTranslations('Messages')
   const [currentUser, setCurrentUser] =
     useState<Profile | null>(null)
 
@@ -221,7 +223,7 @@ export default function MessagesPage() {
         if (userError || !user) {
           throw new Error(
             userError?.message ||
-              'You must be logged in to view messages.'
+              t('loginRequired')
           )
         }
 
@@ -243,7 +245,7 @@ export default function MessagesPage() {
 
         if (profileError || !profileData) {
           throw new Error(
-            profileError?.message || 'Profile not found.'
+            profileError?.message || t('profileNotFound')
           )
         }
 
@@ -308,7 +310,7 @@ export default function MessagesPage() {
           setProfileFiles([])
 
           if (backgroundRefresh) {
-            setMessage('Messages refreshed.')
+            setMessage(t('refreshed'))
             setMessageTone('success')
           }
 
@@ -504,7 +506,7 @@ export default function MessagesPage() {
         )
 
         if (backgroundRefresh) {
-          setMessage('Messages refreshed.')
+          setMessage(t('refreshed'))
           setMessageTone('success')
         }
 
@@ -515,7 +517,7 @@ export default function MessagesPage() {
         setMessage(
           error instanceof Error
             ? error.message
-            : 'Unable to load messages.'
+            : t('unableToLoad')
         )
         setMessageTone('error')
 
@@ -528,7 +530,7 @@ export default function MessagesPage() {
         setRefreshing(false)
       }
     },
-    [showArchived]
+    [showArchived, t]
   )
 
   useEffect(() => {
@@ -687,7 +689,7 @@ export default function MessagesPage() {
     const term = search.trim().toLowerCase()
 
     return cards.filter((card) => {
-      const otherName = getDisplayName(card.otherUser)
+      const otherName = getDisplayName(card.otherUser, t)
 
       const searchable = [
         otherName,
@@ -734,8 +736,8 @@ export default function MessagesPage() {
 
     const confirmed = window.confirm(
       showArchived
-        ? 'Restore this conversation to your inbox?'
-        : 'Archive this conversation from your inbox?'
+        ? t('restoreConfirm')
+        : t('archiveConfirm')
     )
 
     if (!confirmed) {
@@ -768,8 +770,8 @@ export default function MessagesPage() {
 
     setMessage(
       showArchived
-        ? 'Conversation restored.'
-        : 'Conversation archived.'
+        ? t('restored')
+        : t('archivedNotice')
     )
     setMessageTone('success')
 
@@ -811,18 +813,18 @@ export default function MessagesPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge
-                    label="CrewCall Inbox"
+                    label={t('inbox')}
                     tone="cyan"
                   />
 
                   {unreadTotal > 0 ? (
                     <StatusBadge
-                      label={`${unreadTotal} Unread`}
+                      label={t('unreadCount', { count: unreadTotal })}
                       tone="amber"
                     />
                   ) : (
                     <StatusBadge
-                      label="All Caught Up"
+                      label={t('allCaughtUp')}
                       tone="green"
                     />
                   )}
@@ -830,32 +832,30 @@ export default function MessagesPage() {
 
                 <h1 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
                   {showArchived
-                    ? 'Archived Messages'
-                    : 'Messages'}
+                    ? t('archivedMessages')
+                    : t('messages')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-400 sm:text-base">
-                  Keep job conversations organized with
-                  live updates, unread tracking, presence
-                  indicators, and archived conversations.
+                  {t('description')}
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <HeroStat
-                  label="Chats"
+                  label={t('chats')}
                   value={String(cards.length)}
                   tone="cyan"
                 />
 
                 <HeroStat
-                  label="Unread"
+                  label={t('unread')}
                   value={String(unreadTotal)}
                   tone="amber"
                 />
 
                 <HeroStat
-                  label="Online"
+                  label={t('online')}
                   value={String(onlineTotal)}
                   tone="green"
                 />
@@ -876,7 +876,7 @@ export default function MessagesPage() {
                 onChange={(event) =>
                   setSearch(event.target.value)
                 }
-                placeholder="Search people, jobs, trades, locations, or messages..."
+                placeholder={t('searchPlaceholder')}
                 className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 pr-12 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/40 focus:ring-4 focus:ring-cyan-400/5"
               />
 
@@ -886,7 +886,7 @@ export default function MessagesPage() {
                   onClick={() => setSearch('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl px-3 py-2 text-xs font-black text-slate-400 transition hover:bg-white/5 hover:text-white"
                 >
-                  Clear
+                  {t('clear')}
                 </button>
               ) : null}
             </div>
@@ -898,8 +898,8 @@ export default function MessagesPage() {
               className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-5 py-3 text-sm font-black text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {refreshing
-                ? 'Refreshing...'
-                : 'Refresh'}
+                ? t('refreshing')
+                : t('refresh')}
             </button>
           </div>
 
@@ -909,8 +909,8 @@ export default function MessagesPage() {
               onClick={() =>
                 setUnreadOnly((previous) => !previous)
               }
-              activeLabel="Unread Filter On"
-              inactiveLabel="Unread Only"
+              activeLabel={t('unreadFilterOn')}
+              inactiveLabel={t('unreadOnly')}
               tone="amber"
             />
 
@@ -919,8 +919,8 @@ export default function MessagesPage() {
               onClick={() =>
                 setOnlineOnly((previous) => !previous)
               }
-              activeLabel="Online Filter On"
-              inactiveLabel="Online Only"
+              activeLabel={t('onlineFilterOn')}
+              inactiveLabel={t('onlineOnly')}
               tone="green"
             />
 
@@ -929,8 +929,8 @@ export default function MessagesPage() {
               onClick={() =>
                 setShowArchived((previous) => !previous)
               }
-              activeLabel="Back to Inbox"
-              inactiveLabel="Archived"
+              activeLabel={t('backToInbox')}
+              inactiveLabel={t('archived')}
               tone="cyan"
             />
 
@@ -940,7 +940,7 @@ export default function MessagesPage() {
                 onClick={resetFilters}
                 className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/[0.1] hover:text-white"
               >
-                Clear Filters
+                {t('clearFilters')}
               </button>
             ) : null}
           </div>
@@ -960,7 +960,8 @@ export default function MessagesPage() {
           ) : (
             filteredCards.map((card) => {
               const otherName = getDisplayName(
-                card.otherUser
+                card.otherUser,
+                t
               )
 
               const otherPhoto = card.otherUser?.id
@@ -978,13 +979,14 @@ export default function MessagesPage() {
               const messagePreview = card.lastMessage
                 ? card.lastMessage.sender_id ===
                   currentUser?.id
-                  ? `You: ${
-                      card.lastMessage.body ||
-                      'Attachment or empty message'
-                    }`
+                  ? t('youPrefix', {
+                      message:
+                        card.lastMessage.body ||
+                        t('attachmentEmpty'),
+                    })
                   : card.lastMessage.body ||
-                    'Attachment or empty message'
-                : 'No messages yet.'
+                    t('attachmentEmpty')
+                : t('noMessages')
 
               return (
                 <article
@@ -1056,8 +1058,8 @@ export default function MessagesPage() {
                                 label={
                                   card.otherUser.role ===
                                   'company'
-                                    ? 'Company'
-                                    : 'Worker'
+                                    ? t('company')
+                                    : t('worker')
                                 }
                                 tone="slate"
                               />
@@ -1087,7 +1089,8 @@ export default function MessagesPage() {
                               }
                             >
                               {presenceLabel(
-                                card.otherUser
+                                card.otherUser,
+                                t
                               )}
                             </span>
 
@@ -1105,7 +1108,7 @@ export default function MessagesPage() {
                             <div className="mt-3 flex flex-wrap gap-2">
                               <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300">
                                 {job.title ||
-                                  'Untitled Job'}
+                                  t('untitledJob')}
                               </span>
 
                               {job.trade ? (
@@ -1147,7 +1150,7 @@ export default function MessagesPage() {
                           }}
                           className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
                         >
-                          Open Chat
+                          {t('openChat')}
                         </Link>
 
                         <button
@@ -1166,11 +1169,11 @@ export default function MessagesPage() {
                           {archivingId ===
                           card.conversation.id
                             ? showArchived
-                              ? 'Restoring...'
-                              : 'Archiving...'
+                              ? t('restoring')
+                              : t('archiving')
                             : showArchived
-                              ? 'Restore'
-                              : 'Archive'}
+                              ? t('restore')
+                              : t('archive')}
                         </button>
                       </div>
                     </div>

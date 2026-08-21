@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -19,6 +20,7 @@ type Conversation = {
 }
 
 export default function MessageConversationPage() {
+  const t = useTranslations('MessageThread')
   const params = useParams()
   const id = String(params.id || '')
 
@@ -54,7 +56,7 @@ export default function MessageConversationPage() {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setError('Please log in.')
+      setError(t('loginRequired'))
       return
     }
 
@@ -70,7 +72,7 @@ export default function MessageConversationPage() {
       .single()
 
     if (convoError || !convo) {
-      setError('Conversation not found.')
+      setError(t('notFound'))
       return
     }
 
@@ -79,7 +81,7 @@ export default function MessageConversationPage() {
       convo.company_id !== user.id
     ) {
       setError(
-        'You do not have access to this conversation.'
+        t('noAccess')
       )
       return
     }
@@ -215,7 +217,7 @@ export default function MessageConversationPage() {
       setError(
         sendError instanceof Error
           ? sendError.message
-          : 'Unable to send message.'
+          : t('sendFailed')
       )
     } finally {
       setSending(false)
@@ -322,12 +324,12 @@ export default function MessageConversationPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <h1 className="text-3xl font-black">
-            CrewCall Messages
+            {t('title')}
           </h1>
 
           {conversation ? (
             <p className="mt-2 text-slate-400">
-              Job conversation
+              {t('jobConversation')}
             </p>
           ) : null}
         </div>
@@ -335,7 +337,7 @@ export default function MessageConversationPage() {
         <div className="min-h-[400px] space-y-4 rounded-3xl border border-white/10 bg-slate-900/60 p-6">
           {messages.length === 0 ? (
             <p className="text-slate-400">
-              No messages yet.
+              {t('noMessages')}
             </p>
           ) : null}
 
@@ -354,7 +356,7 @@ export default function MessageConversationPage() {
 
           {otherTyping ? (
             <div className="max-w-fit rounded-2xl bg-white/5 px-4 py-2 text-sm font-bold text-cyan-300">
-              Typing...
+              {t('typing')}
             </div>
           ) : null}
         </div>
@@ -377,7 +379,7 @@ export default function MessageConversationPage() {
                   void sendMessage()
                 }
               }}
-              placeholder="Type message..."
+              placeholder={t('placeholder')}
               className="flex-1 rounded-2xl bg-white/10 px-5 py-3 text-white outline-none focus:ring-2 focus:ring-cyan-400/40"
             />
 
@@ -392,8 +394,8 @@ export default function MessageConversationPage() {
               className="rounded-2xl bg-blue-500 px-6 font-black transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {sending
-                ? 'Sending...'
-                : 'Send'}
+                ? t('sending')
+                : t('send')}
             </button>
           </div>
         </div>
