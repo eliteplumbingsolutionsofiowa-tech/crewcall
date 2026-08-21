@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 type TimeEntry = {
   id: string
@@ -47,24 +48,26 @@ const entries: TimeEntry[] = [
 ]
 
 export default function TimeTrackingPage() {
-  const [activeTab, setActiveTab] = useState('Today')
+
+  const t = useTranslations('CompanyTimeTracking')
+  const [activeTab, setActiveTab] = useState('today')
 
   const stats = useMemo(
     () => [
       {
-        label: 'Workers Clocked In',
+        label: t('workersClockedIn'),
         value: '18',
       },
       {
-        label: 'Hours Today',
+        label: t('hoursToday'),
         value: '142.5',
       },
       {
-        label: 'Overtime Hours',
+        label: t('overtimeHours'),
         value: '12.4',
       },
       {
-        label: 'Pending Approval',
+        label: t('pendingApproval'),
         value: '7',
       },
     ],
@@ -77,15 +80,15 @@ export default function TimeTrackingPage() {
 
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            Workforce
+            {t('workforce')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Time Tracking
+            {t('title')}
           </h1>
 
           <p className="mt-3 text-slate-400">
-            Track hours, approve labor, and manage workforce costs.
+            {t('description')}
           </p>
         </section>
 
@@ -108,7 +111,12 @@ export default function TimeTrackingPage() {
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex flex-wrap gap-3">
-            {['Today', 'Week', 'Payroll', 'Reports'].map((tab) => (
+            {[
+              ['today', t('today')],
+              ['week', t('week')],
+              ['payroll', t('payroll')],
+              ['reports', t('reports')],
+            ].map(([tab, label]) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -118,7 +126,7 @@ export default function TimeTrackingPage() {
                     : 'rounded-xl bg-white/10 px-5 py-2 font-bold'
                 }
               >
-                {tab}
+                {label}
               </button>
             ))}
           </div>
@@ -148,7 +156,7 @@ export default function TimeTrackingPage() {
 
                 <div className="text-right">
                   <p className="text-3xl font-black">
-                    {entry.hours} hrs
+                    {entry.hours} {t('hrs')}
                   </p>
 
                   <span
@@ -160,7 +168,11 @@ export default function TimeTrackingPage() {
                           : 'rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-bold text-cyan-300'
                     }
                   >
-                    {entry.status}
+                    {entry.status === 'approved'
+                      ? t('approved')
+                      : entry.status === 'pending'
+                        ? t('pending')
+                        : t('review')}
                   </span>
                 </div>
 
@@ -168,11 +180,11 @@ export default function TimeTrackingPage() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button className="rounded-xl bg-white/10 px-4 py-2 font-bold">
-                  View Details
+                  {t('viewDetails')}
                 </button>
 
                 <button className="rounded-xl bg-cyan-400 px-4 py-2 font-black text-slate-950">
-                  Approve
+                  {t('approve')}
                 </button>
               </div>
             </div>
@@ -181,20 +193,20 @@ export default function TimeTrackingPage() {
 
         <section className="rounded-2xl border border-purple-400/20 bg-purple-400/5 p-6">
           <h2 className="text-xl font-black">
-            AI Labor Insights
+            {t('aiLaborInsights')}
           </h2>
 
           <div className="mt-4 space-y-3 text-sm text-slate-300">
             <p>
-              • Overtime risk detected on 3 active jobs.
+              • {t('insightOvertime')}
             </p>
 
             <p>
-              • Crew productivity is 8% above average this week.
+              • {t('insightProductivity')}
             </p>
 
             <p>
-              • Moving one worker could reduce travel time by 42 minutes.
+              • {t('insightTravel')}
             </p>
           </div>
         </section>

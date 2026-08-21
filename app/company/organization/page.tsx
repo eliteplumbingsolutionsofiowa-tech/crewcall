@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 
@@ -64,10 +65,13 @@ const roles = [
 ]
 
 export default function OrganizationPage() {
+
+  const t = useTranslations('CompanyOrganization')
+  const locale = useLocale()
   const supabaseAny = supabase as any
 
   const [companyId, setCompanyId] = useState<string | null>(null)
-  const [companyName, setCompanyName] = useState('Company')
+  const [companyName, setCompanyName] = useState(t('companyFallback'))
 
   const [branches, setBranches] = useState<Branch[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -90,6 +94,49 @@ export default function OrganizationPage() {
   const [selectedRole, setSelectedRole] = useState('Admin')
   const [selectedBranchId, setSelectedBranchId] = useState('')
 
+  function roleLabel(role: string) {
+    const labels: Record<string, string> = {
+      Owner: 'Propietario',
+      Admin: 'Administrador',
+      'Branch Manager': 'Gerente de Sucursal',
+      Dispatcher: 'Despachador',
+      Recruiter: 'Reclutador',
+      Accounting: 'Contabilidad',
+      Supervisor: 'Supervisor',
+      Employee: 'Empleado',
+    }
+
+    if (locale !== 'es') return role
+    return labels[role] || role
+  }
+
+  function memberStatusLabel(status: string) {
+    const normalized = status.toLowerCase()
+
+    if (normalized === 'invited') {
+      return locale === 'es' ? 'Invitado' : 'Invited'
+    }
+
+    if (normalized === 'active') {
+      return locale === 'es' ? 'Activo' : 'Active'
+    }
+
+    if (normalized === 'accepted') {
+      return locale === 'es' ? 'Aceptado' : 'Accepted'
+    }
+
+    if (normalized === 'joined') {
+      return locale === 'es' ? 'Se unió' : 'Joined'
+    }
+
+    if (normalized === 'disabled') {
+      return locale === 'es' ? 'Deshabilitado' : 'Disabled'
+    }
+
+    return status
+  }
+
+
   const loadOrganization = useCallback(async () => {
     setLoading(true)
     setMessage(null)
@@ -100,7 +147,7 @@ export default function OrganizationPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('You must be logged in to manage your organization.')
+      setMessage(t('loginRequired'))
       setLoading(false)
       return
     }
@@ -114,7 +161,7 @@ export default function OrganizationPage() {
     if (!companyContext.companyId) {
       setCompanyId(null)
       setMessage(
-        'Create or join a company before managing an organization.'
+        t('companyRequired')
       )
       setLoading(false)
       return
@@ -141,7 +188,7 @@ export default function OrganizationPage() {
     setCompanyName(
       profile?.company_name ||
         profile?.full_name ||
-        'Company'
+        t('companyFallback')
     )
 
     const [
@@ -218,7 +265,7 @@ export default function OrganizationPage() {
     )
 
     setLoading(false)
-  }, [supabaseAny])
+  }, [supabaseAny, t])
 
   useEffect(() => {
     void loadOrganization()
@@ -251,19 +298,19 @@ export default function OrganizationPage() {
   const stats = useMemo(
     () => [
       {
-        label: 'Branches',
+        label: t('branches'),
         value: branches.length,
       },
       {
-        label: 'Team Members',
+        label: t('teamMembers'),
         value: teamMembers.length,
       },
       {
-        label: 'Active Jobs',
+        label: t('activeJobs'),
         value: activeJobs,
       },
       {
-        label: 'Pending Invites',
+        label: t('pendingInvites'),
         value: pendingInvites,
       },
     ],
@@ -272,6 +319,7 @@ export default function OrganizationPage() {
       branches.length,
       pendingInvites,
       teamMembers.length,
+      t,
     ]
   )
 
@@ -319,7 +367,7 @@ export default function OrganizationPage() {
     const name = branchForm.name.trim()
 
     if (!name) {
-      setBranchError('Enter a branch name.')
+      setBranchError(t('enterBranchName'))
       return
     }
 
@@ -331,7 +379,7 @@ export default function OrganizationPage() {
 
     if (duplicateBranch) {
       setBranchError(
-        `A branch named "${name}" already exists. Choose a different name.`
+        t('duplicateBranch', { name })
       )
       return
     }
@@ -381,7 +429,7 @@ export default function OrganizationPage() {
 
         if (error) throw error
 
-        setMessage('Branch updated successfully.')
+        setMessage(t('branchUpdated'))
       } else {
         const { error } = await supabaseAny
           .from('company_branches')
@@ -389,7 +437,7 @@ export default function OrganizationPage() {
 
         if (error) throw error
 
-        setMessage('Branch added successfully.')
+        setMessage(t('branchAdded'))
       }
 
       cancelBranchForm()
@@ -398,7 +446,7 @@ export default function OrganizationPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Could not save branch.'
+          : t('branchSaveFailed')
       )
     } finally {
       setSaving(false)
@@ -416,7 +464,7 @@ export default function OrganizationPage() {
     setInviteMessage(null)
 
     if (!email) {
-      setInviteError('Enter an email address.')
+      setInviteError(t('enterEmail'))
       return
     }
 
@@ -424,7 +472,7 @@ export default function OrganizationPage() {
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
     if (!emailLooksValid) {
-      setInviteError('Enter a valid email address.')
+      setInviteError(t('validEmail'))
       return
     }
 
@@ -438,7 +486,7 @@ export default function OrganizationPage() {
       existingMember.status !== 'invited'
     ) {
       setInviteError(
-        `${email} is already a member of this company.`
+        t('alreadyMember', { email })
       )
       return
     }
@@ -500,7 +548,7 @@ export default function OrganizationPage() {
 
       if (!session?.access_token) {
         throw new Error(
-          'Invitation was saved, but CrewCall could not verify your session to send the email.'
+          t('inviteSessionError')
         )
       }
 
@@ -528,16 +576,17 @@ export default function OrganizationPage() {
 
       if (!emailResponse.ok) {
         setInviteError(
-          `Invitation was saved, but the email could not be sent: ${
-            emailResult?.error ||
-            'Unknown email error.'
-          }`
+          t('inviteEmailFailed', {
+            error:
+              emailResult?.error ||
+              t('unknownEmailError'),
+          })
         )
       } else {
         setInviteMessage(
           existingMember
-            ? `Invitation re-sent to ${email}.`
-            : `Invitation emailed to ${email}.`
+            ? t('inviteResent', { email })
+            : t('inviteSent', { email })
         )
       }
 
@@ -546,7 +595,7 @@ export default function OrganizationPage() {
       setInviteError(
         error instanceof Error
           ? error.message
-          : 'Could not create team member invite.'
+          : t('inviteCreateFailed')
       )
     } finally {
       setSaving(false)
@@ -558,7 +607,7 @@ export default function OrganizationPage() {
       <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
         <div className="mx-auto max-w-7xl rounded-3xl border border-white/10 bg-white/5 p-8">
           <p className="font-black text-slate-300">
-            Loading organization...
+            {t('loading')}
           </p>
         </div>
       </main>
@@ -570,16 +619,15 @@ export default function OrganizationPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            Enterprise
+            {t('enterprise')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Organization Management
+            {t('title')}
           </h1>
 
           <p className="mt-3 max-w-3xl text-slate-400">
-            Manage branches, teams, permissions, and workforce operations
-            across {companyName}.
+            {t('description', { company: companyName })}
           </p>
         </section>
 
@@ -609,7 +657,7 @@ export default function OrganizationPage() {
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-black">
-              Branches
+              {t('branches')}
             </h2>
 
             <button
@@ -617,7 +665,7 @@ export default function OrganizationPage() {
               onClick={startAddBranch}
               className="rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950"
             >
-              Add Branch
+              {t('addBranch')}
             </button>
           </div>
 
@@ -639,7 +687,7 @@ export default function OrganizationPage() {
                     }))
                     setBranchError(null)
                   }}
-                  placeholder="Branch name"
+                  placeholder={t('branchName')}
                   className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
                 />
 
@@ -651,7 +699,7 @@ export default function OrganizationPage() {
                       phone: event.target.value,
                     }))
                   }
-                  placeholder="Phone"
+                  placeholder={t('phone')}
                   className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
                 />
 
@@ -663,7 +711,7 @@ export default function OrganizationPage() {
                       address: event.target.value,
                     }))
                   }
-                  placeholder="Street address"
+                  placeholder={t('streetAddress')}
                   className="rounded-xl bg-slate-900 px-4 py-3 outline-none md:col-span-2"
                 />
 
@@ -675,7 +723,7 @@ export default function OrganizationPage() {
                       city: event.target.value,
                     }))
                   }
-                  placeholder="City"
+                  placeholder={t('city')}
                   className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
                 />
 
@@ -687,7 +735,7 @@ export default function OrganizationPage() {
                       state: event.target.value,
                     }))
                   }
-                  placeholder="State"
+                  placeholder={t('state')}
                   className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
                 />
               </div>
@@ -705,7 +753,7 @@ export default function OrganizationPage() {
                   }
                   className="h-5 w-5 accent-cyan-400"
                 />
-                Headquarters
+                {t('headquarters')}
               </label>
 
               {branchError && (
@@ -722,10 +770,10 @@ export default function OrganizationPage() {
                   className="rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950 disabled:opacity-60"
                 >
                   {saving
-                    ? 'Saving...'
+                    ? t('saving')
                     : editingBranchId
-                      ? 'Save Changes'
-                      : 'Create Branch'}
+                      ? t('saveChanges')
+                      : t('createBranch')}
                 </button>
 
                 <button
@@ -734,7 +782,7 @@ export default function OrganizationPage() {
                   disabled={saving}
                   className="rounded-xl bg-white/10 px-5 py-3 font-black"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             </div>
@@ -742,7 +790,7 @@ export default function OrganizationPage() {
 
           {branches.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-400">
-              No branches yet. Add your first branch above.
+              {t('noBranches')}
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
@@ -768,7 +816,7 @@ export default function OrganizationPage() {
                           {[branch.city, branch.state]
                             .filter(Boolean)
                             .join(', ') ||
-                            'Location not added'}
+                            t('locationNotAdded')}
                         </p>
                       </div>
 
@@ -799,30 +847,30 @@ export default function OrganizationPage() {
                     {viewing && (
                       <div className="mt-5 rounded-xl border border-white/10 bg-slate-950/60 p-4">
                         <p className="text-xs font-bold uppercase text-slate-500">
-                          Address
+                          {t('address')}
                         </p>
 
                         <p className="mt-1 font-bold text-slate-200">
                           {branch.address ||
-                            'Not added'}
+                            t('notAdded')}
                         </p>
 
                         <p className="mt-4 text-xs font-bold uppercase text-slate-500">
-                          Phone
+                          {t('phone')}
                         </p>
 
                         <p className="mt-1 font-bold text-slate-200">
                           {branch.phone ||
-                            'Not added'}
+                            t('notAdded')}
                         </p>
 
                         <p className="mt-4 text-xs font-bold uppercase text-slate-500">
-                          Team
+                          {t('team')}
                         </p>
 
                         {branchMembers.length === 0 ? (
                           <p className="mt-1 text-sm font-semibold text-slate-400">
-                            No team members assigned.
+                            {t('noTeamAssigned')}
                           </p>
                         ) : (
                           <div className="mt-2 space-y-2">
@@ -836,8 +884,8 @@ export default function OrganizationPage() {
                                     {member.email}
                                   </span>{' '}
                                   <span className="text-slate-400">
-                                    · {member.role} ·{' '}
-                                    {member.status}
+                                    · {roleLabel(member.role)} ·{' '}
+                                    {memberStatusLabel(member.status)}
                                   </span>
                                 </div>
                               )
@@ -859,7 +907,7 @@ export default function OrganizationPage() {
                         }
                         className="rounded-xl bg-white/10 px-4 py-2 font-bold"
                       >
-                        {viewing ? 'Close' : 'View'}
+                        {viewing ? t('close') : t('view')}
                       </button>
 
                       <button
@@ -869,7 +917,7 @@ export default function OrganizationPage() {
                         }
                         className="rounded-xl bg-white/10 px-4 py-2 font-bold"
                       >
-                        Edit
+                        {t('edit')}
                       </button>
                     </div>
                   </div>
@@ -881,12 +929,11 @@ export default function OrganizationPage() {
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-2xl font-black">
-            Add Team Member
+            {t('addTeamMember')}
           </h2>
 
           <p className="mt-2 text-sm font-semibold text-slate-400">
-            Create a company team invitation and optionally assign it
-            to a branch.
+            {t('addTeamDescription')}
           </p>
 
           <div className="mt-5 grid gap-4 md:grid-cols-4">
@@ -897,7 +944,7 @@ export default function OrganizationPage() {
                 setInviteError(null)
                 setInviteMessage(null)
               }}
-              placeholder="Email address"
+              placeholder={t('emailAddress')}
               type="email"
               className="rounded-xl bg-slate-900 px-4 py-3 outline-none"
             />
@@ -910,8 +957,8 @@ export default function OrganizationPage() {
               className="rounded-xl bg-slate-900 px-4 py-3"
             >
               {roles.map((role) => (
-                <option key={role} value={role}>
-                  {role}
+                <option key={roleLabel(role)} value={roleLabel(role)}>
+                  {roleLabel(role)}
                 </option>
               ))}
             </select>
@@ -926,7 +973,7 @@ export default function OrganizationPage() {
               className="rounded-xl bg-slate-900 px-4 py-3"
             >
               <option value="">
-                No branch assigned
+                {t('noBranchAssigned')}
               </option>
 
               {branches.map((branch) => (
@@ -946,8 +993,8 @@ export default function OrganizationPage() {
               className="rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950 disabled:opacity-60"
             >
               {saving
-                ? 'Saving...'
-                : 'Send Invite'}
+                ? t('saving')
+                : t('sendInvite')}
             </button>
           </div>
 
@@ -966,12 +1013,12 @@ export default function OrganizationPage() {
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-xl font-black">
-            Team Invitations
+            {t('teamInvitations')}
           </h2>
 
           {teamMembers.length === 0 ? (
             <p className="mt-4 text-sm font-semibold text-slate-400">
-              No team members or invitations yet.
+              {t('noTeamInvites')}
             </p>
           ) : (
             <div className="mt-4 space-y-3">
@@ -996,12 +1043,12 @@ export default function OrganizationPage() {
                       <p className="text-sm font-semibold text-slate-400">
                         {member.role} ·{' '}
                         {branch?.name ||
-                          'No branch'}
+                          t('noBranch')}
                       </p>
                     </div>
 
                     <span className="w-fit rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase text-cyan-300">
-                      {member.status}
+                      {memberStatusLabel(member.status)}
                     </span>
                   </div>
                 )

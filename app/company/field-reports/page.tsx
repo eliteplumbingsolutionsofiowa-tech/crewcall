@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 
 type Report = {
   id: string
@@ -37,22 +38,24 @@ const reports: Report[] = [
 ]
 
 export default function FieldReportsPage() {
+
+  const t = useTranslations('CompanyFieldReports')
   const stats = useMemo(
     () => [
       {
-        label: 'Reports Today',
+        label: t('reportsToday'),
         value: '24',
       },
       {
-        label: 'Photos Uploaded',
+        label: t('photosUploaded'),
         value: '186',
       },
       {
-        label: 'Hours Logged',
+        label: t('hoursLogged'),
         value: '192',
       },
       {
-        label: 'Pending Review',
+        label: t('pendingReview'),
         value: '6',
       },
     ],
@@ -65,15 +68,15 @@ export default function FieldReportsPage() {
 
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            Field Operations
+            {t('fieldOperations')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Daily Field Reports
+            {t('title')}
           </h1>
 
           <p className="mt-3 text-slate-400">
-            Track progress, photos, labor, materials, and jobsite updates.
+            {t('description')}
           </p>
         </section>
 
@@ -96,11 +99,11 @@ export default function FieldReportsPage() {
 
         <section className="flex flex-wrap gap-3">
           <button className="rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950">
-            New Report
+            {t('newReport')}
           </button>
 
           <button className="rounded-xl bg-white/10 px-5 py-3 font-bold">
-            Export Reports
+            {t('exportReports')}
           </button>
         </section>
 
@@ -127,7 +130,11 @@ export default function FieldReportsPage() {
                 </div>
 
                 <span className="rounded-full bg-cyan-400/20 px-4 py-2 text-sm font-bold text-cyan-300">
-                  {report.status}
+                  {report.status === 'Submitted'
+                  ? t('submitted')
+                  : report.status === 'Approved'
+                    ? t('approved')
+                    : report.status}
                 </span>
 
               </div>
@@ -135,22 +142,22 @@ export default function FieldReportsPage() {
               <div className="mt-5 grid gap-3 sm:grid-cols-4">
 
                 <Stat
-                  label="Photos"
+                  label={t('photos')}
                   value={String(report.photos)}
                 />
 
                 <Stat
-                  label="Hours"
+                  label={t('hours')}
                   value={String(report.hours)}
                 />
 
                 <Stat
-                  label="Location"
+                  label={t('location')}
                   value={report.location}
                 />
 
                 <button className="rounded-xl bg-white/10 font-bold">
-                  View Report
+                  {t('viewReport')}
                 </button>
 
               </div>
@@ -161,20 +168,20 @@ export default function FieldReportsPage() {
         <section className="rounded-2xl border border-purple-400/20 bg-purple-400/5 p-6">
 
           <h2 className="text-xl font-black">
-            AI Field Summary
+            {t('aiFieldSummary')}
           </h2>
 
           <div className="mt-4 space-y-3 text-sm text-slate-300">
             <p>
-              • Production is on schedule for 92% of active jobs.
+              • {t('insightProduction')}
             </p>
 
             <p>
-              • Two jobs may need additional manpower tomorrow.
+              • {t('insightManpower')}
             </p>
 
             <p>
-              • Material delays detected on one project.
+              • {t('insightMaterials')}
             </p>
           </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 
@@ -23,6 +24,9 @@ function PaymentSection({
   title: string
   payments: PaymentRow[]
 }) {
+  const t = useTranslations('CompanyPayments')
+  const locale = useLocale()
+
   return (
     <section className="mt-8 space-y-5">
       <h2 className="text-2xl font-black">
@@ -31,7 +35,7 @@ function PaymentSection({
 
       {payments.length === 0 ? (
         <div className="rounded-xl bg-white/10 p-6">
-          No {title.toLowerCase()}.
+          {t('none')}
         </div>
       ) : (
         payments.map((payment) => (
@@ -40,13 +44,13 @@ function PaymentSection({
             className="rounded-3xl border border-white/10 bg-white/5 p-6"
           >
             <h3 className="text-2xl font-black">
-              {payment.title || 'CrewCall Job'}
+              {payment.title || t('crewCallJob')}
             </h3>
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <div>
                 <p className="text-sm text-slate-400">
-                  Worker Paid
+                  {t('workerPaid')}
                 </p>
                 <p className="font-bold">
                   ${((payment.worker_payout_cents || 0) / 100).toFixed(2)}
@@ -55,20 +59,22 @@ function PaymentSection({
 
               <div>
                 <p className="text-sm text-slate-400">
-                  Status
+                  {t('status')}
                 </p>
                 <p className="font-bold">
-                  {payment.payout_status || 'pending'}
+                  {payment.payout_status === 'released'
+                    ? t('releasedStatus')
+                    : t('pendingStatus')}
                 </p>
               </div>
 
               <div>
                 <p className="text-sm text-slate-400">
-                  Released
+                  {t('released')}
                 </p>
                 <p className="font-bold">
                   {payment.payout_released_at
-                    ? new Date(payment.payout_released_at).toLocaleDateString()
+                    ? new Date(payment.payout_released_at).toLocaleDateString(locale)
                     : '-'}
                 </p>
               </div>
@@ -76,7 +82,7 @@ function PaymentSection({
 
             {payment.stripe_transfer_id && (
               <p className="mt-4 text-xs text-slate-400 break-all">
-                Stripe Transfer: {payment.stripe_transfer_id}
+                {t('stripeTransfer')}: {payment.stripe_transfer_id}
               </p>
             )}
           </div>
@@ -87,6 +93,8 @@ function PaymentSection({
 }
 
 export default function CompanyPaymentsPage() {
+
+  const t = useTranslations('CompanyPayments')
   const [payments, setPayments] = useState<PaymentRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -186,18 +194,18 @@ export default function CompanyPaymentsPage() {
       <div className="mx-auto max-w-6xl">
 
         <h1 className="text-4xl font-black">
-          Payment History
+          {t('paymentHistory')}
         </h1>
 
         <p className="mt-2 text-slate-300">
-          Track CrewCall payments and worker payouts.
+          {t('description')}
         </p>
 
         <div className="mt-8 grid gap-5 md:grid-cols-2">
 
           <div className="rounded-3xl bg-white/5 p-8 border border-white/10">
             <p className="text-sm text-slate-400">
-              Total Paid
+              {t('totalPaid')}
             </p>
             <p className="mt-2 text-4xl font-black">
               ${totalSpent.toFixed(2)}
@@ -206,7 +214,7 @@ export default function CompanyPaymentsPage() {
 
           <div className="rounded-3xl bg-white/5 p-8 border border-white/10">
             <p className="text-sm text-slate-400">
-              CrewCall Fees
+              {t('crewCallFees')}
             </p>
             <p className="mt-2 text-4xl font-black">
               ${(totalFees / 100).toFixed(2)}
@@ -217,12 +225,12 @@ export default function CompanyPaymentsPage() {
 
 
         <PaymentSection
-          title="Payment History"
+          title={t('paymentHistory')}
           payments={releasedPayments}
         />
 
         <PaymentSection
-          title="Pending Payments"
+          title={t('pendingPayments')}
           payments={pendingPayments}
         />
 
