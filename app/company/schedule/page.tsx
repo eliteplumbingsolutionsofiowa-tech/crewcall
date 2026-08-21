@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 
@@ -31,26 +32,37 @@ type ScheduleItem = {
 }
 
 const days = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-]
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+] as const
 
-function formatTime(date: Date) {
-  return date.toLocaleTimeString([], {
+function formatTime(date: Date, locale: string) {
+  return date.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
   })
 }
 
 export default function WorkforceSchedulePage() {
+  const t = useTranslations('CompanySchedule')
+  const locale = useLocale()
+
+  const weekdayKeys = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ] as const
+
   const [selectedDay, setSelectedDay] =
-    useState(
-      new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-      })
+    useState<(typeof weekdayKeys)[number]>(
+      weekdayKeys[new Date().getDay()]
     )
 
   const [jobs, setJobs] = useState<Job[]>([])
@@ -74,7 +86,7 @@ export default function WorkforceSchedulePage() {
 
       if (userError || !user) {
         setMessage(
-          'Please log in to view workforce scheduling.'
+          t('loginRequired')
         )
         return
       }
@@ -87,7 +99,7 @@ export default function WorkforceSchedulePage() {
 
       if (!companyContext.companyId) {
         setMessage(
-          'You are not connected to a company account.'
+          t('companyRequired')
         )
         return
       }
@@ -175,7 +187,7 @@ export default function WorkforceSchedulePage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to load schedule.'
+          : t('loadFailed')
       )
     } finally {
       setLoading(false)
@@ -201,18 +213,18 @@ export default function WorkforceSchedulePage() {
             id: job.id,
             worker:
               worker?.full_name ||
-              'Unassigned',
+              t('unassigned'),
             trade:
               job.trade ||
-              'Trade not set',
+              t('tradeNotSet'),
             job:
               job.title ||
-              'Untitled Job',
+              t('untitledJob'),
             location:
               job.location ||
-              'Location not set',
+              t('locationNotSet'),
             date,
-            time: formatTime(date),
+            time: formatTime(date, locale),
             status:
               job.status ||
               'open',
@@ -224,18 +236,14 @@ export default function WorkforceSchedulePage() {
               item.date.getTime()
             )
         )
-    }, [jobs, workers])
+    }, [jobs, workers, locale, t])
 
   const selectedItems =
     useMemo(() => {
       return scheduleItems.filter(
         (item) =>
-          item.date.toLocaleDateString(
-            'en-US',
-            {
-              weekday: 'long',
-            }
-          ) === selectedDay
+          weekdayKeys[item.date.getDay()] ===
+          selectedDay
       )
     }, [
       scheduleItems,
@@ -248,8 +256,11 @@ export default function WorkforceSchedulePage() {
         scheduleItems
           .filter(
             (item) =>
-              item.worker !==
-              'Unassigned'
+              Boolean(
+              jobs.find(
+                (job) => job.id === item.id
+              )?.assigned_worker_id
+            )
           )
           .map(
             (item) => item.worker
@@ -268,55 +279,54 @@ export default function WorkforceSchedulePage() {
     const unassigned =
       scheduleItems.filter(
         (item) =>
-          item.worker ===
-          'Unassigned'
+          !jobs.find(
+            (job) => job.id === item.id
+          )?.assigned_worker_id
       ).length
 
     return [
       {
         label:
-          'Workers Scheduled',
+          t('workersScheduled'),
         value:
           String(
             scheduledWorkers
           ),
       },
       {
-        label: 'Scheduled Jobs',
+        label: t('scheduledJobs'),
         value:
           String(
             scheduleItems.length
           ),
       },
       {
-        label: 'Active Jobs',
+        label: t('activeJobs'),
         value:
           String(activeJobs),
       },
       {
-        label: 'Unassigned',
+        label: t('unassigned'),
         value:
           String(unassigned),
       },
     ]
-  }, [scheduleItems])
+  }, [jobs, scheduleItems, t])
 
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
       <div className="mx-auto max-w-7xl space-y-8">
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            Operations
+            {t('operations')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Workforce Scheduling
+            {t('title')}
           </h1>
 
           <p className="mt-3 text-slate-400">
-            View scheduled jobs,
-            assigned workers, and
-            upcoming workforce needs.
+            {t('description')}
           </p>
         </section>
 
@@ -359,7 +369,7 @@ export default function WorkforceSchedulePage() {
                     : 'rounded-xl bg-white/10 px-5 py-2 font-bold'
                 }
               >
-                {day}
+                {t(day)}
               </button>
             ))}
           </div>
@@ -368,20 +378,19 @@ export default function WorkforceSchedulePage() {
         <section className="grid gap-5">
           {loading ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-slate-300">
-              Loading schedule...
+              {t('loading')}
             </div>
           ) : selectedItems.length ===
             0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
               <h2 className="text-xl font-black">
-                No jobs scheduled for{' '}
-                {selectedDay}
+                {t('noJobsScheduled', {
+                  day: t(selectedDay),
+                })}
               </h2>
 
               <p className="mt-2 text-sm text-slate-400">
-                Jobs with a start date
-                will appear here
-                automatically.
+                {t('jobsAppearAutomatically')}
               </p>
             </div>
           ) : (
@@ -419,9 +428,21 @@ export default function WorkforceSchedulePage() {
                             : 'rounded-full bg-cyan-400/20 px-4 py-2 text-sm font-bold text-cyan-300'
                       }
                     >
-                      {item.status.replaceAll(
-                        '_',
-                        ' '
+                      {t(
+                        `status.${item.status}` as
+                          | 'status.open'
+                          | 'status.assigned'
+                          | 'status.in_progress'
+                          | 'status.completed'
+                          | 'status.closed'
+                          | 'status.cancelled',
+                        {
+                          fallback:
+                            item.status.replaceAll(
+                              '_',
+                              ' '
+                            ),
+                        }
                       )}
                     </span>
                   </div>
@@ -433,17 +454,11 @@ export default function WorkforceSchedulePage() {
 
         <section className="rounded-2xl border border-purple-400/20 bg-purple-400/5 p-6">
           <h2 className="text-xl font-black">
-            Scheduling Overview
+            {t('overview')}
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            CrewCall uses your actual
-            job start dates and worker
-            assignments to build this
-            schedule. Unassigned jobs
-            are highlighted so your
-            team can address staffing
-            needs before the job starts.
+            {t('overviewDescription')}
           </p>
         </section>
       </div>

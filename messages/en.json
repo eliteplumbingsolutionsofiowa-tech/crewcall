@@ -1574,5 +1574,40 @@
     "hoursAgo": "{count}h ago",
     "daysAgo": "{count}d ago",
     "crewCallWorker": "CrewCall Worker"
+  },
+  "CompanySchedule": {
+    "operations": "Operations",
+    "title": "Workforce Scheduling",
+    "description": "View scheduled jobs, assigned workers, and upcoming workforce needs.",
+    "loginRequired": "Please log in to view workforce scheduling.",
+    "companyRequired": "You are not connected to a company account.",
+    "loadFailed": "Unable to load schedule.",
+    "unassigned": "Unassigned",
+    "tradeNotSet": "Trade not set",
+    "untitledJob": "Untitled Job",
+    "locationNotSet": "Location not set",
+    "workersScheduled": "Workers Scheduled",
+    "scheduledJobs": "Scheduled Jobs",
+    "activeJobs": "Active Jobs",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "loading": "Loading schedule...",
+    "noJobsScheduled": "No jobs scheduled for {day}",
+    "jobsAppearAutomatically": "Jobs with a start date will appear here automatically.",
+    "overview": "Scheduling Overview",
+    "overviewDescription": "CrewCall uses your actual job start dates and worker assignments to build this schedule. Unassigned jobs are highlighted so your team can address staffing needs before the job starts.",
+    "status": {
+      "open": "Open",
+      "assigned": "Assigned",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    }
   }
 }

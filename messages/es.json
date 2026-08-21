@@ -1574,5 +1574,40 @@
     "hoursAgo": "Hace {count} h",
     "daysAgo": "Hace {count} d",
     "crewCallWorker": "Trabajador de CrewCall"
+  },
+  "CompanySchedule": {
+    "operations": "Operaciones",
+    "title": "Programación de Personal",
+    "description": "Consulta los trabajos programados, trabajadores asignados y próximas necesidades de personal.",
+    "loginRequired": "Inicia sesión para ver la programación de personal.",
+    "companyRequired": "No estás conectado a una cuenta de empresa.",
+    "loadFailed": "No se pudo cargar el horario.",
+    "unassigned": "Sin Asignar",
+    "tradeNotSet": "Oficio no especificado",
+    "untitledJob": "Trabajo sin Título",
+    "locationNotSet": "Ubicación no especificada",
+    "workersScheduled": "Trabajadores Programados",
+    "scheduledJobs": "Trabajos Programados",
+    "activeJobs": "Trabajos Activos",
+    "monday": "Lunes",
+    "tuesday": "Martes",
+    "wednesday": "Miércoles",
+    "thursday": "Jueves",
+    "friday": "Viernes",
+    "saturday": "Sábado",
+    "sunday": "Domingo",
+    "loading": "Cargando horario...",
+    "noJobsScheduled": "No hay trabajos programados para {day}",
+    "jobsAppearAutomatically": "Los trabajos con una fecha de inicio aparecerán aquí automáticamente.",
+    "overview": "Resumen de Programación",
+    "overviewDescription": "CrewCall utiliza las fechas reales de inicio de tus trabajos y las asignaciones de trabajadores para crear este horario. Los trabajos sin asignar se resaltan para que tu equipo pueda resolver las necesidades de personal antes de que comience el trabajo.",
+    "status": {
+      "open": "Abierto",
+      "assigned": "Asignado",
+      "in_progress": "En Progreso",
+      "completed": "Completado",
+      "closed": "Cerrado",
+      "cancelled": "Cancelado"
+    }
   }
 }
