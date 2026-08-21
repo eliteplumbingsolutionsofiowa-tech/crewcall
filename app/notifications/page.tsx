@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Notification = {
@@ -128,7 +129,7 @@ function categoryFor(type: string | null): TypeFilter {
   return 'system'
 }
 
-function relativeTime(value: string) {
+function relativeTime(value: string, t: ReturnType<typeof useTranslations>) {
   const created = new Date(value)
   const now = new Date()
   const seconds = Math.max(
@@ -136,23 +137,24 @@ function relativeTime(value: string) {
     Math.floor((now.getTime() - created.getTime()) / 1000)
   )
 
-  if (seconds < 10) return 'Just now'
-  if (seconds < 60) return `${seconds} seconds ago`
+  if (seconds < 10) return t('justNow')
+  if (seconds < 60) return seconds === 1 ? t('oneSecondAgo') : t('secondsAgo', { count: seconds })
 
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  if (minutes < 60) return minutes === 1 ? t('oneMinuteAgo') : t('minutesAgo', { count: minutes })
 
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  if (hours < 24) return hours === 1 ? t('oneHourAgo') : t('hoursAgo', { count: hours })
 
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
+  if (days < 7) return days === 1 ? t('oneDayAgo') : t('daysAgo', { count: days })
 
   return created.toLocaleString()
 }
 
 export default function NotificationsPage() {
   const router = useRouter()
+  const t = useTranslations('Notifications')
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -174,7 +176,7 @@ export default function NotificationsPage() {
 
     setToast({
       id: notification.id,
-      title: notification.title || 'New CrewCall alert',
+      title: notification.title || t('newAlert'),
       body: notification.body,
       linkUrl: notification.link_url,
     })
@@ -182,7 +184,7 @@ export default function NotificationsPage() {
     toastTimerRef.current = setTimeout(() => {
       setToast(null)
     }, 6000)
-  }, [])
+  }, [t])
 
   const loadNotifications = useCallback(async () => {
     setRefreshing(true)
@@ -196,7 +198,7 @@ export default function NotificationsPage() {
       if (!user) {
         setUserId(null)
         setNotifications([])
-        setErrorMessage('You must be logged in.')
+        setErrorMessage(t('loginRequired'))
         return
       }
 
@@ -227,12 +229,12 @@ export default function NotificationsPage() {
       setNotifications(data ?? [])
     } catch (error) {
       console.error('Unable to load notifications:', error)
-      setErrorMessage('Unable to load notifications. Please try again.')
+      setErrorMessage(t('loadFailed'))
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     loadNotifications()
@@ -321,7 +323,7 @@ export default function NotificationsPage() {
         if (status === 'CHANNEL_ERROR') {
           console.error('Notifications realtime channel failed.')
           setErrorMessage(
-            'Live notifications temporarily disconnected. The page will refresh when you return.'
+            t('liveDisconnected')
           )
         }
       })
@@ -417,7 +419,7 @@ export default function NotificationsPage() {
   }
 
   async function clearNotification(id: string) {
-    const confirmed = window.confirm('Delete this notification permanently?')
+    const confirmed = window.confirm(t('deleteConfirm'))
 
     if (!confirmed) return
 
@@ -506,7 +508,7 @@ export default function NotificationsPage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading notifications...</p>
+          <p className="text-lg font-black">{t('loading')}</p>
         </div>
       </main>
     )
@@ -523,7 +525,7 @@ export default function NotificationsPage() {
 
             <div className="min-w-0 flex-1">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                New CrewCall Alert
+                {t('newAlert')}
               </p>
 
               <h2 className="mt-1 truncate text-lg font-black text-white">
@@ -555,7 +557,7 @@ export default function NotificationsPage() {
                     }}
                     className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
                   >
-                    Open
+                    {t('open')}
                   </button>
                 )}
 
@@ -564,7 +566,7 @@ export default function NotificationsPage() {
                   onClick={() => setToast(null)}
                   className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/20"
                 >
-                  Dismiss
+                  {t('dismiss')}
                 </button>
               </div>
             </div>
@@ -578,24 +580,23 @@ export default function NotificationsPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  Live Alerts Center
+                  {t('eyebrow')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Notifications
+                  {t('title')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  New messages, jobs, applications, invites, payments, and
-                  reviews appear instantly without refreshing.
+                  {t('description')}
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <StatCard label="Total" value={notifications.length} />
-                <StatCard label="Unread" value={unreadCount} />
+                <StatCard label={t('total')} value={notifications.length} />
+                <StatCard label={t('unread')} value={unreadCount} />
                 <StatCard
-                  label="Read"
+                  label={t('read')}
                   value={notifications.length - unreadCount}
                 />
               </div>
@@ -613,20 +614,20 @@ export default function NotificationsPage() {
               <div className="grid gap-4 xl:grid-cols-[1fr_190px_210px_auto_auto] xl:items-end">
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Search
+                    {t('search')}
                   </label>
 
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search notifications..."
+                    placeholder={t('searchPlaceholder')}
                     className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Status
+                    {t('status')}
                   </label>
 
                   <select
@@ -636,15 +637,15 @@ export default function NotificationsPage() {
                     }
                     className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
                   >
-                    <option value="all">All</option>
-                    <option value="unread">Unread</option>
-                    <option value="read">Read</option>
+                    <option value="all">{t('all')}</option>
+                    <option value="unread">{t('unread')}</option>
+                    <option value="read">{t('read')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Type
+                    {t('type')}
                   </label>
 
                   <select
@@ -654,14 +655,14 @@ export default function NotificationsPage() {
                     }
                     className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
                   >
-                    <option value="all">All Types</option>
-                    <option value="messages">Messages</option>
-                    <option value="jobs">Jobs</option>
-                    <option value="applications">Applications</option>
-                    <option value="invites">Invites</option>
-                    <option value="payments">Payments</option>
-                    <option value="reviews">Reviews</option>
-                    <option value="system">System</option>
+                    <option value="all">{t('allTypes')}</option>
+                    <option value="messages">{t('messages')}</option>
+                    <option value="jobs">{t('jobs')}</option>
+                    <option value="applications">{t('applications')}</option>
+                    <option value="invites">{t('invites')}</option>
+                    <option value="payments">{t('payments')}</option>
+                    <option value="reviews">{t('reviews')}</option>
+                    <option value="system">{t('system')}</option>
                   </select>
                 </div>
 
@@ -671,7 +672,7 @@ export default function NotificationsPage() {
                   disabled={refreshing}
                   className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                  {refreshing ? t('refreshing') : t('refresh')}
                 </button>
 
                 <button
@@ -680,7 +681,7 @@ export default function NotificationsPage() {
                   disabled={markingAll || unreadCount === 0}
                   className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {markingAll ? 'Updating...' : 'Mark All Read'}
+                  {markingAll ? t('updating') : t('markAllRead')}
                 </button>
               </div>
             </div>
@@ -692,11 +693,11 @@ export default function NotificationsPage() {
                 </div>
 
                 <h2 className="mt-6 text-3xl font-black text-white">
-                  No notifications
+                  {t('noNotifications')}
                 </h2>
 
                 <p className="mt-3 text-sm font-bold text-slate-400">
-                  New CrewCall activity will appear here instantly.
+                  {t('emptyDescription')}
                 </p>
               </div>
             ) : (
@@ -718,7 +719,7 @@ export default function NotificationsPage() {
                           <div className="mb-3 flex flex-wrap items-center gap-2">
                             {unread && (
                               <span className="animate-pulse rounded-full border border-cyan-300/20 bg-cyan-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-cyan-100">
-                                New
+                                {t('new')}
                               </span>
                             )}
 
@@ -729,14 +730,14 @@ export default function NotificationsPage() {
                                 )}`}
                               >
                                 {notification.type === 'invite'
-                                  ? 'INVITE'
+                                  ? t('invite')
                                   : notification.type}
                               </span>
                             )}
                           </div>
 
                           <h2 className="text-2xl font-black text-white">
-                            {notification.title || 'Notification'}
+                            {notification.title || t('notification')}
                           </h2>
 
                           {notification.body && (
@@ -747,7 +748,7 @@ export default function NotificationsPage() {
 
                           <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-black uppercase tracking-wide">
                             <span className="text-cyan-300">
-                              {relativeTime(notification.created_at)}
+                              {relativeTime(notification.created_at, t)}
                             </span>
 
                             <span className="text-slate-600">•</span>
@@ -769,13 +770,13 @@ export default function NotificationsPage() {
                               className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {workingId === notification.id
-                                ? 'Opening...'
+                                ? t('opening')
                                 : notification.type === 'invite'
-                                  ? 'View Invite'
+                                  ? t('viewInvite')
                                   : notification.type === 'applicant' ||
                                       notification.type === 'application'
-                                    ? 'View Applicant'
-                                    : 'Open'}
+                                    ? t('viewApplicant')
+                                    : t('open')}
                             </button>
                           )}
 
@@ -789,8 +790,8 @@ export default function NotificationsPage() {
                               className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {workingId === notification.id
-                                ? 'Updating...'
-                                : 'Mark Read'}
+                                ? t('updating')
+                                : t('markRead')}
                             </button>
                           )}
 
@@ -800,7 +801,7 @@ export default function NotificationsPage() {
                             disabled={workingId === notification.id}
                             className="rounded-2xl border border-red-300/20 bg-red-400/15 px-5 py-3 text-sm font-black text-red-100 transition hover:bg-red-400/25 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            Delete
+                            {t('delete')}
                           </button>
                         </div>
                       </div>
