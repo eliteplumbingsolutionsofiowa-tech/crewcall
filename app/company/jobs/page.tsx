@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -30,6 +31,7 @@ type Job = {
 
 export default function CompanyJobsPage() {
   const router = useRouter()
+  const t = useTranslations('CompanyJobs')
 
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
@@ -159,7 +161,7 @@ export default function CompanyJobsPage() {
 
   async function deleteJob(jobId: string) {
     const confirmed = window.confirm(
-      'Delete this job? This cannot be undone.'
+      t('deleteConfirm')
     )
 
     if (!confirmed) {
@@ -183,7 +185,7 @@ export default function CompanyJobsPage() {
 
   function formatDate(value: string | null) {
     if (!value) {
-      return 'No start date'
+      return t('noStartDate')
     }
 
     const date = new Date(value)
@@ -222,28 +224,28 @@ export default function CompanyJobsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black uppercase tracking-wider text-cyan-200">
-                {job.trade || 'Trade not set'}
+                {job.trade || t('tradeNotSet')}
               </span>
 
-              <span className={statusBadgeClass(status)}>{status}</span>
+              <span className={statusBadgeClass(status)}>{t(status)}</span>
 
               <span className={paymentBadgeClass(job.payment_status)}>
-                {job.payment_status || 'payment pending'}
+                {job.payment_status === 'paid' ? t('paid') : job.payment_status === 'pending' ? t('pending') : t('paymentPending')}
               </span>
             </div>
 
             <h2 className="mt-4 text-2xl font-black text-white">
-              {job.title || 'Untitled job'}
+              {job.title || t('untitledJob')}
             </h2>
 
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-              {job.description || 'No description added yet.'}
+              {job.description || t('noDescription')}
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <Info label="Location" value={job.location || 'No location'} />
-              <Info label="Pay" value={job.pay_rate || 'No pay rate'} />
-              <Info label="Start" value={formatDate(job.start_date)} />
+              <Info label={t('location')} value={job.location || t('noLocation')} />
+              <Info label={t('pay')} value={job.pay_rate || t('noPayRate')} />
+              <Info label={t('start')} value={formatDate(job.start_date)} />
             </div>
           </div>
 
@@ -315,7 +317,7 @@ export default function CompanyJobsPage() {
             disabled={isUpdating}
             className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isUpdating ? 'Updating...' : 'Delete'}
+            {isUpdating ? t('updating') : t('delete')}
           </button>
         </div>
       </article>
@@ -404,10 +406,10 @@ export default function CompanyJobsPage() {
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="All Jobs" value={totals.all} />
-          <StatCard label="Open" value={totals.open} />
-          <StatCard label="Active" value={totals.active} />
-          <StatCard label="Completed" value={totals.completed} />
+          <StatCard label={t('allJobs')} value={totals.all} />
+          <StatCard label={t('open')} value={totals.open} />
+          <StatCard label={t('active')} value={totals.active} />
+          <StatCard label={t('completed')} value={totals.completed} />
         </section>
 
         {loading ? (
@@ -434,26 +436,26 @@ export default function CompanyJobsPage() {
         ) : (
           <div className="space-y-10">
             <JobSection
-              title="Open Jobs"
-              description="Jobs currently accepting workers and applications."
+              title={t('openJobs')}
+              description={t('openJobsDescription')}
               jobs={groupedJobs.open}
             />
 
             <JobSection
-              title="Active Jobs"
-              description="Jobs that are currently underway."
+              title={t('activeJobs')}
+              description={t('activeJobsDescription')}
               jobs={groupedJobs.active}
             />
 
             <JobSection
-              title="Completed Jobs"
-              description="Finished jobs and completed work history."
+              title={t('completedJobs')}
+              description={t('completedJobsDescription')}
               jobs={groupedJobs.completed}
             />
 
             <JobSection
-              title="Cancelled Jobs"
-              description="Jobs that were closed without completion."
+              title={t('cancelledJobs')}
+              description={t('cancelledJobsDescription')}
               jobs={groupedJobs.cancelled}
             />
           </div>
