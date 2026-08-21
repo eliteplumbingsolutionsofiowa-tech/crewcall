@@ -402,16 +402,15 @@ export default function CompanyApplicationsPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  Company Hiring
+                  {t('companyHiring')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Applications
+                  {t('title')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Review applicants, hire workers, message candidates, and manage
-                  your live hiring pipeline.
+                  {t('description')}
                 </p>
               </div>
 
@@ -441,7 +440,7 @@ export default function CompanyApplicationsPage() {
               <div className="grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end">
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Search
+                    {t('search')}
                   </label>
 
                   <input
@@ -454,7 +453,7 @@ export default function CompanyApplicationsPage() {
 
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Status
+                    {t('status')}
                   </label>
 
                   <select
@@ -496,7 +495,7 @@ export default function CompanyApplicationsPage() {
                     href="/post-job"
                     className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20"
                   >
-                    Post a Job
+                    {t('postJob')}
                   </Link>
                 </div>
               </div>
@@ -515,9 +514,9 @@ export default function CompanyApplicationsPage() {
                           </h2>
 
                           <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-cyan-100">
-                            {apps.length} {apps.length === 1
-                              ? "Applicant"
-                              : "Applicants"}
+                            {t('applicantCount', {
+                              count: apps.length,
+                            })}
                           </span>
                         </div>
 
@@ -579,12 +578,13 @@ export default function CompanyApplicationsPage() {
                             </div>
 
                             <p className="mt-2 text-sm font-bold text-slate-300">
-                              ⭐ {app.worker_rating || '0.0'} ({app.review_count}{' '}
-                              reviews)
+                              ⭐ {app.worker_rating || '0.0'} ({t('reviewCount', {
+                                count: app.review_count,
+                              })})
                             </p>
 
                             <p className="mt-2 text-xs font-black uppercase tracking-wide text-slate-500">
-                              Applied{' '}
+                              {t('applied')}{' '}
                               {new Date(app.created_at).toLocaleDateString()}
                             </p>
                           </div>
@@ -594,14 +594,14 @@ export default function CompanyApplicationsPage() {
                               href={`/profile?user=${app.worker_id}`}
                               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                             >
-                              View Profile
+                              {t('viewProfile')}
                             </Link>
 
                             <Link
                               href={`/messages?user=${app.worker_id}`}
                               className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-400"
                             >
-                              Message
+                              {t('message')}
                             </Link>
 
                             {app.status !== "accepted" &&
@@ -610,7 +610,7 @@ export default function CompanyApplicationsPage() {
                                   href={`/my-jobs/${app.job_id}/applicants`}
                                   className="rounded-2xl bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-300"
                                 >
-                                  Review & Negotiate
+                                  {t('reviewNegotiate')}
                                 </Link>
                               )}
 
@@ -620,11 +620,11 @@ export default function CompanyApplicationsPage() {
                                   href={`/my-jobs/${app.job_id}/applicants`}
                                   className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-5 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-400/20"
                                 >
-                                  View Assignment
+                                  {t('viewAssignment')}
                                 </Link>
 
                                 <div className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white">
-                                  Worker Assigned
+                                  {t('workerAssigned')}
                                 </div>
                               </>
                             )}

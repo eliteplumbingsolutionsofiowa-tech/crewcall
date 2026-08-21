@@ -1159,7 +1159,7 @@
     "hideApplicants": "Hide Applicants",
     "workerProfile": "Worker Profile",
     "reviews": "reviews",
-    "applied": "Applied {date}",
+    "applied": "Applied",
     "viewProfile": "View Profile",
     "message": "Message",
     "reviewNegotiate": "Review & Negotiate",
@@ -1176,7 +1176,10 @@
     "applicationUpdate": "Application update",
     "applicationNotSelected": "Your application for {job} was not selected.",
     "aJob": "a job",
-    "workerRejected": "{worker} rejected."
+    "workerRejected": "{worker} rejected.",
+    "applicationsAppear": "Applications will appear here when workers apply to your jobs.",
+    "applicantCount": "{count, plural, one {# Applicant} other {# Applicants}}",
+    "reviewCount": "{count, plural, one {# review} other {# reviews}}"
   },
   "CompanyJobs": {
     "deleteConfirm": "Delete this job? This cannot be undone.",
