@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Application = {
@@ -46,6 +47,7 @@ type ReviewRow = {
 
 export default function CompanyApplicationsPage() {
   const router = useRouter()
+  const t = useTranslations('CompanyApplications')
 
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
@@ -171,9 +173,9 @@ export default function CompanyApplicationsPage() {
         worker_id: app.worker_id,
         status: app.status || 'pending',
         created_at: app.created_at,
-        job_title: job?.title || 'Untitled Job',
-        job_location: job?.location || 'Location not set',
-        worker_name: worker?.full_name || 'Worker',
+        job_title: job?.title || t('untitledJob'),
+        job_location: job?.location || t('locationNotSet'),
+        worker_name: worker?.full_name || t('worker'),
         worker_rating: Number(avg.toFixed(1)),
         review_count: reviews.length,
       }
@@ -184,7 +186,7 @@ export default function CompanyApplicationsPage() {
     setRefreshing(false)
 
     window.dispatchEvent(new Event('crewcall-refresh-nav'))
-  }, [applications.length, router])
+  }, [applications.length, router, t])
 
   useEffect(() => {
     void loadApplications()
@@ -289,7 +291,7 @@ export default function CompanyApplicationsPage() {
 
       if (!session?.access_token) {
         setMessage(
-          'Your login session expired. Please log in again.'
+          t('sessionExpired')
         )
         return
       }
@@ -311,13 +313,13 @@ export default function CompanyApplicationsPage() {
 
       if (!response.ok) {
         setMessage(
-          data?.error || 'Unable to hire this worker.'
+          data?.error || t('unableToHire')
         )
         return
       }
 
       setSuccessMessage(
-        `${app.worker_name || 'Worker'} hired successfully.`
+        t('hiredSuccessfully', { worker: app.worker_name || t('worker') })
       )
 
       window.dispatchEvent(
@@ -329,7 +331,7 @@ export default function CompanyApplicationsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to hire this worker.'
+          : t('unableToHire')
       )
     } finally {
       setActionLoading(null)
@@ -357,14 +359,14 @@ export default function CompanyApplicationsPage() {
     await supabase.from('notifications').insert({
       user_id: app.worker_id,
       type: 'application',
-      title: 'Application update',
-      body: `Your application for ${app.job_title || 'a job'} was not selected.`,
+      title: t('applicationUpdate'),
+      body: t('applicationNotSelected', { job: app.job_title || t('aJob') }),
       link_url: `/jobs/${app.job_id}`,
       is_read: false,
       read: false,
     })
 
-    setSuccessMessage(`${app.worker_name || 'Worker'} rejected.`)
+    setSuccessMessage(t('workerRejected', { worker: app.worker_name || t('worker') }))
     setActionLoading(null)
 
     await loadApplications()
@@ -386,7 +388,7 @@ export default function CompanyApplicationsPage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading applications...</p>
+          <p className="text-lg font-black">{t('loadingApplications')}</p>
         </div>
       </main>
     )
@@ -414,10 +416,10 @@ export default function CompanyApplicationsPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-4">
-                <StatCard label="All" value={counts.all} />
-                <StatCard label="Pending" value={counts.pending} />
-                <StatCard label="Accepted" value={counts.accepted} />
-                <StatCard label="Rejected" value={counts.rejected} />
+                <StatCard label={t('all')} value={counts.all} />
+                <StatCard label={t('pending')} value={counts.pending} />
+                <StatCard label={t('accepted')} value={counts.accepted} />
+                <StatCard label={t('rejected')} value={counts.rejected} />
               </div>
             </div>
           </div>
@@ -445,7 +447,7 @@ export default function CompanyApplicationsPage() {
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Worker, job, location..."
+                    placeholder={t('searchPlaceholder')}
                     className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"
                   />
                 </div>
@@ -462,10 +464,10 @@ export default function CompanyApplicationsPage() {
                     }
                     className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300/50"
                   >
-                    <option value="all">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="all">{t('all')}</option>
+                    <option value="pending">{t('pending')}</option>
+                    <option value="accepted">{t('accepted')}</option>
+                    <option value="rejected">{t('rejected')}</option>
                   </select>
                 </div>
 
@@ -474,7 +476,7 @@ export default function CompanyApplicationsPage() {
                   onClick={() => void loadApplications()}
                   className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                 >
-                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                  {refreshing ? t('refreshing') : t('refresh')}
                 </button>
               </div>
             </div>
@@ -564,7 +566,7 @@ export default function CompanyApplicationsPage() {
                                 href={`/profile?user=${app.worker_id}`}
                                 className="text-2xl font-black text-white hover:text-cyan-300"
                               >
-                                {app.worker_name || 'Worker Profile'}
+                                {app.worker_name || t('workerProfile')}
                               </Link>
 
                               <span
@@ -572,7 +574,7 @@ export default function CompanyApplicationsPage() {
                                   app.status
                                 )}`}
                               >
-                                {app.status || 'pending'}
+                                {app.status === 'accepted' ? t('accepted') : app.status === 'rejected' ? t('rejected') : t('pending')}
                               </span>
                             </div>
 
