@@ -1681,5 +1681,30 @@
     "completed": "Completed",
     "companyDashboard": "Company Dashboard",
     "operationsCenter": "Operations Center"
+  },
+  "CompanyInvites": {
+    "loginRequired": "You must be logged in to view company invites.",
+    "profileNotFound": "Profile not found.",
+    "companyOnly": "Only companies can view this page.",
+    "loading": "Loading company invites...",
+    "eyebrow": "Company Invites",
+    "title": "Sent Worker Invites",
+    "description": "Track every worker you invited, see who accepted, and keep your company-side invite badge cleared as soon as this page opens.",
+    "all": "All",
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "declined": "Declined",
+    "refresh": "Refresh",
+    "noInvites": "No invites found.",
+    "emptyDescription": "Invite workers from the Find Workers or job detail screens.",
+    "findWorkers": "Find Workers",
+    "sent": "Sent",
+    "worker": "Worker",
+    "tradeNotListed": "Trade not listed",
+    "jobInvite": "Job Invite",
+    "untitledJob": "Untitled Job",
+    "locationNotListed": "Location not listed",
+    "viewJob": "View Job",
+    "workerProfile": "Worker Profile"
   }
 }

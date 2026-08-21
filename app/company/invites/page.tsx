@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Profile = {
@@ -35,6 +36,9 @@ type Invite = {
 }
 
 export default function CompanyInvitesPage() {
+  const t = useTranslations('CompanyInvites')
+  const locale = useLocale()
+
   const [profile, setProfile] = useState<Profile | null>(null)
   const [invites, setInvites] = useState<Invite[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,7 +64,7 @@ export default function CompanyInvitesPage() {
     console.log('INVITES: SESSION', user?.id, sessionError)
 
     if (userError || !user) {
-      setMessage('You must be logged in to view company invites.')
+      setMessage(t('loginRequired'))
       setInvites([])
       setLoading(false)
       return
@@ -73,7 +77,7 @@ export default function CompanyInvitesPage() {
       .maybeSingle()
 
     if (profileError || !profileData) {
-      setMessage(profileError?.message || 'Profile not found.')
+      setMessage(profileError?.message || t('profileNotFound'))
       setInvites([])
       setLoading(false)
       return
@@ -87,7 +91,7 @@ export default function CompanyInvitesPage() {
       currentProfile.role !== 'company' &&
       currentProfile.role !== 'admin'
     ) {
-      setMessage('Only companies can view this page.')
+      setMessage(t('companyOnly'))
       setInvites([])
       setLoading(false)
       return
@@ -159,7 +163,7 @@ export default function CompanyInvitesPage() {
 
     setInvites(cleaned)
     setLoading(false)
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void loadInvites()
@@ -192,18 +196,26 @@ export default function CompanyInvitesPage() {
   }
 
   function statusLabel(status: string | null) {
-    return status || 'pending'
+    const normalized = status || 'pending'
+
+    const labels: Record<string, string> = {
+      pending: t('pending'),
+      accepted: t('accepted'),
+      declined: t('declined'),
+    }
+
+    return labels[normalized] || normalized
   }
 
   function workerName(invite: Invite) {
-    return invite.worker?.full_name || 'Worker'
+    return invite.worker?.full_name || t('worker')
   }
 
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading company invites...</p>
+          <p className="text-lg font-black">{t('loading')}</p>
         </div>
       </main>
     )
@@ -217,17 +229,15 @@ export default function CompanyInvitesPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  Company Invites
+                  {t('eyebrow')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Sent Worker Invites
+                  {t('title')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Track every worker you invited, see who accepted, and keep
-                  your company-side invite badge cleared as soon as this page
-                  opens.
+                  {t('description')}
                 </p>
 
                 {profile?.company_name && (
@@ -238,10 +248,10 @@ export default function CompanyInvitesPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-4">
-                <StatCard label="All" value={counts.all} />
-                <StatCard label="Pending" value={counts.pending} />
-                <StatCard label="Accepted" value={counts.accepted} />
-                <StatCard label="Declined" value={counts.declined} />
+                <StatCard label={t('all')} value={counts.all} />
+                <StatCard label={t('pending')} value={counts.pending} />
+                <StatCard label={t('accepted')} value={counts.accepted} />
+                <StatCard label={t('declined')} value={counts.declined} />
               </div>
             </div>
           </div>
@@ -296,11 +306,11 @@ export default function CompanyInvitesPage() {
             {filteredInvites.length === 0 ? (
               <div className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-8 text-center">
                 <p className="text-xl font-black text-white">
-                  No invites found.
+                  {t('noInvites')}
                 </p>
 
                 <p className="mt-2 text-sm font-bold text-slate-400">
-                  Invite workers from the Find Workers or job detail screens.
+                  {t('emptyDescription')}
                 </p>
 
                 <div className="mt-5 flex justify-center">
@@ -308,7 +318,7 @@ export default function CompanyInvitesPage() {
                     href="/workers"
                     className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20"
                   >
-                    Find Workers
+                    {t('findWorkers')}
                   </Link>
                 </div>
               </div>
@@ -331,7 +341,8 @@ export default function CompanyInvitesPage() {
                           </span>
 
                           <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-slate-300">
-                            Sent {new Date(invite.created_at).toLocaleString()}
+                            {t('sent')}{' '}
+                            {new Date(invite.created_at).toLocaleString(locale)}
                           </span>
                         </div>
 
@@ -340,7 +351,7 @@ export default function CompanyInvitesPage() {
                         </h2>
 
                         <p className="mt-1 text-sm font-bold text-slate-300">
-                          {invite.worker?.trade || 'Trade not listed'}
+                          {invite.worker?.trade || t('tradeNotListed')}
                           {invite.worker?.city || invite.worker?.state
                             ? ` • ${invite.worker?.city || ''}${
                                 invite.worker?.city && invite.worker?.state
@@ -356,12 +367,12 @@ export default function CompanyInvitesPage() {
                           </p>
 
                           <h3 className="mt-2 text-lg font-black text-white">
-                            {invite.job?.title || 'Untitled Job'}
+                            {invite.job?.title || t('untitledJob')}
                           </h3>
 
                           <p className="mt-1 text-sm font-bold text-slate-400">
-                            {invite.job?.trade || 'Trade not listed'} •{' '}
-                            {invite.job?.location || 'Location not listed'}
+                            {invite.job?.trade || t('tradeNotListed')} •{' '}
+                            {invite.job?.location || t('locationNotListed')}
                           </p>
                         </div>
                       </div>

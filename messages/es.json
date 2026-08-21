@@ -1681,5 +1681,30 @@
     "completed": "Completados",
     "companyDashboard": "Panel de la Empresa",
     "operationsCenter": "Centro de Operaciones"
+  },
+  "CompanyInvites": {
+    "loginRequired": "Debes iniciar sesión para ver las invitaciones de la empresa.",
+    "profileNotFound": "No se encontró el perfil.",
+    "companyOnly": "Solo las empresas pueden ver esta página.",
+    "loading": "Cargando invitaciones de la empresa...",
+    "eyebrow": "Invitaciones de la Empresa",
+    "title": "Invitaciones Enviadas a Trabajadores",
+    "description": "Consulta cada trabajador que invitaste, quién aceptó y mantén actualizado el indicador de invitaciones de tu empresa al abrir esta página.",
+    "all": "Todas",
+    "pending": "Pendientes",
+    "accepted": "Aceptadas",
+    "declined": "Rechazadas",
+    "refresh": "Actualizar",
+    "noInvites": "No se encontraron invitaciones.",
+    "emptyDescription": "Invita trabajadores desde Buscar Trabajadores o desde las pantallas de detalles del trabajo.",
+    "findWorkers": "Buscar Trabajadores",
+    "sent": "Enviada",
+    "worker": "Trabajador",
+    "tradeNotListed": "Oficio no especificado",
+    "jobInvite": "Invitación al Trabajo",
+    "untitledJob": "Trabajo sin Título",
+    "locationNotListed": "Ubicación no especificada",
+    "viewJob": "Ver Trabajo",
+    "workerProfile": "Perfil del Trabajador"
   }
 }
