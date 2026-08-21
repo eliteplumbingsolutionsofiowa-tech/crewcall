@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   CircleMarker,
   MapContainer,
@@ -122,18 +123,24 @@ function milesBetween(
   return earthRadiusMiles * angularDistance
 }
 
-function formatLastUpdated(value: string | null) {
+function formatLastUpdated(
+  value: string | null,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
   if (!value) {
-    return 'Location update unavailable'
+    return t('locationUnavailable')
   }
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'Location update unavailable'
+    return t('locationUnavailable')
   }
 
-  return `Updated ${date.toLocaleString()}`
+  return t('updated', {
+    date: date.toLocaleString(locale),
+  })
 }
 
 function getLocationFreshnessScore(value: string | null) {
@@ -252,15 +259,22 @@ function parseExperienceYears(
   return Number.isFinite(years) ? years : 0
 }
 
-function formatWorkerAvailability(worker: Worker) {
+function formatWorkerAvailability(
+  worker: Worker,
+  t: ReturnType<typeof useTranslations>
+) {
   if (worker.currently_working === true && worker.booked_until) {
-    return `Currently working; booked until ${worker.booked_until}`
+    return t('currentlyWorkingUntil', {
+      date: worker.booked_until,
+    })
   }
 
   if (worker.available_for_work === true) {
     return worker.availability_status
-      ? `Available for work: ${worker.availability_status}`
-      : 'Available for work'
+      ? t('availableStatus', {
+          status: worker.availability_status,
+        })
+      : t('availableForWork')
   }
 
   if (worker.availability_status) {
@@ -268,13 +282,15 @@ function formatWorkerAvailability(worker: Worker) {
   }
 
   if (worker.is_online === true) {
-    return 'Online now; availability not confirmed'
+    return t('onlineAvailabilityUnknown')
   }
 
-  return 'Current availability not confirmed'
+  return t('availabilityUnknown')
 }
 
 export default function WorkerMapClient() {
+  const t = useTranslations('WorkerMap')
+  const locale = useLocale()
   const searchParams = useSearchParams()
   const jobId = searchParams.get('jobId')
 
@@ -366,7 +382,7 @@ export default function WorkerMapClient() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('Log in as a company to view the worker map.')
+      setMessage(t('loginCompany'))
       setLoading(false)
       return
     }
@@ -387,7 +403,7 @@ export default function WorkerMapClient() {
       !profile ||
       (profile.role !== 'company' && profile.role !== 'admin')
     ) {
-      setMessage('This map is available to company and admin accounts.')
+      setMessage(t('companyAdminOnly'))
       setLoading(false)
       return
     }
@@ -466,7 +482,7 @@ export default function WorkerMapClient() {
 
   function useMyLocation() {
     if (!navigator.geolocation) {
-      setMessage('Location services are not supported by this browser.')
+      setMessage(t('locationUnsupported'))
       return
     }
 
@@ -487,14 +503,14 @@ export default function WorkerMapClient() {
 
         if (error.code === 1) {
           setMessage(
-            'Location access was denied. Allow location access in your browser settings.'
+            t('locationDenied')
           )
         } else if (error.code === 2) {
-          setMessage('Your location could not be determined.')
+          setMessage(t('locationUnknown'))
         } else if (error.code === 3) {
-          setMessage('The location request timed out.')
+          setMessage(t('locationTimeout'))
         } else {
-          setMessage('Your location could not be loaded.')
+          setMessage(t('locationLoadFailed'))
         }
 
         setLocating(false)
@@ -523,7 +539,7 @@ export default function WorkerMapClient() {
 
     if (!prompt) {
       setMessage(
-        'Describe the workers you need before running the recruiter.'
+        t('describeWorkers')
       )
       return
     }
@@ -573,14 +589,14 @@ export default function WorkerMapClient() {
     setAiError(null)
 
     const summaryParts = [
-      matchedTrade ? matchedTrade : 'all trades',
-      onlineOnly ? 'online workers prioritized' : 'availability considered',
+      matchedTrade ? matchedTrade : t('allTrades'),
+      onlineOnly ? t('onlinePrioritized') : t('availabilityConsidered'),
       verifiedOnly
-        ? 'verified workers prioritized'
-        : 'verification included in scoring',
+        ? t('verifiedPrioritized')
+        : t('verificationScored'),
       companyLocation
-        ? `within ${radius} miles`
-        : 'distance scoring available after location is enabled',
+        ? t('withinMiles', { count: radius })
+        : t('distanceAfterLocation'),
     ]
 
     setRecruiterSummary(summaryParts.join(' • '))
@@ -628,10 +644,10 @@ export default function WorkerMapClient() {
           worker.trade?.toLowerCase() === selectedTrade.toLowerCase()
         ) {
           matchScore += 30
-          matchReasons.push(`Exact ${selectedTrade} trade match`)
+          matchReasons.push(t('exactTradeMatch', { trade: selectedTrade }))
         } else if (selectedTrade === 'all') {
           matchScore += 10
-          matchReasons.push('Eligible trade')
+          matchReasons.push(t('eligibleTrade'))
         }
 
         if (
@@ -645,17 +661,17 @@ export default function WorkerMapClient() {
 
         if (worker.is_online === true) {
           matchScore += 15
-          matchReasons.push('Online now')
+          matchReasons.push(t('onlineNow'))
         }
 
         if (worker.insurance_verified === true) {
           matchScore += 12
-          matchReasons.push('Insurance verified')
+          matchReasons.push(t('insuranceVerified'))
         }
 
         if (worker.liability_form_verified === true) {
           matchScore += 8
-          matchReasons.push('Liability verified')
+          matchReasons.push(t('liabilityVerified'))
         }
 
         const experienceYears = parseExperienceYears(
@@ -664,22 +680,22 @@ export default function WorkerMapClient() {
 
         if (experienceYears >= 10) {
           matchScore += 12
-          matchReasons.push(`${experienceYears}+ years experience`)
+          matchReasons.push(t('yearsExperience', { count: experienceYears }))
         } else if (experienceYears >= 5) {
           matchScore += 8
-          matchReasons.push(`${experienceYears}+ years experience`)
+          matchReasons.push(t('yearsExperience', { count: experienceYears }))
         } else if (experienceYears >= 2) {
           matchScore += 4
         }
 
         if (worker.license_number) {
           matchScore += 10
-          matchReasons.push('License listed')
+          matchReasons.push(t('licenseListed'))
         }
 
         if (worker.available_for_work === true) {
           matchScore += 12
-          matchReasons.push('Available for work')
+          matchReasons.push(t('availableForWork'))
         }
 
         if (worker.currently_working === true) {
@@ -711,13 +727,13 @@ export default function WorkerMapClient() {
           worker.crewcall_score >= 90
         ) {
           matchScore += 10
-          matchReasons.push('Excellent CrewCall score')
+          matchReasons.push(t('excellentScore'))
         } else if (
           typeof worker.crewcall_score === 'number' &&
           worker.crewcall_score >= 80
         ) {
           matchScore += 6
-          matchReasons.push('Strong CrewCall score')
+          matchReasons.push(t('strongScore'))
         }
 
         if (
@@ -732,7 +748,9 @@ export default function WorkerMapClient() {
           if (matchedSkills.length > 0) {
             matchScore += Math.min(12, matchedSkills.length * 4)
             matchReasons.push(
-              `Skill match: ${matchedSkills.slice(0, 2).join(', ')}`
+              t('skillMatch', {
+                skills: matchedSkills.slice(0, 2).join(', ')
+              })
             )
           }
         }
@@ -748,7 +766,7 @@ export default function WorkerMapClient() {
 
           if (preferredMatch) {
             matchScore += 8
-            matchReasons.push('Preferred work match')
+            matchReasons.push(t('preferredWorkMatch'))
           }
         }
 
@@ -758,7 +776,7 @@ export default function WorkerMapClient() {
           worker.willing_to_travel === true
         ) {
           matchScore += 6
-          matchReasons.push('Willing to travel')
+          matchReasons.push(t('willingTravel'))
         }
 
         const distanceScore = getDistanceScore(distance, radius)
@@ -766,9 +784,9 @@ export default function WorkerMapClient() {
 
         if (distance !== null) {
           if (distance <= 15) {
-            matchReasons.push(`${distance.toFixed(1)} miles away`)
+            matchReasons.push(t('milesAway', { distance: distance.toFixed(1) }))
           } else if (distance <= radius) {
-            matchReasons.push(`Within selected radius`)
+            matchReasons.push(t('withinRadius'))
           }
         }
 
@@ -779,7 +797,7 @@ export default function WorkerMapClient() {
         matchScore += freshnessScore
 
         if (freshnessScore >= 8) {
-          matchReasons.push('Recently active location')
+          matchReasons.push(t('recentLocation'))
         }
 
         return {
@@ -863,7 +881,7 @@ export default function WorkerMapClient() {
     if (rankedWorkers.length === 0) {
       setAiResult(null)
       setAiError(
-        'No workers matched the current requirements. Broaden the filters and try again.'
+        t('noMatches')
       )
       return
     }
@@ -887,36 +905,36 @@ export default function WorkerMapClient() {
               title: question,
               trade:
                 selectedTrade === 'all'
-                  ? 'Multiple skilled trades'
+                  ? t('multipleTrades')
                   : selectedTrade,
               location: companyLocation
                 ? `${companyLocation.latitude.toFixed(5)}, ${companyLocation.longitude.toFixed(5)}`
-                : 'Company location not shared',
-              payRate: 'Not specified',
+                : t('companyLocationNotShared'),
+              payRate: t('notSpecified'),
               description: question,
             },
             workers: rankedWorkers.slice(0, 15).map((worker) => ({
               workerId: worker.id,
-              name: worker.full_name || 'CrewCall Worker',
-              trade: worker.trade || 'Not listed',
+              name: worker.full_name || t('crewCallWorker'),
+              trade: worker.trade || t('notListed'),
               location:
                 [worker.city, worker.state]
                   .filter(Boolean)
-                  .join(', ') || 'Not listed',
+                  .join(', ') || t('notListed'),
               matchScore: worker.matchScore,
               matchLabel:
                 worker.matchScore >= 85
-                  ? 'Excellent'
+                  ? t('excellent')
                   : worker.matchScore >= 70
-                    ? 'Strong'
+                    ? t('strong')
                     : worker.matchScore >= 50
-                      ? 'Possible'
-                      : 'Limited',
+                      ? t('possible')
+                      : t('limited'),
               experience:
-                worker.years_experience || 'Not listed',
-              availability: formatWorkerAvailability(worker),
+                worker.years_experience || t('notListed'),
+              availability: formatWorkerAvailability(worker, t),
               crewcallScore: worker.crewcall_score,
-              preferredPay: 'Not listed',
+              preferredPay: t('notListed'),
               skills: Array.from(
                 new Set([
                   ...(worker.trade ? [worker.trade] : []),
@@ -925,46 +943,46 @@ export default function WorkerMapClient() {
               ),
               credentials: [
                 worker.license_number
-                  ? `License listed: ${worker.license_number}`
+                  ? t('licenseListedValue', { number: worker.license_number })
                   : '',
                 worker.insurance_verified
-                  ? 'Insurance verified'
+                  ? t('insuranceVerified')
                   : '',
                 worker.liability_form_verified
-                  ? 'Liability form verified'
+                  ? t('liabilityFormVerified')
                   : '',
                 worker.osha10 ? 'OSHA 10' : '',
                 worker.osha30 ? 'OSHA 30' : '',
-                worker.med_gas ? 'Medical gas certified' : '',
+                worker.med_gas ? t('medicalGasCertified') : '',
                 worker.background_verified
-                  ? 'Background verified'
+                  ? t('backgroundVerified')
                   : '',
-                worker.drug_tested ? 'Drug tested' : '',
+                worker.drug_tested ? t('drugTested') : '',
                 worker.willing_to_travel
-                  ? 'Willing to travel'
+                  ? t('willingTravel')
                   : '',
               ].filter(Boolean),
               preferredWork: worker.preferred_work || [],
               reasons: worker.matchReasons,
               warnings: [
-                !worker.trade ? 'Trade is not listed' : '',
+                !worker.trade ? t('tradeNotListedWarning') : '',
                 !worker.years_experience
-                  ? 'Experience is not listed'
+                  ? t('experienceNotListed')
                   : '',
                 !worker.license_number
-                  ? 'License information is not listed'
+                  ? t('licenseNotListed')
                   : '',
                 worker.available_for_work !== true
-                  ? 'Availability is not confirmed'
+                  ? t('availabilityNotConfirmed')
                   : '',
                 !worker.insurance_verified
-                  ? 'Insurance verification is not confirmed'
+                  ? t('insuranceNotConfirmed')
                   : '',
                 !worker.liability_form_verified
-                  ? 'Liability verification is not confirmed'
+                  ? t('liabilityNotConfirmed')
                   : '',
                 !worker.background_verified
-                  ? 'Background verification is not confirmed'
+                  ? t('backgroundNotConfirmed')
                   : '',
               ].filter(Boolean),
             })),
@@ -978,13 +996,13 @@ export default function WorkerMapClient() {
         if (!response.ok) {
           throw new Error(
             payload?.error ||
-              'CrewCall AI Recruiter could not analyze these workers.'
+              t('aiAnalyzeFailed')
           )
         }
 
         if (!payload?.result) {
           throw new Error(
-            'CrewCall AI Recruiter returned no recommendation.'
+            t('aiNoRecommendation')
           )
         }
 
@@ -997,7 +1015,7 @@ export default function WorkerMapClient() {
           setAiError(
             error instanceof Error
               ? error.message
-              : 'Unable to use CrewCall AI Recruiter.'
+              : t('aiUnavailable')
           )
         }
       } finally {
@@ -1026,7 +1044,7 @@ export default function WorkerMapClient() {
 
     if (!jobId) {
       setInviteError(
-        'Open the AI Recruiter from a specific job before sending invitations.'
+        t('openFromJob')
       )
       return
     }
@@ -1039,7 +1057,7 @@ export default function WorkerMapClient() {
 
     if (pendingDrafts.length === 0) {
       setInviteProgress(
-        'All selected workers have already been invited.'
+        t('alreadyInvited')
       )
       return
     }
@@ -1053,7 +1071,7 @@ export default function WorkerMapClient() {
 
       if (!session) {
         throw new Error(
-          'You must be logged in to send invitations.'
+          t('loginToInvite')
         )
       }
 
@@ -1064,7 +1082,7 @@ export default function WorkerMapClient() {
         const draft = pendingDrafts[index]
 
         setInviteProgress(
-          `Sending invitation ${index + 1} of ${pendingDrafts.length}...`
+          t('sendingInvitation', { current: index + 1, total: pendingDrafts.length })
         )
 
         try {
@@ -1086,7 +1104,7 @@ export default function WorkerMapClient() {
 
           if (!response.ok) {
             throw new Error(
-              payload?.error || 'Invitation could not be sent.'
+              payload?.error || t('invitationFailed')
             )
           }
 
@@ -1096,7 +1114,7 @@ export default function WorkerMapClient() {
             `${draft.workerName}: ${
               error instanceof Error
                 ? error.message
-                : 'Invitation failed.'
+                : t('invitationFailedWorker')
             }`
           )
         }
@@ -1120,15 +1138,13 @@ export default function WorkerMapClient() {
       const sentCount = successfullyInvited.length
 
       setInviteProgress(
-        `${sentCount} ${
-          sentCount === 1 ? 'invitation' : 'invitations'
-        } sent successfully.`
+        t('invitationsSent', { count: sentCount })
       )
     } catch (error) {
       setInviteError(
         error instanceof Error
           ? error.message
-          : 'Unable to send AI invitations.'
+          : t('unableSendInvites')
       )
       setInviteProgress(null)
     } finally {
@@ -1148,7 +1164,7 @@ export default function WorkerMapClient() {
       <AIRecruiterHeartbeat />
         <div className="mx-auto max-w-7xl">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-            Loading worker map...
+            {t('loading')}
           </div>
         </div>
       </main>
@@ -1162,17 +1178,15 @@ export default function WorkerMapClient() {
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                CrewCall Intelligence
+                {t('intelligence')}
               </p>
 
               <h1 className="mt-2 text-3xl font-bold sm:text-4xl">
-                AI Worker Recruiter
+                {t('aiRecruiter')}
               </h1>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                Describe the crew you need. CrewCall ranks nearby workers
-                using trade, distance, online status, verification, and
-                recent location activity.
+                {t('aiRecruiterDescription')}
               </p>
             </div>
 
@@ -1183,7 +1197,7 @@ export default function WorkerMapClient() {
                 disabled={locating}
                 className="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
               >
-                {locating ? 'Finding location...' : 'Use My Location'}
+                {locating ? t('findingLocation') : t('useMyLocation')}
               </button>
 
               <button
@@ -1191,7 +1205,7 @@ export default function WorkerMapClient() {
                 onClick={() => void loadWorkers()}
                 className="rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
               >
-                Refresh Workers
+                {t('refreshWorkers')}
               </button>
             </div>
           </div>
@@ -1199,7 +1213,7 @@ export default function WorkerMapClient() {
           <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-white">
-                What kind of workers do you need?
+                {t('workerQuestion')}
               </span>
 
               <textarea
@@ -1207,7 +1221,7 @@ export default function WorkerMapClient() {
                 onChange={(event) =>
                   setRecruiterPrompt(event.target.value)
                 }
-                placeholder="Example: I need two insured commercial plumbers online now within 25 miles."
+                placeholder={t('promptPlaceholder')}
                 rows={3}
                 className="w-full resize-none rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
               />
@@ -1215,8 +1229,7 @@ export default function WorkerMapClient() {
 
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-slate-400">
-                Try including the trade, distance, availability, and
-                verification requirements.
+                {t('promptHint')}
               </p>
 
               <div className="flex gap-2">
@@ -1226,7 +1239,7 @@ export default function WorkerMapClient() {
                     onClick={clearRecruiter}
                     className="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
                   >
-                    Clear
+                    {t('clear')}
                   </button>
                 ) : null}
 
@@ -1235,7 +1248,7 @@ export default function WorkerMapClient() {
                   onClick={() => runRecruiter()}
                   className="rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:brightness-110"
                 >
-                  Find Best Workers
+                  {t('findBestWorkers')}
                 </button>
               </div>
             </div>
@@ -1252,34 +1265,34 @@ export default function WorkerMapClient() {
           <section className="mb-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-cyan-200">
-                Matches Found
+                {t('matchesFound')}
               </p>
               <p className="mt-2 text-3xl font-bold">
                 {rankedWorkers.length}
               </p>
               <p className="mt-1 text-xs text-slate-300">
-                Ranked from strongest to weakest match
+                {t('rankedDescription')}
               </p>
             </div>
 
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-emerald-200">
-                Best Match Score
+                {t('bestMatchScore')}
               </p>
               <p className="mt-2 text-3xl font-bold">
                 {bestMatch ? `${bestMatch.matchScore}%` : '—'}
               </p>
               <p className="mt-1 truncate text-xs text-slate-300">
-                {bestMatch?.full_name || 'No matching worker'}
+                {bestMatch?.full_name || t('noMatchingWorker')}
               </p>
             </div>
 
             <div className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-violet-200">
-                Search Summary
+                {t('searchSummary')}
               </p>
               <p className="mt-2 text-sm font-semibold leading-6 text-white">
-                {recruiterSummary || 'Recruiter filters applied'}
+                {recruiterSummary || t('filtersApplied')}
               </p>
             </div>
           </section>
@@ -1295,12 +1308,11 @@ export default function WorkerMapClient() {
                   </p>
 
                   <h2 className="mt-2 text-2xl font-bold text-white">
-                    CrewCall AI Analysis
+                    {t('aiAnalysis')}
                   </h2>
 
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                    AI analysis of the workers matching your current recruiter
-                    search.
+                    {t('aiAnalysisDescription')}
                   </p>
                 </div>
 
@@ -1308,7 +1320,7 @@ export default function WorkerMapClient() {
                   <div className="flex flex-wrap gap-2">
                     <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">
-                        Confidence
+                        {t('confidence')}
                       </p>
                       <p className="mt-1 text-lg font-bold text-white">
                         {Math.round(aiResult.confidence)}%
@@ -1317,10 +1329,16 @@ export default function WorkerMapClient() {
 
                     <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200">
-                        Hiring Risk
+                        {t('hiringRisk')}
                       </p>
                       <p className="mt-1 text-lg font-bold text-white">
-                        {aiResult.hiringRisk}
+                        {aiResult.hiringRisk === 'Low'
+                          ? t('riskLow')
+                          : aiResult.hiringRisk === 'Moderate'
+                            ? t('riskModerate')
+                            : aiResult.hiringRisk === 'High'
+                              ? t('riskHigh')
+                              : t('riskUnknown')}
                       </p>
                     </div>
                   </div>
@@ -1335,18 +1353,18 @@ export default function WorkerMapClient() {
                     <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-cyan-300/20 border-t-cyan-300" />
 
                     <p className="mt-4 font-semibold text-white">
-                      CrewCall AI is analyzing the best workers...
+                      {t('aiAnalyzing')}
                     </p>
 
                     <p className="mt-2 text-sm text-slate-400">
-                      Reviewing match scores, trade, location and verification.
+                      {t('aiReviewing')}
                     </p>
                   </div>
                 </div>
               ) : aiError ? (
                 <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-5">
                   <p className="font-bold text-red-100">
-                    AI analysis could not be completed
+                    {t('aiCouldNotComplete')}
                   </p>
 
                   <p className="mt-2 text-sm leading-6 text-red-100/80">
@@ -1357,7 +1375,7 @@ export default function WorkerMapClient() {
                 <div className="space-y-5">
                   <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-5">
                     <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200">
-                      Recommendation
+                      {t('recommendation')}
                     </p>
 
                     <p className="mt-3 text-base font-semibold leading-7 text-white">
@@ -1368,7 +1386,7 @@ export default function WorkerMapClient() {
                   {aiResult.answer ? (
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-300">
-                        Recruiter Analysis
+                        {t('recruiterAnalysis')}
                       </p>
 
                       <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-200">
@@ -1380,7 +1398,7 @@ export default function WorkerMapClient() {
                   <div className="grid gap-5 lg:grid-cols-2">
                     <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-5">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-200">
-                        Strengths
+                        {t('strengths')}
                       </p>
 
                       {aiResult.strengths.length > 0 ? (
@@ -1397,14 +1415,14 @@ export default function WorkerMapClient() {
                         </div>
                       ) : (
                         <p className="mt-3 text-sm text-emerald-100/70">
-                          No specific strengths were returned.
+                          {t('noStrengths')}
                         </p>
                       )}
                     </div>
 
                     <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-5">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
-                        Concerns
+                        {t('concerns')}
                       </p>
 
                       {aiResult.concerns.length > 0 ? (
@@ -1421,7 +1439,7 @@ export default function WorkerMapClient() {
                         </div>
                       ) : (
                         <p className="mt-3 text-sm text-amber-100/70">
-                          No major concerns were returned.
+                          {t('noConcerns')}
                         </p>
                       )}
                     </div>
@@ -1430,7 +1448,7 @@ export default function WorkerMapClient() {
                   {aiResult.interviewQuestions.length > 0 ? (
                     <div className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-5">
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-200">
-                        Suggested Interview Questions
+                        {t('interviewQuestions')}
                       </p>
 
                       <div className="mt-4 space-y-3">
@@ -1459,11 +1477,11 @@ export default function WorkerMapClient() {
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-200">
-                            Invitation Drafts
+                            {t('invitationDrafts')}
                           </p>
 
                           <p className="mt-2 text-sm text-blue-100/70">
-                            Send AI-selected workers an invitation to this job.
+                            {t('invitationDraftsDescription')}
                           </p>
                         </div>
 
@@ -1483,8 +1501,8 @@ export default function WorkerMapClient() {
                             className="rounded-xl bg-blue-400 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {inviteSending
-                              ? 'Sending...'
-                              : 'Invite Top 3'}
+                              ? t('sending')
+                              : t('inviteTop3')}
                           </button>
 
                           <button
@@ -1501,7 +1519,7 @@ export default function WorkerMapClient() {
                             }
                             className="rounded-xl border border-blue-300/30 bg-blue-300/10 px-4 py-2.5 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            Invite All
+                            {t('inviteAll')}
                           </button>
                         </div>
                       </div>
@@ -1557,8 +1575,8 @@ export default function WorkerMapClient() {
                                 {invitedWorkerIds.includes(
                                   draft.workerId
                                 )
-                                  ? 'Invitation Sent'
-                                  : 'Send Invitation'}
+                                  ? t('invitationSent')
+                                  : t('sendInvitation')}
                               </button>
 
                               <button
@@ -1570,7 +1588,7 @@ export default function WorkerMapClient() {
                                 }
                                 className="rounded-lg border border-blue-300/20 bg-blue-300/10 px-3 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-300/20"
                               >
-                                Copy Invitation
+                                {t('copyInvitation')}
                               </button>
                             </div>
                           </div>
@@ -1582,7 +1600,7 @@ export default function WorkerMapClient() {
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
                   <p className="font-semibold text-white">
-                    Run the recruiter search to generate AI analysis.
+                    {t('runRecruiter')}
                   </p>
                 </div>
               )}
@@ -1593,7 +1611,7 @@ export default function WorkerMapClient() {
         <section className="mb-6 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 md:grid-cols-5">
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-slate-200">
-              Trade
+              {t('trade')}
             </span>
 
             <select
@@ -1601,7 +1619,7 @@ export default function WorkerMapClient() {
               onChange={(event) => setSelectedTrade(event.target.value)}
               className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white"
             >
-              <option value="all">All trades</option>
+              <option value="all">{t('allTradesFilter')}</option>
 
               {trades.map((trade) => (
                 <option key={trade} value={trade}>
@@ -1613,7 +1631,7 @@ export default function WorkerMapClient() {
 
           <label className="block">
             <span className="mb-2 block text-sm font-semibold text-slate-200">
-              Distance
+              {t('distance')}
             </span>
 
             <select
@@ -1624,18 +1642,18 @@ export default function WorkerMapClient() {
               disabled={!companyLocation}
               className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white disabled:opacity-50"
             >
-              <option value={10}>Within 10 miles</option>
-              <option value={25}>Within 25 miles</option>
-              <option value={50}>Within 50 miles</option>
-              <option value={100}>Within 100 miles</option>
-              <option value={250}>Within 250 miles</option>
+              <option value={10}>{t('withinDistance', { count: 10 })}</option>
+              <option value={25}>{t('withinDistance', { count: 25 })}</option>
+              <option value={50}>{t('withinDistance', { count: 50 })}</option>
+              <option value={100}>{t('withinDistance', { count: 100 })}</option>
+              <option value={250}>{t('withinDistance', { count: 250 })}</option>
             </select>
           </label>
 
           <label className="flex items-end">
             <span className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-900 px-4 py-2.5">
               <span className="text-sm font-semibold text-slate-200">
-                Online only
+                {t('onlineOnly')}
               </span>
 
               <input
@@ -1650,7 +1668,7 @@ export default function WorkerMapClient() {
           <label className="flex items-end">
             <span className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-900 px-4 py-2.5">
               <span className="text-sm font-semibold text-slate-200">
-                Verified only
+                {t('verifiedOnly')}
               </span>
 
               <input
@@ -1664,7 +1682,7 @@ export default function WorkerMapClient() {
 
           <div className="flex items-end">
             <div className="w-full rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2.5">
-              <p className="text-xs text-cyan-200">Workers shown</p>
+              <p className="text-xs text-cyan-200">{t('workersShown')}</p>
               <p className="text-xl font-bold text-white">
                 {rankedWorkers.length}
               </p>
@@ -1701,7 +1719,7 @@ export default function WorkerMapClient() {
                       fillOpacity: 0.9,
                     }}
                   >
-                    <Popup>Your location</Popup>
+                    <Popup>{t('yourLocation')}</Popup>
                   </CircleMarker>
                 ) : null}
 
@@ -1744,32 +1762,32 @@ export default function WorkerMapClient() {
                         {recruiterActive ? (
                           <p className="mb-2 font-bold text-violet-700">
                             {index === 0
-                              ? 'Best Match'
-                              : `${worker.matchScore}% Match`}
+                              ? t('bestMatch')
+                              : t('matchPercent', { score: worker.matchScore })}
                           </p>
                         ) : null}
 
                         <p className="font-bold">
-                          {worker.full_name || 'CrewCall Worker'}
+                          {worker.full_name || t('crewCallWorker')}
                         </p>
 
-                        <p>{worker.trade || 'Trade not listed'}</p>
+                        <p>{worker.trade || t('tradeNotListed')}</p>
 
                         <p>
                           {[worker.city, worker.state]
                             .filter(Boolean)
-                            .join(', ') || 'Location not listed'}
+                            .join(', ') || t('locationNotListed')}
                         </p>
 
                         {worker.distance !== null ? (
-                          <p>{worker.distance.toFixed(1)} miles away</p>
+                          <p>{t('milesAway', { distance: worker.distance.toFixed(1) })}</p>
                         ) : null}
 
                         <Link
                           href={`/profile/${worker.id}`}
                           className="mt-3 inline-block font-semibold text-cyan-700"
                         >
-                          View profile
+                          {t('viewProfileLower')}
                         </Link>
                       </div>
                     </Popup>
@@ -1782,7 +1800,7 @@ export default function WorkerMapClient() {
           <aside className="max-h-[650px] space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-4">
             {rankedWorkers.length === 0 ? (
               <div className="rounded-xl border border-white/10 bg-slate-900 p-5 text-center text-sm text-slate-400">
-                No workers match these filters.
+                {t('noWorkersFilters')}
               </div>
             ) : (
               rankedWorkers.map((worker, index) => (
@@ -1797,7 +1815,7 @@ export default function WorkerMapClient() {
                   {recruiterActive && index === 0 ? (
                     <div className="mb-3 flex items-center justify-between rounded-lg bg-violet-400/15 px-3 py-2">
                       <span className="text-xs font-bold uppercase tracking-[0.15em] text-violet-200">
-                        Best Overall Match
+                        {t('bestOverallMatch')}
                       </span>
                       <span className="text-sm font-bold text-white">
                         #{index + 1}
@@ -1805,18 +1823,18 @@ export default function WorkerMapClient() {
                     </div>
                   ) : recruiterActive ? (
                     <p className="mb-2 text-xs font-semibold text-slate-500">
-                      Ranked #{index + 1}
+                      {t('rankedNumber', { number: index + 1 })}
                     </p>
                   ) : null}
 
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="font-bold text-white">
-                        {worker.full_name || 'CrewCall Worker'}
+                        {worker.full_name || t('crewCallWorker')}
                       </h2>
 
                       <p className="mt-1 text-sm text-cyan-300">
-                        {worker.trade || 'Trade not listed'}
+                        {worker.trade || t('tradeNotListed')}
                       </p>
                     </div>
 
@@ -1826,7 +1844,7 @@ export default function WorkerMapClient() {
                           worker.matchScore
                         )}`}
                       >
-                        {worker.matchScore}% Match
+                        {t('matchPercent', { score: worker.matchScore })}
                       </span>
                     ) : (
                       <span
@@ -1836,7 +1854,7 @@ export default function WorkerMapClient() {
                             : 'bg-slate-700 text-slate-300'
                         }`}
                       >
-                        {worker.is_online ? 'Online' : 'Offline'}
+                        {worker.is_online ? t('online') : t('offline')}
                       </span>
                     )}
                   </div>
@@ -1844,7 +1862,7 @@ export default function WorkerMapClient() {
                   <p className="mt-3 text-sm text-slate-300">
                     {[worker.city, worker.state]
                       .filter(Boolean)
-                      .join(', ') || 'Location not listed'}
+                      .join(', ') || t('locationNotListed')}
                   </p>
 
                   {worker.distance !== null ? (
@@ -1856,7 +1874,7 @@ export default function WorkerMapClient() {
                   {recruiterActive && worker.matchReasons.length > 0 ? (
                     <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
                       <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-                        Why this worker matched
+                        {t('whyMatched')}
                       </p>
 
                       <ul className="space-y-1.5">
@@ -1876,25 +1894,25 @@ export default function WorkerMapClient() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {worker.is_online ? (
                       <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-                        Online now
+                        {t('onlineNow')}
                       </span>
                     ) : null}
 
                     {worker.insurance_verified ? (
                       <span className="rounded-full bg-blue-400/15 px-2.5 py-1 text-xs font-semibold text-blue-300">
-                        Insurance verified
+                        {t('insuranceVerified')}
                       </span>
                     ) : null}
 
                     {worker.liability_form_verified ? (
                       <span className="rounded-full bg-violet-400/15 px-2.5 py-1 text-xs font-semibold text-violet-300">
-                        Liability verified
+                        {t('liabilityVerified')}
                       </span>
                     ) : null}
                   </div>
 
                   <p className="mt-3 text-xs text-slate-500">
-                    {formatLastUpdated(worker.location_updated_at)}
+                    {formatLastUpdated(worker.location_updated_at, locale, t)}
                   </p>
 
                   <div className="mt-4 grid grid-cols-2 gap-2">
@@ -1902,14 +1920,14 @@ export default function WorkerMapClient() {
                       href={`/profile/${worker.id}`}
                       className="rounded-lg border border-cyan-400/40 px-3 py-2 text-center text-sm font-semibold text-cyan-300 transition hover:bg-cyan-400/10"
                     >
-                      View Profile
+                      {t('viewProfile')}
                     </Link>
 
                     <Link
                       href={`/workers/${worker.id}/invite`}
                       className="rounded-lg bg-cyan-400 px-3 py-2 text-center text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
                     >
-                      Invite Worker
+                      {t('inviteWorker')}
                     </Link>
                   </div>
                 </article>
