@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -26,6 +27,8 @@ type Invite = {
 }
 
 export default function WorkerInviteDetailPage() {
+
+  const t = useTranslations('WorkerInviteDetail')
   const params = useParams()
   const router = useRouter()
 
@@ -80,7 +83,7 @@ export default function WorkerInviteDetailPage() {
     setMessage('')
 
     if (!invite) {
-      setMessage('Invite not loaded.')
+      setMessage(t('inviteNotLoaded'))
       setWorking(false)
       return
     }
@@ -91,7 +94,7 @@ export default function WorkerInviteDetailPage() {
       } = await supabase.auth.getUser()
 
       if (!user) {
-        setMessage('You must be logged in.')
+        setMessage(t('mustBeLoggedIn'))
         setWorking(false)
         return
       }
@@ -110,7 +113,7 @@ export default function WorkerInviteDetailPage() {
       const result = await response.json()
 
       if (!response.ok) {
-        setMessage(result.error || 'Unable to accept invite.')
+        setMessage(result.error || t('unableToAccept'))
         setWorking(false)
         return
       }
@@ -147,7 +150,7 @@ export default function WorkerInviteDetailPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 p-8 text-white">
-        Loading invite...
+        {t('loadingInvite')}
       </main>
     )
   }
@@ -155,7 +158,7 @@ export default function WorkerInviteDetailPage() {
   if (!invite) {
     return (
       <main className="min-h-screen bg-slate-950 p-8 text-white">
-        Invite not found.
+        {t('inviteNotFound')}
       </main>
     )
   }
@@ -171,24 +174,24 @@ export default function WorkerInviteDetailPage() {
           href="/worker/invites"
           className="text-cyan-300 font-bold"
         >
-          ← Back to Invites
+          ← {t('backToInvites')}
         </Link>
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
           <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
-            CrewCall Job Invite
+            {t('crewCallJobInvite')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            {job?.title || 'Job Invitation'}
+            {job?.title || t('jobInvitation')}
           </h1>
 
           <p className="mt-3 text-slate-300">
-            From:{' '}
+            {t('from')}:{' '}
             <b>
               {company?.company_name ||
                 company?.full_name ||
-                'Company'}
+                t('company')}
             </b>
           </p>
 
@@ -196,37 +199,41 @@ export default function WorkerInviteDetailPage() {
 
             <div className="rounded-2xl bg-slate-900 p-5">
               <p className="text-xs text-slate-400">
-                TRADE
+                {t('trade')}
               </p>
               <p className="text-xl font-bold">
-                {job?.trade || 'Not listed'}
+                {job?.trade || t('notListed')}
               </p>
             </div>
 
             <div className="rounded-2xl bg-slate-900 p-5">
               <p className="text-xs text-slate-400">
-                PAY
+                {t('pay')}
               </p>
               <p className="text-xl font-bold text-cyan-300">
-                {job?.pay_rate || 'Not listed'}
+                {job?.pay_rate || t('notListed')}
               </p>
             </div>
 
             <div className="rounded-2xl bg-slate-900 p-5">
               <p className="text-xs text-slate-400">
-                LOCATION
+                {t('location')}
               </p>
               <p className="text-xl font-bold">
-                {job?.location || 'Not listed'}
+                {job?.location || t('notListed')}
               </p>
             </div>
 
             <div className="rounded-2xl bg-slate-900 p-5">
               <p className="text-xs text-slate-400">
-                STATUS
+                {t('status')}
               </p>
               <p className="text-xl font-bold">
-                {invite.status}
+                {invite.status === 'accepted'
+                  ? t('accepted')
+                  : invite.status === 'declined'
+                    ? t('declined')
+                    : t('pending')}
               </p>
             </div>
 
@@ -246,7 +253,7 @@ export default function WorkerInviteDetailPage() {
                 onClick={() => updateInvite('accepted')}
                 className="rounded-2xl bg-green-500 px-6 py-3 font-black text-white"
               >
-                Accept
+                {t('accept')}
               </button>
 
               <button
@@ -254,7 +261,7 @@ export default function WorkerInviteDetailPage() {
                 onClick={() => updateInvite('declined')}
                 className="rounded-2xl bg-red-500 px-6 py-3 font-black text-white"
               >
-                Decline
+                {t('decline')}
               </button>
 
             </div>

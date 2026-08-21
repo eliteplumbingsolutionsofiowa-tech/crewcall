@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/lib/formatMoney'
 
@@ -21,6 +22,9 @@ type PaymentRow = {
 }
 
 export default function WorkerPaymentsPage() {
+
+  const t = useTranslations('WorkerPayments')
+  const locale = useLocale()
   const [payments, setPayments] = useState<PaymentRow[]>([])
   const [profile, setProfile] = useState<WorkerProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -110,7 +114,7 @@ export default function WorkerPaymentsPage() {
 
       if (!session?.access_token) {
         setMessage(
-          'Your login session expired. Please log in again.'
+          t('sessionExpired')
         )
         return
       }
@@ -127,7 +131,7 @@ export default function WorkerPaymentsPage() {
 
       if (!response.ok || !data.url) {
         setMessage(
-          data.error || 'Unable to connect Stripe.'
+          data.error || t('stripeConnectFailed')
         )
         return
       }
@@ -137,7 +141,7 @@ export default function WorkerPaymentsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to connect Stripe.'
+          : t('stripeConnectFailed')
       )
     } finally {
       setConnectingStripe(false)
@@ -149,30 +153,30 @@ export default function WorkerPaymentsPage() {
       <div className="mx-auto max-w-6xl">
 
         <h1 className="text-4xl font-black">
-          Worker Payments
+          {t('title')}
         </h1>
 
         <p className="mt-2 text-slate-300">
-          Track your CrewCall earnings and payouts.
+          {t('description')}
         </p>
 
         <div className="mt-8 rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-6 sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                Payout Account
+                {t('payoutAccount')}
               </p>
 
               <h2 className="mt-2 text-2xl font-black text-white">
                 {stripeConnected
-                  ? 'Stripe Connected'
-                  : 'Set Up Worker Payouts'}
+                  ? t('stripeConnected')
+                  : t('setUpWorkerPayouts')}
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
                 {stripeConnected
-                  ? 'Your Stripe payout account is connected and ready to receive released CrewCall payments.'
-                  : 'Connect Stripe so companies can release your CrewCall payments directly to your payout account.'}
+                  ? t('stripeReadyDescription')
+                  : t('stripeSetupDescription')}
               </p>
 
               {message ? (
@@ -184,7 +188,7 @@ export default function WorkerPaymentsPage() {
 
             {stripeConnected ? (
               <div className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-6 py-3 text-sm font-black text-emerald-200">
-                ✓ Ready for Payouts
+                ✓ {t('readyForPayouts')}
               </div>
             ) : (
               <button
@@ -194,8 +198,8 @@ export default function WorkerPaymentsPage() {
                 className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {connectingStripe
-                  ? 'Opening Stripe...'
-                  : 'Set Up Payouts'}
+                  ? t('openingStripe')
+                  : t('setUpPayouts')}
               </button>
             )}
           </div>
@@ -203,7 +207,7 @@ export default function WorkerPaymentsPage() {
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <p className="text-sm text-slate-400">
-            Total Paid
+            {t('totalPaid')}
           </p>
 
           <p className="mt-2 text-5xl font-black">
@@ -216,11 +220,11 @@ export default function WorkerPaymentsPage() {
 
           {loading ? (
             <div className="rounded-2xl bg-white/10 p-6">
-              Loading payments...
+              {t('loadingPayments')}
             </div>
           ) : payments.length === 0 ? (
             <div className="rounded-2xl bg-white/10 p-6">
-              No payouts yet.
+              {t('noPayouts')}
             </div>
           ) : (
             payments.map((payment) => (
@@ -230,14 +234,14 @@ export default function WorkerPaymentsPage() {
               >
 
                 <h2 className="text-2xl font-black">
-                  {payment.title || 'CrewCall Job'}
+                  {payment.title || t('crewCallJob')}
                 </h2>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
 
                   <div>
                     <p className="text-sm text-slate-400">
-                      Paid
+                      {t('paid')}
                     </p>
                     <p className="font-bold">
                       {formatMoney(
@@ -248,7 +252,7 @@ export default function WorkerPaymentsPage() {
 
                   <div>
                     <p className="text-sm text-slate-400">
-                      Platform Fee
+                      {t('platformFee')}
                     </p>
                     <p className="font-bold">
                       {formatMoney(
@@ -259,13 +263,13 @@ export default function WorkerPaymentsPage() {
 
                   <div>
                     <p className="text-sm text-slate-400">
-                      Date
+                      {t('date')}
                     </p>
                     <p className="font-bold">
                       {payment.payout_released_at
                         ? new Date(
                             payment.payout_released_at
-                          ).toLocaleDateString()
+                          ).toLocaleDateString(locale)
                         : '-'}
                     </p>
                   </div>
@@ -274,7 +278,7 @@ export default function WorkerPaymentsPage() {
 
                 {payment.stripe_transfer_id && (
                   <p className="mt-5 break-all text-xs text-slate-400">
-                    Transfer: {payment.stripe_transfer_id}
+                    {t('transfer')}: {payment.stripe_transfer_id}
                   </p>
                 )}
 

@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Application = {
@@ -38,6 +39,9 @@ type StatusFilter =
   | 'rejected'
 
 export default function WorkerApplicationsPage() {
+
+  const t = useTranslations('WorkerApplications')
+  const locale = useLocale()
   const router = useRouter()
 
   const [applications, setApplications] =
@@ -79,7 +83,7 @@ export default function WorkerApplicationsPage() {
         requested_pay_rate: app.company_counter_offer,
         negotiation_status: 'accepted',
         negotiation_message:
-          'Worker accepted the company counter offer.',
+          t('workerAcceptedCounter'),
       })
       .eq('id', app.id)
 
@@ -90,7 +94,7 @@ export default function WorkerApplicationsPage() {
     }
 
     setMessage(
-      `Rate accepted at $${app.company_counter_offer}. Waiting for the company to hire you.`
+      t('rateAccepted', { rate: app.company_counter_offer })
     )
 
     await loadApplications()
@@ -241,7 +245,7 @@ export default function WorkerApplicationsPage() {
           'crewcall-refresh-nav'
         )
       )
-    }, [router])
+    }, [router, t])
 
   useEffect(() => {
     loadApplications()
@@ -410,11 +414,11 @@ export default function WorkerApplicationsPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  Worker Dashboard
+                  {t('workerDashboard')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  My Applications
+                  {t('myApplications')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
@@ -427,26 +431,26 @@ export default function WorkerApplicationsPage() {
 
               <div className="grid gap-3 sm:grid-cols-4">
                 <StatCard
-                  label="All"
+                  label={t('all')}
                   value={counts.all}
                 />
 
                 <StatCard
-                  label="Pending"
+                  label={t('pending')}
                   value={
                     counts.pending
                   }
                 />
 
                 <StatCard
-                  label="Accepted"
+                  label={t('accepted')}
                   value={
                     counts.accepted
                   }
                 />
 
                 <StatCard
-                  label="Rejected"
+                  label={t('rejected')}
                   value={
                     counts.rejected
                   }
@@ -466,7 +470,7 @@ export default function WorkerApplicationsPage() {
               <div className="grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end">
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Search
+                    {t('search')}
                   </label>
 
                   <input
@@ -476,14 +480,14 @@ export default function WorkerApplicationsPage() {
                         e.target.value
                       )
                     }
-                    placeholder="Search jobs, companies..."
+                    placeholder={t('searchPlaceholder')}
                     className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                    Status
+                    {t('status')}
                   </label>
 
                   <select
@@ -497,19 +501,19 @@ export default function WorkerApplicationsPage() {
                     className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300/50"
                   >
                     <option value="all">
-                      All
+                      {t('all')}
                     </option>
 
                     <option value="pending">
-                      Pending
+                      {t('pending')}
                     </option>
 
                     <option value="accepted">
-                      Accepted
+                      {t('accepted')}
                     </option>
 
                     <option value="rejected">
-                      Rejected
+                      {t('rejected')}
                     </option>
                   </select>
                 </div>
@@ -522,8 +526,8 @@ export default function WorkerApplicationsPage() {
                   className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                 >
                   {refreshing
-                    ? 'Refreshing...'
-                    : 'Refresh'}
+                    ? t('refreshing')
+                    : t('refresh')}
                 </button>
               </div>
             </div>
@@ -532,7 +536,7 @@ export default function WorkerApplicationsPage() {
             0 ? (
               <div className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-8 text-center">
                 <p className="text-xl font-black text-white">
-                  No applications found.
+                  {t('noApplicationsFound')}
                 </p>
 
                 <p className="mt-2 text-sm font-bold text-slate-400">
@@ -545,7 +549,7 @@ export default function WorkerApplicationsPage() {
                     href="/jobs"
                     className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20"
                   >
-                    Browse Jobs
+                    {t('browseJobs')}
                   </Link>
                 </div>
               </div>
@@ -585,14 +589,16 @@ export default function WorkerApplicationsPage() {
                                   app.status
                                 )}`}
                               >
-                                {
-                                  app.status
-                                }
+                                {app.status === 'accepted'
+                                  ? t('accepted')
+                                  : app.status === 'rejected'
+                                    ? t('rejected')
+                                    : t('pending')}
                               </span>
 
                               {hired && (
                                 <span className="rounded-full border border-emerald-300/20 bg-emerald-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100">
-                                  Hired
+                                  {t('hired')}
                                 </span>
                               )}
                             </div>
@@ -622,31 +628,37 @@ export default function WorkerApplicationsPage() {
                               <div className="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-5">
 
                                 <p className="text-xs font-black uppercase tracking-wide text-amber-200">
-                                  Pay Negotiation
+                                  {t('payNegotiation')}
                                 </p>
 
                                 <div className="mt-3 space-y-2 text-sm font-bold text-white">
 
                                   <p>
-                                    Your Request:
+                                    {t('yourRequest')}:
                                     <span className="ml-2 text-emerald-300">
                                       ${app.requested_pay_rate || '—'}
                                     </span>
                                   </p>
 
                                   <p>
-                                    Company Counter:
+                                    {t('companyCounter')}:
                                     <span className="ml-2 text-cyan-300">
                                       {app.company_counter_offer
                                         ? `$${app.company_counter_offer}`
-                                        : 'No counter yet'}
+                                        : t('noCounterYet')}
                                     </span>
                                   </p>
 
                                   <p>
-                                    Status:
+                                    {t('status')}:
                                     <span className="ml-2 text-yellow-300">
-                                      {app.negotiation_status || 'open'}
+                                      {app.negotiation_status === 'accepted'
+                                        ? t('accepted')
+                                        : app.negotiation_status === 'declined'
+                                          ? t('declined')
+                                          : app.negotiation_status === 'hired'
+                                            ? t('hired')
+                                            : t('open')}
                                     </span>
                                   </p>
 
@@ -662,7 +674,7 @@ export default function WorkerApplicationsPage() {
                                       disabled={workingId === app.id}
                                       className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white hover:bg-emerald-400 disabled:opacity-50"
                                     >
-                                      Accept Counter
+                                      {t('acceptCounter')}
                                     </button>
 
                                     <button
@@ -670,7 +682,7 @@ export default function WorkerApplicationsPage() {
                                       disabled={workingId === app.id}
                                       className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white hover:bg-red-400 disabled:opacity-50"
                                     >
-                                      Decline
+                                      {t('decline')}
                                     </button>
 
                                   </div>
@@ -693,7 +705,7 @@ export default function WorkerApplicationsPage() {
                                           [app.id]: e.target.value,
                                         }))
                                       }
-                                      placeholder="Counter amount"
+                                      placeholder={t('counterAmount')}
                                       className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
                                     />
 
@@ -707,7 +719,7 @@ export default function WorkerApplicationsPage() {
                                           [app.id]: e.target.value,
                                         }))
                                       }
-                                      placeholder="Message to company"
+                                      placeholder={t('messageToCompany')}
                                       className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
                                     />
 
@@ -717,8 +729,8 @@ export default function WorkerApplicationsPage() {
                                       className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white hover:bg-blue-400 disabled:opacity-50"
                                     >
                                       {workingId === app.id
-                                        ? 'Sending...'
-                                        : 'Send Counter Again'}
+                                        ? t('sending')
+                                        : t('sendCounterAgain')}
                                     </button>
 
                                   </div>
@@ -729,10 +741,10 @@ export default function WorkerApplicationsPage() {
 
 
                             <p className="mt-4 text-xs font-black uppercase tracking-wide text-slate-500">
-                              Applied{' '}
+                              {t('applied')}{' '}
                               {new Date(
                                 app.created_at
-                              ).toLocaleDateString()}
+                              ).toLocaleDateString(locale)}
                             </p>
                           </div>
 
@@ -741,14 +753,14 @@ export default function WorkerApplicationsPage() {
                               href={`/jobs/${app.job_id}`}
                               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                             >
-                              View Job
+                              {t('viewJob')}
                             </Link>
 
                             <Link
                               href={`/messages?jobId=${app.job_id}`}
                               className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-400"
                             >
-                              Message
+                              {t('message')}
                             </Link>
                           </div>
                         </div>

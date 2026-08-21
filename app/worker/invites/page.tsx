@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Job = {
@@ -34,6 +35,8 @@ type Invite = {
 }
 
 export default function WorkerInvitesPage() {
+  const t = useTranslations('WorkerInvites')
+  const locale = useLocale()
   const [invites, setInvites] = useState<Invite[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -64,7 +67,7 @@ export default function WorkerInvitesPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('You must be logged in to view worker invites.')
+      setMessage(t('mustBeLoggedIn'))
       setInvites([])
       setLoading(false)
       return
@@ -211,9 +214,7 @@ export default function WorkerInvitesPage() {
   }
 
   async function acceptInvite(invite: Invite) {
-    const confirmed = window.confirm(
-      'Accept this invite and take this job?'
-    )
+    const confirmed = window.confirm(t('acceptConfirm'))
 
     if (!confirmed) return
 
@@ -240,7 +241,7 @@ export default function WorkerInvitesPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.error || 'Accept failed'
+          data.error || t('acceptFailed')
         )
       }
 
@@ -249,15 +250,13 @@ export default function WorkerInvitesPage() {
         'accepted'
       )
 
-      setMessage(
-        'Invite accepted successfully.'
-      )
+      setMessage(t('acceptedSuccessfully'))
 
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Accept failed'
+          : t('acceptFailed')
       )
     } finally {
       setWorkingId(null)
@@ -265,7 +264,7 @@ export default function WorkerInvitesPage() {
   }
 
   async function declineInvite(invite: Invite) {
-    const confirmed = window.confirm('Decline this invite?')
+    const confirmed = window.confirm(t('declineConfirm'))
     if (!confirmed) return
 
     setWorkingId(invite.id)
@@ -298,13 +297,13 @@ export default function WorkerInvitesPage() {
       read: false,
     })
 
-    setMessage('Invite declined.')
+    setMessage(t('declinedSuccessfully'))
     await loadInvites()
     setWorkingId(null)
   }
 
   function companyName(invite: Invite) {
-    return invite.company?.company_name || invite.company?.full_name || 'Company'
+    return invite.company?.company_name || invite.company?.full_name || t('company')
   }
 
   function statusClasses(status: Invite['status']) {
@@ -320,15 +319,15 @@ export default function WorkerInvitesPage() {
   }
 
   function formatDate(value: string | null) {
-    if (!value) return 'No date listed'
+    if (!value) return t('noDateListed')
 
     const date = new Date(value)
 
     if (Number.isNaN(date.getTime())) {
-      return 'No date listed'
+      return t('noDateListed')
     }
 
-    return date.toLocaleDateString()
+    return date.toLocaleDateString(locale)
   }
 
   return (
@@ -339,7 +338,7 @@ export default function WorkerInvitesPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  CrewCall Worker
+                  {t('crewCallWorker')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
@@ -347,7 +346,7 @@ export default function WorkerInvitesPage() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Review job invites from companies and accept or decline opportunities.
+                  {t('description')}
                 </p>
               </div>
 
@@ -357,7 +356,7 @@ export default function WorkerInvitesPage() {
                 </p>
 
                 <p className="text-xs font-black uppercase tracking-wide text-cyan-300">
-                  Active Results
+                  {t('activeResults')}
                 </p>
               </div>
             </div>
@@ -382,7 +381,7 @@ export default function WorkerInvitesPage() {
                       : 'border border-white/10 bg-white/10 text-white hover:bg-white/15'
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}{' '}
+                  {t(status)}{' '}
                   <span className="opacity-70">({counts[status]})</span>
                 </button>
               ))}
@@ -390,21 +389,21 @@ export default function WorkerInvitesPage() {
 
             {loading ? (
               <div className="rounded-3xl border border-white/10 bg-slate-950/50 p-8">
-                <p className="text-lg font-black text-white">Loading invites...</p>
+                <p className="text-lg font-black text-white">{t('loadingInvites')}</p>
               </div>
             ) : filteredInvites.length === 0 ? (
               <div className="rounded-3xl border border-white/10 bg-slate-950/50 p-8 text-center">
-                <p className="text-xl font-black text-white">No invites found.</p>
+                <p className="text-xl font-black text-white">{t('noInvitesFound')}</p>
 
                 <p className="mt-2 text-sm font-semibold text-slate-400">
-                  Job invites from companies will appear here.
+                  {t('emptyDescription')}
                 </p>
 
                 <Link
                   href="/jobs"
                   className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
                 >
-                  Browse Jobs
+                  {t('browseJobs')}
                 </Link>
               </div>
             ) : (
@@ -418,7 +417,7 @@ export default function WorkerInvitesPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-3">
                           <h2 className="truncate text-3xl font-black text-white">
-                            {invite.job?.title || 'Untitled Job'}
+                            {invite.job?.title || t('untitledJob')}
                           </h2>
 
                           <span
@@ -426,32 +425,32 @@ export default function WorkerInvitesPage() {
                               invite.status
                             )}`}
                           >
-                            {invite.status || 'pending'}
+                            {t(invite.status || 'pending')}
                           </span>
                         </div>
 
                         <p className="mt-3 text-sm font-semibold text-slate-300">
-                          From:{' '}
+                          {t('from')}:{' '}
                           <span className="font-black text-white">
                             {companyName(invite)}
                           </span>
                         </p>
 
                         <p className="mt-3 text-sm font-semibold text-slate-400">
-                          {invite.job?.trade || 'Trade not listed'} •{' '}
-                          {invite.job?.location || 'Location not listed'}
+                          {invite.job?.trade || t('tradeNotListed')} •{' '}
+                          {invite.job?.location || t('locationNotListed')}
                         </p>
 
                         <p className="mt-2 text-2xl font-black text-cyan-300">
-                          {invite.job?.pay_rate || 'Pay not listed'}
+                          {invite.job?.pay_rate || t('payNotListed')}
                         </p>
 
                         <p className="mt-2 text-sm font-semibold text-slate-400">
-                          Start: {formatDate(invite.job?.start_date || null)}
+                          {t('start')}: {formatDate(invite.job?.start_date || null)}
                         </p>
 
                         <p className="mt-3 text-xs font-semibold text-slate-500">
-                          Sent {new Date(invite.created_at).toLocaleDateString()}
+                          {t('sent')} {new Date(invite.created_at).toLocaleDateString(locale)}
                         </p>
                       </div>
 
@@ -460,14 +459,14 @@ export default function WorkerInvitesPage() {
                           href={`/jobs/${invite.job_id}`}
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/15"
                         >
-                          View Job
+                          {t('viewJob')}
                         </Link>
 
                         <Link
                           href={`/profile?user=${invite.company_id}`}
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/15"
                         >
-                          View Company
+                          {t('viewCompany')}
                         </Link>
 
                         <Link
@@ -485,7 +484,7 @@ export default function WorkerInvitesPage() {
                               disabled={workingId === invite.id}
                               className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white hover:bg-emerald-400 disabled:opacity-60"
                             >
-                              {workingId === invite.id ? 'Accepting...' : 'Accept'}
+                              {workingId === invite.id ? t('accepting') : t('accept')}
                             </button>
 
                             <button
@@ -494,7 +493,7 @@ export default function WorkerInvitesPage() {
                               disabled={workingId === invite.id}
                               className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white hover:bg-red-400 disabled:opacity-60"
                             >
-                              {workingId === invite.id ? 'Declining...' : 'Decline'}
+                              {workingId === invite.id ? t('declining') : t('decline')}
                             </button>
                           </>
                         )}
