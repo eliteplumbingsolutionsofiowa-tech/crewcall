@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 import AIRecruiterHeartbeat from '@/app/components/AIRecruiterHeartbeat'
@@ -139,13 +140,16 @@ type OperationsStats = {
 }
 
 export default function CompanyOperationsPage() {
+  const t = useTranslations('CompanyOperations')
+  const locale = useLocale()
+
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [companyName, setCompanyName] = useState('Your Company')
+  const [companyName, setCompanyName] = useState(t('yourCompany'))
 
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
@@ -172,7 +176,7 @@ export default function CompanyOperationsPage() {
         } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          setError('Please log in with a company account.')
+          setError(t('loginRequired'))
           return
         }
 
@@ -186,7 +190,7 @@ export default function CompanyOperationsPage() {
 
         if (!companyContext.companyId) {
           setError(
-            'This page is only available to company accounts or joined company team members.',
+            t('companyOnly'),
           )
           return
         }
@@ -349,13 +353,13 @@ export default function CompanyOperationsPage() {
       } catch (caughtError) {
         console.error('Company operations error:', caughtError)
 
-        setError('Could not load the Operations Center.')
+        setError(t('loadFailed'))
       } finally {
         setLoading(false)
         setRefreshing(false)
       }
     },
-    [],
+    [t],
   )
 
   const updateJobStatus = useCallback(
@@ -390,7 +394,7 @@ export default function CompanyOperationsPage() {
         void loadOperations({ background: true })
       } catch (caughtError) {
         console.error('Could not update job status:', caughtError)
-        setError('Could not update the job status. Please try again.')
+        setError(t('updateFailed'))
       } finally {
         setUpdatingJobId(null)
       }
@@ -624,11 +628,11 @@ export default function CompanyOperationsPage() {
       if (status === 'open' && jobApplications.length === 0) {
         results.push({
           id: `no-applicants-${job.id}`,
-          title: job.title || 'Untitled job',
+          title: job.title || t('untitledJob'),
           description:
-            'This open job has not received any applications.',
+            t('noApplicationsAlert'),
           href: `/jobs/${job.id}/boost`,
-          actionLabel: 'Boost Job',
+          actionLabel: t('boostJob'),
           severity: job.urgent ? 'high' : 'medium',
         })
       }
@@ -640,11 +644,11 @@ export default function CompanyOperationsPage() {
       ) {
         results.push({
           id: `payment-${job.id}`,
-          title: job.title || 'Untitled job',
+          title: job.title || t('untitledJob'),
           description:
-            'The job is completed but payment is still outstanding.',
+            t('paymentOutstanding'),
           href: `/jobs/${job.id}/pay`,
-          actionLabel: 'Pay Worker',
+          actionLabel: t('payWorker'),
           severity: 'high',
         })
       }
@@ -656,11 +660,11 @@ export default function CompanyOperationsPage() {
       ) {
         results.push({
           id: `urgent-${job.id}`,
-          title: job.title || 'Urgent job',
+          title: job.title || t('urgentJob'),
           description:
-            'This urgent job has fewer than two applicants.',
+            t('urgentFewApplicants'),
           href: `/my-jobs/${job.id}`,
-          actionLabel: 'Review Job',
+          actionLabel: t('reviewJob'),
           severity: 'high',
         })
       }
@@ -680,7 +684,7 @@ export default function CompanyOperationsPage() {
         )
       })
       .slice(0, 8)
-  }, [applicationsByJobId, jobs])
+  }, [applicationsByJobId, jobs, t])
 
   const aiOperationsSummary = useMemo(() => {
     const recommendations: Array<{
@@ -725,12 +729,10 @@ export default function CompanyOperationsPage() {
     if (urgentUnstaffedJobs.length > 0) {
       recommendations.push({
         id: 'urgent-staffing',
-        title: 'Urgent staffing risk',
-        description: `${urgentUnstaffedJobs.length} urgent job${
-          urgentUnstaffedJobs.length === 1 ? '' : 's'
-        } still need assigned workers.`,
+        title: t('urgentStaffingRisk'),
+        description: t('urgentJobsNeedWorkers', { count: urgentUnstaffedJobs.length }),
         href: '/company/jobs',
-        actionLabel: 'Staff Jobs',
+        actionLabel: t('staffJobs'),
         severity: 'high',
       })
     }
@@ -738,12 +740,10 @@ export default function CompanyOperationsPage() {
     if (jobsStartingSoonWithoutWorkers.length > 0) {
       recommendations.push({
         id: 'starting-soon',
-        title: 'Jobs starting soon',
-        description: `${jobsStartingSoonWithoutWorkers.length} job${
-          jobsStartingSoonWithoutWorkers.length === 1 ? '' : 's'
-        } begin within 48 hours without assigned workers.`,
+        title: t('jobsStartingSoon'),
+        description: t('startingSoonNoWorkers', { count: jobsStartingSoonWithoutWorkers.length }),
         href: '/workers',
-        actionLabel: 'Find Workers',
+        actionLabel: t('findWorkers'),
         severity: 'high',
       })
     }
@@ -751,12 +751,10 @@ export default function CompanyOperationsPage() {
     if (stats.paymentsDue > 0) {
       recommendations.push({
         id: 'payments-due',
-        title: 'Payments need attention',
-        description: `${stats.paymentsDue} assigned or completed job${
-          stats.paymentsDue === 1 ? '' : 's'
-        } have not been marked paid.`,
+        title: t('paymentsNeedAttention'),
+        description: t('paymentsNotPaid', { count: stats.paymentsDue }),
         href: '/admin/payments',
-        actionLabel: 'Review Payments',
+        actionLabel: t('reviewPayments'),
         severity: 'medium',
       })
     }
@@ -764,12 +762,10 @@ export default function CompanyOperationsPage() {
     if (stats.unreadNotifications > 0) {
       recommendations.push({
         id: 'unread-notifications',
-        title: 'Unread company alerts',
-        description: `${stats.unreadNotifications} notification${
-          stats.unreadNotifications === 1 ? '' : 's'
-        } should be reviewed.`,
+        title: t('unreadCompanyAlerts'),
+        description: t('notificationsToReview', { count: stats.unreadNotifications }),
         href: '/notifications',
-        actionLabel: 'View Alerts',
+        actionLabel: t('viewAlerts'),
         severity: 'low',
       })
     }
@@ -780,11 +776,11 @@ export default function CompanyOperationsPage() {
     ) {
       recommendations.push({
         id: 'low-candidate-flow',
-        title: 'Candidate flow is low',
+        title: t('candidateFlowLow'),
         description:
-          'You have open jobs but no active applications. Consider inviting matched workers directly.',
+          t('candidateFlowLowDescription'),
         href: '/company/worker-map',
-        actionLabel: 'Run Recruiter',
+        actionLabel: t('runRecruiter'),
         severity: 'medium',
       })
     }
@@ -792,11 +788,11 @@ export default function CompanyOperationsPage() {
     if (recommendations.length === 0) {
       recommendations.push({
         id: 'healthy-operation',
-        title: 'Operation looks healthy',
+        title: t('operationHealthy'),
         description:
-          'CrewCall found no immediate staffing, payment, or notification risks.',
+          t('operationHealthyDescription'),
         href: '/company/jobs',
-        actionLabel: 'View Jobs',
+        actionLabel: t('viewJobs'),
         severity: 'low',
       })
     }
@@ -827,12 +823,12 @@ export default function CompanyOperationsPage() {
 
     const status =
       healthScore >= 90
-        ? 'Excellent'
+        ? t('excellent')
         : healthScore >= 75
-          ? 'Stable'
+          ? t('stable')
           : healthScore >= 60
-            ? 'Needs Attention'
-            : 'At Risk'
+            ? t('needsAttention')
+            : t('atRisk')
 
     return {
       healthScore,
@@ -847,6 +843,7 @@ export default function CompanyOperationsPage() {
     stats.openJobs,
     stats.paymentsDue,
     stats.unreadNotifications,
+    t,
   ])
 
   const activityFeed = useMemo<ActivityItem[]>(() => {
@@ -859,10 +856,10 @@ export default function CompanyOperationsPage() {
 
         return {
           id: `application-${application.id}`,
-          title: 'New job application',
-          description: `${
-            job?.title || 'A company job'
-          } received a worker application.`,
+          title: t('newJobApplication'),
+          description: t('receivedApplication', {
+            job: job?.title || t('companyJob'),
+          }),
           createdAt: application.created_at,
           href: `/my-jobs/${application.job_id}/applicants`,
           tone: 'blue' as const,
@@ -878,9 +875,9 @@ export default function CompanyOperationsPage() {
       .slice(0, 10)
       .map((message) => ({
         id: `message-${message.id}`,
-        title: 'New message received',
+        title: t('newMessageReceived'),
         description:
-          message.body || 'A worker sent a new job message.',
+          message.body || t('workerSentMessage'),
         createdAt: message.created_at,
         href: '/messages',
         tone: 'cyan' as const,
@@ -892,10 +889,10 @@ export default function CompanyOperationsPage() {
       .map((notification) => ({
         id: `notification-${notification.id}`,
         title:
-          notification.title || 'CrewCall notification',
+          notification.title || t('crewCallNotification'),
         description:
           notification.body ||
-          'Your company received a new update.',
+          t('companyNewUpdate'),
         createdAt: notification.created_at,
         href:
           notification.link_url &&
@@ -923,6 +920,7 @@ export default function CompanyOperationsPage() {
     jobs,
     messages,
     notifications,
+    t,
   ])
 
   const recentApplications = applications.slice(0, 6)
@@ -951,18 +949,18 @@ export default function CompanyOperationsPage() {
 
       <div className="relative mx-auto max-w-7xl space-y-8">
         <PageHeader
-          eyebrow="CrewCall Operations Center"
-          greeting={getGreeting()}
-          title={`${companyName} Operations`}
-          description="Manage active jobs, assigned workers, applicants, messages, payments, and urgent work from one live workspace."
+          eyebrow={t('eyebrow')}
+          greeting={getGreeting(t)}
+          title={t('operationsTitle', { company: companyName })}
+          description={t('description')}
           actions={
             <div className="flex flex-wrap gap-3">
               <PrimaryButton href="/post-job">
-                Post a Job
+                {t('postJob')}
               </PrimaryButton>
 
               <SecondaryButton href="/workers">
-                Find Workers
+                {t('findWorkers')}
               </SecondaryButton>
 
               <button
@@ -973,7 +971,7 @@ export default function CompanyOperationsPage() {
                 disabled={refreshing}
                 className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-white transition hover:border-blue-400/30 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {refreshing ? 'Refreshing...' : 'Refresh'}
+                {refreshing ? t('refreshing') : t('refresh')}
               </button>
             </div>
           }
@@ -989,16 +987,15 @@ export default function CompanyOperationsPage() {
               <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
-                    CrewCall AI Operations Intelligence
+                    {t('aiOperations')}
                   </p>
 
                   <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">
-                    Your live operational briefing
+                    {t('liveBriefing')}
                   </h2>
 
                   <p className="mt-3 text-sm font-semibold leading-6 text-slate-400">
-                    CrewCall is analyzing staffing, job starts,
-                    payments, applications, and company alerts.
+                    {t('liveBriefingDescription')}
                   </p>
                 </div>
 
@@ -1105,7 +1102,7 @@ export default function CompanyOperationsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-black text-red-100">
-                  Operations Center unavailable
+                  {t('operationsUnavailable')}
                 </p>
 
                 <p className="mt-1 text-sm font-semibold text-red-200/80">
@@ -1118,7 +1115,7 @@ export default function CompanyOperationsPage() {
                 onClick={() => void loadOperations()}
                 className="rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-red-300/20"
               >
-                Try Again
+                {t('tryAgain')}
               </button>
             </div>
           </GlassCard>
@@ -1128,64 +1125,64 @@ export default function CompanyOperationsPage() {
           <>
             <section>
               <SectionHeader
-                eyebrow="Live Snapshot"
-                title="Your operation right now"
-                description="Realtime totals for your active company workflow."
+                eyebrow={t('liveSnapshot')}
+                title={t('operationNow')}
+                description={t('realtimeDescription')}
               />
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
-                  title="Open Jobs"
+                  title={t('openJobs')}
                   value={stats.openJobs}
-                  description="Currently accepting workers"
+                  description={t('acceptingWorkers')}
                   tone="blue"
                   icon={<span aria-hidden="true">▣</span>}
                 />
 
                 <StatCard
-                  title="Active Jobs"
+                  title={t('activeJobs')}
                   value={stats.activeJobs}
-                  description="Assigned or in progress"
+                  description={t('assignedOrProgress')}
                   tone="blue"
                   icon={<span aria-hidden="true">⚒</span>}
                 />
 
                 <StatCard
-                  title="Assigned Workers"
+                  title={t('assignedWorkers')}
                   value={stats.assignedWorkers}
-                  description="Workers currently on your jobs"
+                  description={t('workersOnJobs')}
                   tone="purple"
                   icon={<span aria-hidden="true">◎</span>}
                 />
 
                 <StatCard
-                  title="Applications"
+                  title={t('applications')}
                   value={stats.applications}
-                  description="Workers in your hiring pipeline"
+                  description={t('workersPipeline')}
                   tone="blue"
                   icon={<span aria-hidden="true">✓</span>}
                 />
 
                 <StatCard
-                  title="Payments Due"
+                  title={t('paymentsDue')}
                   value={stats.paymentsDue}
-                  description="Assigned work not marked paid"
+                  description={t('workNotPaid')}
                   tone={stats.paymentsDue > 0 ? 'amber' : 'green'}
                   icon={<span aria-hidden="true">$</span>}
                 />
 
                 <StatCard
-                  title="Urgent Jobs"
+                  title={t('urgentJobs')}
                   value={stats.urgentJobs}
-                  description="Jobs marked urgent"
+                  description={t('jobsMarkedUrgent')}
                   tone={stats.urgentJobs > 0 ? 'red' : 'green'}
                   icon={<span aria-hidden="true">!</span>}
                 />
 
                 <StatCard
-                  title="Unread Alerts"
+                  title={t('unreadAlerts')}
                   value={stats.unreadNotifications}
-                  description="Notifications needing review"
+                  description={t('notificationsReview')}
                   tone={
                     stats.unreadNotifications > 0
                       ? 'amber'
@@ -1195,9 +1192,9 @@ export default function CompanyOperationsPage() {
                 />
 
                 <StatCard
-                  title="Completed"
+                  title={t('completed')}
                   value={stats.completedJobs}
-                  description="Finished company jobs"
+                  description={t('finishedJobs')}
                   tone="green"
                   icon={<span aria-hidden="true">★</span>}
                 />
@@ -1210,12 +1207,12 @@ export default function CompanyOperationsPage() {
               <>
                 <section>
                   <SectionHeader
-                    eyebrow="Today's Schedule"
-                    title="Jobs scheduled for today"
-                    description="Start work, complete jobs, contact workers, and open jobsite directions from one dispatch board."
+                    eyebrow={t('todaysSchedule')}
+                    title={t('jobsScheduledToday')}
+                    description={t('scheduleDescription')}
                     action={
                       <SecondaryButton href="/company/jobs" size="sm">
-                        Full Schedule
+                        {t('fullSchedule')}
                       </SecondaryButton>
                     }
                   />
@@ -1224,8 +1221,8 @@ export default function CompanyOperationsPage() {
                     {todaysJobs.length === 0 ? (
                       <GlassCard padding="lg">
                         <EmptyState
-                          title="Nothing scheduled today"
-                          description="Jobs with today's start date will appear here automatically."
+                          title={t('nothingScheduled')}
+                          description={t('nothingScheduledDescription')}
                         />
                       </GlassCard>
                     ) : (
@@ -1255,52 +1252,52 @@ export default function CompanyOperationsPage() {
 
                 <section>
                   <SectionHeader
-                    eyebrow="Quick Actions"
-                    title="Move work forward"
-                    description="Open the tools your company uses throughout the day."
+                    eyebrow={t('quickActions')}
+                    title={t('moveWorkForward')}
+                    description={t('quickActionsDescription')}
                   />
 
                   <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <QuickAction
                       href="/post-job"
                       icon="+"
-                      title="Post Job"
-                      description="Create new work"
+                      title={t('postJobShort')}
+                      description={t('createNewWork')}
                     />
 
                     <QuickAction
                       href="/workers"
                       icon="⌖"
                       title="Find Workers"
-                      description="Search available help"
+                      description={t('searchAvailableHelp')}
                     />
 
                     <QuickAction
                       href="/company/applications"
                       icon="✓"
-                      title="Applicants"
-                      description="Review candidates"
+                      title={t('applicants')}
+                      description={t('reviewCandidates')}
                     />
 
                     <QuickAction
                       href="/messages"
                       icon="✉"
-                      title="Messages"
-                      description="Open conversations"
+                      title={t('messages')}
+                      description={t('openConversations')}
                     />
 
                     <QuickAction
                       href="/company/jobs"
                       icon="▣"
-                      title="Jobs"
-                      description="Manage all jobs"
+                      title={t('jobs')}
+                      description={t('manageAllJobs')}
                     />
 
                     <QuickAction
                       href="/company/analytics"
                       icon="↗"
-                      title="Analytics"
-                      description="View performance"
+                      title={t('analytics')}
+                      description={t('viewPerformance')}
                     />
                   </div>
                 </section>
@@ -1308,15 +1305,15 @@ export default function CompanyOperationsPage() {
                 <section className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
                   <GlassCard padding="lg" accent>
                     <SectionHeader
-                      eyebrow="Dispatch Board"
-                      title="Active company jobs"
-                      description="Open, assigned, and in-progress jobs ordered by urgency and start date."
+                      eyebrow={t('dispatchBoard')}
+                      title={t('activeCompanyJobs')}
+                      description={t('dispatchDescription')}
                       action={
                         <SecondaryButton
                           href="/company/jobs"
                           size="sm"
                         >
-                          View All Jobs
+                          {t('viewAllJobs')}
                         </SecondaryButton>
                       }
                     />
@@ -1324,8 +1321,8 @@ export default function CompanyOperationsPage() {
                     <div className="mt-6">
                       {operationalJobs.length === 0 ? (
                         <EmptyState
-                          title="No active jobs"
-                          description="Post a new job or reopen an existing job to begin building your active operation."
+                          title={t('noActiveJobs')}
+                          description={t('noActiveJobsDescription')}
                         />
                       ) : (
                         <div className="space-y-4">
@@ -1360,16 +1357,16 @@ export default function CompanyOperationsPage() {
 
                   <GlassCard padding="lg">
                     <SectionHeader
-                      eyebrow="Needs Attention"
-                      title="Operational alerts"
-                      description="Work that may require immediate action."
+                      eyebrow={t('needsAttention')}
+                      title={t('operationalAlerts')}
+                      description={t('alertsDescription')}
                     />
 
                     <div className="mt-6">
                       {alerts.length === 0 ? (
                         <EmptyState
-                          title="Everything looks good"
-                          description="There are currently no urgent job, applicant, or payment alerts."
+                          title={t('everythingLooksGood')}
+                          description={t('noAlertsDescription')}
                         />
                       ) : (
                         <div className="space-y-3">
@@ -1392,16 +1389,16 @@ export default function CompanyOperationsPage() {
                     className="xl:col-span-2"
                   >
                     <SectionHeader
-                      eyebrow="Crew Board"
-                      title="Assigned workers"
-                      description="Workers attached to active CrewCall jobs."
+                      eyebrow={t('crewBoard')}
+                      title={t('assignedWorkersTitle')}
+                      description={t('assignedWorkersDescription')}
                     />
 
                     <div className="mt-6">
                       {todaysCrew.length === 0 ? (
                         <EmptyState
-                          title="No workers assigned"
-                          description="Workers will appear here after your company hires or assigns them to active jobs."
+                          title={t('noWorkersAssigned')}
+                          description={t('noWorkersAssignedDescription')}
                         />
                       ) : (
                         <div className="grid gap-4 md:grid-cols-2">
@@ -1421,15 +1418,15 @@ export default function CompanyOperationsPage() {
 
                   <GlassCard padding="lg">
                     <SectionHeader
-                      eyebrow="Hiring Pipeline"
-                      title="Recent applicants"
-                      description="Newest workers interested in your jobs."
+                      eyebrow={t('hiringPipeline')}
+                      title={t('recentApplicants')}
+                      description={t('recentApplicantsDescription')}
                       action={
                         <SecondaryButton
                           href="/company/applications"
                           size="sm"
                         >
-                          View All
+                          {t('viewAll')}
                         </SecondaryButton>
                       }
                     />
@@ -1437,8 +1434,8 @@ export default function CompanyOperationsPage() {
                     <div className="mt-6">
                       {recentApplications.length === 0 ? (
                         <EmptyState
-                          title="No applicants yet"
-                          description="Applications will appear here after workers apply."
+                          title={t('noApplicants')}
+                          description={t('noApplicantsDescription')}
                         />
                       ) : (
                         <div className="space-y-3">
@@ -1460,13 +1457,11 @@ export default function CompanyOperationsPage() {
                                     <div className="min-w-0">
                                       <p className="truncate font-black text-white">
                                         {job?.title ||
-                                          'Untitled job'}
+                                          t('untitledJob')}
                                       </p>
 
                                       <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                                        {formatDate(
-                                          application.created_at,
-                                        )}
+                                        {formatDate(application.created_at, locale, t)}
                                       </p>
                                     </div>
 
@@ -1489,15 +1484,15 @@ export default function CompanyOperationsPage() {
                 <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
                   <GlassCard padding="lg">
                     <SectionHeader
-                      eyebrow="Live Activity"
-                      title="Recent company activity"
-                      description="Applications, messages, and account events ordered by time."
+                      eyebrow={t('liveActivity')}
+                      title={t('recentCompanyActivity')}
+                      description={t('recentCompanyActivityDescription')}
                       action={
                         <SecondaryButton
                           href="/notifications"
                           size="sm"
                         >
-                          Notifications
+                          {t('notifications')}
                         </SecondaryButton>
                       }
                     />
@@ -1505,8 +1500,8 @@ export default function CompanyOperationsPage() {
                     <div className="mt-6">
                       {activityFeed.length === 0 ? (
                         <EmptyState
-                          title="No recent activity"
-                          description="New applications, messages, payments, and job updates will appear here."
+                          title={t('noRecentActivity')}
+                          description={t('noRecentActivityDescription')}
                         />
                       ) : (
                         <div className="relative space-y-3 before:absolute before:bottom-5 before:left-[1.42rem] before:top-5 before:w-px before:bg-white/10">
@@ -1523,14 +1518,14 @@ export default function CompanyOperationsPage() {
 
                   <GlassCard padding="lg">
                     <SectionHeader
-                      eyebrow="Company Performance"
-                      title="Hiring funnel"
-                      description="A quick operational conversion snapshot."
+                      eyebrow={t('companyPerformance')}
+                      title={t('hiringFunnel')}
+                      description={t('hiringFunnelDescription')}
                     />
 
                     <div className="mt-6 space-y-3">
                       <FunnelMetric
-                        label="Jobs posted"
+                        label={t('jobsPosted')}
                         value={jobs.length}
                         maximum={Math.max(jobs.length, 1)}
                       />
@@ -1546,13 +1541,13 @@ export default function CompanyOperationsPage() {
                       />
 
                       <FunnelMetric
-                        label="Assigned jobs"
+                        label={t('assignedJobs')}
                         value={stats.assignedWorkers}
                         maximum={Math.max(jobs.length, 1)}
                       />
 
                       <FunnelMetric
-                        label="Completed jobs"
+                        label={t('completedJobs')}
                         value={stats.completedJobs}
                         maximum={Math.max(jobs.length, 1)}
                       />
@@ -1560,7 +1555,7 @@ export default function CompanyOperationsPage() {
 
                     <div className="mt-6">
                       <PrimaryButton href="/company/analytics">
-                        View Full Analytics
+                        {t('viewFullAnalytics')}
                       </PrimaryButton>
                     </div>
                   </GlassCard>
@@ -1587,10 +1582,12 @@ function TodayScheduleCard({
   onStart: () => void
   onComplete: () => void
 }) {
+  const t = useTranslations('CompanyOperations')
+  const locale = useLocale()
   const status = normalizeStatus(job.status)
   const workerName = worker
     ? getWorkerName(worker)
-    : 'No worker assigned'
+    : t('noWorkerAssigned')
   const directionsHref = getDirectionsHref(job.location)
   const canStart = ['assigned', 'open'].includes(status)
   const canComplete = status === 'in_progress'
@@ -1623,7 +1620,7 @@ function TodayScheduleCard({
               href={`/my-jobs/${job.id}`}
               className="mt-3 block truncate text-xl font-black text-white transition hover:text-blue-200"
             >
-              {job.title || 'Untitled job'}
+              {job.title || t('untitledJob')}
             </Link>
           </div>
 
@@ -1632,22 +1629,22 @@ function TodayScheduleCard({
               Start
             </p>
             <p className="mt-1 text-lg font-black text-cyan-100">
-              {formatTime(job.start_date)}
+              {formatTime(job.start_date, locale, t)}
             </p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <ScheduleDetail
-            label="Assigned worker"
+            label={t('assignedWorker')}
             value={workerName}
             icon="◎"
             tone={worker ? 'green' : 'amber'}
           />
 
           <ScheduleDetail
-            label="Job location"
-            value={job.location || 'Location not listed'}
+            label={t('jobLocation')}
+            value={job.location || t('locationNotListed')}
             icon="⌖"
             tone="blue"
           />
@@ -1660,7 +1657,7 @@ function TodayScheduleCard({
               disabled={updating}
               emphasis
             >
-              {updating ? 'Updating...' : 'Start Job'}
+              {updating ? t('updating') : t('startJob')}
             </ScheduleActionButton>
           )}
 
@@ -1670,7 +1667,7 @@ function TodayScheduleCard({
               disabled={updating}
               emphasis
             >
-              {updating ? 'Updating...' : 'Complete'}
+              {updating ? t('updating') : t('complete')}
             </ScheduleActionButton>
           )}
 
@@ -1803,6 +1800,8 @@ function OperationsJobCard({
   messageCount: number
   worker: WorkerProfile | null
 }) {
+  const t = useTranslations('CompanyOperations')
+  const locale = useLocale()
   const status = normalizeStatus(job.status)
   const paymentDue =
     Boolean(job.assigned_worker_id) &&
@@ -1842,7 +1841,7 @@ function OperationsJobCard({
         } = await supabase.auth.getSession()
 
         if (sessionError || !session?.access_token) {
-          throw new Error('Please log in again to use AI recruiting.')
+          throw new Error(t('loginAgainRecruiter'))
         }
 
         const sendAction = async (
@@ -1871,7 +1870,7 @@ function OperationsJobCard({
             throw new Error(
               result?.error ||
                 result?.message ||
-                'AI recruiting could not be updated.',
+                t('aiRecruitingUpdateFailed'),
             )
           }
 
@@ -1897,7 +1896,7 @@ function OperationsJobCard({
           result.message ||
             (action === 'status'
               ? ''
-              : 'AI recruiting updated successfully.'),
+              : t('aiRecruitingUpdated')),
         )
       } catch (caughtError) {
         console.error(
@@ -1908,13 +1907,13 @@ function OperationsJobCard({
         setAutoRecruitError(
           caughtError instanceof Error
             ? caughtError.message
-            : 'AI recruiting could not be updated.',
+            : t('aiRecruitingUpdateFailed'),
         )
       } finally {
         setAutoRecruitLoading(false)
       }
     },
-    [autoRecruitLoading, job.id],
+    [autoRecruitLoading, job.id, t],
   )
 
   useEffect(() => {
@@ -1944,12 +1943,12 @@ function OperationsJobCard({
 
     const staffingRisk =
       worker
-        ? 'Low'
+        ? t('riskLow')
         : job.urgent || applicationCount === 0
-          ? 'High'
+          ? t('riskHigh')
           : applicationCount < 3
-            ? 'Medium'
-            : 'Low'
+            ? t('riskMedium')
+            : t('riskLow')
 
     const confidence =
       worker
@@ -1964,12 +1963,12 @@ function OperationsJobCard({
 
     const recommendation =
       worker
-        ? 'Worker assigned. Monitor arrival, messages, and payment status.'
+        ? t('workerAssignedRecommendation')
         : applicationCount >= 3
-          ? 'Review the strongest applicants and assign a worker.'
+          ? t('reviewStrongest')
           : applicationCount > 0
-            ? 'Review current applicants and invite backup candidates.'
-            : 'Run AI Recruiter and invite matched workers immediately.'
+            ? t('reviewAndInvite')
+            : t('runAiImmediately')
 
     return {
       matchScore,
@@ -2015,35 +2014,33 @@ function OperationsJobCard({
             href={`/my-jobs/${job.id}`}
             className="mt-3 block truncate text-xl font-black text-white transition hover:text-blue-200"
           >
-            {job.title || 'Untitled job'}
+            {job.title || t('untitledJob')}
           </Link>
 
           <p className="mt-2 text-sm font-semibold text-slate-400">
             {[job.trade, job.location].filter(Boolean).join(' • ') ||
-              'Job details not listed'}
+              t('jobDetailsNotListed')}
           </p>
 
           <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-slate-400">
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">
-              {applicationCount} applicant
-              {applicationCount === 1 ? '' : 's'}
+              {t('applicantCount', { count: applicationCount })}
             </span>
 
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">
-              {messageCount} message
-              {messageCount === 1 ? '' : 's'}
+              {t('messageCount', { count: messageCount })}
             </span>
 
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">
               {job.pay_rate != null
                 ? `$${Number(job.pay_rate).toLocaleString()}`
-                : 'Pay not listed'}
+                : t('payNotListed')}
             </span>
 
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">
               {job.start_date
-                ? `Starts ${formatDate(job.start_date)}`
-                : 'Start date not listed'}
+                ? t('starts', { date: formatDate(job.start_date, locale, t) })
+                : t('startDateNotListed')}
             </span>
           </div>
 
@@ -2055,7 +2052,7 @@ function OperationsJobCard({
 
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-white">
-                  {getWorkerName(worker)}
+                  {getWorkerName(worker, t)}
                 </p>
 
                 <p className="text-xs font-semibold text-green-200/70">
@@ -2086,7 +2083,7 @@ function OperationsJobCard({
                       : 'green'
                 }
               >
-                {dispatchIntelligence.staffingRisk} Risk
+                {t('risk', { level: dispatchIntelligence.staffingRisk })}
               </StatusBadge>
             </div>
 
@@ -2185,9 +2182,11 @@ function CrewMemberCard({
   job: Job
   worker: WorkerProfile | null
 }) {
+  const t = useTranslations('CompanyOperations')
+  const locale = useLocale()
   const workerName = worker
-    ? getWorkerName(worker)
-    : 'Assigned Worker'
+    ? getWorkerName(worker, t)
+    : t('assignedWorkerFallback')
 
   const inProgress =
     normalizeStatus(job.status) === 'in_progress'
@@ -2209,13 +2208,13 @@ function CrewMemberCard({
           </p>
 
           <p className="mt-1 truncate text-sm font-semibold text-blue-300">
-            {job.title || 'Untitled job'}
+            {job.title || t('untitledJob')}
           </p>
 
           <p className="mt-2 text-sm text-slate-400">
             {[worker?.trade, job.location]
               .filter(Boolean)
-              .join(' • ') || 'Assignment details not listed'}
+              .join(' • ') || t('assignmentDetailsNotListed')}
           </p>
         </div>
 
@@ -2224,22 +2223,22 @@ function CrewMemberCard({
           dot
           pulse={inProgress}
         >
-          {inProgress ? 'Working' : 'Assigned'}
+          {inProgress ? t('working') : t('assigned')}
         </StatusBadge>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <MiniMetric
-          label="Start"
+          label={t('start')}
           value={
             job.start_date
-              ? formatShortDate(job.start_date)
-              : 'Not set'
+              ? formatShortDate(job.start_date, locale, t)
+              : t('notSet')
           }
         />
 
         <MiniMetric
-          label="Score"
+          label={t('score')}
           value={
             worker?.crewcall_score != null
               ? String(worker.crewcall_score)
@@ -2358,7 +2357,7 @@ function ActivityFeedItem({
           </p>
 
           <p className="shrink-0 text-xs font-bold text-slate-500">
-            {formatRelativeTime(activity.createdAt)}
+            {formatRelativeTime(activity.createdAt, useLocale(), useTranslations('CompanyOperations'))}
           </p>
         </div>
 
@@ -2415,6 +2414,8 @@ function QuickAction({
   title: string
   description: string
 }) {
+  const t = useTranslations('CompanyOperations')
+
   return (
     <Link href={href} className="group block">
       <GlassCard padding="lg" hover className="h-full">
@@ -2430,7 +2431,7 @@ function QuickAction({
           </p>
 
           <span className="mt-4 text-xs font-black text-blue-300 transition group-hover:translate-x-1">
-            Open →
+            {t('open')}
           </span>
         </div>
       </GlassCard>
@@ -2500,6 +2501,8 @@ function EmptyState({
 }
 
 function FirstJobState() {
+  const t = useTranslations('CompanyOperations')
+
   return (
     <GlassCard padding="xl" accent>
       <div className="mx-auto max-w-2xl py-10 text-center">
@@ -2508,25 +2511,24 @@ function FirstJobState() {
         </div>
 
         <p className="mt-6 text-xs font-black uppercase tracking-[0.25em] text-blue-300">
-          Start Your Operation
+          {t('startOperation')}
         </p>
 
         <h2 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">
-          Post your first CrewCall job
+          {t('postFirstJob')}
         </h2>
 
         <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-slate-300">
-          Active jobs, applicants, assigned workers, messages,
-          operational alerts, and payment activity will appear here.
+          {t('firstJobDescription')}
         </p>
 
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <PrimaryButton href="/post-job">
-            Post Your First Job
+            {t('postYourFirstJob')}
           </PrimaryButton>
 
           <SecondaryButton href="/workers">
-            Browse Workers
+            {t('browseWorkers')}
           </SecondaryButton>
         </div>
       </div>
@@ -2577,12 +2579,13 @@ function ApplicationBadge({
 }: {
   status: string | null
 }) {
+  const t = useTranslations('CompanyOperations')
   const normalized = normalizeStatus(status)
 
   if (['hired', 'accepted'].includes(normalized)) {
     return (
       <StatusBadge tone="green" dot>
-        {formatStatus(normalized)}
+        {translatedStatus(normalized, t)}
       </StatusBadge>
     )
   }
@@ -2594,14 +2597,14 @@ function ApplicationBadge({
   ) {
     return (
       <StatusBadge tone="red">
-        {formatStatus(normalized)}
+        {translatedStatus(normalized, t)}
       </StatusBadge>
     )
   }
 
   return (
     <StatusBadge tone="amber" dot>
-      {formatStatus(normalized || 'pending')}
+      {translatedStatus(normalized || 'pending', t)}
     </StatusBadge>
   )
 }
@@ -2611,12 +2614,13 @@ function JobStatusBadge({
 }: {
   status: string | null
 }) {
+  const t = useTranslations('CompanyOperations')
   const normalized = normalizeStatus(status)
 
   if (normalized === 'completed') {
     return (
       <StatusBadge tone="green" dot>
-        Completed
+        {t('statusCompleted')}
       </StatusBadge>
     )
   }
@@ -2624,7 +2628,7 @@ function JobStatusBadge({
   if (normalized === 'in_progress') {
     return (
       <StatusBadge tone="blue" dot pulse>
-        In Progress
+        {t('statusInProgress')}
       </StatusBadge>
     )
   }
@@ -2632,7 +2636,7 @@ function JobStatusBadge({
   if (normalized === 'assigned') {
     return (
       <StatusBadge tone="purple" dot>
-        Assigned
+        {t('statusAssigned')}
       </StatusBadge>
     )
   }
@@ -2643,14 +2647,14 @@ function JobStatusBadge({
   ) {
     return (
       <StatusBadge tone="slate">
-        {formatStatus(normalized)}
+        {translatedStatus(normalized, t)}
       </StatusBadge>
     )
   }
 
   return (
     <StatusBadge tone="blue" dot>
-      Open
+      {t('statusOpen')}
     </StatusBadge>
   )
 }
@@ -2695,8 +2699,15 @@ function notificationTone(
   return 'blue'
 }
 
-function getWorkerName(worker: WorkerProfile) {
-  return worker.full_name || worker.company_name || 'CrewCall Worker'
+function getWorkerName(
+  worker: WorkerProfile,
+  t?: ReturnType<typeof useTranslations>
+) {
+  return (
+    worker.full_name ||
+    worker.company_name ||
+    (t ? t('crewCallWorker') : 'CrewCall Worker')
+  )
 }
 
 function getInitial(worker: WorkerProfile) {
@@ -2717,22 +2728,40 @@ function isActuallyOnline(worker: WorkerProfile) {
   return Date.now() - timestamp < 90_000
 }
 
-function getGreeting() {
+function getGreeting(
+  t: ReturnType<typeof useTranslations>
+) {
   const hour = new Date().getHours()
 
-  if (hour < 12) {
-    return 'Good morning'
-  }
-
-  if (hour < 17) {
-    return 'Good afternoon'
-  }
-
-  return 'Good evening'
+  if (hour < 12) return t('goodMorning')
+  if (hour < 17) return t('goodAfternoon')
+  return t('goodEvening')
 }
 
 function normalizeStatus(value: string | null) {
   return value?.trim().toLowerCase() || ''
+}
+
+function translatedStatus(
+  value: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  const map: Record<string, string> = {
+    pending: t('statusPending'),
+    hired: t('statusHired'),
+    accepted: t('statusAccepted'),
+    declined: t('statusDeclined'),
+    not_selected: t('statusNotSelected'),
+    withdrawn: t('statusWithdrawn'),
+    completed: t('statusCompleted'),
+    in_progress: t('statusInProgress'),
+    assigned: t('statusAssigned'),
+    closed: t('statusClosed'),
+    cancelled: t('statusCancelled'),
+    open: t('statusOpen'),
+  }
+
+  return map[value] || formatStatus(value)
 }
 
 function formatStatus(value: string) {
@@ -2741,47 +2770,55 @@ function formatStatus(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-function formatDate(value: string | null) {
-  if (!value) {
-    return 'Date not set'
-  }
+function formatDate(
+  value: string | null,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (!value) return t('dateNotSet')
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'Date not set'
+    return t('dateNotSet')
   }
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 }
 
-function formatShortDate(value: string) {
+function formatShortDate(
+  value: string,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'Not set'
+    return t('notSet')
   }
 
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
   })
 }
 
-function formatRelativeTime(value: string | null) {
-  if (!value) {
-    return 'Recently'
-  }
+function formatRelativeTime(
+  value: string | null,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (!value) return t('recently')
 
   const date = new Date(value)
   const timestamp = date.getTime()
 
   if (Number.isNaN(timestamp)) {
-    return 'Recently'
+    return t('recently')
   }
 
   const difference = Date.now() - timestamp
@@ -2790,23 +2827,12 @@ function formatRelativeTime(value: string | null) {
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
 
-  if (seconds < 60) {
-    return 'Just now'
-  }
+  if (seconds < 60) return t('justNow')
+  if (minutes < 60) return t('minutesAgo', { count: minutes })
+  if (hours < 24) return t('hoursAgo', { count: hours })
+  if (days < 7) return t('daysAgo', { count: days })
 
-  if (minutes < 60) {
-    return `${minutes}m ago`
-  }
-
-  if (hours < 24) {
-    return `${hours}h ago`
-  }
-
-  if (days < 7) {
-    return `${days}d ago`
-  }
-
-  return formatDate(value)
+  return formatDate(value, locale, t)
 }
 
 function isSameLocalDay(value: string, comparisonDate: Date) {
@@ -2823,18 +2849,20 @@ function isSameLocalDay(value: string, comparisonDate: Date) {
   )
 }
 
-function formatTime(value: string | null) {
-  if (!value) {
-    return 'Time not set'
-  }
+function formatTime(
+  value: string | null,
+  locale: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (!value) return t('timeNotSet')
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'Time not set'
+    return t('timeNotSet')
   }
 
-  return date.toLocaleTimeString('en-US', {
+  return date.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
   })
