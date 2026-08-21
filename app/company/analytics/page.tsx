@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Job = {
@@ -64,6 +65,9 @@ type AnalyticsStats = {
 }
 
 export default function CompanyAnalyticsPage() {
+  const t = useTranslations('CompanyAnalytics')
+  const locale = useLocale()
+
   const [loading, setLoading] = useState(true)
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
@@ -83,7 +87,7 @@ export default function CompanyAnalyticsPage() {
       } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        setError('Please log in to view analytics.')
+        setError(t('loginRequired'))
         setLoading(false)
         return
       }
@@ -144,11 +148,11 @@ export default function CompanyAnalyticsPage() {
       setJobViews((jobViewsRes.data || []) as JobView[])
     } catch (err) {
       console.error(err)
-      setError('Could not load company analytics.')
+      setError(t('loadError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     loadAnalytics()
@@ -255,7 +259,7 @@ export default function CompanyAnalyticsPage() {
     const counts: Record<string, number> = {}
 
     jobs.forEach((job) => {
-      const trade = job.trade || 'Other'
+      const trade = job.trade || t('other')
       counts[trade] = (counts[trade] || 0) + 1
     })
 
@@ -266,40 +270,40 @@ export default function CompanyAnalyticsPage() {
         percent: jobs.length > 0 ? Math.round((count / jobs.length) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count)
-  }, [jobs])
+  }, [jobs, t])
 
 
   const activity = useMemo(() => {
     const jobTitleMap = new Map(
-      jobs.map((job) => [job.id, job.title || 'Untitled Job'])
+      jobs.map((job) => [job.id, job.title || t('untitledJob')])
     )
 
     const items = [
       ...jobViews.map((view) => ({
         id: `view-${view.id}`,
-        type: 'View',
-        title: jobTitleMap.get(view.job_id) || 'Job',
+        type: t('activity.view'),
+        title: jobTitleMap.get(view.job_id) || t('job'),
         created_at: view.created_at,
       })),
       ...applications.map((application) => ({
         id: `application-${application.id}`,
         type:
           application.status === 'hired'
-            ? 'Worker hired'
-            : 'New application',
-        title: jobTitleMap.get(application.job_id) || 'Job',
+            ? t('activity.workerHired')
+            : t('activity.newApplication'),
+        title: jobTitleMap.get(application.job_id) || t('job'),
         created_at: application.created_at,
       })),
       ...messages.map((message) => ({
         id: `message-${message.id}`,
-        type: 'New message',
-        title: jobTitleMap.get(message.job_id) || 'Job',
+        type: t('activity.newMessage'),
+        title: jobTitleMap.get(message.job_id) || t('job'),
         created_at: message.created_at,
       })),
       ...reviews.map((review) => ({
         id: `review-${review.id}`,
-        type: 'New review',
-        title: `${review.rating || 0} star rating`,
+        type: t('activity.newReview'),
+        title: t('activity.starRating', { rating: review.rating || 0 }),
         created_at: review.created_at,
       })),
     ]
@@ -312,7 +316,7 @@ export default function CompanyAnalyticsPage() {
           new Date(a.created_at || 0).getTime()
       )
       .slice(0, 8)
-  }, [jobs, jobViews, applications, messages, reviews])
+  }, [jobs, jobViews, applications, messages, reviews, t])
 
   const chartData = useMemo(() => {
     const days = Array.from({ length: 14 }, (_, index) => {
@@ -337,14 +341,14 @@ export default function CompanyAnalyticsPage() {
     }
 
     return days.map((day) => ({
-      label: day.toLocaleDateString('en-US', {
+      label: day.toLocaleDateString(locale, {
         month: 'short',
         day: 'numeric',
       }),
       views: countForDay(jobViews, day),
       applications: countForDay(applications, day),
     }))
-  }, [jobViews, applications])
+  }, [jobViews, applications, locale])
 
   const insights = useMemo(() => {
     const result: string[] = []
@@ -360,21 +364,21 @@ export default function CompanyAnalyticsPage() {
 
     if (featuredAverage > regularAverage && regularAverage > 0) {
       result.push(
-        `Featured jobs average ${(featuredAverage / regularAverage).toFixed(
-          1
-        )}× more views than regular jobs.`
+        t('insights.featuredBetter', {
+          multiplier: (featuredAverage / regularAverage).toFixed(1),
+        })
       )
     }
 
     if (stats.totalViews > 0 && stats.applicants === 0) {
       result.push(
-        'Your jobs are receiving views but no applications yet. Consider improving pay, title, or job details.'
+        t('insights.viewsNoApplications')
       )
     }
 
     if (stats.applicants > 0 && stats.workersHired === 0) {
       result.push(
-        'You have applicants waiting but no recorded hires yet.'
+        t('insights.applicantsNoHires')
       )
     }
 
@@ -385,26 +389,26 @@ export default function CompanyAnalyticsPage() {
 
     if (completedWithoutReview > 0) {
       result.push(
-        `${completedWithoutReview} completed ${
-          completedWithoutReview === 1 ? 'job still needs' : 'jobs still need'
-        } a review.`
+        t('insights.needsReview', {
+          count: completedWithoutReview,
+        })
       )
     }
 
     if (stats.openJobs === 0) {
       result.push(
-        'You have no open jobs. Post a new job to keep your worker pipeline active.'
+        t('insights.noOpenJobs')
       )
     }
 
     if (result.length === 0) {
       result.push(
-        'Your company activity looks healthy. Keep monitoring views and applications as more jobs are posted.'
+        t('insights.healthy')
       )
     }
 
     return result.slice(0, 4)
-  }, [jobs.length, stats])
+  }, [jobs.length, stats, t])
 
   function getApplicationsForJob(jobId: string) {
     return applications.filter((app) => app.job_id === jobId)
@@ -419,7 +423,7 @@ export default function CompanyAnalyticsPage() {
   }
 
   function formatMoney(value: number) {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: 'USD',
       maximumFractionDigits: 0,
@@ -427,9 +431,9 @@ export default function CompanyAnalyticsPage() {
   }
 
   function formatDate(value: string | null) {
-    if (!value) return 'Not set'
+    if (!value) return t('notSet')
 
-    return new Date(value).toLocaleDateString('en-US', {
+    return new Date(value).toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -440,7 +444,7 @@ export default function CompanyAnalyticsPage() {
     return (
       <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-7xl">
-          <p className="text-slate-300">Loading analytics...</p>
+          <p className="text-slate-300">{t('loading')}</p>
         </div>
       </main>
     )
@@ -452,16 +456,15 @@ export default function CompanyAnalyticsPage() {
         <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-500/10 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300">
-              Company Analytics
+              {t('eyebrow')}
             </p>
 
             <h1 className="mt-2 text-3xl font-black md:text-5xl">
-              Hiring performance
+              {t('title')}
             </h1>
 
             <p className="mt-3 max-w-2xl text-slate-300">
-              Track job views, applicants, hires, messages, reviews, and paid
-              upgrades in one place.
+              {t('description')}
             </p>
           </div>
 
@@ -470,14 +473,14 @@ export default function CompanyAnalyticsPage() {
               href="/post-job"
               className="rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950 hover:bg-cyan-300"
             >
-              Post Job
+              {t('postJob')}
             </Link>
 
             <Link
               href="/company/jobs"
               className="rounded-xl border border-white/10 bg-white/10 px-5 py-3 font-bold text-white hover:bg-white/15"
             >
-              My Jobs
+              {t('myJobs')}
             </Link>
           </div>
         </div>
@@ -490,18 +493,17 @@ export default function CompanyAnalyticsPage() {
 
         {!error && jobs.length === 0 && (
           <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-            <h2 className="text-2xl font-black">No analytics yet</h2>
+            <h2 className="text-2xl font-black">{t('noAnalytics')}</h2>
 
             <p className="mx-auto mt-3 max-w-xl text-slate-300">
-              Once you post jobs and start getting views, applicants, and hires,
-              your company analytics will show here.
+              {t('noAnalyticsDescription')}
             </p>
 
             <Link
               href="/post-job"
               className="mt-6 inline-flex rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950 hover:bg-cyan-300"
             >
-              Post Your First Job
+              {t('postFirstJob')}
             </Link>
           </div>
         )}
@@ -509,22 +511,22 @@ export default function CompanyAnalyticsPage() {
         {jobs.length > 0 && (
           <>
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Total Views" value={stats.totalViews} />
-              <StatCard label="Avg Views / Job" value={stats.avgViewsPerJob} />
-              <StatCard label="Open Jobs" value={stats.openJobs} />
-              <StatCard label="Completed Jobs" value={stats.completedJobs} />
-              <StatCard label="Applicants" value={stats.applicants} />
-              <StatCard label="Workers Hired" value={stats.workersHired} />
-              <StatCard label="Messages" value={stats.messages} />
-              <StatCard label="Reviews" value={stats.reviews} />
-              <StatCard label="Jobs Filled" value={stats.jobsFilled} />
-              <StatCard label="Average Rating" value={`${stats.avgRating} ★`} />
-              <StatCard label="Total Spend" value={formatMoney(stats.totalSpend)} />
-              <StatCard label="Featured Jobs" value={stats.featuredJobs} />
-              <StatCard label="Urgent Jobs" value={stats.urgentJobs} />
-              <StatCard label="Featured Views" value={stats.featuredViews} />
-              <StatCard label="Regular Views" value={stats.regularViews} />              <StatCard
-                label="Average Views / Applicant"
+              <StatCard label={t('totalViews')} value={stats.totalViews} />
+              <StatCard label={t('avgViewsPerJob')} value={stats.avgViewsPerJob} />
+              <StatCard label={t('openJobs')} value={stats.openJobs} />
+              <StatCard label={t('completedJobs')} value={stats.completedJobs} />
+              <StatCard label={t('applicants')} value={stats.applicants} />
+              <StatCard label={t('workersHired')} value={stats.workersHired} />
+              <StatCard label={t('messages')} value={stats.messages} />
+              <StatCard label={t('reviews')} value={stats.reviews} />
+              <StatCard label={t('jobsFilled')} value={stats.jobsFilled} />
+              <StatCard label={t('averageRating')} value={`${stats.avgRating} ★`} />
+              <StatCard label={t('totalSpend')} value={formatMoney(stats.totalSpend)} />
+              <StatCard label={t('featuredJobs')} value={stats.featuredJobs} />
+              <StatCard label={t('urgentJobs')} value={stats.urgentJobs} />
+              <StatCard label={t('featuredViews')} value={stats.featuredViews} />
+              <StatCard label={t('regularViews')} value={stats.regularViews} />              <StatCard
+                label={t('avgViewsPerApplicant')}
                 value={
                   stats.applicants > 0
                     ? (stats.totalViews / stats.applicants).toFixed(1)
@@ -535,19 +537,19 @@ export default function CompanyAnalyticsPage() {
 
             <section className="grid gap-6 lg:grid-cols-3">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6 lg:col-span-2">
-                <h2 className="text-2xl font-black">Hiring Funnel</h2>
+                <h2 className="text-2xl font-black">{t('hiringFunnel')}</h2>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-5">
-                  <FunnelStep label="Views" value={stats.totalViews} />
-                  <FunnelStep label="Jobs Posted" value={jobs.length} />
-                  <FunnelStep label="Applicants" value={stats.applicants} />
-                  <FunnelStep label="Hired" value={stats.workersHired} />
-                  <FunnelStep label="Completed" value={stats.completedJobs} />
+                  <FunnelStep label={t('views')} value={stats.totalViews} />
+                  <FunnelStep label={t('jobsPosted')} value={jobs.length} />
+                  <FunnelStep label={t('applicants')} value={stats.applicants} />
+                  <FunnelStep label={t('hired')} value={stats.workersHired} />
+                  <FunnelStep label={t('completed')} value={stats.completedJobs} />
                 </div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                <h2 className="text-2xl font-black">Trade Breakdown</h2>
+                <h2 className="text-2xl font-black">{t('tradeBreakdown')}</h2>
 
                 <div className="mt-5 space-y-4">
                   {tradeBreakdown.map((item) => (
@@ -574,14 +576,14 @@ export default function CompanyAnalyticsPage() {
 
             <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                <h2 className="text-2xl font-black">14-Day Activity</h2>
+                <h2 className="text-2xl font-black">{t('fourteenDayActivity')}</h2>
                 <p className="mt-2 text-slate-300">
-                  Daily job views and applications.
+                  {t('dailyActivityDescription')}
                 </p>
 
                 <div className="mt-6 grid gap-6 md:grid-cols-2">
                   <BarChart
-                    title="Views"
+                    title={t('views')}
                     values={chartData.map((item) => ({
                       label: item.label,
                       value: item.views,
@@ -589,7 +591,7 @@ export default function CompanyAnalyticsPage() {
                   />
 
                   <BarChart
-                    title="Applications"
+                    title={t('applications')}
                     values={chartData.map((item) => ({
                       label: item.label,
                       value: item.applications,
@@ -599,9 +601,9 @@ export default function CompanyAnalyticsPage() {
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                <h2 className="text-2xl font-black">CrewCall Insights</h2>
+                <h2 className="text-2xl font-black">{t('crewCallInsights')}</h2>
                 <p className="mt-2 text-slate-300">
-                  Actionable observations from your current data.
+                  {t('insightsDescription')}
                 </p>
 
                 <div className="mt-5 space-y-3">
@@ -618,15 +620,15 @@ export default function CompanyAnalyticsPage() {
             </section>
 
             <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
-              <h2 className="text-2xl font-black">Recent Activity</h2>
+              <h2 className="text-2xl font-black">{t('recentActivity')}</h2>
               <p className="mt-2 text-slate-300">
-                The latest activity across your jobs.
+                {t('recentActivityDescription')}
               </p>
 
               <div className="mt-5 space-y-3">
                 {activity.length === 0 ? (
                   <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 text-slate-400">
-                    No recent activity yet.
+                    {t('noRecentActivity')}
                   </div>
                 ) : (
                   activity.map((item) => (
@@ -654,24 +656,24 @@ export default function CompanyAnalyticsPage() {
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h2 className="text-2xl font-black">
-                    Featured Job Performance
+                    {t('featuredPerformance')}
                   </h2>
 
                   <p className="mt-2 text-slate-300">
-                    Compare paid featured listings against regular job posts.
+                    {t('featuredPerformanceDescription')}
                   </p>
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <ComparisonCard
-                  label="Featured Jobs"
+                  label={t('featuredJobs')}
                   jobs={stats.featuredJobs}
                   views={stats.featuredViews}
                 />
 
                 <ComparisonCard
-                  label="Regular Jobs"
+                  label={t('regularJobs')}
                   jobs={jobs.length - stats.featuredJobs}
                   views={stats.regularViews}
                 />
@@ -680,19 +682,19 @@ export default function CompanyAnalyticsPage() {
 
 
             <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
-              <h2 className="text-2xl font-black">Top Performing Jobs</h2>
+              <h2 className="text-2xl font-black">{t('topPerformingJobs')}</h2>
               <p className="mt-2 text-slate-300">
-                Ranked by total job views.
+                {t('rankedByViews')}
               </p>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full text-left">
                   <thead className="border-b border-white/10 text-sm uppercase text-slate-400">
                     <tr>
-                      <th className="py-3">Job</th>
-                      <th className="py-3">Views</th>
-                      <th className="py-3">Applicants</th>
-                      <th className="py-3">Messages</th>
+                      <th className="py-3">{t('job')}</th>
+                      <th className="py-3">{t('views')}</th>
+                      <th className="py-3">{t('applicants')}</th>
+                      <th className="py-3">{t('messages')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -703,7 +705,7 @@ export default function CompanyAnalyticsPage() {
                       )
                       .map(job=>(
                         <tr key={job.id} className="border-b border-white/5">
-                          <td className="py-3 font-bold">{job.title || 'Untitled Job'}</td>
+                          <td className="py-3 font-bold">{job.title || t('untitledJob')}</td>
                           <td>{getViewsForJob(job.id).length}</td>
                           <td>{getApplicationsForJob(job.id).length}</td>
                           <td>{getMessagesForJob(job.id).length}</td>
@@ -717,11 +719,10 @@ export default function CompanyAnalyticsPage() {
             <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <h2 className="text-2xl font-black">Job Performance</h2>
+                  <h2 className="text-2xl font-black">{t('jobPerformance')}</h2>
 
                   <p className="mt-2 text-slate-300">
-                    See which jobs are getting views, applicants, messages, and
-                    hires.
+                    {t('jobPerformanceDescription')}
                   </p>
                 </div>
               </div>
@@ -744,11 +745,11 @@ export default function CompanyAnalyticsPage() {
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                           <h3 className="text-xl font-black">
-                            {job.title || 'Untitled Job'}
+                            {job.title || t('untitledJob')}
                           </h3>
 
                           <p className="mt-1 text-sm text-slate-400">
-                            {job.trade || 'Trade not set'} • Posted{' '}
+                            {job.trade || t('tradeNotSet')} • {t('posted')}{' '}
                             {formatDate(job.created_at)}
                           </p>
                         </div>
@@ -756,33 +757,33 @@ export default function CompanyAnalyticsPage() {
                         <div className="flex flex-wrap gap-2">
                           {job.is_featured && (
                             <span className="rounded-full bg-yellow-400/15 px-3 py-1 text-xs font-bold text-yellow-200">
-                              Featured
+                              {t('featured')}
                             </span>
                           )}
 
                           {job.urgent && (
                             <span className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-bold text-red-200">
-                              Urgent
+                              {t('urgent')}
                             </span>
                           )}
 
                           <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-slate-200">
-                            {job.status || 'unknown'}
+                            {job.status ? t(`statuses.${job.status}` as any) : t('statuses.unknown')}
                           </span>
                         </div>
                       </div>
 
                       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                        <MiniMetric label="Views" value={views.length} />
+                        <MiniMetric label={t('views')} value={views.length} />
                         <MiniMetric
-                          label="Applicants"
+                          label={t('applicants')}
                           value={jobApplications.length}
                         />
-                        <MiniMetric label="Messages" value={jobMessages.length} />
-                        <MiniMetric label="Hires" value={hiredCount} />
+                        <MiniMetric label={t('messages')} value={jobMessages.length} />
+                        <MiniMetric label={t('hires')} value={hiredCount} />
                         <MiniMetric
-                          label="Pay"
-                          value={job.pay_rate ? formatMoney(job.pay_rate) : 'N/A'}
+                          label={t('pay')}
+                          value={job.pay_rate ? formatMoney(job.pay_rate) : t('notAvailable')}
                         />
                       </div>
                     </div>
@@ -808,6 +809,7 @@ function BarChart({
     value: number
   }>
 }) {
+  const t = useTranslations('CompanyAnalytics')
   const maxValue = Math.max(...values.map((item) => item.value), 1)
 
   return (
@@ -815,7 +817,7 @@ function BarChart({
       <div className="flex items-end justify-between">
         <p className="font-black text-white">{title}</p>
         <p className="text-sm font-bold text-cyan-200">
-          {values.reduce((sum, item) => sum + item.value, 0)} total
+          {t('totalCount', { count: values.reduce((sum, item) => sum + item.value, 0) })}
         </p>
       </div>
 
@@ -911,6 +913,7 @@ function ComparisonCard({
   jobs: number
   views: number
 }) {
+  const t = useTranslations('CompanyAnalytics')
   const avgViews = jobs > 0 ? Number((views / jobs).toFixed(1)) : 0
 
   return (
@@ -920,9 +923,9 @@ function ComparisonCard({
       </p>
 
       <div className="mt-5 grid grid-cols-3 gap-3">
-        <MiniMetric label="Jobs" value={jobs} />
-        <MiniMetric label="Views" value={views} />
-        <MiniMetric label="Avg" value={avgViews} />
+        <MiniMetric label={t('jobs')} value={jobs} />
+        <MiniMetric label={t('views')} value={views} />
+        <MiniMetric label={t('avg')} value={avgViews} />
       </div>
     </div>
   )
