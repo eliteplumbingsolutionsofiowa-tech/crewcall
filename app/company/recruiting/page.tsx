@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 
@@ -84,41 +85,76 @@ function normalizeStatus(value: unknown) {
   return String(value || '').trim().toLowerCase()
 }
 
-function formatRelativeTime(value: string | null) {
-  if (!value) return 'Never'
+function formatRelativeTime(
+  value: string | null,
+  locale: string,
+  t: ReturnType<typeof useTranslations>,
+) {
+  if (!value) return t('never')
 
   const timestamp = new Date(value).getTime()
-  if (!Number.isFinite(timestamp)) return 'Unknown'
+  if (!Number.isFinite(timestamp)) return t('unknown')
 
   const difference = Date.now() - timestamp
   const minutes = Math.max(0, Math.floor(difference / 60000))
 
-  if (minutes < 1) return 'Just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return t('justNow')
+
+  const formatter = new Intl.RelativeTimeFormat(locale, {
+    numeric: 'always',
+  })
+
+  if (minutes < 60) {
+    return formatter.format(-minutes, 'minute')
+  }
 
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) {
+    return formatter.format(-hours, 'hour')
+  }
 
   const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  return formatter.format(-days, 'day')
 }
 
-function formatDuration(milliseconds: number | null) {
+function formatDuration(
+  milliseconds: number | null,
+  locale: string,
+) {
   if (!milliseconds || milliseconds <= 0) return '—'
 
   const minutes = Math.round(milliseconds / 60000)
 
-  if (minutes < 60) return `${minutes} min`
+  if (minutes < 60) {
+    return new Intl.NumberFormat(locale, {
+      style: 'unit',
+      unit: 'minute',
+      unitDisplay: 'short',
+    }).format(minutes)
+  }
 
   const hours = minutes / 60
-  return `${hours.toFixed(hours >= 10 ? 0 : 1)} hrs`
+  const roundedHours =
+    hours >= 10
+      ? Math.round(hours)
+      : Math.round(hours * 10) / 10
+
+  return new Intl.NumberFormat(locale, {
+    style: 'unit',
+    unit: 'hour',
+    unitDisplay: 'short',
+    maximumFractionDigits: 1,
+  }).format(roundedHours)
 }
 
-function getProfileName(profile: ProfileRow | null) {
+function getProfileName(
+  profile: ProfileRow | null,
+  t?: ReturnType<typeof useTranslations>,
+) {
   return (
     profile?.full_name?.trim() ||
     profile?.company_name?.trim() ||
-    'CrewCall Worker'
+    (t ? t('crewCallWorker') : 'CrewCall Worker')
   )
 }
 
@@ -155,42 +191,42 @@ function getStatusPresentation(status: QueueItem['status']) {
   switch (status) {
     case 'recruiting':
       return {
-        label: 'Recruiting',
+        labelKey: 'statusRecruiting',
         classes:
           'border-green-400/25 bg-green-400/10 text-green-200',
         dot: 'bg-green-300',
       }
     case 'waiting':
       return {
-        label: 'Waiting',
+        labelKey: 'statusWaiting',
         classes:
           'border-amber-400/25 bg-amber-400/10 text-amber-200',
         dot: 'bg-amber-300',
       }
     case 'filled':
       return {
-        label: 'Filled',
+        labelKey: 'statusFilled',
         classes:
           'border-cyan-400/25 bg-cyan-400/10 text-cyan-200',
         dot: 'bg-cyan-300',
       }
     case 'complete':
       return {
-        label: 'Complete',
+        labelKey: 'statusComplete',
         classes:
           'border-blue-400/25 bg-blue-400/10 text-blue-200',
         dot: 'bg-blue-300',
       }
     case 'no_matches':
       return {
-        label: 'No Matches',
+        labelKey: 'statusNoMatches',
         classes:
           'border-red-400/25 bg-red-400/10 text-red-200',
         dot: 'bg-red-300',
       }
     default:
       return {
-        label: 'Paused',
+        labelKey: 'statusPaused',
         classes:
           'border-slate-400/20 bg-white/[0.04] text-slate-300',
         dot: 'bg-slate-400',
@@ -228,6 +264,9 @@ function MetricCard({
 }
 
 export default function CompanyRecruitingPage() {
+  const t = useTranslations('CompanyRecruiting')
+  const locale = useLocale()
+
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -258,7 +297,7 @@ export default function CompanyRecruitingPage() {
 
         if (sessionError) throw sessionError
         if (!session?.user) {
-          throw new Error('Please sign in to view recruiting analytics.')
+          throw new Error(t('loginRequired'))
         }
 
         const companyContext = await resolveCompanyContext(
@@ -268,7 +307,7 @@ export default function CompanyRecruitingPage() {
 
         if (!companyContext.companyId) {
           throw new Error(
-            'You are not connected to a company account.',
+            t('companyRequired'),
           )
         }
 
@@ -435,7 +474,7 @@ export default function CompanyRecruitingPage() {
                 ? errorRecord.details
                 : typeof caughtError === 'string'
                   ? caughtError
-                  : 'Unable to load recruiting dashboard.'
+                  : t('loadFailed')
 
         console.error(
           'Recruiting dashboard load failed:',
@@ -449,7 +488,7 @@ export default function CompanyRecruitingPage() {
         setRefreshing(false)
       }
     },
-    [],
+    [t],
   )
 
   useEffect(() => {
@@ -691,7 +730,7 @@ export default function CompanyRecruitingPage() {
       } = await supabase.auth.getSession()
 
       if (!session?.access_token) {
-        throw new Error('Your session has expired.')
+        throw new Error(t('sessionExpired'))
       }
 
       const response = await fetch(
@@ -712,12 +751,12 @@ export default function CompanyRecruitingPage() {
         throw new Error(
           result?.error ||
             result?.message ||
-            'Recruiter action failed.',
+            t('actionFailed'),
         )
       }
 
       setMessage(
-        result?.message || 'Recruiter updated successfully.',
+        result?.message || t('updatedSuccessfully'),
       )
 
       await loadDashboard(true)
@@ -725,7 +764,7 @@ export default function CompanyRecruitingPage() {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : 'Recruiter action failed.',
+          : t('actionFailed'),
       )
     } finally {
       setBusyJobId(null)
@@ -738,10 +777,10 @@ export default function CompanyRecruitingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-cyan-300">
-              AI Recruiting
+              {t('aiRecruiting')}
             </p>
             <p className="mt-3 text-2xl font-black">
-              Loading recruiter command center...
+              {t('loading')}
             </p>
           </div>
         </div>
@@ -757,24 +796,22 @@ export default function CompanyRecruitingPage() {
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                  CrewCall Intelligence
+                  {t('intelligence')}
                 </p>
 
                 {refreshing && (
                   <span className="rounded-full border border-cyan-400/20 bg-cyan-400/[0.08] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
-                    Updating
+                    {t('updating')}
                   </span>
                 )}
               </div>
 
               <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                AI Recruiter Performance
+                {t('title')}
               </h1>
 
               <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300">
-                Monitor every active recruiter, measure performance,
-                and control automated worker invitations from one
-                command center.
+                {t('description')}
               </p>
             </div>
 
@@ -785,14 +822,14 @@ export default function CompanyRecruitingPage() {
                 disabled={refreshing}
                 className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {refreshing ? 'Refreshing...' : 'Refresh'}
+                {refreshing ? t('refreshing') : t('refresh')}
               </button>
 
               <Link
                 href="/company/operations"
                 className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
               >
-                Operations
+                {t('operations')}
               </Link>
             </div>
           </div>
@@ -812,44 +849,44 @@ export default function CompanyRecruitingPage() {
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <MetricCard
-            label="Active Recruiters"
+            label={t('activeRecruiters')}
             value={metrics.activeRecruiters}
-            detail="Jobs recruiting right now"
+            detail={t('activeRecruitersDetail')}
             icon="⚡"
           />
 
           <MetricCard
-            label="Jobs Filled"
+            label={t('jobsFilled')}
             value={metrics.filledJobs}
-            detail="Jobs with assigned workers"
+            detail={t('jobsFilledDetail')}
             icon="✅"
           />
 
           <MetricCard
-            label="Invites Sent"
+            label={t('invitesSent')}
             value={metrics.totalInvites}
-            detail="Across your recruiting jobs"
+            detail={t('invitesSentDetail')}
             icon="📨"
           />
 
           <MetricCard
-            label="Acceptance Rate"
+            label={t('acceptanceRate')}
             value={`${metrics.acceptanceRate}%`}
-            detail="Accepted versus responded invites"
+            detail={t('acceptanceRateDetail')}
             icon="📈"
           />
 
           <MetricCard
-            label="Average Fill Time"
-            value={formatDuration(metrics.averageFillTime)}
-            detail="From recruiting start to assignment"
+            label={t('averageFillTime')}
+            value={formatDuration(metrics.averageFillTime, locale)}
+            detail={t('averageFillTimeDetail')}
             icon="⏱️"
           />
 
           <MetricCard
-            label="Top Match Score"
+            label={t('topMatchScore')}
             value={`${metrics.topScore}%`}
-            detail="Highest ranked worker match"
+            detail={t('topMatchScoreDetail')}
             icon="🎯"
           />
         </section>
@@ -858,7 +895,7 @@ export default function CompanyRecruitingPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-5 py-5 sm:px-6">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
-                Live Recruiter Queue
+                {t('live')} Recruiter Queue
               </p>
               <h2 className="mt-1 text-xl font-black">
                 Automated Recruiting Jobs
@@ -866,24 +903,24 @@ export default function CompanyRecruitingPage() {
             </div>
 
             <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-black text-slate-300">
-              {queueItems.length} jobs
+              {t('jobsCount', { count: queueItems.length })}
             </span>
           </div>
 
           {queueItems.length === 0 ? (
             <div className="px-6 py-14 text-center">
               <p className="text-xl font-black text-white">
-                No recruiting jobs yet
+                {t('noRecruitingJobs')}
               </p>
               <p className="mt-2 text-sm font-semibold text-slate-400">
                 Start AI recruiting from a job in Company
-                Operations.
+                {t('operations')}.
               </p>
               <Link
                 href="/company/operations"
                 className="mt-5 inline-flex rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950"
               >
-                Open Operations
+                {t('openOperations')}
               </Link>
             </div>
           ) : (
@@ -908,7 +945,7 @@ export default function CompanyRecruitingPage() {
                             className="truncate text-base font-black text-white hover:text-cyan-200"
                           >
                             {item.job.title?.trim() ||
-                              'Untitled Job'}
+                              t('untitledJob')}
                           </Link>
 
                           <span
@@ -917,31 +954,31 @@ export default function CompanyRecruitingPage() {
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${statusPresentation.dot}`}
                             />
-                            {statusPresentation.label}
+                            {t(statusPresentation.labelKey)}
                           </span>
                         </div>
 
                         <p className="mt-2 truncate text-xs font-semibold text-slate-400">
                           {[item.job.trade, item.job.location]
                             .filter(Boolean)
-                            .join(' • ') || 'Job details unavailable'}
+                            .join(' • ') || t('jobDetailsUnavailable')}
                         </p>
                       </div>
 
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          Current Worker
+                          {t('currentWorker')}
                         </p>
                         <p className="mt-1 truncate text-sm font-black text-white">
                           {item.currentWorker
-                            ? getProfileName(item.currentWorker)
+                            ? getProfileName(item.currentWorker, t)
                             : '—'}
                         </p>
                       </div>
 
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          Match
+                          {t('match')}
                         </p>
                         <p className="mt-1 text-sm font-black text-white">
                           {item.currentMatchScore !== null
@@ -952,7 +989,7 @@ export default function CompanyRecruitingPage() {
 
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          Invites
+                          {t('invites')}
                         </p>
                         <p className="mt-1 text-sm font-black text-white">
                           {item.invites.length}
@@ -961,11 +998,13 @@ export default function CompanyRecruitingPage() {
 
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          Last Invite
+                          {t('lastInvite')}
                         </p>
                         <p className="mt-1 text-sm font-black text-white">
                           {formatRelativeTime(
                             item.job.ai_last_invite_at,
+                            locale,
+                            t,
                           )}
                         </p>
                       </div>
@@ -987,8 +1026,8 @@ export default function CompanyRecruitingPage() {
                               className="rounded-lg bg-green-300 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-green-200 disabled:opacity-50"
                             >
                               {item.job.ai_recruiting_complete
-                                ? 'Restart'
-                                : 'Start'}
+                                ? t('restart')
+                                : t('start')}
                             </button>
                           )}
 
@@ -1006,7 +1045,7 @@ export default function CompanyRecruitingPage() {
                                 }
                                 className="rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-200 transition hover:bg-amber-400/15 disabled:opacity-50"
                               >
-                                Pause
+                                {t('pause')}
                               </button>
 
                               <button
@@ -1020,7 +1059,7 @@ export default function CompanyRecruitingPage() {
                                 }
                                 className="rounded-lg border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-xs font-black text-cyan-200 transition hover:bg-cyan-400/15 disabled:opacity-50"
                               >
-                                Send Next
+                                {t('sendNext')}
                               </button>
                             </>
                           )}
@@ -1029,14 +1068,14 @@ export default function CompanyRecruitingPage() {
                           href={`/my-jobs/${item.job.id}`}
                           className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-white transition hover:bg-white/[0.1]"
                         >
-                          View
+                          {t('view')}
                         </Link>
                       </div>
                     </div>
 
                     {busy && (
                       <p className="mt-3 text-xs font-bold text-cyan-300">
-                        Updating recruiter...
+                        {t('updating')} recruiter...
                       </p>
                     )}
                   </article>
@@ -1051,15 +1090,15 @@ export default function CompanyRecruitingPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
-                  Recruiting Activity
+                  {t('recruitingActivity')}
                 </p>
                 <h2 className="mt-1 text-xl font-black">
-                  Latest AI Actions
+                  {t('latestAiActions')}
                 </h2>
               </div>
 
               <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-black text-slate-400">
-                Live
+                {t('live')}
               </span>
             </div>
 
@@ -1067,7 +1106,7 @@ export default function CompanyRecruitingPage() {
               {recentEvents.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center">
                   <p className="text-sm font-bold text-slate-400">
-                    Recruiter activity will appear here.
+                    {t('activityEmpty')}
                   </p>
                 </div>
               ) : (
@@ -1089,12 +1128,12 @@ export default function CompanyRecruitingPage() {
                           </p>
                           <p className="mt-1 text-xs font-semibold text-slate-400">
                             {job?.title?.trim() ||
-                              'Recruiting job'}
+                              t('recruitingJob')}
                           </p>
                         </div>
 
                         <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          {formatRelativeTime(event.created_at)}
+                          {formatRelativeTime(event.created_at, locale, t)}
                         </span>
                       </div>
                     </div>
@@ -1106,39 +1145,39 @@ export default function CompanyRecruitingPage() {
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
-              Recruiter Health
+              {t('recruiterHealth')}
             </p>
             <h2 className="mt-1 text-xl font-black">
-              System Overview
+              {t('systemOverview')}
             </h2>
 
             <div className="mt-5 space-y-4">
               {[
                 {
-                  label: 'Active Jobs',
+                  label: t('activeJobs'),
                   value: metrics.activeRecruiters,
                 },
                 {
-                  label: 'Waiting for Delay',
+                  label: t('waitingForDelay'),
                   value: queueItems.filter(
                     (item) => item.status === 'waiting',
                   ).length,
                 },
                 {
-                  label: 'Paused',
+                  label: t('statusPaused'),
                   value: queueItems.filter(
                     (item) => item.status === 'paused',
                   ).length,
                 },
                 {
-                  label: 'No Matches',
+                  label: t('statusNoMatches'),
                   value: queueItems.filter(
                     (item) =>
                       item.status === 'no_matches',
                   ).length,
                 },
                 {
-                  label: 'Completed',
+                  label: t('completed'),
                   value: queueItems.filter((item) =>
                     ['complete', 'filled'].includes(
                       item.status,
@@ -1167,14 +1206,14 @@ export default function CompanyRecruitingPage() {
             href="/company/dashboard"
             className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.1]"
           >
-            Company Dashboard
+            {t('companyDashboard')}
           </Link>
 
           <Link
             href="/company/operations"
             className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.08] px-4 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-400/[0.12]"
           >
-            Operations Center
+            {t('operationsCenter')}
           </Link>
         </div>
       </div>
