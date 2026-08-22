@@ -91,7 +91,8 @@
     "messageCompany": "Message Company",
     "sending": "Sending...",
     "requestCompletion": "Request Completion",
-    "leaveReview": "Leave Review"
+    "leaveReview": "Leave Review",
+    "inProgress": "In Progress"
   },
   "WorkerLocation": {
     "title": "Worker Location",

@@ -180,11 +180,7 @@ export async function POST(req: Request) {
           title: 'Worker says job is complete',
           body: `The worker assigned to ${
             job.title || 'your job'
-          } says the work is complete.`,
-          message: `The worker assigned to ${
-            job.title || 'your job'
           } says the work is complete. Review the job and mark it complete when ready.`,
-          job_id: job.id,
           link_url: `/my-jobs/${job.id}`,
           read: false,
           is_read: false,

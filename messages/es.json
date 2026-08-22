@@ -91,7 +91,8 @@
     "messageCompany": "Enviar Mensaje",
     "sending": "Enviando...",
     "requestCompletion": "Solicitar Finalización",
-    "leaveReview": "Dejar Reseña"
+    "leaveReview": "Dejar Reseña",
+    "inProgress": "En progreso"
   },
   "WorkerLocation": {
     "title": "Ubicación del Trabajador",
