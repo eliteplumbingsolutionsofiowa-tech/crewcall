@@ -624,17 +624,31 @@ export default function JobDetailsPage() {
         return
       }
 
-      await supabase.from('notifications').insert({
-        user_id: job.company_id,
-        type: 'completion_submitted',
-        title: 'Work ready for approval',
-        body: `${job.title || 'A CrewCall job'} has been submitted for approval.`,
-        message: `${job.title || 'A CrewCall job'} has been submitted for approval.`,
-        job_id: job.id,
-        link_url: `/my-jobs/${job.id}`,
-        read: false,
-        is_read: false,
-      } as never)
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: job.company_id,
+          type: 'general',
+          title: 'Work ready for approval',
+          body: `${job.title || 'A CrewCall job'} has been submitted for approval.`,
+          link_url: `/my-jobs/${job.id}`,
+          read: false,
+          is_read: false,
+        } as never)
+
+      if (notificationError) {
+        console.error(
+          'Unable to create work approval notification:',
+          notificationError
+        )
+
+        setMessage(
+          `Work was submitted, but the company alert failed: ${notificationError.message}`
+        )
+        setMessageTone('error')
+        await loadPage(true)
+        return
+      }
 
       setMessage(
         t('workSubmitted')
