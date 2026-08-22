@@ -379,7 +379,11 @@ export default function WorkerDashboard() {
                     <div>
                       <div className="mb-2 flex flex-wrap gap-2">
                         <span className={statusClass(isCompleted)}>
-                          {isCompleted ? t('completed') : t('assigned')}
+                          {isCompleted
+                            ? t('completed')
+                            : job.status === 'in_progress'
+                              ? t('inProgress')
+                              : t('assigned')}
                         </span>
 
                         <span className={paymentClass(payStatus)}>
