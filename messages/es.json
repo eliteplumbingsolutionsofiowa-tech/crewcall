@@ -92,7 +92,8 @@
     "sending": "Enviando...",
     "requestCompletion": "Solicitar Finalización",
     "leaveReview": "Dejar Reseña",
-    "inProgress": "En progreso"
+    "inProgress": "En progreso",
+    "finishJob": "Finalizar trabajo"
   },
   "WorkerLocation": {
     "title": "Ubicación del Trabajador",

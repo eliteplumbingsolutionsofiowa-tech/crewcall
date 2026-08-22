@@ -92,7 +92,8 @@
     "sending": "Sending...",
     "requestCompletion": "Request Completion",
     "leaveReview": "Leave Review",
-    "inProgress": "In Progress"
+    "inProgress": "In Progress",
+    "finishJob": "Finish Job"
   },
   "WorkerLocation": {
     "title": "Worker Location",

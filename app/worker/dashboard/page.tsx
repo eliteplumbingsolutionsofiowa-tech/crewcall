@@ -81,7 +81,6 @@ export default function WorkerDashboard() {
   })
 
   const [loading, setLoading] = useState(true)
-  const [busyJobId, setBusyJobId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
     () => new Set()
@@ -177,83 +176,7 @@ export default function WorkerDashboard() {
     setLoading(false)
   }
 
-  async function requestCompletion(job: Job) {
-    if (!job.company_id) {
-      setMessage(t('noCompany'))
-      return
-    }
 
-    const confirmed = window.confirm(
-      t('confirmCompletion')
-    )
-
-    if (!confirmed) {
-      return
-    }
-
-    setBusyJobId(job.id)
-    setMessage(null)
-
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser()
-
-      if (userError || !user) {
-        throw new Error(
-          userError?.message || t('mustLogin')
-        )
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session?.access_token) {
-        throw new Error(
-          t('sessionExpired')
-        )
-      }
-
-      const response = await fetch(
-        '/api/jobs/request-completion',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization:
-              `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            jobId: job.id,
-          }),
-        }
-      )
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            t('completionFailed')
-        )
-      }
-
-      setMessage(
-        data.message ||
-          t('completionSent')
-      )
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : t('completionFailed')
-      )
-    } finally {
-      setBusyJobId(null)
-    }
-  }
 
   if (loading) {
     return (
@@ -447,16 +370,12 @@ export default function WorkerDashboard() {
                       ) : null}
 
                       {canMarkComplete ? (
-                        <button
-                          type="button"
-                          onClick={() => void requestCompletion(job)}
-                          disabled={busyJobId === job.id}
-                          className="rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-400"
                         >
-                          {busyJobId === job.id
-                            ? t('sending')
-                            : t('requestCompletion')}
-                        </button>
+                          {t('finishJob')}
+                        </Link>
                       ) : null}
 
                       {isCompleted &&
