@@ -61,7 +61,6 @@ type SendMessageRequest = {
 
 type ProfileRow = {
   id: string
-  email: string | null
   full_name: string | null
   company_name: string | null
 }
@@ -321,7 +320,7 @@ export async function POST(req: Request) {
       adminClient
         .from('profiles')
         .select(
-          'id, email, full_name, company_name'
+          'id, full_name, company_name'
         )
         .eq('id', user.id)
         .maybeSingle<ProfileRow>(),
@@ -329,7 +328,7 @@ export async function POST(req: Request) {
       adminClient
         .from('profiles')
         .select(
-          'id, email, full_name, company_name'
+          'id, full_name, company_name'
         )
         .eq('id', recipientId)
         .maybeSingle<ProfileRow>(),
@@ -340,6 +339,23 @@ export async function POST(req: Request) {
 
     const recipientProfile =
       recipientProfileResult.data
+
+    const {
+      data: recipientAuthData,
+      error: recipientAuthError,
+    } = await adminClient.auth.admin.getUserById(
+      recipientId
+    )
+
+    if (recipientAuthError) {
+      console.error(
+        'Unable to load recipient auth email:',
+        recipientAuthError
+      )
+    }
+
+    const recipientEmail =
+      recipientAuthData?.user?.email || null
 
     const senderName =
       senderProfile?.company_name ||
@@ -372,15 +388,16 @@ export async function POST(req: Request) {
       )
     }
 
-    if (recipientProfile?.email) {
+    if (recipientEmail) {
       try {
         await sendCrewCallEmail({
-          to: recipientProfile.email,
+          to: recipientEmail,
           subject: `New message from ${senderName}`,
           html: MessageEmail({
             recipientName:
-              recipientProfile.full_name ||
-              recipientProfile.company_name,
+              recipientProfile?.full_name ||
+              recipientProfile?.company_name ||
+              'CrewCall user',
             senderName,
             jobTitle: normalizedJob?.title,
             messagePreview: safeBody,

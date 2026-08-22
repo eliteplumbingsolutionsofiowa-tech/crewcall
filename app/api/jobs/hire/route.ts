@@ -65,7 +65,6 @@ type JobRow = {
 
 type ProfileRow = {
   id: string
-  email: string | null
   full_name: string | null
   company_name: string | null
   role?: string | null
@@ -231,7 +230,7 @@ export async function POST(req: Request) {
     } = await adminClient
       .from('profiles')
       .select(
-        'id, email, full_name, company_name, role'
+        'id, full_name, company_name, role'
       )
       .eq('id', user.id)
       .maybeSingle<ProfileRow>()
@@ -269,7 +268,7 @@ export async function POST(req: Request) {
     } = await adminClient
       .from('profiles')
       .select(
-        'id, email, full_name, company_name, role'
+        'id, full_name, company_name, role'
       )
       .eq('id', workerId)
       .maybeSingle<ProfileRow>()
@@ -513,10 +512,27 @@ export async function POST(req: Request) {
 
     let workerEmailSent = false
 
-    if (workerProfile.email) {
+    const {
+      data: workerAuthData,
+      error: workerAuthError,
+    } = await adminClient.auth.admin.getUserById(
+      workerId
+    )
+
+    if (workerAuthError) {
+      console.error(
+        'Unable to load hired worker auth email:',
+        workerAuthError
+      )
+    }
+
+    const workerEmail =
+      workerAuthData?.user?.email || null
+
+    if (workerEmail) {
       try {
         await sendCrewCallEmail({
-          to: workerProfile.email,
+          to: workerEmail,
           subject: `You were hired for ${
             job.title || 'a CrewCall job'
           }`,
