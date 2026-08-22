@@ -2150,7 +2150,8 @@
     "payment_paid": "Pagado",
     "payout_not_released": "No Liberado",
     "payout_pending": "Pendiente",
-    "payout_released": "Liberado"
+    "payout_released": "Liberado",
+    "status_in_progress": "En progreso"
   },
   "MyJobDetail": {
     "mustBeLoggedIn": "Debes iniciar sesión para ver este trabajo.",
