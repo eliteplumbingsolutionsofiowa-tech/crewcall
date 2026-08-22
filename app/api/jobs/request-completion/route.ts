@@ -176,7 +176,7 @@ export async function POST(req: Request) {
         .from('notifications')
         .insert({
           user_id: job.company_id,
-          type: 'completion_requested',
+          type: 'job',
           title: 'Worker says job is complete',
           body: `The worker assigned to ${
             job.title || 'your job'
