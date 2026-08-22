@@ -185,6 +185,42 @@ export default function MyJobsPage() {
       'applicant_count' | 'view_count'
     >[]
     const jobIds = cleanJobs.map((job) => job.id)
+    if (jobIds.length > 0) {
+      const {
+        data: completionNotifications,
+        error: completionNotificationsError,
+      } = await supabase
+        .from('notifications')
+        .select('title, link_url')
+        .eq('user_id', user.id)
+        .eq('type', 'job')
+        .eq('title', 'Worker says job is complete')
+
+      if (completionNotificationsError) {
+        console.error(
+          'Unable to load completion request notifications:',
+          completionNotificationsError
+        )
+        setCompletionRequestedJobIds(new Set())
+      } else {
+        const requestedIds = new Set<string>()
+
+        ;(completionNotifications || []).forEach((notification: any) => {
+          const match = String(notification.link_url || '').match(
+            /^\/my-jobs\/([^/?#]+)/
+          )
+
+          if (match?.[1] && jobIds.includes(match[1])) {
+            requestedIds.add(match[1])
+          }
+        })
+
+        setCompletionRequestedJobIds(requestedIds)
+      }
+    } else {
+      setCompletionRequestedJobIds(new Set())
+    }
+
     const countMap = new Map<string, number>()
     const viewMap = new Map<string, number>()
 
