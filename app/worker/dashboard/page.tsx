@@ -381,7 +381,7 @@ export default function WorkerDashboard() {
                         <span className={statusClass(isCompleted)}>
                           {isCompleted
                             ? t('completed')
-                            : job.status === 'in_progress'
+                            : jobStatus === 'in_progress'
                               ? t('inProgress')
                               : t('assigned')}
                         </span>
