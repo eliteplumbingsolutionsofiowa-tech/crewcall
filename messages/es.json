@@ -2151,7 +2151,9 @@
     "payout_not_released": "No Liberado",
     "payout_pending": "Pendiente",
     "payout_released": "Liberado",
-    "status_in_progress": "En progreso"
+    "status_in_progress": "En progreso",
+    "completionRequested": "Finalización solicitada",
+    "reviewCompleteJob": "Revisar y completar trabajo"
   },
   "MyJobDetail": {
     "mustBeLoggedIn": "Debes iniciar sesión para ver este trabajo.",

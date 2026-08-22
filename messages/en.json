@@ -2151,7 +2151,9 @@
     "payout_not_released": "Not Released",
     "payout_pending": "Pending",
     "payout_released": "Released",
-    "status_in_progress": "In Progress"
+    "status_in_progress": "In Progress",
+    "completionRequested": "Completion Requested",
+    "reviewCompleteJob": "Review & Complete Job"
   },
   "MyJobDetail": {
     "mustBeLoggedIn": "You must be logged in to view this job.",

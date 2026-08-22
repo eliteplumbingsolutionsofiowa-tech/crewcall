@@ -111,6 +111,8 @@ export default function MyJobsPage() {
   const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
     () => new Set()
   )
+  const [completionRequestedJobIds, setCompletionRequestedJobIds] =
+    useState<Set<string>>(() => new Set())
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -584,6 +586,8 @@ export default function MyJobsPage() {
           {filteredJobs.map((job) => {
             const isPaid = job.payment_status === 'paid'
             const isCompleted = job.status === 'completed'
+            const completionRequested =
+              !isCompleted && completionRequestedJobIds.has(job.id)
             const payoutReleased = job.payout_status === 'released'
             const canPay = !isPaid && Boolean(job.assigned_worker_id)
             const canReleasePayout = isPaid && isCompleted && !payoutReleased
@@ -616,6 +620,11 @@ export default function MyJobsPage() {
                           label={t(`payment_${job.payment_status || 'unpaid'}`)}
                           type="payment"
                         />
+                        {completionRequested && (
+                          <span className="rounded-full border border-orange-300/20 bg-orange-400/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-orange-100">
+                            {t('completionRequested')}
+                          </span>
+                        )}
 
                         {isCompleted && (
                           <Badge
@@ -690,6 +699,14 @@ export default function MyJobsPage() {
                       </Link>
                     )}
 
+                    {completionRequested && (
+                      <Link
+                        href={`/my-jobs/${job.id}`}
+                        className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-orange-400"
+                      >
+                        {t('reviewCompleteJob')}
+                      </Link>
+                    )}
                     <Link
                       href={`/my-jobs/${job.id}`}
                       className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
