@@ -186,10 +186,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (
-      job.status === 'completed' ||
-      job.completed_at
-    ) {
+    if (job.status === 'completed') {
       return NextResponse.json(
         {
           success: true,
@@ -264,13 +261,10 @@ export async function POST(req: Request) {
       await Promise.allSettled([
         adminClient.from('notifications').insert({
           user_id: job.assigned_worker_id,
-          type: 'job_completed',
+          type: 'general',
           title: 'Job completed',
           body:
             'The company approved your work and marked the job as completed.',
-          message:
-            'The company approved your work and marked the job as completed.',
-          job_id: jobId,
           link_url: `/jobs/${jobId}`,
           read: false,
           is_read: false,
