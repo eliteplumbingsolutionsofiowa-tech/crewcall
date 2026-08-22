@@ -611,13 +611,6 @@ export default function JobDetailPage() {
       return
     }
 
-    if (job.payment_status !== 'paid') {
-      setMessage(
-        t('fundingRequired')
-      )
-      return
-    }
-
     setApprovalLoading(true)
     setMessage(t('approvingCompletedWork'))
 

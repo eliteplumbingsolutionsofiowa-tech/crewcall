@@ -223,16 +223,6 @@ export async function POST(req: Request) {
       )
     }
 
-    if (job.payment_status !== 'paid') {
-      return NextResponse.json(
-        {
-          error:
-            'Job must be paid before it can be completed.',
-        },
-        { status: 409 }
-      )
-    }
-
     const completedAt = new Date().toISOString()
 
     const {
