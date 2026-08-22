@@ -53,7 +53,6 @@ type JobRow = {
 
 type ProfileRow = {
   id: string
-  email: string | null
   full_name: string | null
   company_name: string | null
   role?: string | null
@@ -183,7 +182,7 @@ export async function POST(req: Request) {
       error: workerProfileError,
     } = await adminClient
       .from('profiles')
-      .select('id, email, full_name, company_name, role')
+      .select('id, full_name, company_name, role')
       .eq('id', user.id)
       .maybeSingle<ProfileRow>()
 
@@ -290,9 +289,25 @@ export async function POST(req: Request) {
 
     const { data: companyProfile } = await adminClient
       .from('profiles')
-      .select('id, email, full_name, company_name')
+      .select('id, full_name, company_name')
       .eq('id', job.company_id)
       .maybeSingle<ProfileRow>()
+
+    const { data: companyAuthData, error: companyAuthError } =
+      await adminClient.auth.admin.getUserById(job.company_id)
+
+    if (companyAuthError) {
+      console.error(
+        'Unable to load company auth email:',
+        companyAuthError
+      )
+    }
+
+    const companyEmail =
+      companyAuthData?.user?.email || null
+
+    const workerEmail =
+      user.email || null
 
     const { data: application, error: appError } =
       await adminClient
@@ -363,10 +378,10 @@ export async function POST(req: Request) {
       workerEmailSent: false,
     }
 
-    if (companyProfile?.email) {
+    if (companyEmail) {
       try {
         await sendCrewCallEmail({
-          to: companyProfile.email,
+          to: companyEmail,
           subject: `New applicant for ${
             job.title || 'your job'
           }`,
@@ -393,10 +408,10 @@ export async function POST(req: Request) {
       }
     }
 
-    if (workerProfile.email) {
+    if (workerEmail) {
       try {
         await sendCrewCallEmail({
-          to: workerProfile.email,
+          to: workerEmail,
           subject: `Application submitted: ${
             job.title || 'CrewCall job'
           }`,
