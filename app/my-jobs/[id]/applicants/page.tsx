@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -261,6 +262,7 @@ function cleanStatus(value: string) {
 }
 
 export default function ApplicantsPage() {
+  const t = useTranslations('MyJobApplicants')
   const params = useParams()
   const jobId = String(params?.id || '')
 
@@ -394,7 +396,7 @@ export default function ApplicantsPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('You must be logged in to view applicants.')
+      setMessage(t('mustBeLoggedInToViewApplicants'))
       setLoading(false)
       return
     }
@@ -425,7 +427,7 @@ export default function ApplicantsPage() {
     }
 
     if (!jobData) {
-      setMessage('Job not found.')
+      setMessage(t('jobNotFound'))
       setLoading(false)
       return
     }
@@ -442,7 +444,7 @@ export default function ApplicantsPage() {
         companyContext.companyId
     ) {
       setMessage(
-        'You do not have permission to view applicants for this job.'
+        t('noPermissionToViewApplicants')
       )
       setLoading(false)
       return
@@ -684,7 +686,7 @@ export default function ApplicantsPage() {
         counterOffers[applicant.id]
 
       if (!counter) {
-        setMessage('Enter a counter offer amount first.')
+        setMessage(t('enterCounterOfferFirst'))
         return
       }
 
@@ -702,7 +704,7 @@ export default function ApplicantsPage() {
         throw error
       }
 
-      setMessage('Counter offer sent to worker.')
+      setMessage(t('counterOfferSent'))
 
       await loadApplicants()
 
@@ -710,7 +712,7 @@ export default function ApplicantsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to send counter offer.'
+          : t('unableToSendCounterOffer')
       )
     } finally {
       setWorkingId(null)
@@ -723,12 +725,15 @@ export default function ApplicantsPage() {
       applicant.requested_pay
 
     if (!workerOffer) {
-      setMessage('This worker did not submit a pay request.')
+      setMessage(t('workerDidNotSubmitPayRequest'))
       return
     }
 
     const confirmed = window.confirm(
-      `Accept ${getWorkerName(applicant)}'s requested rate of ${workerOffer}?`
+      t('confirmAcceptWorkerRate', {
+        worker: getWorkerName(applicant),
+        rate: workerOffer,
+      })
     )
 
     if (!confirmed) return
@@ -743,7 +748,7 @@ export default function ApplicantsPage() {
           company_counter_offer: workerOffer,
           negotiation_status: 'accepted',
           negotiation_message:
-            'Company accepted the worker requested rate.',
+            t('companyAcceptedWorkerRate'),
         })
         .eq('id', applicant.id)
 
@@ -752,7 +757,7 @@ export default function ApplicantsPage() {
       }
 
       setMessage(
-        `Worker offer accepted at ${workerOffer}. You can now hire the worker.`
+        t('workerOfferAccepted', { rate: workerOffer })
       )
 
       await loadApplicants()
@@ -760,7 +765,7 @@ export default function ApplicantsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to accept the worker offer.'
+          : t('unableToAcceptWorkerOffer')
       )
     } finally {
       setWorkingId(null)
@@ -781,7 +786,7 @@ export default function ApplicantsPage() {
       applicant.negotiation_status !== 'accepted'
     ) {
       setMessage(
-        'Accept the worker offer or complete the negotiation before hiring.'
+        t('completeNegotiationBeforeHiring')
       )
 
       document
@@ -795,12 +800,14 @@ export default function ApplicantsPage() {
     }
 
     if (job.assigned_worker_id || job.assigned_application_id) {
-      setMessage('This job already has an assigned worker.')
+      setMessage(t('jobAlreadyAssigned'))
       return
     }
 
     const confirmed = window.confirm(
-      `Hire ${getWorkerName(applicant)}?`
+      t('confirmHireWorker', {
+        worker: getWorkerName(applicant),
+      })
     )
 
     if (!confirmed) return
@@ -816,7 +823,7 @@ export default function ApplicantsPage() {
 
       if (sessionError || !session?.access_token) {
         throw new Error(
-          sessionError?.message || 'You must be logged in to hire a worker.'
+          sessionError?.message || t('mustBeLoggedInToHire')
         )
       }
 
@@ -836,12 +843,12 @@ export default function ApplicantsPage() {
 
       if (!response.ok) {
         throw new Error(
-          result?.error || 'Unable to hire worker.'
+          result?.error || t('unableToHireWorker')
         )
       }
 
       setMessage(
-        result?.message || 'Worker hired successfully.'
+        result?.message || t('workerHiredSuccessfully')
       )
 
       await loadApplicants()
@@ -853,7 +860,7 @@ export default function ApplicantsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to hire worker.'
+          : t('unableToHireWorker')
       )
     } finally {
       setActionLoadingId(null)
@@ -861,7 +868,11 @@ export default function ApplicantsPage() {
   }
 
   async function declineApplicant(applicant: Applicant) {
-    const confirmed = window.confirm(`Decline ${getWorkerName(applicant)}?`)
+    const confirmed = window.confirm(
+      t('confirmDeclineApplicant', {
+        worker: getWorkerName(applicant),
+      })
+    )
 
     if (!confirmed) return
 
@@ -880,7 +891,7 @@ export default function ApplicantsPage() {
       return
     }
 
-    setMessage('Applicant declined.')
+    setMessage(t('applicantDeclined'))
 
     await loadApplicants()
 
@@ -905,7 +916,7 @@ export default function ApplicantsPage() {
         if (sessionError || !session?.access_token) {
           throw new Error(
             sessionError?.message ||
-              'You must be logged in to complete this job.'
+              t('mustBeLoggedInToCompleteJob')
           )
         }
 
@@ -925,12 +936,12 @@ export default function ApplicantsPage() {
 
         if (!response.ok) {
           throw new Error(
-            result?.error || 'Unable to complete job.'
+            result?.error || t('unableToCompleteJob')
           )
         }
 
         setMessage(
-          result?.message || 'Job marked completed.'
+          result?.message || t('jobMarkedCompleted')
         )
       } else {
         const { error } = await jobsUpdateTable()
@@ -943,7 +954,11 @@ export default function ApplicantsPage() {
           throw error
         }
 
-        setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
+        setMessage(
+          t('jobMarkedStatus', {
+            status: cleanStatus(nextStatus),
+          })
+        )
       }
 
       await loadApplicants()
@@ -955,7 +970,7 @@ export default function ApplicantsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to update job status.'
+          : t('unableToUpdateJobStatus')
       )
     } finally {
       setActionLoadingId(null)
@@ -973,7 +988,7 @@ export default function ApplicantsPage() {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      setMessage('You must be logged in.')
+      setMessage(t('mustBeLoggedIn'))
       setActionLoadingId(null)
       return
     }
@@ -1000,7 +1015,7 @@ export default function ApplicantsPage() {
       .single()
 
     if (error || !newConversation?.id) {
-      setMessage(error?.message || 'Could not create conversation.')
+      setMessage(error?.message || t('couldNotCreateConversation'))
       setActionLoadingId(null)
       return
     }
@@ -1041,12 +1056,12 @@ export default function ApplicantsPage() {
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            'Unable to invite worker.'
+            t('unableToInviteWorker')
         )
       }
 
       setInviteMessage(
-        'Worker invited successfully.'
+        t('workerInvitedSuccessfully')
       )
 
       window.dispatchEvent(
@@ -1060,7 +1075,7 @@ export default function ApplicantsPage() {
       setInviteMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to invite worker.'
+          : t('unableToInviteWorker')
       )
 
       return false
@@ -1081,7 +1096,7 @@ export default function ApplicantsPage() {
       } = await supabase.auth.getSession()
 
       if (!session?.access_token) {
-        throw new Error('Authentication required.')
+        throw new Error(t('authenticationRequired'))
       }
 
       const matchResponse = await crewCallAuthedFetch('/api/jobs/match', {
@@ -1098,7 +1113,7 @@ export default function ApplicantsPage() {
 
       if (!matchResponse.ok) {
         throw new Error(
-          matchResult?.error || 'Unable to run AI matching.'
+          matchResult?.error || t('unableToRunAiMatch')
         )
       }
 
@@ -1135,7 +1150,10 @@ export default function ApplicantsPage() {
       }
 
       setInviteMessage(
-        `✅ AI updated ${matchResult.matchesCreated || 0} matches and invited ${invited} worker${invited === 1 ? '' : 's'}`
+        t('aiUpdatedAndInvited', {
+          matches: matchResult.matchesCreated || 0,
+          invited,
+        })
       )
 
       window.dispatchEvent(
@@ -1146,7 +1164,7 @@ export default function ApplicantsPage() {
       setInviteMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to send invites.'
+          : t('unableToSendInvites')
       )
     } finally {
       setInviteLoading(false)
@@ -1223,20 +1241,19 @@ export default function ApplicantsPage() {
                 href="/my-jobs"
                 className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
               >
-                ← Back to My Jobs
+                ← {t('backToMyJobs')}
               </Link>
 
               <p className="mt-5 text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                Hiring Workspace
+                {t('hiringWorkspace')}
               </p>
 
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                {job?.title || 'Manage Applicants'}
+                {job?.title || t('manageApplicants')}
               </h1>
 
               <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
-                Review each applicant, negotiate pay, message workers, and hire
-                the best fit without leaving this job.
+                {t('description')}
               </p>
             </div>
 
@@ -1246,7 +1263,7 @@ export default function ApplicantsPage() {
                   href={`/jobs/${job.id}`}
                   className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                 >
-                  View Job
+                  {t('viewJob')}
                 </Link>
 
                 {!job.assigned_worker_id &&
@@ -1273,7 +1290,7 @@ export default function ApplicantsPage() {
                         if (!response.ok) {
                           const result = await response.json()
                           throw new Error(
-                            result?.error || 'Unable to run AI matching.'
+                            result?.error || t('unableToRunAiMatch')
                           )
                         }
 
@@ -1283,7 +1300,7 @@ export default function ApplicantsPage() {
                         setInviteMessage(
                           error instanceof Error
                             ? error.message
-                            : 'Unable to run AI matching.'
+                            : t('unableToRunAiMatch')
                         )
                       } finally {
                         setInviteLoading(false)
@@ -1292,7 +1309,7 @@ export default function ApplicantsPage() {
                     disabled={inviteLoading}
                     className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] disabled:opacity-60"
                   >
-                    {inviteLoading ? 'Running AI...' : 'Run AI Match'}
+                    {inviteLoading ? t('runningAi') : t('runAiMatch')}
                   </button>
                 ) : null}
 
@@ -1301,7 +1318,7 @@ export default function ApplicantsPage() {
                     href={`/jobs/${job.id}/pay`}
                     className="rounded-2xl bg-green-600 px-5 py-3 text-sm font-black text-white transition hover:bg-green-500"
                   >
-                    Fund Job
+                    {t('fundJob')}
                   </Link>
                 )}
 
@@ -1310,7 +1327,7 @@ export default function ApplicantsPage() {
                     href={`/jobs/${job.id}/release-payout`}
                     className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500"
                   >
-                    Release Payout
+                    {t('releasePayout')}
                   </Link>
                 )}
               </div>
@@ -1342,29 +1359,29 @@ export default function ApplicantsPage() {
                   </div>
 
                   <h2 className="mt-5 text-3xl font-black text-white">
-                    {job.title || 'Untitled Job'}
+                    {job.title || t('untitledJob')}
                   </h2>
 
                   <p className="mt-2 text-sm font-semibold text-slate-300">
                     {[job.trade, job.location].filter(Boolean).join(' • ') ||
-                      'No trade or location listed'}
+                      t('noTradeLocation')}
                   </p>
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <JobMetric
-                      label="Pay"
+                      label={t('pay')}
                       value={formatMoney(job.pay_rate)}
                     />
                     <JobMetric
-                      label="Applicants"
+                      label={t('applicants')}
                       value={String(sortedApplicants.length)}
                     />
                     <JobMetric
-                      label="Status"
+                      label={t('status')}
                       value={cleanStatus(job.status || 'open')}
                     />
                     <JobMetric
-                      label="Payment"
+                      label={t('payment')}
                       value={cleanStatus(job.payment_status || 'unpaid')}
                     />
                   </div>
@@ -1373,7 +1390,7 @@ export default function ApplicantsPage() {
                 {assignedApplicant && (
                   <div className="w-full rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5 xl:max-w-sm">
                     <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-200">
-                      Assigned Worker
+                      {t('assignedWorker')}
                     </p>
 
                     <p className="mt-3 text-2xl font-black text-white">
@@ -1381,7 +1398,7 @@ export default function ApplicantsPage() {
                     </p>
 
                     <p className="mt-2 text-sm font-semibold text-emerald-100/80">
-                      Agreed pay:{' '}
+                      {t('agreedPay')}:{' '}
                       {formatMoney(
                         assignedApplicant.company_counter_offer ||
                           assignedApplicant.requested_pay_rate ||
@@ -1393,7 +1410,7 @@ export default function ApplicantsPage() {
                     {job.status !== 'completed' ? (
                       <div className="mt-5 flex flex-wrap gap-3">
                         <LifecycleButton
-                          label="Mark In Progress"
+                          label={t('markInProgress')}
                           disabled={
                             actionLoadingId === 'in_progress' ||
                             job.status === 'in_progress'
@@ -1413,7 +1430,7 @@ export default function ApplicantsPage() {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">
-                        CrewCall AI Pick
+                        {t('crewCallAiPick')}
                       </p>
 
                       <h3 className="mt-2 text-2xl font-black text-white">
@@ -1422,14 +1439,14 @@ export default function ApplicantsPage() {
 
                       <p className="mt-2 max-w-3xl text-sm font-semibold text-cyan-100">
                         {topRecommendedMatch.reason ||
-                          'Strong overall match for this job.'}
+                          t('strongOverallMatch')}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="rounded-2xl bg-cyan-300/15 px-5 py-3 text-center">
                         <p className="text-xs font-black uppercase text-cyan-200">
-                          Match
+                          {t('match')}
                         </p>
                         <p className="text-3xl font-black text-white">
                           {topRecommendedMatch.match_score || 0}%
@@ -1441,7 +1458,7 @@ export default function ApplicantsPage() {
                         onClick={() => setShowComparison((current) => !current)}
                         className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                       >
-                        {showComparison ? 'Hide Comparison' : 'Compare'}
+                        {showComparison ? t('hideComparison') : t('compare')}
                       </button>
                     </div>
                   </div>
@@ -1449,27 +1466,27 @@ export default function ApplicantsPage() {
                   {showComparison && (
                     <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
                       <MatchMetric
-                        label="Trade"
+                        label={t('trade')}
                         value={topRecommendedMatch.trade_score}
                       />
                       <MatchMetric
-                        label="Location"
+                        label={t('location')}
                         value={topRecommendedMatch.location_score}
                       />
                       <MatchMetric
-                        label="Availability"
+                        label={t('availability')}
                         value={topRecommendedMatch.availability_score}
                       />
                       <MatchMetric
-                        label="Credentials"
+                        label={t('credentials')}
                         value={topRecommendedMatch.certification_score}
                       />
                       <MatchMetric
-                        label="Pay Fit"
+                        label={t('payFit')}
                         value={topRecommendedMatch.pay_score}
                       />
                       <MatchMetric
-                        label="Experience"
+                        label={t('experience')}
                         value={topRecommendedMatch.experience_score}
                       />
                     </div>
@@ -1483,15 +1500,15 @@ export default function ApplicantsPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                      CrewCall AI
+                      {t('crewCallAi')}
                     </p>
 
                     <h3 className="mt-2 text-2xl font-black text-white">
-                      AI Recommended Workers
+                      {t('aiRecommendedWorkers')}
                     </h3>
 
                     <p className="mt-2 text-sm font-semibold text-slate-400">
-                      Workers matched to this job before they apply.
+                      {t('recommendedWorkersDescription')}
                     </p>
                   </div>
 
@@ -1503,8 +1520,8 @@ export default function ApplicantsPage() {
                       className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
                     >
                       {inviteLoading
-                        ? 'Inviting...'
-                        : 'Invite Top 3'}
+                        ? t('inviting')
+                        : t('inviteTopThree')}
                     </button>
                   )}
                 </div>
@@ -1529,7 +1546,7 @@ export default function ApplicantsPage() {
                         const name =
                           worker?.full_name ||
                           worker?.company_name ||
-                          'CrewCall Worker'
+                          t('crewCallWorker')
 
                         const photo =
                           getWorkerPhoto(
@@ -1579,7 +1596,7 @@ export default function ApplicantsPage() {
                                             0
                                         )
                                       )}
-                                      % MATCH
+                                      % {t('match').toUpperCase()}
                                     </span>
                                   </div>
 
@@ -1600,7 +1617,7 @@ export default function ApplicantsPage() {
                                     ]
                                       .filter(Boolean)
                                       .join(' • ') ||
-                                      'Available CrewCall worker'}
+                                      t('availableCrewCallWorker')}
                                   </p>
 
                                   {match.reason && (
@@ -1618,7 +1635,7 @@ export default function ApplicantsPage() {
                                   href={`/profile?user=${match.worker_id}`}
                                   className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
                                 >
-                                  View Profile
+                                  {t('viewProfile')}
                                 </Link>
 
                                 <button
@@ -1636,8 +1653,8 @@ export default function ApplicantsPage() {
                                 >
                                   {actionLoadingId ===
                                   `invite-${match.worker_id}`
-                                    ? 'Inviting...'
-                                    : 'Invite Worker'}
+                                    ? t('inviting')
+                                    : t('inviteWorker')}
                                 </button>
                               </div>
                             </div>
@@ -1653,11 +1670,11 @@ export default function ApplicantsPage() {
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
-                    Applicants
+                    {t('applicants')}
                   </p>
                   <h3 className="mt-2 text-2xl font-black text-white">
                     {sortedApplicants.length}{' '}
-                    {sortedApplicants.length === 1 ? 'candidate' : 'candidates'}
+                    {sortedApplicants.length === 1 ? t('candidate') : t('candidates')}
                   </h3>
                 </div>
 
@@ -1666,10 +1683,10 @@ export default function ApplicantsPage() {
               {sortedApplicants.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] p-10 text-center">
                   <h3 className="text-2xl font-black text-white">
-                    No applicants yet
+                    {t('noApplicantsYet')}
                   </h3>
                   <p className="mt-3 text-sm font-semibold text-slate-400">
-                    New applicants will appear inside this job workspace.
+                    {t('newApplicantsDescription')}
                   </p>
                 </div>
               ) : (
@@ -1750,7 +1767,7 @@ export default function ApplicantsPage() {
 
                                   {aiMatch && index === 0 && (
                                     <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-xs font-black text-cyan-100">
-                                      AI PICK
+                                      {t('aiPick')}
                                     </span>
                                   )}
 
@@ -1775,45 +1792,45 @@ export default function ApplicantsPage() {
                                 <p className="mt-2 text-sm font-semibold text-slate-300">
                                   {[worker?.trade, worker?.city, worker?.state]
                                     .filter(Boolean)
-                                    .join(' • ') || 'Profile incomplete'}
+                                    .join(' • ') || t('profileIncomplete')}
                                 </p>
 
                                 <div className="mt-4 flex flex-wrap gap-2">
                                   {worker?.years_experience && (
                                     <WorkerBadge>
-                                      {worker.years_experience} years
+                                      {worker.years_experience} {t('years')}
                                     </WorkerBadge>
                                   )}
 
                                   {worker?.insurance_provider && (
-                                    <WorkerBadge>✓ Insured</WorkerBadge>
+                                    <WorkerBadge>✓ {t('insured')}</WorkerBadge>
                                   )}
 
                                   {worker?.liability_form_signed && (
                                     <WorkerBadge>
-                                      ✓ Liability complete
+                                      ✓ {t('liabilityComplete')}
                                     </WorkerBadge>
                                   )}
 
                                   {payoutReady ? (
                                     <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-200">
-                                      ✓ Payout Ready
+                                      ✓ {t('payoutReady')}
                                     </span>
                                   ) : (
                                     <span className="rounded-full border border-orange-400/30 bg-orange-500/15 px-3 py-1 text-xs font-black text-orange-200">
-                                      ⚠ Payout Setup Required
+                                      ⚠ {t('payoutSetupRequired')}
                                     </span>
                                   )}
 
                                   {aiMatch && (
                                     <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black text-cyan-100">
-                                      {aiMatch.match_score || 0}% match
+                                      {aiMatch.match_score || 0}% {t('match')}
                                     </span>
                                   )}
                                 </div>
 
                                 <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-500">
-                                  Applied{' '}
+                                  {t('applied')}{' '}
                                   {new Date(
                                     applicant.created_at
                                   ).toLocaleDateString()}
@@ -1840,8 +1857,8 @@ export default function ApplicantsPage() {
                                 className="flex-1 rounded-2xl bg-blue-500 px-4 py-3 text-sm font-black text-white transition hover:bg-blue-400 disabled:opacity-60"
                               >
                                 {actionLoadingId === applicant.worker_id
-                                  ? 'Opening...'
-                                  : 'Message'}
+                                  ? t('opening')
+                                  : t('message')}
                               </button>
 
                               {!jobAlreadyAssigned &&
@@ -1859,8 +1876,8 @@ export default function ApplicantsPage() {
                                     className="flex-1 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
                                   >
                                     {actionLoadingId === applicant.id
-                                      ? 'Hiring...'
-                                      : 'Hire Worker'}
+                                      ? t('hiring')
+                                      : t('hireWorker')}
                                   </button>
                                 )}
 
@@ -1900,8 +1917,8 @@ export default function ApplicantsPage() {
                                 >
                                   {actionLoadingId ===
                                   `decline-${applicant.id}`
-                                    ? 'Declining...'
-                                    : 'Decline'}
+                                    ? t('declining')
+                                    : t('decline')}
                                 </button>
                               )}
 
@@ -1922,30 +1939,30 @@ export default function ApplicantsPage() {
 
                             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                               <SnapshotRow
-                                label="Trade"
-                                value={worker?.trade || 'Not listed'}
+                                label={t('trade')}
+                                value={worker?.trade || t('notListed')}
                               />
                               <SnapshotRow
-                                label="Experience"
+                                label={t('experience')}
                                 value={
                                   worker?.years_experience
-                                    ? `${worker.years_experience} years`
-                                    : 'Not listed'
+                                    ? `${worker.years_experience} {t('years')}`
+                                    : t('notListed')
                                 }
                               />
                               <SnapshotRow
-                                label="Insurance"
+                                label={t('insurance')}
                                 value={
                                   worker?.insurance_provider ||
-                                  'Not listed'
+                                  t('notListed')
                                 }
                               />
                               <SnapshotRow
-                                label="Liability"
+                                label={t('liability')}
                                 value={
                                   worker?.liability_form_signed
-                                    ? 'Complete'
-                                    : 'Pending'
+                                    ? t('complete')
+                                    : t('pending')
                                 }
                               />
                             </div>
@@ -1963,7 +1980,7 @@ export default function ApplicantsPage() {
 
                                 <p className="mt-2 text-sm font-semibold leading-6 text-cyan-50/90">
                                   {aiMatch.reason ||
-                                    'Strong CrewCall match.'}
+                                    t('strongCrewCallMatch')}
                                 </p>
                               </div>
                             )}
@@ -1976,12 +1993,12 @@ export default function ApplicantsPage() {
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-200">
-                                  Pay Negotiation
+                                  {t('payNegotiation')}
                                 </p>
                                 <h5 className="mt-2 text-xl font-black text-white">
                                   {isAssigned
-                                    ? 'Final Pay Agreement'
-                                    : 'Set the final rate before hiring'}
+                                    ? t('finalPayAgreement')
+                                    : t('setFinalRate')}
                                 </h5>
                               </div>
 
@@ -2001,12 +2018,12 @@ export default function ApplicantsPage() {
                             !applicant.company_counter_offer ? (
                               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                 <OfferCard
-                                  label="Original Job Rate"
+                                  label={t('originalJobRate')}
                                   value={formatMoney(job.pay_rate)}
                                   tone="cyan"
                                 />
                                 <OfferCard
-                                  label="Final Agreed Rate"
+                                  label={t('finalAgreedRate')}
                                   value={
                                     agreedRate
                                       ? formatMoney(agreedRate)
@@ -2018,31 +2035,31 @@ export default function ApplicantsPage() {
                             ) : (
                               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                                 <OfferCard
-                                  label="Worker Request"
+                                  label={t('workerRequest')}
                                   value={
                                     workerOffer
                                       ? formatMoney(workerOffer)
-                                      : 'Not submitted'
+                                      : t('notSubmitted')
                                   }
                                   tone="orange"
                                 />
                                 <OfferCard
-                                  label="Company Counter"
+                                  label={t('companyCounter')}
                                   value={
                                     applicant.company_counter_offer
                                       ? formatMoney(
                                           applicant.company_counter_offer
                                         )
-                                      : 'Not sent'
+                                      : t('notSent')
                                   }
                                   tone="cyan"
                                 />
                                 <OfferCard
-                                  label="Agreed Rate"
+                                  label={t('agreedRate')}
                                   value={
                                     agreedRate
                                       ? formatMoney(agreedRate)
-                                      : 'Not agreed'
+                                      : t('notAgreed')
                                   }
                                   tone="green"
                                 />
@@ -2064,7 +2081,7 @@ export default function ApplicantsPage() {
                                           event.target.value,
                                       }))
                                     }
-                                    placeholder="Counter amount"
+                                    placeholder={t('counterAmount')}
                                     className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/40"
                                   />
 
@@ -2080,7 +2097,7 @@ export default function ApplicantsPage() {
                                           event.target.value,
                                       }))
                                     }
-                                    placeholder="Optional message to the worker"
+                                    placeholder={t('optionalMessage')}
                                     className="w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/40"
                                   />
                                 </div>
@@ -2100,8 +2117,8 @@ export default function ApplicantsPage() {
                                     >
                                       {workingId ===
                                       `accept-${applicant.id}`
-                                        ? 'Accepting...'
-                                        : 'Accept Rate'}
+                                        ? t('accepting')
+                                        : t('acceptRate')}
                                     </button>
                                   )}
 
@@ -2116,8 +2133,8 @@ export default function ApplicantsPage() {
                                     className="flex-1 rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-400 disabled:opacity-50"
                                   >
                                     {workingId === applicant.id
-                                      ? 'Sending...'
-                                      : 'Send Counter Offer'}
+                                      ? t('sending')
+                                      : t('sendCounterOffer')}
                                   </button>
                                 </div>
 
@@ -2133,10 +2150,8 @@ export default function ApplicantsPage() {
                                     className="w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 px-5 py-4 text-sm font-black text-slate-950 shadow-lg transition hover:scale-[1.01] disabled:opacity-50"
                                   >
                                     {actionLoadingId === applicant.id
-                                      ? 'Hiring...'
-                                      : `Hire ${workerName} at ${formatMoney(
-                                          agreedRate
-                                        )}`}
+                                      ? t('hiring')
+                                      : t('hireAtRate', { worker: workerName, rate: formatMoney(agreedRate) })}
                                   </button>
                                 )}
                               </div>
@@ -2144,13 +2159,13 @@ export default function ApplicantsPage() {
 
                             {isAssigned && (
                               <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
-                                This worker has been hired for this job.
+                                {t('workerHiredForJob')}
                               </div>
                             )}
 
                             {isRejected && (
                               <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-400/10 p-4 text-sm font-bold text-red-100">
-                                This application has been declined.
+                                {t('applicationDeclined')}
                               </div>
                             )}
                           </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -9,6 +10,7 @@ export default function BoostJobPage({
 }: {
   params: { id: string }
 }) {
+  const t = useTranslations('JobBoost')
   const router = useRouter()
   const jobId = params.id
 
@@ -45,9 +47,9 @@ export default function BoostJobPage({
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
       <div className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl">
-        <h1 className="text-2xl font-black">Boosting job...</h1>
+        <h1 className="text-2xl font-black">{t('boosting')}</h1>
         <p className="mt-3 text-sm text-slate-300">
-          Your job is being featured for the next 7 days.
+          {t('featuredForSevenDays')}
         </p>
       </div>
     </main>

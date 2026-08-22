@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
@@ -16,6 +17,7 @@ type JobRow = {
 }
 
 export default function ReleasePayoutPage() {
+  const t = useTranslations('ReleasePayout')
   const params = useParams()
   const router = useRouter()
 
@@ -88,7 +90,7 @@ export default function ReleasePayoutPage() {
 
       if (!data) {
         throw new Error(
-          'Job not found.'
+          t('jobNotFound')
         )
       }
 
@@ -157,13 +159,13 @@ export default function ReleasePayoutPage() {
     ) {
       setSuccess(true)
       setMessage(
-        'Payout was already released.'
+        t('alreadyReleased')
       )
       return
     }
 
     const confirmed = window.confirm(
-      'Release the secured funds to this worker?'
+      t('confirmRelease')
     )
 
     if (!confirmed) return
@@ -204,7 +206,7 @@ export default function ReleasePayoutPage() {
       if (!res.ok) {
         throw new Error(
           data.error ||
-            'Release payout failed.'
+            t('releaseFailed')
         )
       }
 
@@ -212,8 +214,8 @@ export default function ReleasePayoutPage() {
 
       setMessage(
         data.alreadyReleased
-          ? 'Payout was already released.'
-          : 'Worker payout released successfully.'
+          ? t('alreadyReleased')
+          : t('releasedSuccessfully')
       )
 
       setTimeout(() => {
@@ -278,17 +280,17 @@ export default function ReleasePayoutPage() {
               </div>
 
               <h1 className="mb-4 text-4xl font-black">
-                Payment Released
+                {t('paymentReleased')}
               </h1>
 
               <p className="text-lg text-slate-300">
-                The worker payout has been sent through Stripe.
+                {t('paymentReleasedDescription')}
               </p>
             </>
           ) : (
             <>
               <h1 className="mb-4 text-4xl font-black">
-                Release Worker Payout
+                {t('title')}
               </h1>
 
               <p className="mb-8 text-slate-300">
@@ -302,12 +304,12 @@ export default function ReleasePayoutPage() {
           <div className="mb-8 space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
             <div>
               <div className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">
-                Job
+                {t('job')}
               </div>
 
               <div className="font-black text-white">
                 {job.title ||
-                  'CrewCall Job'}
+                  t('crewCallJob')}
               </div>
             </div>
 
@@ -336,10 +338,10 @@ export default function ReleasePayoutPage() {
               />
 
               <StatusRow
-                label="Job Status"
+                label={t('jobStatus')}
                 value={
                   completed
-                    ? 'Completed'
+                    ? t('completed')
                     : job.status ||
                       'Unknown'
                 }
@@ -347,10 +349,10 @@ export default function ReleasePayoutPage() {
               />
 
               <StatusRow
-                label="Payout"
+                label={t('payout')}
                 value={
                   alreadyReleased
-                    ? 'Released'
+                    ? t('released')
                     : 'Held'
                 }
                 ready={
@@ -371,13 +373,13 @@ export default function ReleasePayoutPage() {
               className="w-full rounded-2xl bg-green-500 px-6 py-5 text-xl font-black text-black transition hover:bg-green-400 disabled:opacity-50"
             >
               {loading
-                ? 'Processing Payment...'
-                : 'Release Payout'}
+                ? t('processingPayment')
+                : t('releasePayout')}
             </button>
           ) : (
             <div className="rounded-2xl border border-orange-400/20 bg-orange-500/10 p-5 text-center">
               <p className="font-black text-orange-200">
-                Payout Locked
+                {t('payoutLocked')}
               </p>
 
               <p className="mt-2 text-sm font-semibold leading-6 text-orange-100/70">

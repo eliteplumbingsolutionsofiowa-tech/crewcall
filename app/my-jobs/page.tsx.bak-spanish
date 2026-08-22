@@ -1,0 +1,834 @@
+'use client'
+
+import Link from 'next/link'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
+
+type Job = {
+  id: string
+  title: string | null
+  description: string | null
+  trade: string | null
+  location: string | null
+  pay_rate: string | null
+  start_date: string | null
+  status: string | null
+  payment_status: string | null
+  payout_status: string | null
+  company_id: string
+  assigned_worker_id: string | null
+  assigned_worker: {
+    id: string
+    full_name: string | null
+    trade: string | null
+  } | null
+  created_at: string
+  applicant_count: number
+  view_count: number
+}
+
+type Filter =
+  | 'all'
+  | 'open'
+  | 'assigned'
+  | 'completed'
+  | 'paid'
+  | 'unpaid'
+  | 'not_released'
+
+function formatDate(value: string | null) {
+  if (!value) return 'Not set'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not set'
+  }
+
+  return date.toLocaleDateString()
+}
+
+function statusClasses(status: string | null) {
+  const value = status || 'open'
+
+  if (value === 'completed') {
+    return 'border-emerald-300/20 bg-emerald-400/15 text-emerald-100'
+  }
+
+  if (value === 'assigned') {
+    return 'border-cyan-300/20 bg-cyan-400/15 text-cyan-100'
+  }
+
+  if (value === 'cancelled') {
+    return 'border-red-300/20 bg-red-400/15 text-red-100'
+  }
+
+  return 'border-yellow-300/20 bg-yellow-400/15 text-yellow-100'
+}
+
+function paymentClasses(status: string | null) {
+  const value = status || 'unpaid'
+
+  if (value === 'paid') {
+    return 'border-emerald-300/20 bg-emerald-400/15 text-emerald-100'
+  }
+
+  if (value === 'pending') {
+    return 'border-orange-300/20 bg-orange-400/15 text-orange-100'
+  }
+
+  return 'border-slate-300/20 bg-slate-400/10 text-slate-200'
+}
+
+function payoutClasses(status: string | null) {
+  const value = status || 'not_released'
+
+  if (value === 'released') {
+    return 'border-emerald-300/20 bg-emerald-400/15 text-emerald-100'
+  }
+
+  if (value === 'pending') {
+    return 'border-orange-300/20 bg-orange-400/15 text-orange-100'
+  }
+
+  return 'border-blue-300/20 bg-blue-400/15 text-blue-100'
+}
+
+export default function MyJobsPage() {
+  const router = useRouter()
+
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
+    () => new Set()
+  )
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
+
+  const loadJobs = useCallback(async () => {
+    setRefreshing(true)
+    setMessage(null)
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      router.push('/login')
+      return
+    }
+
+    const companyContext =
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+    if (!companyContext.companyId) {
+      router.push('/worker/dashboard')
+      return
+    }
+
+    const companyId =
+      companyContext.companyId
+
+    const { data: jobsData, error: jobsError } = await supabase
+      .from('jobs')
+      .select(
+        `
+        id,
+        title,
+        description,
+        trade,
+        location,
+        pay_rate,
+        start_date,
+        status,
+        payment_status,
+        payout_status,
+        company_id,
+        assigned_worker_id,
+        created_at
+      `
+      )
+      .eq('company_id', companyId)
+      .order('created_at', {
+        ascending: false,
+      })
+
+    if (jobsError) {
+      setMessage(jobsError.message)
+      setJobs([])
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
+
+    const cleanJobs = (jobsData || []) as Omit<
+      Job,
+      'applicant_count' | 'view_count'
+    >[]
+    const jobIds = cleanJobs.map((job) => job.id)
+    const countMap = new Map<string, number>()
+    const viewMap = new Map<string, number>()
+
+    if (jobIds.length > 0) {
+      const { data: applicationsData } = await supabase
+        .from('applications')
+        .select('id, job_id')
+        .in('job_id', jobIds)
+
+      ;(applicationsData || []).forEach((app: any) => {
+        countMap.set(app.job_id, (countMap.get(app.job_id) || 0) + 1)
+      })
+
+      const { data: viewsData } = await supabase
+        .from('job_views')
+        .select('job_id')
+        .in('job_id', jobIds)
+
+      ;(viewsData || []).forEach((view: any) => {
+        viewMap.set(
+          view.job_id,
+          (viewMap.get(view.job_id) || 0) + 1
+        )
+      })
+    }
+
+    if (jobIds.length > 0) {
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('job_id')
+        .eq('reviewer_id', user.id)
+        .in('job_id', jobIds)
+
+      setReviewedJobIds(
+        new Set(
+          (reviewsData || [])
+            .map((review) => review.job_id)
+            .filter((reviewJobId): reviewJobId is string =>
+              Boolean(reviewJobId)
+            )
+        )
+      )
+    } else {
+      setReviewedJobIds(new Set())
+    }
+
+    const workerIds = cleanJobs
+      .map((job) => job.assigned_worker_id)
+      .filter(Boolean) as string[]
+
+    const { data: workersData } =
+      workerIds.length > 0
+        ? await supabase
+            .from('profiles')
+            .select('id, full_name, trade')
+            .in('id', workerIds)
+        : { data: [] }
+
+    const workerMap = new Map(
+      (workersData || []).map((worker) => [
+        worker.id,
+        worker,
+      ])
+    )
+
+    const mergedJobs: Job[] = cleanJobs.map((job) => ({
+      ...job,
+      assigned_worker: job.assigned_worker_id
+        ? workerMap.get(job.assigned_worker_id) || null
+        : null,
+      payout_status: job.payout_status || 'not_released',
+      applicant_count: countMap.get(job.id) || 0,
+      view_count: viewMap.get(job.id) || 0,
+    }))
+
+    setJobs(mergedJobs)
+    setLoading(false)
+    setRefreshing(false)
+
+    window.dispatchEvent(new Event('crewcall-refresh-nav'))
+  }, [router])
+
+  useEffect(() => {
+    let mounted = true
+
+    async function boot() {
+      if (!mounted) return
+      await loadJobs()
+    }
+
+    boot()
+
+    const refresh = async () => {
+      if (!mounted) return
+      await loadJobs()
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+    }
+
+    window.addEventListener('focus', refresh)
+    window.addEventListener('pageshow', refresh)
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refresh()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    const jobsChannel = supabase
+      .channel('my-jobs-live-sync-upgraded')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs',
+        },
+        refresh
+      )
+      .subscribe()
+
+    const applicationsChannel = supabase
+      .channel('my-jobs-applications-sync-upgraded')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'applications',
+        },
+        refresh
+      )
+      .subscribe()
+
+    return () => {
+      mounted = false
+
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('pageshow', refresh)
+      document.removeEventListener('visibilitychange', handleVisibility)
+
+      supabase.removeChannel(jobsChannel)
+      supabase.removeChannel(applicationsChannel)
+    }
+  }, [loadJobs])
+
+  const dedupedJobs = useMemo(() => {
+    const seen = new Set<string>()
+
+    return jobs.filter((job) => {
+      if (seen.has(job.id)) return false
+      seen.add(job.id)
+      return true
+    })
+  }, [jobs])
+
+  const filteredJobs = useMemo(() => {
+    const term = search.trim().toLowerCase()
+
+    return dedupedJobs.filter((job) => {
+      const matchesFilter =
+        filter === 'all' ||
+        job.status === filter ||
+        (filter === 'paid' && job.payment_status === 'paid') ||
+        (filter === 'unpaid' && job.payment_status !== 'paid') ||
+        (filter === 'not_released' &&
+          job.status === 'completed' &&
+          job.payment_status === 'paid' &&
+          job.payout_status !== 'released')
+
+      const haystack = [
+        job.title,
+        job.description,
+        job.trade,
+        job.location,
+        job.pay_rate,
+        job.status,
+        job.payment_status,
+        job.payout_status,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      const matchesSearch = !term || haystack.includes(term)
+
+      return matchesFilter && matchesSearch
+    })
+  }, [dedupedJobs, filter, search])
+
+  const stats = useMemo(() => {
+    const totalViews = dedupedJobs.reduce(
+      (total, job) => total + job.view_count,
+      0
+    )
+
+    const totalApplicants = dedupedJobs.reduce(
+      (total, job) => total + job.applicant_count,
+      0
+    )
+
+    const averageViews =
+      dedupedJobs.length > 0
+        ? totalViews / dedupedJobs.length
+        : 0
+
+    const conversionRate =
+      totalViews > 0
+        ? (totalApplicants / totalViews) * 100
+        : 0
+
+    return {
+      total: dedupedJobs.length,
+      open: dedupedJobs.filter((job) => job.status === 'open').length,
+      assigned: dedupedJobs.filter((job) => job.status === 'assigned').length,
+      completed: dedupedJobs.filter((job) => job.status === 'completed').length,
+      paid: dedupedJobs.filter((job) => job.payment_status === 'paid').length,
+      needsPayout: dedupedJobs.filter(
+        (job) =>
+          job.status === 'completed' &&
+          job.payment_status === 'paid' &&
+          job.payout_status !== 'released'
+      ).length,
+      totalViews,
+      totalApplicants,
+      averageViews,
+      conversionRate,
+    }
+  }, [dedupedJobs])
+
+  function clearFilters() {
+    setSearch('')
+    setFilter('all')
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 text-white">
+        <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
+          <p className="text-lg font-black">Loading your jobs...</p>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 text-white">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur">
+          <div className="bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/10 p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                  Company Dashboard
+                </p>
+
+                <h1 className="mt-3 text-5xl font-black tracking-tight text-white">
+                  My Jobs
+                </h1>
+
+                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+                  Manage active jobs, applicants, hires, payments, completed
+                  work, and worker communication.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/completed-jobs"
+                  className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-sm font-black text-white transition hover:bg-white/20"
+                >
+                  Completed Jobs
+                </Link>
+
+                <Link
+                  href="/post-job"
+                  className="rounded-2xl bg-cyan-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
+                >
+                  Post New Job
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+              <StatCard label="Total" value={String(stats.total)} />
+              <StatCard label="Open" value={String(stats.open)} />
+              <StatCard label="Assigned" value={String(stats.assigned)} />
+              <StatCard label="Completed" value={String(stats.completed)} />
+              <StatCard label="Paid" value={String(stats.paid)} />
+              <StatCard label="Needs Payout" value={String(stats.needsPayout)} />
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <AnalyticsCard
+                label="Total Views"
+                value={String(stats.totalViews)}
+                helper="Across all posted jobs"
+              />
+
+              <AnalyticsCard
+                label="Total Applicants"
+                value={String(stats.totalApplicants)}
+                helper="Across all posted jobs"
+              />
+
+              <AnalyticsCard
+                label="Average Views"
+                value={stats.averageViews.toFixed(1)}
+                helper="Average views per job"
+              />
+
+              <AnalyticsCard
+                label="Conversion Rate"
+                value={`${stats.conversionRate.toFixed(1)}%`}
+                helper="Applicants divided by views"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
+          <div className="grid gap-4 lg:grid-cols-[1fr_220px_auto_auto] lg:items-end">
+            <div>
+              <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                Search Jobs
+              </label>
+
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search title, trade, location..."
+                className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                Filter
+              </label>
+
+              <select
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as Filter)}
+                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none"
+              >
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="assigned">Assigned</option>
+                <option value="completed">Completed</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="not_released">Needs Payout</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
+            >
+              Clear
+            </button>
+
+            <button
+              type="button"
+              onClick={loadJobs}
+              className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
+            >
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </section>
+
+        {message && (
+          <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm font-bold text-red-100">
+            {message}
+          </div>
+        )}
+
+        {filteredJobs.length === 0 && (
+          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
+            <h2 className="text-3xl font-black text-white">No jobs found</h2>
+
+            <p className="mt-3 text-slate-300">
+              Post your first job to start finding workers.
+            </p>
+
+            <Link
+              href="/post-job"
+              className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
+            >
+              Post a Job
+            </Link>
+          </div>
+        )}
+
+        <div className="grid gap-5">
+          {filteredJobs.map((job) => {
+            const isPaid = job.payment_status === 'paid'
+            const isCompleted = job.status === 'completed'
+            const payoutReleased = job.payout_status === 'released'
+            const canPay = !isPaid && Boolean(job.assigned_worker_id)
+            const canReleasePayout = isPaid && isCompleted && !payoutReleased
+            const canReview =
+              isCompleted &&
+              payoutReleased &&
+              Boolean(job.assigned_worker_id)
+
+            return (
+              <div
+                key={job.id}
+                className="group rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur transition-all duration-200 hover:-translate-y-1 hover:border-cyan-300/20"
+              >
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-2xl font-black text-white">
+                          {job.title || 'Untitled Job'}
+                        </h2>
+
+                        <Badge value={job.status || 'open'} type="status" />
+
+                        <Badge
+                          value={job.payment_status || 'unpaid'}
+                          type="payment"
+                        />
+
+                        {isCompleted && (
+                          <Badge
+                            value={job.payout_status || 'not_released'}
+                            type="payout"
+                          />
+                        )}
+                      </div>
+
+                      <p className="mt-2 text-sm font-semibold text-slate-400">
+                        {job.trade || 'Trade not set'} •{' '}
+                        {job.location || 'Location not set'}
+                      </p>
+                    </div>
+
+                    {job.description && (
+                      <p className="max-w-3xl text-sm leading-6 text-slate-300">
+                        {job.description}
+                      </p>
+                    )}
+
+                    <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
+                      <Info label="Pay" value={job.pay_rate || 'Not set'} />
+
+                      <Info label="Start" value={formatDate(job.start_date)} />
+
+                      <Info
+                        label="Applicants"
+                        value={String(job.applicant_count)}
+                      />
+
+                      <Info
+                        label="Views"
+                        value={String(job.view_count)}
+                      />
+
+                      <Info label="Posted" value={formatDate(job.created_at)} />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 lg:w-[260px] lg:flex-col">
+
+                    {job.assigned_worker && (
+                      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-center">
+                        <div className="text-xs font-black uppercase tracking-wide text-emerald-200">
+                          Assigned Worker
+                        </div>
+                        <div className="mt-1 text-sm font-black text-white">
+                          {job.assigned_worker.full_name || 'Worker'}
+                        </div>
+                        {job.assigned_worker.trade && (
+                          <div className="mt-1 text-xs font-bold text-emerald-100">
+                            {job.assigned_worker.trade}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!isCompleted && (
+                      <Link
+                        href={`/my-jobs/${job.id}/applicants`}
+                        className={
+                          job.assigned_worker_id
+                            ? "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+                            : "rounded-2xl bg-cyan-500 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-cyan-400"
+                        }
+                      >
+                        {job.assigned_worker_id
+                          ? "View Applicants"
+                          : "Review & Negotiate"}
+                      </Link>
+                    )}
+
+                    <Link
+                      href={`/my-jobs/${job.id}`}
+                      className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+                    >
+                      View Job
+                    </Link>
+
+                    {canPay && (
+                      <Link
+                        href={`/jobs/${job.id}/pay`}
+                        className="rounded-2xl bg-green-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-green-500"
+                      >
+                        Fund Job
+                      </Link>
+                    )}
+
+                    {canReleasePayout && (
+                      <Link
+                        href={`/jobs/${job.id}/release-payout`}
+                        className="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-500"
+                      >
+                        Release Payout
+                      </Link>
+                    )}
+
+                    {isCompleted && (
+                      <>
+                        <Link
+                          href="/completed-jobs"
+                          className="rounded-2xl bg-purple-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-purple-500"
+                        >
+                          View Completed
+                        </Link>
+
+                        {canReview &&
+                          !reviewedJobIds.has(job.id) && (
+                          <Link
+                            href={`/jobs/${job.id}/review?to=${job.assigned_worker_id}`}
+                            className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-orange-400"
+                          >
+                            Leave Review
+                          </Link>
+                        )}
+                      </>
+                    )}
+
+                    {job.assigned_worker_id && (
+                      <Link
+                        href={`/messages?workerId=${job.assigned_worker_id}&jobId=${job.id}`}
+                        className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-blue-400"
+                      >
+                        Message Worker
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </main>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-3 text-4xl font-black tracking-tight text-white">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function AnalyticsCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string
+  value: string
+  helper: string
+}) {
+  return (
+    <div className="rounded-3xl border border-cyan-300/10 bg-cyan-400/5 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-cyan-200">
+        {label}
+      </p>
+
+      <p className="mt-3 text-3xl font-black tracking-tight text-white">
+        {value}
+      </p>
+
+      <p className="mt-2 text-xs font-semibold text-slate-400">
+        {helper}
+      </p>
+    </div>
+  )
+}
+
+function Badge({
+  value,
+  type,
+}: {
+  value: string
+  type: 'status' | 'payment' | 'payout'
+}) {
+  const classes =
+    type === 'payment'
+      ? paymentClasses(value)
+      : type === 'payout'
+        ? payoutClasses(value)
+        : statusClasses(value)
+
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${classes}`}
+    >
+      {value.replaceAll('_', ' ')}
+    </span>
+  )
+}
+
+function Info({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-2 text-sm font-bold text-white">{value}</p>
+    </div>
+  )
+}

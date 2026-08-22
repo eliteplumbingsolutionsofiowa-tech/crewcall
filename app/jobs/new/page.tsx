@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { CrewButton } from '@/app/components/CrewButton'
@@ -26,6 +27,7 @@ const trades = [
 ]
 
 export default function NewJobPage() {
+  const t = useTranslations('NewJob')
   const router = useRouter()
 
   const [title, setTitle] = useState('')
@@ -94,7 +96,7 @@ export default function NewJobPage() {
             CrewCall
           </p>
           <h1 className="mt-2 text-3xl font-bold text-gray-900">
-            Post a Job
+            {t('title')}
           </h1>
           <p className="mt-2 text-gray-600">
             Add the work you need help with and let available workers apply.
@@ -104,7 +106,7 @@ export default function NewJobPage() {
         <CrewCard>
           <form onSubmit={createJob} className="space-y-5">
             <CrewInput
-              label="Job Title"
+              label={t('jobTitle')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Example: Rough-in help needed"
@@ -113,7 +115,7 @@ export default function NewJobPage() {
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
-                Trade
+                {t('trade')}
               </label>
 
               <select
@@ -130,7 +132,7 @@ export default function NewJobPage() {
             </div>
 
             <CrewInput
-              label="Location"
+              label={t('location')}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Example: Des Moines, IA"
@@ -138,7 +140,7 @@ export default function NewJobPage() {
             />
 
             <CrewInput
-              label="Pay Rate / Job Price"
+              label={t('payRate')}
               value={payRate}
               onChange={(e) => setPayRate(e.target.value)}
               placeholder="Example: $45/hr or $1,200"
@@ -146,7 +148,7 @@ export default function NewJobPage() {
             />
 
             <CrewInput
-              label="Start Date"
+              label={t('startDate')}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -154,7 +156,7 @@ export default function NewJobPage() {
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">
-                Job Description
+                {t('description')}
               </label>
 
               <textarea
@@ -175,11 +177,11 @@ export default function NewJobPage() {
 
             <div className="flex flex-wrap gap-3">
               <CrewButton type="submit" disabled={loading}>
-                {loading ? 'Posting...' : 'Post Job'}
+                {loading ? t('posting') : t('postJob')}
               </CrewButton>
 
               <CrewButton href="/my-jobs" variant="ghost">
-                Cancel
+                {t('cancel')}
               </CrewButton>
             </div>
           </form>

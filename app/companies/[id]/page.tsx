@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type CompanyProfile = {
@@ -61,11 +62,17 @@ function getInitial(value: string | null | undefined) {
   return String(value || 'C').charAt(0).toUpperCase()
 }
 
-function formatLocation(city: string | null, state: string | null) {
-  return [city, state].filter(Boolean).join(', ') || 'Location not listed'
+function formatLocation(
+  city: string | null,
+  state: string | null,
+  fallback = 'Location not listed'
+) {
+  return [city, state].filter(Boolean).join(', ') || fallback
 }
 
 export default function CompanyProfilePage() {
+  const t = useTranslations('PublicCompanyProfile')
+  const locale = useLocale()
   const params = useParams()
   const companyId = String(params?.id || '')
 
@@ -125,7 +132,7 @@ export default function CompanyProfilePage() {
       const companyData = data as CompanyProfile | null
 
       if (!companyData || companyData.role !== 'company') {
-        throw new Error('Company profile not found.')
+        throw new Error(t('profileNotFound'))
       }
 
       setCompany(companyData)
@@ -217,7 +224,7 @@ export default function CompanyProfilePage() {
       setOpenJobs((openData as Job[]) || [])
 
       if (backgroundRefresh) {
-        setMessage('Company profile refreshed.')
+        setMessage(t('profileRefreshed'))
         setMessageTone('success')
       }
     } catch (error) {
@@ -257,7 +264,7 @@ export default function CompanyProfilePage() {
   }, [reviews])
 
   const ratingDisplay =
-    averageRating > 0 ? averageRating.toFixed(1) : 'New'
+    averageRating > 0 ? averageRating.toFixed(1) : t('new')
 
   const recommendationPercent = useMemo(() => {
     const validRatings = reviews
@@ -287,14 +294,14 @@ export default function CompanyProfilePage() {
         <div className="mx-auto max-w-5xl">
           <div className="rounded-[2rem] border border-red-400/20 bg-red-500/10 p-8 text-red-200">
             <p className="text-lg font-black">
-              {message || 'Company not found.'}
+              {message || t('companyNotFound')}
             </p>
 
             <Link
               href="/jobs"
               className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
             >
-              Back to Jobs
+              {t('backToJobs')}
             </Link>
           </div>
         </div>
@@ -321,7 +328,7 @@ export default function CompanyProfilePage() {
             href="/jobs"
             className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
-            ← Back to Jobs
+            ← {t('backToJobs')}
           </Link>
 
           <button
@@ -331,8 +338,8 @@ export default function CompanyProfilePage() {
             className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-black text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {refreshing
-              ? 'Refreshing...'
-              : 'Refresh Profile'}
+              ? t('refreshing')
+              : t('refreshProfile')}
           </button>
         </div>
 
@@ -354,18 +361,18 @@ export default function CompanyProfilePage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge
-                        label="Company Profile"
+                        label={t('companyProfile')}
                         tone="cyan"
                       />
 
                       {company.verified ? (
                         <StatusBadge
-                          label="Verified Company"
+                          label={t('verifiedCompany')}
                           tone="green"
                         />
                       ) : (
                         <StatusBadge
-                          label="Not Yet Verified"
+                          label={t('notYetVerified')}
                           tone="slate"
                         />
                       )}
@@ -378,7 +385,8 @@ export default function CompanyProfilePage() {
                     <p className="mt-3 text-base font-semibold text-slate-300 sm:text-lg">
                       {formatLocation(
                         company.city,
-                        company.state
+                        company.state,
+                        t('locationNotListed')
                       )}
                     </p>
 
@@ -391,7 +399,7 @@ export default function CompanyProfilePage() {
                       </a>
                     ) : (
                       <p className="mt-2 text-sm text-slate-500">
-                        Phone number not listed
+                        {t('phoneNotListed')}
                       </p>
                     )}
                   </div>
@@ -399,21 +407,21 @@ export default function CompanyProfilePage() {
 
                 <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <QuickStat
-                    label="Open Jobs"
+                    label={t('openJobs')}
                     value={String(openJobs.length)}
                     description="Hiring now"
                     tone="cyan"
                   />
 
                   <QuickStat
-                    label="Completed Jobs"
+                    label={t('completedJobs')}
                     value={String(completedJobs.length)}
                     description="Finished through CrewCall"
                     tone="blue"
                   />
 
                   <QuickStat
-                    label="Reviews"
+                    label={t('reviews')}
                     value={String(reviews.length)}
                     description="Worker feedback"
                     tone="violet"
@@ -424,7 +432,7 @@ export default function CompanyProfilePage() {
               <div className="w-full shrink-0 xl:w-80">
                 <div className="rounded-[2rem] border border-amber-400/20 bg-amber-500/10 p-6 text-center">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-300">
-                    Company Rating
+                    {t('companyRating')}
                   </p>
 
                   <p className="mt-4 text-5xl font-black tracking-tight text-white">
@@ -444,18 +452,17 @@ export default function CompanyProfilePage() {
 
                 <div className="mt-3 rounded-3xl border border-white/10 bg-slate-950/55 p-5">
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                    Worker Recommendation
+                    {t('workerRecommendation')}
                   </p>
 
                   <p className="mt-3 text-3xl font-black text-white">
                     {recommendationPercent !== null
                       ? `${recommendationPercent}%`
-                      : 'New'}
+                      : t('new')}
                   </p>
 
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    Percentage of ratings that were four stars or
-                    higher.
+                    {t('recommendationDescription')}
                   </p>
                 </div>
               </div>
@@ -466,20 +473,18 @@ export default function CompanyProfilePage() {
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
             <SectionHeader
-              eyebrow="Current Opportunities"
-              title="Open Jobs"
-              description="Review work this company is actively hiring for."
-              badge={`${openJobs.length} ${
-                openJobs.length === 1 ? 'job' : 'jobs'
-              }`}
+              eyebrow={t('currentOpportunities')}
+              title={t('openJobs')}
+              description={t('openJobsDescription')}
+              badge={t('job', { count: openJobs.length })}
             />
 
             <div className="p-5 sm:p-6">
               {openJobs.length === 0 ? (
                 <EmptyState
                   icon="J"
-                  title="No open jobs"
-                  description="This company is not currently advertising any open work."
+                  title={t('noOpenJobsTitle')}
+                  description={t('noOpenJobsDescription')}
                 />
               ) : (
                 <div className="space-y-4">
@@ -496,7 +501,7 @@ export default function CompanyProfilePage() {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <StatusBadge
-                                label="Open"
+                                label={t('open')}
                                 tone="cyan"
                               />
 
@@ -510,17 +515,17 @@ export default function CompanyProfilePage() {
                             </div>
 
                             <h3 className="mt-4 text-2xl font-black text-white transition group-hover:text-cyan-300">
-                              {job.title || 'Untitled Job'}
+                              {job.title || t('untitledJob')}
                             </h3>
 
                             <p className="mt-2 text-sm font-semibold text-slate-400">
                               {job.location ||
-                                'Location not listed'}
+                                t('locationNotListed')}
                             </p>
                           </div>
 
                           <span className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-black text-cyan-200">
-                            View Job →
+                            {t('viewJobArrow')}
                           </span>
                         </div>
                       </div>
@@ -533,18 +538,18 @@ export default function CompanyProfilePage() {
 
           <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
             <SectionHeader
-              eyebrow="Company History"
-              title="Completed Jobs"
-              description="Work this company has completed through the platform."
-              badge={`${completedJobs.length} completed`}
+              eyebrow={t('companyHistory')}
+              title={t('completedJobs')}
+              description={t('completedJobsDescription')}
+              badge={t('completedCount', { count: completedJobs.length })}
             />
 
             <div className="p-5 sm:p-6">
               {completedJobs.length === 0 ? (
                 <EmptyState
                   icon="C"
-                  title="No completed jobs yet"
-                  description="Completed CrewCall jobs will appear here."
+                  title={t('noCompletedJobs')}
+                  description={t('noCompletedJobsDescription')}
                 />
               ) : (
                 <div className="space-y-3">
@@ -556,19 +561,19 @@ export default function CompanyProfilePage() {
                     >
                       <div className="min-w-0">
                         <p className="text-lg font-black text-white">
-                          {job.title || 'Untitled Job'}
+                          {job.title || t('untitledJob')}
                         </p>
 
                         <p className="mt-2 text-sm text-slate-400">
-                          {job.trade || 'Trade not listed'}
+                          {job.trade || t('tradeNotListed')}
                           {' • '}
                           {job.location ||
-                            'Location not listed'}
+                            t('locationNotListed')}
                         </p>
                       </div>
 
                       <StatusBadge
-                        label="Completed"
+                        label={t('completed')}
                         tone="green"
                       />
                     </Link>
@@ -581,22 +586,18 @@ export default function CompanyProfilePage() {
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
-            eyebrow="Worker Feedback"
-            title="Reviews"
-            description="Ratings and comments from CrewCall users who worked with this company."
-            badge={`${reviews.length} ${
-              reviews.length === 1
-                ? 'review'
-                : 'reviews'
-            }`}
+            eyebrow={t('workerFeedback')}
+            title={t('reviews')}
+            description={t('reviewsDescription')}
+            badge={t('reviewCount', { count: reviews.length })}
           />
 
           <div className="p-5 sm:p-6">
             {reviews.length === 0 ? (
               <EmptyState
                 icon="R"
-                title="No reviews yet"
-                description="This company has not received any worker reviews yet."
+                title={t('noReviews')}
+                description={t('noReviewsDescription')}
               />
             ) : (
               <div className="grid gap-4 lg:grid-cols-2">
@@ -606,7 +607,7 @@ export default function CompanyProfilePage() {
                     : null
 
                   const reviewerName =
-                    reviewer?.full_name || 'CrewCall User'
+                    reviewer?.full_name || t('crewCallUser')
 
                   const rating = Math.max(
                     0,
@@ -657,7 +658,7 @@ export default function CompanyProfilePage() {
 
                       <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-300">
                         {review.comment ||
-                          'The reviewer did not leave a written comment.'}
+                          t('noWrittenComment')}
                       </p>
                     </article>
                   )
@@ -672,6 +673,7 @@ export default function CompanyProfilePage() {
 }
 
 function LoadingState() {
+  const t = useTranslations('PublicCompanyProfile')
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -687,11 +689,11 @@ function LoadingState() {
 
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                  CrewCall Company
+                  {t('crewCallCompany')}
                 </p>
 
                 <p className="mt-1 text-lg font-bold text-white">
-                  Loading company profile...
+                  {t('loading')}
                 </p>
               </div>
             </div>

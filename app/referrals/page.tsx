@@ -1,39 +1,41 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 const stats = [
   {
-    label: 'Invites Sent',
+    label: 'invitesSent',
     value: '24',
   },
   {
-    label: 'Joined',
+    label: 'joined',
     value: '8',
   },
   {
-    label: 'Jobs Created',
+    label: 'jobsCreated',
     value: '5',
   },
   {
-    label: 'Rewards Earned',
+    label: 'rewardsEarned',
     value: '$250',
   },
 ]
 
 const companyRewards = [
-  '5 referred companies',
-  'Featured listing credits',
-  'Priority support',
+  'referredCompanies',
+  'featuredListingCredits',
+  'prioritySupport',
 ]
 
 const workerRewards = [
-  '5 referred workers',
-  'Profile boost',
-  'More job visibility',
+  'referredWorkers',
+  'profileBoost',
+  'moreJobVisibility',
 ]
 
 export default function ReferralsPage() {
+  const t = useTranslations('Referrals')
   const [copied, setCopied] = useState(false)
 
   const referralLink =
@@ -58,7 +60,7 @@ export default function ReferralsPage() {
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Referral Center
+            {t('title')}
           </h1>
 
           <p className="mt-3 text-slate-400">
@@ -70,11 +72,11 @@ export default function ReferralsPage() {
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((item) => (
             <div
-              key={item.label}
+              key={t(item.label)}
               className="rounded-2xl border border-white/10 bg-white/5 p-5"
             >
               <p className="text-xs font-bold uppercase text-slate-500">
-                {item.label}
+                {t(item.label)}
               </p>
 
               <p className="mt-2 text-3xl font-black">
@@ -88,7 +90,7 @@ export default function ReferralsPage() {
         <section className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-6">
 
           <h2 className="text-2xl font-black">
-            Your Referral Link
+            {t('yourReferralLink')}
           </h2>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -101,7 +103,7 @@ export default function ReferralsPage() {
               onClick={copyLink}
               className="rounded-xl bg-cyan-400 px-6 py-3 font-black text-slate-950"
             >
-              {copied ? 'Copied!' : 'Copy Link'}
+              {copied ? t('copied') : t('copyLink')}
             </button>
 
           </div>
@@ -114,7 +116,7 @@ export default function ReferralsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
 
             <h2 className="text-2xl font-black">
-              Company Rewards
+              {t('companyRewards')}
             </h2>
 
             <ul className="mt-5 space-y-3 text-slate-300">
@@ -131,7 +133,7 @@ export default function ReferralsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
 
             <h2 className="text-2xl font-black">
-              Worker Rewards
+              {t('workerRewards')}
             </h2>
 
             <ul className="mt-5 space-y-3 text-slate-300">
@@ -150,21 +152,21 @@ export default function ReferralsPage() {
         <section className="rounded-2xl border border-white/10 bg-white/5 p-8">
 
           <h2 className="text-2xl font-black">
-            Share CrewCall
+            {t('shareCrewCall')}
           </h2>
 
           <div className="mt-5 flex flex-wrap gap-4">
 
             <button className="rounded-xl bg-white/10 px-6 py-3 font-bold">
-              Email Invite
+              {t('emailInvite')}
             </button>
 
             <button className="rounded-xl bg-white/10 px-6 py-3 font-bold">
-              Text Invite
+              {t('textInvite')}
             </button>
 
             <button className="rounded-xl bg-white/10 px-6 py-3 font-bold">
-              Copy Message
+              {t('copyMessage')}
             </button>
 
           </div>
@@ -175,16 +177,16 @@ export default function ReferralsPage() {
         <section className="rounded-2xl border border-purple-400/20 bg-purple-400/5 p-6">
 
           <h2 className="text-xl font-black">
-            Referral Growth Ideas
+            {t('growthIdeas')}
           </h2>
 
           <div className="mt-4 space-y-3 text-slate-300">
             <p>
-              • Reward contractors who bring quality companies.
+              • {t('rewardCompanies')}
             </p>
 
             <p>
-              • Reward workers who bring skilled tradespeople.
+              • {t('rewardWorkers')}
             </p>
 
             <p>

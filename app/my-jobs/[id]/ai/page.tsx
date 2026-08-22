@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 
@@ -83,11 +84,14 @@ type InviteResponse = {
   alreadyInvited?: boolean
 }
 
-function workerName(worker: WorkerProfile) {
+function workerName(
+  worker: WorkerProfile,
+  fallback = 'CrewCall Worker'
+) {
   return (
     worker.full_name?.trim() ||
     worker.company_name?.trim() ||
-    'CrewCall Worker'
+    fallback
   )
 }
 
@@ -155,6 +159,8 @@ function matchTone(score: number) {
 }
 
 export default function AiWorkerMatchesPage() {
+  const t = useTranslations('AiWorkerMatches')
+  const locale = useLocale()
   const params = useParams()
   const jobId = String(params?.id || '')
 
@@ -233,7 +239,7 @@ export default function AiWorkerMatchesPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setError('You must be logged in to use AI worker matching.')
+      setError(t('mustBeLoggedIn'))
       setLoading(false)
       return
     }
@@ -251,7 +257,7 @@ export default function AiWorkerMatchesPage() {
     }
 
     if (!jobData) {
-      setError('Job not found.')
+      setError(t('jobNotFound'))
       setLoading(false)
       return
     }
@@ -291,7 +297,7 @@ export default function AiWorkerMatchesPage() {
       | null
 
     if (!response.ok || !result?.success) {
-      setError(result?.error || 'Unable to run AI worker matching.')
+      setError(result?.error || t('unableToRunMatching'))
       setMatches([])
       setMatching(false)
       return
@@ -316,7 +322,7 @@ export default function AiWorkerMatchesPage() {
     const name = workerName(match.worker)
 
     const confirmed = window.confirm(
-      `Invite ${name} to ${job?.title || 'this job'}?`
+      t('confirmInvite', { worker: name, job: job?.title || t('thisJob') })
     )
 
     if (!confirmed) return
@@ -330,7 +336,7 @@ export default function AiWorkerMatchesPage() {
     } = await supabase.auth.getSession()
 
     if (!session?.access_token) {
-      setError('Your login session expired. Please log in again.')
+      setError(t('sessionExpired'))
       setActionWorkerId(null)
       return
     }
@@ -351,7 +357,7 @@ export default function AiWorkerMatchesPage() {
       | null
 
     if (!response.ok || !result?.success) {
-      setError(result?.error || 'Unable to invite worker.')
+      setError(result?.error || t('unableToInvite'))
       setActionWorkerId(null)
       return
     }
@@ -364,8 +370,8 @@ export default function AiWorkerMatchesPage() {
 
     setMessage(
       result.alreadyInvited
-        ? `${name} already has a pending invitation.`
-        : `${name} was invited successfully.`
+        ? t('alreadyInvited', { worker: name })
+        : t('invitedSuccessfully', { worker: name })
     )
 
     window.dispatchEvent(new Event('crewcall-refresh-nav'))
@@ -399,7 +405,7 @@ export default function AiWorkerMatchesPage() {
     } = await supabase.auth.getSession()
 
     if (!session?.access_token) {
-      setError('Your login session expired. Please log in again.')
+      setError(t('sessionExpired'))
       setBulkInviting(false)
       return
     }
@@ -471,7 +477,7 @@ export default function AiWorkerMatchesPage() {
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
           <p className="text-lg font-black">
-            Loading AI worker matching...
+            {t('loading')}
           </p>
         </div>
       </main>
@@ -488,15 +494,15 @@ export default function AiWorkerMatchesPage() {
                 href={`/my-jobs/${jobId}/applicants`}
                 className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
               >
-                ← Back to Applicants
+                ← {t('backToApplicants')}
               </Link>
 
               <p className="mt-6 text-xs font-black uppercase tracking-[0.25em] text-cyan-300">
-                CrewCall AI Recruiting
+                {t('crewCallAiRecruiting')}
               </p>
 
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-6xl">
-                AI Worker Matches
+                {t('title')}
               </h1>
 
               <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
@@ -514,15 +520,15 @@ export default function AiWorkerMatchesPage() {
                 className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-7 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {matching
-                  ? 'Analyzing Workers...'
-                  : 'Run AI Matching Again'}
+                  ? t('analyzingWorkers')
+                  : t('runAgain')}
               </button>
 
               <Link
                 href={`/my-jobs/${jobId}/recruiter`}
                 className="rounded-2xl border border-purple-300/30 bg-purple-400/15 px-7 py-4 text-center text-sm font-black text-purple-100 transition hover:bg-purple-400/25"
               >
-                🤖 Open AI Recruiter
+                🤖 {t('openRecruiter')}
               </Link>
             </div>
           </div>
@@ -545,17 +551,17 @@ export default function AiWorkerMatchesPage() {
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                  Matching Workers For
+                  {t('matchingWorkersFor')}
                 </p>
 
                 <h2 className="mt-3 text-3xl font-black text-white">
-                  {job.title || 'Untitled Job'}
+                  {job.title || t('untitledJob')}
                 </h2>
 
                 <p className="mt-3 text-sm font-semibold text-slate-300">
                   {[job.trade, job.location]
                     .filter(Boolean)
-                    .join(' • ') || 'Trade and location not listed'}
+                    .join(' • ') || t('tradeLocationNotListed')}
                 </p>
               </div>
 
@@ -565,7 +571,7 @@ export default function AiWorkerMatchesPage() {
                   value={totalWorkersReviewed}
                 />
                 <StatCard
-                  label="Matches"
+                  label={t('matches')}
                   value={matches.length}
                 />
                 <StatCard
@@ -592,7 +598,7 @@ export default function AiWorkerMatchesPage() {
 
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.25em] text-purple-200">
-                        CrewCall AI Hiring Assistant
+                        {t('hiringAssistant')}
                       </p>
 
                       <h2 className="mt-1 text-3xl font-black text-white">
@@ -617,19 +623,19 @@ export default function AiWorkerMatchesPage() {
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-3">
                     <AssistantStat
-                      label="Excellent"
+                      label={t('excellentMatches')}
                       value={excellentMatchCount}
                       description="90% or higher"
                     />
 
                     <AssistantStat
-                      label="Strong"
+                      label={t('strongMatches')}
                       value={strongMatchCount}
                       description="80%–89%"
                     />
 
                     <AssistantStat
-                      label="Good"
+                      label={t('goodMatches')}
                       value={goodMatchCount}
                       description="70%–79%"
                     />
@@ -692,8 +698,10 @@ export default function AiWorkerMatchesPage() {
                     {bulkInviting
                       ? 'Sending Invitations...'
                       : recommendedMatches.length > 0
-                        ? `Invite Top ${recommendedMatches.length}`
-                        : 'No Recommended Invites'}
+                        ? t('inviteTop', {
+                            count: recommendedMatches.length,
+                          })
+                        : t('noRecommendedInvites')}
                   </button>
 
                   <p className="mt-4 text-center text-xs font-semibold leading-5 text-slate-400">
@@ -722,19 +730,18 @@ export default function AiWorkerMatchesPage() {
         ) : visibleMatches.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
             <h2 className="text-3xl font-black text-white">
-              No visible matches
+              {t('noVisibleMatches')}
             </h2>
 
             <p className="mt-3 text-slate-300">
-              Run matching again or update the job trade, description,
-              location, or pay information.
+              {t('noVisibleMatchesHelp')}
             </p>
           </div>
         ) : (
           <section className="grid gap-6">
             {visibleMatches.map((match) => {
               const worker = match.worker
-              const name = workerName(worker)
+              const name = workerName(worker, t('crewCallWorker'))
               const tone = matchTone(match.match_score)
               const invited = invitedWorkerIds.includes(match.worker_id)
               const inviting = actionWorkerId === match.worker_id
@@ -764,19 +771,19 @@ export default function AiWorkerMatchesPage() {
 
                           {worker.is_online && (
                             <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100">
-                              Online
+                              {t('online')}
                             </span>
                           )}
 
                           {worker.background_verified && (
                             <span className="rounded-full bg-purple-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-purple-100">
-                              Verified
+                              {t('verified')}
                             </span>
                           )}
 
                           {worker.insurance_provider && (
                             <span className="rounded-full bg-blue-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-100">
-                              Insured
+                              {t('insured')}
                             </span>
                           )}
                         </div>
@@ -788,37 +795,37 @@ export default function AiWorkerMatchesPage() {
                         <p className="mt-3 text-sm font-semibold text-slate-300">
                           {[worker.trade, worker.city, worker.state]
                             .filter(Boolean)
-                            .join(' • ') || 'Worker details not listed'}
+                            .join(' • ') || t('workerDetailsNotListed')}
                         </p>
 
                         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                           <WorkerDetail
-                            label="Experience"
+                            label={t('experience')}
                             value={
                               worker.years_experience
-                                ? `${worker.years_experience} years`
-                                : 'Not listed'
+                                ? t('years', { count: worker.years_experience })
+                                : t('notListed')
                             }
                           />
 
                           <WorkerDetail
-                            label="Availability"
+                            label={t('availability')}
                             value={formatStatus(
                               worker.availability_status
                             )}
                           />
 
                           <WorkerDetail
-                            label="CrewCall Score"
+                            label={t('crewCallScore')}
                             value={
                               worker.crewcall_score !== null
                                 ? `${worker.crewcall_score}/100`
-                                : 'Not scored'
+                                : t('notScored')
                             }
                           />
 
                           <WorkerDetail
-                            label="Preferred Pay"
+                            label={t('preferredPay')}
                             value={formatPayRange(worker)}
                           />
                         </div>
@@ -832,7 +839,7 @@ export default function AiWorkerMatchesPage() {
                         </p>
 
                         <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                          AI Match
+                          {t('aiMatch')}
                         </p>
                       </div>
 
@@ -843,17 +850,17 @@ export default function AiWorkerMatchesPage() {
                         className="rounded-2xl bg-emerald-500 px-5 py-4 text-sm font-black text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {inviting
-                          ? 'Sending Invite...'
+                          ? t('sendingInvite')
                           : invited
-                            ? 'Invited'
-                            : 'Invite Worker'}
+                            ? t('invited')
+                            : t('inviteWorker')}
                       </button>
 
                       <Link
                         href={`/profile?user=${match.worker_id}`}
                         className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center text-sm font-black text-white transition hover:bg-white/20"
                       >
-                        View Profile
+                        {t('viewProfile')}
                       </Link>
 
                       <button
@@ -861,7 +868,7 @@ export default function AiWorkerMatchesPage() {
                         onClick={() => hideWorker(match.worker_id)}
                         className="rounded-2xl border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-black text-red-100 transition hover:bg-red-400/20"
                       >
-                        Hide Match
+                        {t('hideMatch')}
                       </button>
                     </div>
                   </div>
@@ -869,7 +876,7 @@ export default function AiWorkerMatchesPage() {
                   <div className="mt-7 grid gap-5 lg:grid-cols-2">
                     <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-6">
                       <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-200">
-                        Why CrewCall Recommends This Worker
+                        {t('whyRecommended')}
                       </p>
 
                       {match.match_reasons.length > 0 ? (
@@ -895,32 +902,32 @@ export default function AiWorkerMatchesPage() {
 
                     <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-6">
                       <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                        Match Breakdown
+                        {t('matchBreakdown')}
                       </p>
 
                       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                         <ScoreItem
-                          label="Trade"
+                          label={t('trade')}
                           value={match.trade_score}
                         />
                         <ScoreItem
-                          label="Location"
+                          label={t('location')}
                           value={match.location_score}
                         />
                         <ScoreItem
-                          label="Available"
+                          label={t('available')}
                           value={match.availability_score}
                         />
                         <ScoreItem
-                          label="Credentials"
+                          label={t('credentials')}
                           value={match.certification_score}
                         />
                         <ScoreItem
-                          label="Activity"
+                          label={t('activity')}
                           value={match.online_score}
                         />
                         <ScoreItem
-                          label="Pay"
+                          label={t('pay')}
                           value={match.pay_score}
                         />
                       </div>
@@ -928,7 +935,7 @@ export default function AiWorkerMatchesPage() {
                       {match.warnings.length > 0 && (
                         <div className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4">
                           <p className="text-xs font-black uppercase tracking-wide text-orange-200">
-                            Items to confirm
+                            {t('itemsToConfirm')}
                           </p>
 
                           <div className="mt-3 space-y-2">

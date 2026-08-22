@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -92,6 +93,8 @@ const workerSelect = `
 `
 
 export default function WorkerProfilePage() {
+  const t = useTranslations('PublicWorkerProfile')
+  const locale = useLocale()
   const params = useParams()
   const router = useRouter()
   const workerId = String(params?.id || '')
@@ -167,7 +170,7 @@ export default function WorkerProfilePage() {
     }
 
     if (!data || data.role !== 'worker') {
-      setMessage('Worker profile not found.')
+      setMessage(t('workerProfileNotFound'))
       setLoading(false)
       return
     }
@@ -237,7 +240,7 @@ export default function WorkerProfilePage() {
 
   async function toggleSavedWorker() {
     if (!currentProfile?.id || currentProfile.role !== 'company') {
-      setMessage('Only company accounts can save workers.')
+      setMessage(t('onlyCompaniesCanSave'))
       return
     }
 
@@ -258,7 +261,7 @@ export default function WorkerProfilePage() {
       }
 
       setSavedWorker(null)
-      setSuccessMessage('Worker removed from saved list.')
+      setSuccessMessage(t('removedFromSaved'))
       setSavingWorker(false)
       return
     }
@@ -281,18 +284,18 @@ export default function WorkerProfilePage() {
     }
 
     setSavedWorker(data)
-    setSuccessMessage('Worker saved.')
+    setSuccessMessage(t('workerSaved'))
     setSavingWorker(false)
   }
 
   async function sendInvite() {
     if (!currentProfile?.id || currentProfile.role !== 'company') {
-      setMessage('Only company accounts can invite workers.')
+      setMessage(t('onlyCompaniesCanInvite'))
       return
     }
 
     if (!selectedJobId) {
-      setMessage('Choose a job before sending the invite.')
+      setMessage(t('chooseJobFirst'))
       return
     }
 
@@ -322,7 +325,7 @@ export default function WorkerProfilePage() {
     const notificationPayload: NotificationInsert = {
       user_id: workerId,
       type: 'invite',
-      title: 'New Job Invite',
+      title: t('newJobInvite'),
       body: `You were invited to ${selectedJob?.title || 'a job'}.`,
       link_url: '/worker/invites',
       is_read: false,
@@ -331,7 +334,7 @@ export default function WorkerProfilePage() {
 
     await supabase.from('notifications').insert(notificationPayload)
 
-    setSuccessMessage('Invite sent to worker.')
+    setSuccessMessage(t('inviteSent'))
     setSendingInvite(false)
   }
 
@@ -356,7 +359,7 @@ export default function WorkerProfilePage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl">
-          Loading worker profile...
+          {t('loading')}
         </div>
       </main>
     )
@@ -366,7 +369,7 @@ export default function WorkerProfilePage() {
     return (
       <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
         <div className="mx-auto max-w-4xl rounded-3xl border border-red-400/20 bg-red-400/10 p-8">
-          <p className="text-red-200">{message || 'Worker not found.'}</p>
+          <p className="text-red-200">{message || t('workerNotFound')}</p>
           <button
             type="button"
             onClick={() => router.back()}
@@ -379,7 +382,7 @@ export default function WorkerProfilePage() {
     )
   }
 
-  const workerName = worker.full_name || worker.company_name || 'Worker Profile'
+  const workerName = worker.full_name || worker.company_name || t('workerFallback')
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white md:px-6 md:py-10">
@@ -418,7 +421,7 @@ export default function WorkerProfilePage() {
 
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                    Worker Profile
+                    {t('workerProfile')}
                   </p>
 
                   <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
@@ -426,7 +429,7 @@ export default function WorkerProfilePage() {
                   </h1>
 
                   <p className="mt-3 text-lg font-bold text-slate-300">
-                    {worker.trade || 'Trade not listed'}
+                    {worker.trade || t('tradeNotListed')}
                   </p>
 
                   <p className="mt-1 text-sm font-semibold text-slate-400">
@@ -436,18 +439,18 @@ export default function WorkerProfilePage() {
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Badge
-                      label={presenceLabel(worker)}
+                      label={presenceLabel(worker, t)}
                       color={isActuallyOnline(worker) ? 'lime' : 'default'}
                     />
                     <Badge
-                      label={availabilityLabel(worker)}
+                      label={availabilityLabel(worker, t)}
                       color={isAvailable(worker) ? 'green' : 'orange'}
                     />
                     {worker.liability_form_signed && (
-                      <Badge label="Compliance Verified" color="cyan" />
+                      <Badge label={t('complianceVerified')} color="cyan" />
                     )}
                     {worker.stripe_account_id && (
-                      <Badge label="Payout Verified" color="green" />
+                      <Badge label={t('payoutVerified')} color="green" />
                     )}
                     {worker.insurance_provider && <Badge label="Insured" color="blue" />}
                   </div>
@@ -457,7 +460,7 @@ export default function WorkerProfilePage() {
               <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 px-8 py-7 text-center shadow-xl shadow-cyan-500/10">
                 <div className="text-5xl font-black text-cyan-200">★ {ratingDisplay}</div>
                 <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-slate-300">
-                  Worker Rating
+                  {t('workerRating')}
                 </p>
                 <p className="mt-3 text-sm font-semibold text-slate-400">
                   {reviewCount} review{reviewCount === 1 ? '' : 's'}
@@ -487,7 +490,7 @@ export default function WorkerProfilePage() {
                 disabled={sendingInvite || companyJobs.length === 0}
                 className="rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
               >
-                {sendingInvite ? 'Sending...' : 'Invite Worker'}
+                {sendingInvite ? t('sending') : t('inviteWorker')}
               </button>
 
               <button
@@ -500,52 +503,52 @@ export default function WorkerProfilePage() {
                     : 'border border-white/10 bg-white/10 text-white hover:bg-white/15'
                 }`}
               >
-                {savingWorker ? 'Saving...' : savedWorker ? '★ Saved' : '☆ Save Worker'}
+                {savingWorker ? t('saving') : savedWorker ? t('saved') : t('saveWorker')}
               </button>
             </div>
           )}
         </section>
 
         <div className="grid gap-5 md:grid-cols-4">
-          <StatCard title="Completed Jobs" value={String(completedCount)} />
-          <StatCard title="Average Rating" value={`★ ${ratingDisplay}`} />
+          <StatCard title={t('completedJobs')} value={String(completedCount)} />
+          <StatCard title={t('averageRating')} value={`★ ${ratingDisplay}`} />
           <StatCard
-            title="Experience"
-            value={worker.years_experience ? `${worker.years_experience} yrs` : 'N/A'}
+            title={t('experience')}
+            value={worker.years_experience ? t('yearsShort', { count: worker.years_experience }) : t('na')}
           />
           <StatCard
-            title="Insurance"
-            value={worker.insurance_provider ? 'Verified' : 'Not Added'}
+            title={t('insurance')}
+            value={worker.insurance_provider ? t('verified') : t('notAdded')}
           />
         </div>
 
         <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl">
-          <h2 className="text-2xl font-black">Worker Experience</h2>
+          <h2 className="text-2xl font-black">{t('workerExperience')}</h2>
           <p className="mt-5 whitespace-pre-wrap leading-8 text-slate-300">
-            {worker.job_experience || 'This worker has not added job experience yet.'}
+            {worker.job_experience || t('noJobExperience')}
           </p>
         </section>
 
         <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl">
-          <h2 className="text-2xl font-black">Compliance Details</h2>
+          <h2 className="text-2xl font-black">{t('complianceDetails')}</h2>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <Detail label="Insurance Provider" value={worker.insurance_provider} />
-            <Detail label="Policy Number" value={worker.insurance_policy_number} />
-            <Detail label="Phone" value={worker.phone} />
+            <Detail label={t('insuranceProvider')} value={worker.insurance_provider} fallback={t('notAdded')} />
+            <Detail label={t('policyNumber')} value={worker.insurance_policy_number} fallback={t('notAdded')} />
+            <Detail label={t('phone')} value={worker.phone} fallback={t('notAdded')} />
             <Detail
-              label="Location"
+              label={t('location')}
               value={[worker.city, worker.state].filter(Boolean).join(', ')}
             />
           </div>
         </section>
 
         <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl">
-          <h2 className="text-2xl font-black">Uploaded Files</h2>
+          <h2 className="text-2xl font-black">{t('uploadedFiles')}</h2>
 
           {docs.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-6 text-slate-300">
-              No public worker documents uploaded yet.
+              {t('noPublicDocuments')}
             </div>
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -558,10 +561,10 @@ export default function WorkerProfilePage() {
                   className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 hover:border-cyan-300/40"
                 >
                   <p className="text-xs font-black uppercase tracking-widest text-cyan-300">
-                    {file.category || 'Document'}
+                    {file.category || t('document')}
                   </p>
                   <p className="mt-2 font-black text-white">
-                    {file.file_name || 'Open uploaded file'}
+                    {file.file_name || t('openUploadedFile')}
                   </p>
                 </a>
               ))}
@@ -572,9 +575,9 @@ export default function WorkerProfilePage() {
         <section className="rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black">Reviews</h2>
+              <h2 className="text-2xl font-black">{t('reviews')}</h2>
               <p className="mt-1 text-sm text-slate-400">
-                Reputation and completed work feedback.
+                {t('reviewsDescription')}
               </p>
             </div>
 
@@ -585,7 +588,7 @@ export default function WorkerProfilePage() {
 
           {reviews.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-6 text-slate-300">
-              No reviews yet.
+              {t('noReviews')}
             </div>
           ) : (
             <div className="mt-6 space-y-4">
@@ -599,16 +602,16 @@ export default function WorkerProfilePage() {
                       ★ {review.rating || 5}
                     </div>
                     <div className="text-sm text-slate-400">
-                      {formatDate(review.created_at || '')}
+                      {formatDate(review.created_at || '', locale)}
                     </div>
                   </div>
 
                   <p className="mt-4 whitespace-pre-wrap text-slate-300">
-                    {review.comment || 'No comment left.'}
+                    {review.comment || t('noComment')}
                   </p>
 
                   <p className="mt-4 text-sm text-slate-500">
-                    — {review.reviewer_name || 'CrewCall User'}
+                    — {review.reviewer_name || t('crewCallUser')}
                   </p>
                 </div>
               ))}
@@ -621,14 +624,14 @@ export default function WorkerProfilePage() {
             href="/messages"
             className="rounded-2xl bg-cyan-400 px-6 py-3 text-center font-black text-slate-950 shadow-lg shadow-cyan-400/20 hover:bg-cyan-300"
           >
-            Message Worker
+            {t('messageWorker')}
           </Link>
 
           <Link
             href="/workers"
             className="rounded-2xl border border-white/10 px-6 py-3 text-center font-bold text-white hover:bg-white/10"
           >
-            Browse More Workers
+            {t('browseMoreWorkers')}
           </Link>
         </div>
       </div>
@@ -673,23 +676,29 @@ function StatCard({ title, value }: { title: string; value: string }) {
 function Detail({
   label,
   value,
+  fallback,
 }: {
   label: string
   value: string | null | undefined
+  fallback?: string
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
       <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
         {label}
       </p>
-      <p className="mt-2 font-semibold text-white">{value || 'Not listed'}</p>
+      <p className="mt-2 font-semibold text-white">{value || fallback || 'Not listed'}</p>
     </div>
   )
 }
 
-function formatDate(value: string) {
+function formatDate(
+  value: string,
+  locale: string
+) {
   if (!value) return ''
-  return new Date(value).toLocaleDateString()
+
+  return new Date(value).toLocaleDateString(locale)
 }
 
 function isAvailable(worker: WorkerProfile) {
@@ -706,33 +715,52 @@ function isActuallyOnline(worker: WorkerProfile) {
   return Date.now() - lastSeen < 90_000
 }
 
-function availabilityLabel(worker: WorkerProfile) {
-  if (isAvailable(worker)) return 'Available Now'
-  if (worker.currently_working) return 'Currently Working'
-  if (worker.booked_until) return `Booked Until ${worker.booked_until}`
-  return 'Not Available'
+function availabilityLabel(
+  worker: WorkerProfile,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (isAvailable(worker)) return t('availableNow')
+
+  if (worker.currently_working) return t('currentlyWorking')
+
+  if (worker.booked_until) {
+    return t('bookedUntil', {
+      date: worker.booked_until,
+    })
+  }
+
+  return t('notAvailable')
 }
 
-function presenceLabel(worker: WorkerProfile) {
-  if (isActuallyOnline(worker)) return 'Online now'
-  if (!worker.last_seen) return 'Offline'
+function presenceLabel(
+  worker: WorkerProfile,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (isActuallyOnline(worker)) return t('onlineNow')
 
-  return `Last seen ${formatRelativeTime(worker.last_seen)}`
+  if (!worker.last_seen) return t('offline')
+
+  return t('lastSeen', {
+    time: formatRelativeTime(worker.last_seen, t),
+  })
 }
 
-function formatRelativeTime(value: string) {
+function formatRelativeTime(
+  value: string,
+  t: ReturnType<typeof useTranslations>
+) {
   const date = new Date(value)
   const diff = Date.now() - date.getTime()
 
-  if (Number.isNaN(date.getTime())) return 'recently'
+  if (Number.isNaN(date.getTime())) return t('recently')
 
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
 
-  if (seconds < 60) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
-  return `${days}d ago`
+  if (seconds < 60) return t('justNow')
+  if (minutes < 60) return t('minutesAgo', { count: minutes })
+  if (hours < 24) return t('hoursAgo', { count: hours })
+  return t('daysAgo', { count: days })
 }

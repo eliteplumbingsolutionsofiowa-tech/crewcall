@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -11,14 +12,15 @@ type ProfileRow = {
 }
 
 export default function ApplicationsRedirectPage() {
+  const t = useTranslations('ApplicationsRedirect')
   const router = useRouter()
-  const [message, setMessage] = useState('Loading applications...')
+  const [message, setMessage] = useState(t('loading'))
 
   useEffect(() => {
     let active = true
 
     async function redirectByRole() {
-      setMessage('Checking your CrewCall account...')
+      setMessage(t('checkingAccount'))
 
       const {
         data: { user },
@@ -41,25 +43,25 @@ export default function ApplicationsRedirectPage() {
       if (!active) return
 
       if (profileError) {
-        setMessage('Could not load your profile. Please refresh and try again.')
+        setMessage(t('profileLoadFailed'))
         return
       }
 
       const profile = data as ProfileRow | null
 
       if (profile?.role === 'company') {
-        setMessage('Opening company applications...')
+        setMessage(t('openingCompany'))
         router.replace('/company/applications')
         return
       }
 
       if (profile?.role === 'worker') {
-        setMessage('Opening worker applications...')
+        setMessage(t('openingWorker'))
         router.replace('/worker/applications')
         return
       }
 
-      setMessage('Your account role is missing. Please finish your profile setup.')
+      setMessage(t('roleMissing'))
     }
 
     redirectByRole()
@@ -79,7 +81,7 @@ export default function ApplicationsRedirectPage() {
         </p>
 
         <h1 className="mt-3 text-3xl font-black tracking-tight text-white">
-          Applications
+          {t('title')}
         </h1>
 
         <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">

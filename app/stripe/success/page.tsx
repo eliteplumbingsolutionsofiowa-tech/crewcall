@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -36,11 +37,12 @@ function jobsSelectTable() {
 }
 
 function StripeSuccessContent() {
+  const t = useTranslations('StripeSuccess')
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
 
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('Confirming payment...')
+  const [message, setMessage] = useState(t('confirmingPayment'))
   const [success, setSuccess] = useState(false)
   const [job, setJob] = useState<Job | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -61,7 +63,7 @@ function StripeSuccessContent() {
     setCurrentUserId(user?.id || null)
 
     if (!sessionId) {
-      setMessage('Missing Stripe session ID.')
+      setMessage(t('missingSessionId'))
       setLoading(false)
       return
     }
@@ -97,7 +99,7 @@ function StripeSuccessContent() {
         }
 
         setMessage(
-          'Payment finished, but CrewCall could not find the matching job.'
+          t('jobNotFound')
         )
         setLoading(false)
         return
@@ -108,11 +110,11 @@ function StripeSuccessContent() {
       if (data.payment_status === 'paid') {
         if (data.payout_status === 'released') {
           setMessage(
-            'Payment and worker payout already completed successfully.'
+            t('alreadyCompleted')
           )
         } else {
           setMessage(
-            'Payment confirmed. Worker payment is secured. Complete the job when the work is finished to release payout.'
+            t('paymentConfirmed')
           )
         }
 
@@ -127,7 +129,7 @@ function StripeSuccessContent() {
       }
 
       if (attempt < maxAttempts - 1) {
-        setMessage('Payment received. Waiting for Stripe confirmation...')
+        setMessage(t('waitingForStripe'))
 
         await new Promise((resolve) =>
           setTimeout(resolve, 1000)
@@ -136,7 +138,7 @@ function StripeSuccessContent() {
     }
 
     setMessage(
-      'Stripe is still confirming the payment. Refresh this page in a moment.'
+      t('stillConfirming')
     )
     setLoading(false)
   }
@@ -186,7 +188,7 @@ function StripeSuccessContent() {
                   </span>
                 </>
               ) : (
-                'Stripe Payment'
+                t('stripePayment')
               )}
             </h1>
 
@@ -204,25 +206,25 @@ function StripeSuccessContent() {
 
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Job
+                {t('job')}
               </p>
 
               <p className="text-2xl font-black text-gray-950">
-                {job?.title || 'CrewCall Job'}
+                {job?.title || t('crewCallJob')}
               </p>
 
               {success && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">
                     {job?.status === 'completed'
-                      ? '✓ Completed'
+                      ? t('completed')
                       : job?.status === 'in_progress'
                         ? '✓ In Progress'
                         : '✓ Assigned'}
                   </span>
 
                   <span className="inline-flex items-center rounded-full bg-cyan-100 px-3 py-1 text-sm font-bold text-cyan-700">
-                    ✓ Payment Secured
+                    {t('paymentSecured')}
                   </span>
                 </div>
               )}
@@ -235,7 +237,7 @@ function StripeSuccessContent() {
                 href={`/jobs/${job?.id}/review?to=${reviewTargetId}`}
                 className="rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-4 text-center text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:scale-[1.02]"
               >
-                ★ Leave Review
+                {t('leaveReview')}
               </Link>
             )}
 
@@ -243,14 +245,14 @@ function StripeSuccessContent() {
               href="/completed-jobs"
               className="rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-4 text-center text-sm font-black text-white shadow-lg shadow-blue-500/20 transition hover:scale-[1.02]"
             >
-              Completed Jobs
+              {t('completedJobs')}
             </Link>
 
             <Link
               href="/my-jobs"
               className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-center text-sm font-black text-gray-900 shadow-sm transition hover:scale-[1.02] hover:bg-gray-50"
             >
-              My Jobs
+              {t('myJobs')}
             </Link>
 
             <Link
@@ -276,7 +278,7 @@ function StripeSuccessContent() {
                 </p>
 
                 <p className="text-sm text-white/85">
-                  Payment secured. Complete the job to release worker payout.
+                  {t('releaseHelp')}
                 </p>
               </div>
 
@@ -284,7 +286,7 @@ function StripeSuccessContent() {
                 href="/messages"
                 className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-blue-700 transition hover:bg-blue-50"
               >
-                Go to Messages
+                {t('goToMessages')}
               </Link>
             </div>
           </div>
@@ -295,16 +297,17 @@ function StripeSuccessContent() {
 }
 
 export default function StripeSuccessPage() {
+  const t = useTranslations('StripeSuccess')
   return (
     <Suspense
       fallback={
         <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-100 px-6 py-10">
           <div className="mx-auto max-w-xl rounded-3xl border border-white bg-white/90 p-8 shadow-xl">
             <h1 className="text-2xl font-black text-gray-900">
-              Loading payment...
+              {t('loadingPayment')}
             </h1>
 
-            <p className="mt-3 text-gray-600">Confirming Stripe payment.</p>
+            <p className="mt-3 text-gray-600">{t('confirmingStripePayment')}</p>
           </div>
         </main>
       }

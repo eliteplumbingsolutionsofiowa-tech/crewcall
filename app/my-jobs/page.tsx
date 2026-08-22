@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 
@@ -43,16 +44,16 @@ type Filter =
   | 'unpaid'
   | 'not_released'
 
-function formatDate(value: string | null) {
-  if (!value) return 'Not set'
+function formatDate(value: string | null, locale: string, notSet: string) {
+  if (!value) return notSet
 
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return 'Not set'
+    return notSet
   }
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString(locale)
 }
 
 function statusClasses(status: string | null) {
@@ -103,6 +104,8 @@ function payoutClasses(status: string | null) {
 
 export default function MyJobsPage() {
   const router = useRouter()
+  const t = useTranslations('MyJobs')
+  const locale = useLocale()
 
   const [jobs, setJobs] = useState<Job[]>([])
   const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
@@ -420,7 +423,7 @@ export default function MyJobsPage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading your jobs...</p>
+          <p className="text-lg font-black">{t('loadingJobs')}</p>
         </div>
       </main>
     )
@@ -434,11 +437,11 @@ export default function MyJobsPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  Company Dashboard
+                  {t('companyDashboard')}
                 </p>
 
                 <h1 className="mt-3 text-5xl font-black tracking-tight text-white">
-                  My Jobs
+                  {t('myJobs')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
@@ -452,50 +455,50 @@ export default function MyJobsPage() {
                   href="/completed-jobs"
                   className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-sm font-black text-white transition hover:bg-white/20"
                 >
-                  Completed Jobs
+                  {t('completedJobs')}
                 </Link>
 
                 <Link
                   href="/post-job"
                   className="rounded-2xl bg-cyan-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
                 >
-                  Post New Job
+                  {t('postNewJob')}
                 </Link>
               </div>
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-              <StatCard label="Total" value={String(stats.total)} />
-              <StatCard label="Open" value={String(stats.open)} />
-              <StatCard label="Assigned" value={String(stats.assigned)} />
-              <StatCard label="Completed" value={String(stats.completed)} />
-              <StatCard label="Paid" value={String(stats.paid)} />
-              <StatCard label="Needs Payout" value={String(stats.needsPayout)} />
+              <StatCard label={t('total')} value={String(stats.total)} />
+              <StatCard label={t('open')} value={String(stats.open)} />
+              <StatCard label={t('assigned')} value={String(stats.assigned)} />
+              <StatCard label={t('completed')} value={String(stats.completed)} />
+              <StatCard label={t('paid')} value={String(stats.paid)} />
+              <StatCard label={t('needsPayout')} value={String(stats.needsPayout)} />
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <AnalyticsCard
-                label="Total Views"
+                label={t('totalViews')}
                 value={String(stats.totalViews)}
-                helper="Across all posted jobs"
+                helper={t('acrossAllPostedJobs')}
               />
 
               <AnalyticsCard
-                label="Total Applicants"
+                label={t('totalApplicants')}
                 value={String(stats.totalApplicants)}
-                helper="Across all posted jobs"
+                helper={t('acrossAllPostedJobs')}
               />
 
               <AnalyticsCard
-                label="Average Views"
+                label={t('averageViews')}
                 value={stats.averageViews.toFixed(1)}
-                helper="Average views per job"
+                helper={t('averageViewsPerJob')}
               />
 
               <AnalyticsCard
-                label="Conversion Rate"
+                label={t('conversionRate')}
                 value={`${stats.conversionRate.toFixed(1)}%`}
-                helper="Applicants divided by views"
+                helper={t('applicantsDividedByViews')}
               />
             </div>
           </div>
@@ -505,20 +508,20 @@ export default function MyJobsPage() {
           <div className="grid gap-4 lg:grid-cols-[1fr_220px_auto_auto] lg:items-end">
             <div>
               <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                Search Jobs
+                {t('searchJobs')}
               </label>
 
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search title, trade, location..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
               />
             </div>
 
             <div>
               <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                Filter
+                {t('filter')}
               </label>
 
               <select
@@ -526,13 +529,13 @@ export default function MyJobsPage() {
                 onChange={(event) => setFilter(event.target.value as Filter)}
                 className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none"
               >
-                <option value="all">All</option>
-                <option value="open">Open</option>
-                <option value="assigned">Assigned</option>
-                <option value="completed">Completed</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="not_released">Needs Payout</option>
+                <option value="all">{t('all')}</option>
+                <option value="open">{t('open')}</option>
+                <option value="assigned">{t('assigned')}</option>
+                <option value="completed">{t('completed')}</option>
+                <option value="paid">{t('paid')}</option>
+                <option value="unpaid">{t('unpaid')}</option>
+                <option value="not_released">{t('needsPayout')}</option>
               </select>
             </div>
 
@@ -549,7 +552,7 @@ export default function MyJobsPage() {
               onClick={loadJobs}
               className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
             >
-              {refreshing ? 'Refreshing...' : 'Refresh'}
+              {refreshing ? t('refreshing') : t('refresh')}
             </button>
           </div>
         </section>
@@ -562,17 +565,17 @@ export default function MyJobsPage() {
 
         {filteredJobs.length === 0 && (
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-10 text-center shadow-2xl backdrop-blur">
-            <h2 className="text-3xl font-black text-white">No jobs found</h2>
+            <h2 className="text-3xl font-black text-white">{t('noJobsFound')}</h2>
 
             <p className="mt-3 text-slate-300">
-              Post your first job to start finding workers.
+              {t('noJobsDescription')}
             </p>
 
             <Link
               href="/post-job"
               className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.02] hover:bg-cyan-300"
             >
-              Post a Job
+              {t('postAJob')}
             </Link>
           </div>
         )}
@@ -599,27 +602,33 @@ export default function MyJobsPage() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-2xl font-black text-white">
-                          {job.title || 'Untitled Job'}
+                          {job.title || t('untitledJob')}
                         </h2>
 
-                        <Badge value={job.status || 'open'} type="status" />
+                        <Badge
+                          value={job.status || 'open'}
+                          label={t(`status_${job.status || 'open'}`)}
+                          type="status"
+                        />
 
                         <Badge
                           value={job.payment_status || 'unpaid'}
+                          label={t(`payment_${job.payment_status || 'unpaid'}`)}
                           type="payment"
                         />
 
                         {isCompleted && (
                           <Badge
                             value={job.payout_status || 'not_released'}
+                            label={t(`payout_${job.payout_status || 'not_released'}`)}
                             type="payout"
                           />
                         )}
                       </div>
 
                       <p className="mt-2 text-sm font-semibold text-slate-400">
-                        {job.trade || 'Trade not set'} •{' '}
-                        {job.location || 'Location not set'}
+                        {job.trade || t('tradeNotSet')} •{' '}
+                        {job.location || t('locationNotSet')}
                       </p>
                     </div>
 
@@ -630,21 +639,21 @@ export default function MyJobsPage() {
                     )}
 
                     <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
-                      <Info label="Pay" value={job.pay_rate || 'Not set'} />
+                      <Info label={t('pay')} value={job.pay_rate || 'Not set'} />
 
-                      <Info label="Start" value={formatDate(job.start_date)} />
+                      <Info label={t('start')} value={formatDate(job.start_date, locale, t('notSet'))} />
 
                       <Info
-                        label="Applicants"
+                        label={t('applicants')}
                         value={String(job.applicant_count)}
                       />
 
                       <Info
-                        label="Views"
+                        label={t('views')}
                         value={String(job.view_count)}
                       />
 
-                      <Info label="Posted" value={formatDate(job.created_at)} />
+                      <Info label={t('posted')} value={formatDate(job.created_at, locale, t('notSet'))} />
                     </div>
                   </div>
 
@@ -653,10 +662,10 @@ export default function MyJobsPage() {
                     {job.assigned_worker && (
                       <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-center">
                         <div className="text-xs font-black uppercase tracking-wide text-emerald-200">
-                          Assigned Worker
+                          {t('assignedWorker')}
                         </div>
                         <div className="mt-1 text-sm font-black text-white">
-                          {job.assigned_worker.full_name || 'Worker'}
+                          {job.assigned_worker.full_name || t('worker')}
                         </div>
                         {job.assigned_worker.trade && (
                           <div className="mt-1 text-xs font-bold text-emerald-100">
@@ -676,8 +685,8 @@ export default function MyJobsPage() {
                         }
                       >
                         {job.assigned_worker_id
-                          ? "View Applicants"
-                          : "Review & Negotiate"}
+                          ? t('viewApplicants')
+                          : t('reviewNegotiate')}
                       </Link>
                     )}
 
@@ -685,7 +694,7 @@ export default function MyJobsPage() {
                       href={`/my-jobs/${job.id}`}
                       className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
                     >
-                      View Job
+                      {t('viewJob')}
                     </Link>
 
                     {canPay && (
@@ -693,7 +702,7 @@ export default function MyJobsPage() {
                         href={`/jobs/${job.id}/pay`}
                         className="rounded-2xl bg-green-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-green-500"
                       >
-                        Fund Job
+                        {t('fundJob')}
                       </Link>
                     )}
 
@@ -702,7 +711,7 @@ export default function MyJobsPage() {
                         href={`/jobs/${job.id}/release-payout`}
                         className="rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-emerald-500"
                       >
-                        Release Payout
+                        {t('releasePayout')}
                       </Link>
                     )}
 
@@ -712,7 +721,7 @@ export default function MyJobsPage() {
                           href="/completed-jobs"
                           className="rounded-2xl bg-purple-600 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-purple-500"
                         >
-                          View Completed
+                          {t('viewCompleted')}
                         </Link>
 
                         {canReview &&
@@ -721,7 +730,7 @@ export default function MyJobsPage() {
                             href={`/jobs/${job.id}/review?to=${job.assigned_worker_id}`}
                             className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-orange-400"
                           >
-                            Leave Review
+                            {t('leaveReview')}
                           </Link>
                         )}
                       </>
@@ -732,7 +741,7 @@ export default function MyJobsPage() {
                         href={`/messages?workerId=${job.assigned_worker_id}&jobId=${job.id}`}
                         className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-blue-400"
                       >
-                        Message Worker
+                        {t('messageWorker')}
                       </Link>
                     )}
                   </div>
@@ -794,9 +803,11 @@ function AnalyticsCard({
 
 function Badge({
   value,
+  label,
   type,
 }: {
   value: string
+  label: string
   type: 'status' | 'payment' | 'payout'
 }) {
   const classes =
@@ -810,7 +821,7 @@ function Badge({
     <span
       className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${classes}`}
     >
-      {value.replaceAll('_', ' ')}
+      {label}
     </span>
   )
 }

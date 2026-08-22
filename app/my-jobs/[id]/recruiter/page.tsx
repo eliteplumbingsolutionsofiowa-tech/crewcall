@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 
@@ -89,18 +90,21 @@ type InviteResponse = {
 }
 
 const QUICK_QUESTIONS = [
-  'Who is the best overall candidate and why?',
-  'Compare the top three candidates.',
-  'What hiring risks should I confirm before inviting someone?',
-  'Generate interview questions for this job.',
-  'Draft personalized invitations for the best candidates.',
-]
+  'quickBestCandidate',
+  'quickCompareTopThree',
+  'quickHiringRisks',
+  'quickInterviewQuestions',
+  'quickDraftInvitations',
+] as const
 
-function workerName(worker: WorkerProfile) {
+function workerName(
+  worker: WorkerProfile,
+  fallback = 'CrewCall Worker'
+) {
   return (
     worker.full_name?.trim() ||
     worker.company_name?.trim() ||
-    'CrewCall Worker'
+    fallback
   )
 }
 
@@ -164,13 +168,15 @@ function riskTone(risk: RecruiterResult['hiringRisk']) {
 }
 
 export default function AiRecruiterPage() {
+  const t = useTranslations('AiRecruiter')
+  const locale = useLocale()
   const params = useParams()
   const jobId = String(params?.id || '')
 
   const [job, setJob] = useState<Job | null>(null)
   const [matches, setMatches] = useState<AiMatch[]>([])
   const [question, setQuestion] = useState(
-    'Who is the best overall candidate and why?'
+    t('quickBestCandidate')
   )
   const [result, setResult] = useState<RecruiterResult | null>(null)
   const [invitedWorkerIds, setInvitedWorkerIds] = useState<string[]>([])
@@ -213,7 +219,7 @@ export default function AiRecruiterPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setError('You must be logged in to use CrewCall AI Recruiter.')
+      setError(t('mustBeLoggedIn'))
       setLoading(false)
       return
     }
@@ -233,13 +239,13 @@ export default function AiRecruiterPage() {
     }
 
     if (!jobData) {
-      setError('Job not found.')
+      setError(t('jobNotFound'))
       setLoading(false)
       return
     }
 
     if (jobData.company_id !== user.id) {
-      setError('You do not have permission to use this recruiter.')
+      setError(t('noPermission'))
       setLoading(false)
       return
     }
@@ -268,7 +274,7 @@ export default function AiRecruiterPage() {
         | null
 
       if (!response.ok || !data?.success) {
-        setError(data?.error || 'Unable to run worker matching.')
+        setError(data?.error || t('unableToRunMatching'))
         setMatches([])
         return
       }
@@ -279,7 +285,7 @@ export default function AiRecruiterPage() {
       setError(
         matchingError instanceof Error
           ? matchingError.message
-          : 'Unable to run worker matching.'
+          : t('unableToRunMatching')
       )
     } finally {
       setMatching(false)
@@ -290,17 +296,17 @@ export default function AiRecruiterPage() {
     const actualQuestion = (selectedQuestion || question).trim()
 
     if (!actualQuestion) {
-      setError('Enter a question for the AI recruiter.')
+      setError(t('enterQuestion'))
       return
     }
 
     if (!job) {
-      setError('The job has not loaded yet.')
+      setError(t('jobNotLoaded'))
       return
     }
 
     if (matches.length === 0) {
-      setError('Run worker matching before asking the recruiter.')
+      setError(t('runMatchingFirst'))
       return
     }
 
@@ -312,7 +318,7 @@ export default function AiRecruiterPage() {
 
     const workers = matches.slice(0, 15).map((match) => ({
       workerId: match.worker_id,
-      name: workerName(match.worker),
+      name: workerName(match.worker, t('crewCallWorker')),
       trade: match.worker.trade || '',
       location: [match.worker.city, match.worker.state]
         .filter(Boolean)
@@ -362,18 +368,18 @@ export default function AiRecruiterPage() {
 
       if (!response.ok || !data?.success || !data.result) {
         setError(
-          data?.error || 'CrewCall AI Recruiter could not answer.'
+          data?.error || t('recruiterCouldNotAnswer')
         )
         return
       }
 
       setResult(data.result)
-      setMessage('CrewCall AI Recruiter completed the analysis.')
+      setMessage(t('analysisCompleted'))
     } catch (recruiterError) {
       setError(
         recruiterError instanceof Error
           ? recruiterError.message
-          : 'CrewCall AI Recruiter could not answer.'
+          : t('recruiterCouldNotAnswer')
       )
     } finally {
       setAsking(false)
@@ -386,14 +392,17 @@ export default function AiRecruiterPage() {
     )
 
     if (!match) {
-      setError('That worker could not be found.')
+      setError(t('workerNotFound'))
       return
     }
 
-    const name = workerName(match.worker)
+    const name = workerName(match.worker, t('crewCallWorker'))
 
     const confirmed = window.confirm(
-      `Invite ${name} to ${job?.title || 'this job'}?`
+      t('confirmInvite', {
+      worker: name,
+      job: job?.title || t('thisJob'),
+    })
     )
 
     if (!confirmed) return
@@ -407,7 +416,7 @@ export default function AiRecruiterPage() {
     } = await supabase.auth.getSession()
 
     if (!session?.access_token) {
-      setError('Your login session expired. Please log in again.')
+      setError(t('sessionExpired'))
       setInvitingWorkerId(null)
       return
     }
@@ -427,7 +436,7 @@ export default function AiRecruiterPage() {
         | null
 
       if (!response.ok || !data?.success) {
-        setError(data?.error || 'Unable to invite worker.')
+        setError(data?.error || t('unableToInvite'))
         return
       }
 
@@ -439,8 +448,8 @@ export default function AiRecruiterPage() {
 
       setMessage(
         data.alreadyInvited
-          ? `${name} already has a pending invitation.`
-          : `${name} was invited successfully.`
+          ? t('alreadyInvited', { worker: name })
+          : t('invitedSuccessfully', { worker: name })
       )
 
       window.dispatchEvent(new Event('crewcall-refresh-nav'))
@@ -448,7 +457,7 @@ export default function AiRecruiterPage() {
       setError(
         inviteError instanceof Error
           ? inviteError.message
-          : 'Unable to invite worker.'
+          : t('unableToInvite')
       )
     } finally {
       setInvitingWorkerId(null)
@@ -458,9 +467,9 @@ export default function AiRecruiterPage() {
   async function copyInvitation(draft: InvitationDraft) {
     try {
       await navigator.clipboard.writeText(draft.message)
-      setMessage(`Invitation for ${draft.workerName} copied.`)
+      setMessage(t('invitationCopied', { worker: draft.workerName }))
     } catch {
-      setError('Unable to copy the invitation.')
+      setError(t('unableToCopy'))
     }
   }
 
@@ -469,7 +478,7 @@ export default function AiRecruiterPage() {
       <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
         <div className="mx-auto max-w-7xl rounded-3xl border border-white/10 bg-white/5 p-8">
           <p className="text-lg font-black">
-            Loading CrewCall AI Recruiter...
+            {t('loading')}
           </p>
         </div>
       </main>
@@ -485,23 +494,21 @@ export default function AiRecruiterPage() {
               href={`/my-jobs/${jobId}/ai`}
               className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
             >
-              ← Back to AI Matches
+              ← {t('backToAiMatches')}
             </Link>
 
             <div className="mt-7 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.28em] text-purple-200">
-                  CrewCall AI
+                  {t('crewCallAi')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight md:text-6xl">
-                  AI Recruiter
+                  {t('title')}
                 </h1>
 
                 <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-slate-300">
-                  Ask questions, compare candidates, identify hiring
-                  risks, generate interview questions, and draft
-                  personalized invitations.
+                  {t('description')}
                 </p>
               </div>
 
@@ -529,11 +536,11 @@ export default function AiRecruiterPage() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                  Recruiting For
+                  {t('recruitingFor')}
                 </p>
 
                 <h2 className="mt-2 text-3xl font-black">
-                  {job.title || 'Untitled Job'}
+                  {job.title || t('untitledJob')}
                 </h2>
 
                 <p className="mt-3 font-semibold text-slate-300">
@@ -545,11 +552,11 @@ export default function AiRecruiterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
-                  label="Workers Reviewed"
+                  label={t('workersReviewed')}
                   value={totalWorkersReviewed}
                 />
                 <StatCard
-                  label="Matches Loaded"
+                  label={t('matchesLoaded')}
                   value={matches.length}
                 />
               </div>
@@ -561,11 +568,11 @@ export default function AiRecruiterPage() {
           <div className="flex flex-col gap-6">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
-                Ask Your Recruiter
+                {t('askYourRecruiter')}
               </p>
 
               <h2 className="mt-2 text-3xl font-black">
-                What do you need help deciding?
+                {t('whatDoYouNeed')}
               </h2>
             </div>
 
@@ -574,11 +581,11 @@ export default function AiRecruiterPage() {
                 <button
                   key={quickQuestion}
                   type="button"
-                  onClick={() => void askRecruiter(quickQuestion)}
+                  onClick={() => void askRecruiter(t(quickQuestion))}
                   disabled={asking || matching}
                   className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-left text-xs font-black text-slate-200 transition hover:bg-white/20 disabled:opacity-50"
                 >
-                  {quickQuestion}
+                  {t(quickQuestion)}
                 </button>
               ))}
             </div>
@@ -586,7 +593,7 @@ export default function AiRecruiterPage() {
             <textarea
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Example: Who should I invite first, and what should I verify before hiring?"
+              placeholder={t('questionPlaceholder')}
               rows={5}
               className="w-full resize-none rounded-3xl border border-white/10 bg-slate-950/80 px-5 py-4 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
             />
@@ -599,8 +606,8 @@ export default function AiRecruiterPage() {
                 className="flex-1 rounded-2xl bg-gradient-to-r from-purple-400 via-cyan-300 to-blue-400 px-6 py-4 text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {asking
-                  ? 'AI Recruiter Is Analyzing...'
-                  : 'Ask CrewCall AI Recruiter'}
+                  ? t('analyzing')
+                  : t('askRecruiter')}
               </button>
 
               <button
@@ -609,7 +616,7 @@ export default function AiRecruiterPage() {
                 disabled={matching || asking}
                 className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-sm font-black transition hover:bg-white/20 disabled:opacity-50"
               >
-                {matching ? 'Matching...' : 'Refresh Matches'}
+                {matching ? t('matching') : t('refreshMatches')}
               </button>
             </div>
           </div>
@@ -621,7 +628,7 @@ export default function AiRecruiterPage() {
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-4xl">
                   <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
-                    Recruiter Answer
+                    {t('recruiterAnswer')}
                   </p>
 
                   <p className="mt-4 whitespace-pre-wrap text-base font-semibold leading-8 text-slate-100">
@@ -639,7 +646,7 @@ export default function AiRecruiterPage() {
                       {result.hiringRisk}
                     </p>
                     <p className="mt-1 text-[10px] font-black uppercase tracking-wide opacity-80">
-                      Hiring Risk
+                      {t('hiringRisk')}
                     </p>
                   </div>
 
@@ -648,7 +655,7 @@ export default function AiRecruiterPage() {
                       {result.confidence}%
                     </p>
                     <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-400">
-                      Confidence
+                      {t('confidence')}
                     </p>
                   </div>
                 </div>
@@ -656,7 +663,7 @@ export default function AiRecruiterPage() {
 
               <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/40 p-5">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-200">
-                  Recommendation
+                  {t('recommendation')}
                 </p>
 
                 <p className="mt-3 font-semibold leading-7 text-white">
@@ -667,16 +674,16 @@ export default function AiRecruiterPage() {
 
             <section className="grid gap-6 lg:grid-cols-2">
               <ResultList
-                title="Hiring Strengths"
+                title={t('hiringStrengths')}
                 items={result.strengths}
-                emptyText="No specific strengths were identified."
+                emptyText={t('noStrengths')}
                 symbol="✓"
               />
 
               <ResultList
-                title="Items to Confirm"
+                title={t('itemsToConfirm')}
                 items={result.concerns}
-                emptyText="No specific concerns were identified."
+                emptyText={t('noConcerns')}
                 symbol="!"
               />
             </section>
@@ -684,7 +691,7 @@ export default function AiRecruiterPage() {
             {recommendedMatches.length > 0 ? (
               <section className="rounded-[2rem] border border-emerald-400/20 bg-emerald-400/10 p-6 shadow-2xl md:p-8">
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
-                  Recommended Candidates
+                  {t('recommendedCandidates')}
                 </p>
 
                 <div className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -703,11 +710,11 @@ export default function AiRecruiterPage() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <h3 className="truncate text-xl font-black">
-                              {workerName(match.worker)}
+                              {workerName(match.worker, t('crewCallWorker'))}
                             </h3>
 
                             <p className="mt-1 text-sm font-semibold text-slate-400">
-                              {match.worker.trade || 'Trade not listed'}
+                              {match.worker.trade || t('tradeNotListed')}
                             </p>
                           </div>
 
@@ -719,7 +726,7 @@ export default function AiRecruiterPage() {
                         <p className="mt-4 text-sm font-semibold leading-6 text-slate-300">
                           {match.match_reasons[0] ||
                             match.reason ||
-                            'Possible match for this job.'}
+                            t('possibleMatch')}
                         </p>
 
                         <button
@@ -731,10 +738,10 @@ export default function AiRecruiterPage() {
                           className="mt-5 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-50"
                         >
                           {inviting
-                            ? 'Sending...'
+                            ? t('sending')
                             : invited
-                              ? 'Invited'
-                              : 'Invite Worker'}
+                              ? t('invited')
+                              : t('inviteWorker')}
                         </button>
                       </article>
                     )
@@ -745,11 +752,11 @@ export default function AiRecruiterPage() {
 
             <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl md:p-8">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
-                Interview Plan
+                {t('interviewPlan')}
               </p>
 
               <h2 className="mt-2 text-3xl font-black">
-                Suggested Interview Questions
+                {t('suggestedInterviewQuestions')}
               </h2>
 
               <div className="mt-6 grid gap-3">
@@ -770,7 +777,7 @@ export default function AiRecruiterPage() {
                   ))
                 ) : (
                   <p className="text-slate-400">
-                    No interview questions were generated.
+                    {t('noInterviewQuestions')}
                   </p>
                 )}
               </div>
@@ -779,11 +786,11 @@ export default function AiRecruiterPage() {
             {result.invitationDrafts.length > 0 ? (
               <section className="rounded-[2rem] border border-purple-400/20 bg-purple-400/10 p-6 shadow-2xl md:p-8">
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-purple-200">
-                  Personalized Invitations
+                  {t('personalizedInvitations')}
                 </p>
 
                 <h2 className="mt-2 text-3xl font-black">
-                  AI Invitation Drafts
+                  {t('aiInvitationDrafts')}
                 </h2>
 
                 <div className="mt-6 grid gap-5">
@@ -813,7 +820,7 @@ export default function AiRecruiterPage() {
                             onClick={() => void copyInvitation(draft)}
                             className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black transition hover:bg-white/20"
                           >
-                            Copy Draft
+                            {t('copyDraft')}
                           </button>
 
                           <button
@@ -825,10 +832,10 @@ export default function AiRecruiterPage() {
                             className="flex-1 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-400 disabled:opacity-50"
                           >
                             {inviting
-                              ? 'Sending...'
+                              ? t('sending')
                               : invited
-                                ? 'Invited'
-                                : 'Send Job Invite'}
+                                ? t('invited')
+                                : t('sendJobInvite')}
                           </button>
                         </div>
                       </article>

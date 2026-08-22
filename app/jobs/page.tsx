@@ -635,7 +635,7 @@ const trades = useMemo(
                   htmlFor="trade-filter"
                   className="text-xs font-black uppercase tracking-[0.16em] text-slate-400"
                 >
-                  Trade
+                  {t('trade')}
                 </label>
 
                 <select
@@ -661,7 +661,7 @@ const trades = useMemo(
                   htmlFor="location-filter"
                   className="text-xs font-black uppercase tracking-[0.16em] text-slate-400"
                 >
-                  Location
+                  {t('location')}
                 </label>
 
                 <select

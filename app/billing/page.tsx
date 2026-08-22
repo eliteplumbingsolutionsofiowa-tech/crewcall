@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isNativeIOS } from '@/app/lib/nativePlatform'
@@ -58,6 +59,8 @@ export default function BillingPage() {
 }
 
 function BillingContent() {
+  const t = useTranslations('Billing')
+  const locale = useLocale()
   const searchParams = useSearchParams()
   const nativeIOS = isNativeIOS()
 
@@ -433,16 +436,15 @@ function BillingContent() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  CrewCall Billing
+                  {t('eyebrow')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
-                  Billing & Membership
+                  {t('title')}
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
-                  Manage your CrewCall membership and worker payout
-                  account.
+                  {t('description')}
                 </p>
 
                 <p className="mt-4 text-sm font-black text-cyan-200">
@@ -454,7 +456,7 @@ function BillingContent() {
                 href="/profile"
                 className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black transition hover:bg-white/15"
               >
-                Back to Profile
+                {t('backToProfile')}
               </Link>
             </div>
           </div>
@@ -469,40 +471,40 @@ function BillingContent() {
             {!profile ? (
               <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-6">
                 <h2 className="text-xl font-black text-red-100">
-                  Profile not found
+                  {t('profileNotFound')}
                 </h2>
 
                 <p className="mt-3 text-sm font-semibold text-red-100/80">
-                  CrewCall could not find a profile for this account.
+                  {t('profileNotFoundDescription')}
                 </p>
               </div>
             ) : (
               <>
                 <section className="grid gap-5 md:grid-cols-3">
                   <BillingStatCard
-                    label="Account"
+                    label={t('account')}
                     value={accountName}
                   />
 
                   <BillingStatCard
-                    label="Role"
+                    label={t('role')}
                     value={
                       profile.role === 'admin'
-                        ? 'Company Admin'
+                        ? t('companyAdmin')
                         : profile.role
                           ? capitalize(profile.role)
-                          : 'Role missing'
+                          : t('roleMissing')
                     }
                   />
 
                   <BillingStatCard
-                    label={isCompany ? 'Membership' : 'Stripe Payouts'}
+                    label={isCompany ? t('membership') : t('stripePayouts')}
                     value={
                       isCompany
-                        ? formatSubscriptionStatus(subscription)
+                        ? formatSubscriptionStatus(subscription, t)
                         : stripeConnected
-                          ? 'Connected'
-                          : 'Not Connected'
+                          ? t('connected')
+                          : t('notConnected')
                     }
                     good={
                       isCompany
@@ -542,19 +544,18 @@ function BillingContent() {
                 {!isCompany && !isWorker && (
                   <section className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-6">
                     <h2 className="text-2xl font-black text-amber-100">
-                      Account role required
+                      {t('accountRoleRequired')}
                     </h2>
 
                     <p className="mt-3 text-sm font-semibold text-amber-100/80">
-                      Finish setting up your CrewCall profile before
-                      managing billing.
+                      {t('finishProfileBeforeBilling')}
                     </p>
 
                     <Link
                       href="/profile"
                       className="mt-5 inline-flex rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950"
                     >
-                      Complete Profile
+                      {t('completeProfile')}
                     </Link>
                   </section>
                 )}
@@ -588,6 +589,9 @@ function CompanyMembershipSection({
   onOpenCustomerPortal: () => void
   nativeIOS: boolean
 }) {
+  const t = useTranslations('Billing')
+  const locale = useLocale()
+
   const hasPaidStripeSubscription = Boolean(
     subscription?.stripe_subscription_id
   )
@@ -598,16 +602,15 @@ function CompanyMembershipSection({
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="inline-flex rounded-full bg-cyan-400 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-950">
-              Founding Member
+              {t('foundingMember')}
             </div>
 
             <h2 className="mt-5 text-3xl font-black">
-              CrewCall Company Membership
+              {t('companyMembership')}
             </h2>
 
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-              Everything your company needs to find workers, manage
-              jobs, communicate, and hire through CrewCall.
+              {t('companyMembershipDescription')}
             </p>
           </div>
 
@@ -617,7 +620,7 @@ function CompanyMembershipSection({
                 $29
               </p>
               <p className="mt-1 font-bold text-slate-300">
-                per month
+                {t('perMonth')}
               </p>
             </div>
           ) : null}
@@ -626,14 +629,15 @@ function CompanyMembershipSection({
         {trialActive && !hasPaidStripeSubscription && (
           <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
             <p className="font-black text-emerald-200">
-              Your free trial is active
+              {t('yourFreeTrialActive')}
             </p>
 
             <p className="mt-2 text-sm font-semibold text-emerald-100/80">
-              {trialDaysRemaining}{' '}
-              {trialDaysRemaining === 1 ? 'day' : 'days'} remaining.
+              {t('trialRemaining', {
+                count: trialDaysRemaining,
+              })}
               {!nativeIOS
-                ? ' Subscribe now to keep CrewCall active after your trial.'
+                ? ` ${t('subscribeAfterTrial')}`
                 : ''}
             </p>
           </div>
@@ -642,7 +646,7 @@ function CompanyMembershipSection({
         {membershipActive && hasPaidStripeSubscription && (
           <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
             <p className="font-black text-emerald-200">
-              Your CrewCall membership is active
+              {t('yourMembershipActive')}
             </p>
 
             {!nativeIOS ? (
@@ -653,22 +657,24 @@ function CompanyMembershipSection({
                 className="mt-4 rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20 disabled:opacity-50"
               >
                 {openingPortal
-                  ? 'Opening...'
-                  : 'Manage Subscription'}
+                  ? t('opening')
+                  : t('manageSubscription')}
               </button>
             ) : null}
 
             {subscription?.current_period_ends_at && (
               <p className="mt-2 text-sm font-semibold text-emerald-100/80">
-                Current billing period ends{' '}
-                {formatDate(subscription.current_period_ends_at)}.
+                {t('currentBillingPeriodEnds', {
+                  date: new Date(
+                    subscription.current_period_ends_at
+                  ).toLocaleDateString(locale),
+                })}
               </p>
             )}
 
             {subscription?.cancel_at_period_end && (
               <p className="mt-2 text-sm font-black text-amber-200">
-                Your membership is scheduled to cancel at the end of
-                the current billing period.
+                {t('scheduledToCancel')}
               </p>
             )}
           </div>
@@ -695,14 +701,14 @@ function CompanyMembershipSection({
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center">
             <p className="text-lg font-black text-white">
               {membershipActive
-                ? 'Membership Active'
+                ? t('membershipActive')
                 : trialActive
-                  ? 'Free Trial Active'
-                  : 'Membership Status'}
+                  ? t('freeTrialActive')
+                  : t('membershipStatus')}
             </p>
 
             <p className="mt-2 text-sm font-semibold text-slate-400">
-              View your current CrewCall account access and membership status here.
+              {t('viewMembershipStatus')}
             </p>
           </div>
         ) : !hasPaidStripeSubscription ? (
@@ -717,10 +723,10 @@ function CompanyMembershipSection({
             }`}
           >
             {startingCheckout
-              ? 'Opening Stripe Checkout...'
+              ? t('openingCheckout')
               : trialActive
-                ? 'Activate $29/Month Membership'
-                : 'Start $29/Month Membership'}
+                ? t('activateMembership')
+                : t('startMonthlyMembership')}
           </button>
         ) : (
           <button
@@ -728,68 +734,66 @@ function CompanyMembershipSection({
             disabled
             className="mt-8 w-full cursor-not-allowed rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-6 py-4 text-lg font-black text-emerald-200"
           >
-            Membership Active
+            {t('membershipActive')}
           </button>
         )}
 
         {!nativeIOS ? (
           <p className="mt-4 text-center text-sm font-bold text-slate-400">
-            Founding Member pricing. Cancel anytime. No contracts.
+            {t('foundingMemberPricing')}
           </p>
         ) : null}
       </div>
 
       <aside className="rounded-[2rem] border border-white/10 bg-slate-950/50 p-7">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-          Membership Details
+          {t('membershipDetails')}
         </p>
 
         <div className="mt-6 space-y-5">
           <DetailRow
-            label="Plan"
+            label={t('plan')}
             value={
               subscription?.plan
-                ? formatPlan(subscription.plan)
-                : 'Starter Trial'
+                ? formatPlan(subscription.plan, t)
+                : t('starterTrial')
             }
           />
 
           <DetailRow
-            label="Status"
-            value={formatSubscriptionStatus(subscription)}
+            label={t('status')}
+            value={formatSubscriptionStatus(subscription, t)}
           />
 
           <DetailRow
-            label="Trial Ends"
+            label={t('trialEnds')}
             value={
               subscription?.trial_ends_at
-                ? formatDate(subscription.trial_ends_at)
-                : 'Not available'
+                ? formatDate(subscription.trial_ends_at, locale)
+                : t('notAvailable')
             }
           />
 
           <DetailRow
-            label="Billing Period Ends"
+            label={t('billingPeriodEnds')}
             value={
               subscription?.current_period_ends_at
-                ? formatDate(subscription.current_period_ends_at)
-                : 'Not started'
+                ? formatDate(subscription.current_period_ends_at, locale)
+                : t('notStarted')
             }
           />
 
           <DetailRow
-            label="Cancel at Period End"
+            label={t('cancelAtPeriodEnd')}
             value={
-              subscription?.cancel_at_period_end ? 'Yes' : 'No'
+              subscription?.cancel_at_period_end ? t('yes') : t('no')
             }
           />
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
           <p className="text-sm font-semibold leading-6 text-slate-400">
-            The customer portal will be added next so members can
-            update payment methods, view invoices, and cancel their
-            membership.
+            {t('customerPortalDescription')}
           </p>
         </div>
       </aside>
@@ -808,54 +812,55 @@ function WorkerStripeSection({
   connectingStripe: boolean
   onConnect: () => void
 }) {
+  const t = useTranslations('Billing')
+
   return (
     <section className="rounded-[2rem] border border-white/10 bg-slate-950/50 p-7 md:p-8">
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            Worker Payouts
+            {t('workerPayouts')}
           </p>
 
           <h2 className="mt-3 text-3xl font-black">
-            Stripe Connect
+            {t('stripeConnect')}
           </h2>
 
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-            Connect Stripe so companies can pay you securely through
-            CrewCall.
+            {t('stripeDescription')}
           </p>
         </div>
 
         <StatusPill
           active={stripeConnected}
-          activeText="Connected"
-          inactiveText="Not Connected"
+          activeText={t('connected')}
+          inactiveText={t('notConnected')}
         />
       </div>
 
       <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-          Stripe Account ID
+          {t('stripeAccountId')}
         </p>
 
         <p className="mt-3 break-all text-sm font-black text-white md:text-base">
-          {profile.stripe_account_id || 'Not connected'}
+          {profile.stripe_account_id || t('notConnected')}
         </p>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <ConnectionStat
-          label="Details Submitted"
+          label={t('detailsSubmitted')}
           active={Boolean(profile.stripe_details_submitted)}
         />
 
         <ConnectionStat
-          label="Charges Enabled"
+          label={t('chargesEnabled')}
           active={Boolean(profile.stripe_charges_enabled)}
         />
 
         <ConnectionStat
-          label="Payouts Enabled"
+          label={t('payoutsEnabled')}
           active={Boolean(profile.stripe_payouts_enabled)}
         />
       </div>
@@ -872,10 +877,10 @@ function WorkerStripeSection({
           }`}
         >
           {connectingStripe
-            ? 'Opening Stripe...'
+            ? t('openingStripe')
             : profile.stripe_account_id
-              ? 'Continue Stripe Setup'
-              : 'Connect Stripe'}
+              ? t('continueStripeSetup')
+              : t('connectStripe')}
         </button>
       )}
     </section>
@@ -883,11 +888,13 @@ function WorkerStripeSection({
 }
 
 function BillingLoading() {
+  const t = useTranslations('Billing')
+
   return (
     <main className="min-h-screen px-4 py-8 text-white md:px-6 md:py-10">
       <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-white/10 p-8 backdrop-blur">
         <p className="text-sm font-bold text-slate-300">
-          Loading billing...
+          {t('loading')}
         </p>
       </div>
     </main>
@@ -949,6 +956,8 @@ function ConnectionStat({
   label: string
   active: boolean
 }) {
+  const t = useTranslations('Billing')
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
       <p className="text-xs font-black uppercase tracking-wide text-slate-400">
@@ -960,7 +969,7 @@ function ConnectionStat({
           active ? 'text-emerald-300' : 'text-slate-400'
         }`}
       >
-        {active ? 'Yes' : 'No'}
+        {active ? t('yes') : t('no')}
       </p>
     </div>
   )
@@ -1010,29 +1019,44 @@ function MessageBox({
 }
 
 function formatSubscriptionStatus(
-  subscription: Subscription | null
+  subscription: Subscription | null,
+  t: ReturnType<typeof useTranslations>
 ) {
-  if (!subscription) return 'No membership'
+  if (!subscription) return t('noMembership')
 
   const labels: Record<string, string> = {
-    trialing: 'Free Trial',
-    active: 'Active',
-    past_due: 'Past Due',
-    unpaid: 'Unpaid',
-    canceled: 'Canceled',
-    incomplete: 'Incomplete',
-    incomplete_expired: 'Expired',
-    paused: 'Paused',
+    trialing: t('freeTrial'),
+    active: t('active'),
+    past_due: t('pastDue'),
+    unpaid: t('unpaid'),
+    canceled: t('canceled'),
+    incomplete: t('incomplete'),
+    incomplete_expired: t('expired'),
+    paused: t('paused'),
   }
 
   return labels[subscription.status] || capitalize(subscription.status)
 }
 
-function formatPlan(plan: string) {
-  return plan
-    .split('_')
-    .map(capitalize)
-    .join(' ')
+function formatPlan(
+  plan: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  const labels: Record<string, string> = {
+    starter: t('starter'),
+    professional: t('professional'),
+    enterprise: t('enterprise'),
+    monthly: t('monthly'),
+    annual: t('annual'),
+  }
+
+  return (
+    labels[plan] ||
+    plan
+      .split('_')
+      .map((part) => labels[part] || capitalize(part))
+      .join(' ')
+  )
 }
 
 function capitalize(value: string) {
@@ -1041,8 +1065,11 @@ function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
+function formatDate(
+  value: string,
+  locale: string
+) {
+  return new Intl.DateTimeFormat(locale, {
     month: 'long',
     day: 'numeric',
     year: 'numeric',

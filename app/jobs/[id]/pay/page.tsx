@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -16,6 +17,7 @@ type Job = {
 }
 
 export default function PayPage() {
+  const t = useTranslations('JobPayment')
   const params = useParams()
   const jobId = String(params.id || '')
 
@@ -107,14 +109,14 @@ export default function PayPage() {
     window.location.href = result.url
   }
 
-  if (loading) return <div className="p-6">Loading...</div>
+  if (loading) return <div className="p-6">{t('loading')}</div>
 
   if (!job) {
     return (
       <main className="p-6">
-        <h1 className="text-2xl font-bold">Job not found</h1>
+        <h1 className="text-2xl font-bold">{t('jobNotFound')}</h1>
         <Link href="/jobs" className="text-blue-600">
-          Back to Jobs
+          {t('backToJobs')}
         </Link>
       </main>
     )
@@ -123,11 +125,11 @@ export default function PayPage() {
   return (
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-xl rounded-2xl border bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold">Pay Worker</h1>
+        <h1 className="text-3xl font-bold">{t('title')}</h1>
 
         <div className="mt-6 space-y-2 text-gray-700">
           <p>
-            <strong>Job:</strong> {job.title}
+            <strong>{t('job')}:</strong> {job.title}
           </p>
 
           <p>
@@ -135,11 +137,11 @@ export default function PayPage() {
           </p>
 
           <p>
-            <strong>Payment:</strong> {job.payment_status || 'unpaid'}
+            <strong>{t('payment')}:</strong> {job.payment_status || t('unpaid')}
           </p>
 
           <p>
-            <strong>Amount:</strong> {formatMoney(job.pay_rate)}
+            <strong>{t('amount')}:</strong> {formatMoney(job.pay_rate)}
           </p>
         </div>
 
@@ -161,14 +163,14 @@ export default function PayPage() {
             disabled={paying || !job.assigned_worker_id}
             className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:opacity-50"
           >
-            {paying ? 'Opening Stripe...' : 'Send Payment'}
+            {paying ? t('openingStripe') : t('sendPayment')}
           </button>
 
           <Link
             href={`/jobs/${job.id}`}
             className="rounded-xl border px-5 py-3 font-semibold hover:bg-gray-100"
           >
-            Back to Job
+            {t('backToJob')}
           </Link>
         </div>
       </div>

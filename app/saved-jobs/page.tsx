@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Company = {
@@ -45,6 +46,7 @@ function firstOrNull<T>(value: T | T[] | null): T | null {
 }
 
 export default function JobsPage() {
+  const t = useTranslations('SavedJobs')
   const [jobs, setJobs] = useState<Job[]>([])
   const [savedJobIds, setSavedJobIds] = useState<string[]>([])
   const [userId, setUserId] = useState<string | null>(null)
@@ -161,7 +163,7 @@ export default function JobsPage() {
     return (
       <main className="min-h-screen bg-slate-50 p-6">
         <div className="rounded-3xl border bg-white p-6 shadow-sm">
-          Loading jobs...
+          {t('loading')}
         </div>
       </main>
     )
@@ -170,16 +172,16 @@ export default function JobsPage() {
   return (
     <main className="min-h-screen space-y-6 bg-slate-50 p-6">
       <div className="rounded-3xl border bg-white p-6 shadow-sm">
-        <h1 className="text-3xl font-bold text-slate-900">Jobs</h1>
+        <h1 className="text-3xl font-bold text-slate-900">{t('title')}</h1>
 
         <p className="mt-2 text-slate-600">
-          Search, filter, apply, and save jobs for later.
+          {t('description')}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-3 rounded-2xl border bg-white p-4 shadow-sm">
         <input
-          placeholder="Search location..."
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="rounded-xl border px-3 py-2"
@@ -190,7 +192,7 @@ export default function JobsPage() {
           onChange={(event) => setTrade(event.target.value)}
           className="rounded-xl border px-3 py-2"
         >
-          <option value="">All Trades</option>
+          <option value="">{t('allTrades')}</option>
           <option value="Plumbing">Plumbing</option>
           <option value="Electrical">Electrical</option>
           <option value="HVAC">HVAC</option>
@@ -213,21 +215,21 @@ export default function JobsPage() {
             checked={openOnly}
             onChange={() => setOpenOnly((current) => !current)}
           />
-          Open Jobs Only
+          {t('openJobsOnly')}
         </label>
 
         <Link
           href="/saved-jobs"
           className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
         >
-          Saved Jobs
+          {t('savedJobs')}
         </Link>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         {filteredJobs.map((job) => {
           const companyName =
-            job.company?.company_name || job.company?.full_name || 'Company'
+            job.company?.company_name || job.company?.full_name || t('company')
 
           const verified =
             job.company?.insurance_status === 'verified' &&
@@ -257,7 +259,7 @@ export default function JobsPage() {
               <div className="mt-3">
                 {verified ? (
                   <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                    ✔ Verified Company
+                    ✔ {t('verifiedCompany')}
                   </span>
                 ) : (
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -271,7 +273,7 @@ export default function JobsPage() {
               </p>
 
               <p className="mt-2 text-sm text-slate-600">
-                Pay: {job.pay_rate || 'Not listed'}
+                {t('pay')}: {job.pay_rate || t('notListed')}
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -279,7 +281,7 @@ export default function JobsPage() {
                   href={`/jobs/${job.id}`}
                   className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                 >
-                  View Job
+                  {t('viewJob')}
                 </Link>
 
                 <button
@@ -291,14 +293,14 @@ export default function JobsPage() {
                       : 'rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100'
                   }
                 >
-                  {saved ? 'Saved ❤️' : 'Save Job 🤍'}
+                  {saved ? t('saved') : t('saveJob')}
                 </button>
 
                 <Link
                   href={`/profiles/${job.company_id}`}
                   className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
-                  View Company
+                  {t('viewCompany')}
                 </Link>
               </div>
             </div>

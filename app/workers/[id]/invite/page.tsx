@@ -10,6 +10,8 @@ import {
   useRouter,
 } from 'next/navigation'
 
+import { useTranslations } from 'next-intl'
+
 import { supabase } from '@/lib/supabase'
 import { CrewButton } from '@/app/components/CrewButton'
 import { CrewCard } from '@/app/components/CrewCard'
@@ -29,6 +31,7 @@ type Worker = {
 }
 
 export default function InviteWorkerPage() {
+  const t = useTranslations('WorkerInvitePage')
   const params = useParams()
   const router = useRouter()
 
@@ -68,7 +71,7 @@ export default function InviteWorkerPage() {
 
     if (!user) {
       setMessage(
-        'You must be logged in.'
+        t('mustBeLoggedIn')
       )
       setLoading(false)
       return
@@ -157,7 +160,7 @@ export default function InviteWorkerPage() {
 
     setLoading(false)
 
-  }, [workerId])
+  }, [workerId, t])
 
 
   useEffect(() => {
@@ -182,7 +185,7 @@ export default function InviteWorkerPage() {
 
       if (!session?.access_token) {
         setMessage(
-          'You must be logged in.'
+          t('mustBeLoggedIn')
         )
         return
       }
@@ -190,7 +193,7 @@ export default function InviteWorkerPage() {
 
       if (!selectedJobId) {
         setMessage(
-          'Select a job first.'
+          t('selectJobFirst')
         )
         return
       }
@@ -223,7 +226,7 @@ export default function InviteWorkerPage() {
       if (!response.ok) {
         setMessage(
           result?.error ||
-          'Unable to send invite.'
+          t('inviteFailed')
         )
         return
       }
@@ -256,7 +259,7 @@ export default function InviteWorkerPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to send invite.'
+          : t('inviteFailed')
       )
 
     } finally {
@@ -269,7 +272,7 @@ export default function InviteWorkerPage() {
     return (
       <main className="min-h-screen bg-slate-950 px-6 py-8 text-white">
         <p className="text-slate-300">
-          Loading invite page...
+          {t('loading')}
         </p>
       </main>
     )
@@ -287,11 +290,11 @@ export default function InviteWorkerPage() {
           </p>
 
           <h1 className="mt-3 text-4xl font-black">
-            Invite Worker
+            {t('title')}
           </h1>
 
           <p className="mt-3 text-slate-300">
-            Invite{' '}
+            {t('invite')}{' '}
             <span className="font-black text-white">
               {worker?.full_name || 'this worker'}
             </span>
@@ -306,11 +309,11 @@ export default function InviteWorkerPage() {
           <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-5">
 
             <h2 className="text-2xl font-black text-white">
-              {worker?.full_name || 'Worker'}
+              {worker?.full_name || t('worker')}
             </h2>
 
             <p className="mt-1 font-bold text-cyan-300">
-              {worker?.trade || 'Trade not listed'}
+              {worker?.trade || t('tradeNotListed')}
             </p>
 
           </div>
@@ -327,7 +330,7 @@ export default function InviteWorkerPage() {
             <div className="space-y-3">
 
               <label className="text-sm font-black text-slate-200">
-                Select Job
+                {t('selectJob')}
               </label>
 
 
@@ -381,7 +384,7 @@ export default function InviteWorkerPage() {
           {success && (
 
             <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 font-bold text-emerald-100">
-              Invite sent successfully.
+              {t('inviteSent')}
             </div>
 
           )}
@@ -398,8 +401,8 @@ export default function InviteWorkerPage() {
             >
               {
                 sending
-                  ? 'Sending...'
-                  : 'Send Invite'
+                  ? t('sending')
+                  : t('sendInvite')
               }
             </CrewButton>
 
@@ -409,7 +412,7 @@ export default function InviteWorkerPage() {
               variant="ghost"
               className="!text-white hover:!text-cyan-300"
             >
-              Back to Workers
+              {t('backToWorkers')}
             </CrewButton>
 
           </div>

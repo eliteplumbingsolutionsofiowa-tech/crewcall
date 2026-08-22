@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 export default function ResetPasswordPage() {
+  const t = useTranslations('ResetPassword')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -65,7 +67,7 @@ export default function ResetPasswordPage() {
 
           if (!data.session) {
             throw new Error(
-              'CrewCall could not open this password reset session.'
+              t('sessionOpenFailed')
             )
           }
 
@@ -113,7 +115,7 @@ export default function ResetPasswordPage() {
 
         if (active) {
           setMessage(
-            'This password reset link is invalid or has expired. Please request a new one.'
+            t('invalidResetLink')
           )
         }
       } catch (error) {
@@ -126,7 +128,7 @@ export default function ResetPasswordPage() {
           setMessage(
             error instanceof Error
               ? error.message
-              : 'Unable to open this password reset link.'
+              : t('openResetLinkFailed')
           )
         }
       }
@@ -149,7 +151,7 @@ export default function ResetPasswordPage() {
 
     if (password.length < 10) {
       setMessage(
-        'Your new password must be at least 10 characters.'
+        t('passwordTooShort')
       )
       return
     }
@@ -158,7 +160,7 @@ export default function ResetPasswordPage() {
       password !== confirmPassword
     ) {
       setMessage(
-        'The passwords do not match.'
+        t('passwordsDoNotMatch')
       )
       return
     }
@@ -188,7 +190,7 @@ export default function ResetPasswordPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to update your password. Please try again.'
+          : t('updateFailed')
       )
     } finally {
       setLoading(false)
@@ -206,24 +208,24 @@ export default function ResetPasswordPage() {
           </p>
 
           <h1 className="mt-3 text-3xl font-black">
-            Reset Password
+            {t('title')}
           </h1>
 
           <p className="mt-2 text-sm font-semibold leading-6 text-slate-400">
-            Choose a new password for your CrewCall account.
+            {t('description')}
           </p>
 
           {success ? (
             <div className="mt-7">
               <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-200">
-                Your password has been updated successfully.
+                {t('successMessage')}
               </div>
 
               <Link
                 href="/login"
                 className="mt-5 block w-full rounded-2xl bg-cyan-400 px-4 py-3 text-center font-black text-slate-950 transition hover:bg-cyan-300"
               >
-                Return to Login
+                {t('returnToLogin')}
               </Link>
             </div>
           ) : (
@@ -236,7 +238,7 @@ export default function ResetPasswordPage() {
                   htmlFor="password"
                   className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
                 >
-                  New Password
+                  {t('newPassword')}
                 </label>
 
                 <input
@@ -252,7 +254,7 @@ export default function ResetPasswordPage() {
                   }
                   required
                   minLength={10}
-                  placeholder="At least 10 characters"
+                  placeholder="{t('passwordPlaceholder')}"
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
@@ -262,7 +264,7 @@ export default function ResetPasswordPage() {
                   htmlFor="confirmPassword"
                   className="text-xs font-black uppercase tracking-[0.14em] text-slate-500"
                 >
-                  Confirm New Password
+                  {t('confirmPassword')}
                 </label>
 
                 <input
@@ -278,7 +280,7 @@ export default function ResetPasswordPage() {
                   }
                   required
                   minLength={10}
-                  placeholder="Enter it again"
+                  placeholder="{t('confirmPasswordPlaceholder')}"
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
@@ -295,10 +297,10 @@ export default function ResetPasswordPage() {
                 className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading
-                  ? 'Updating Password...'
+                  ? t('updatingPassword')
                   : ready
-                    ? 'Update Password'
-                    : 'Opening Reset Link...'}
+                    ? t('updatePassword')
+                    : t('openingResetLink')}
               </button>
             </form>
           )}

@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function StripeConnectCompletePage() {
+  const t = useTranslations('StripeConnectComplete')
   const router = useRouter()
   const [message, setMessage] = useState(
-    'Updating Stripe connection...'
+    t('updating')
   )
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function StripeConnectCompletePage() {
         } = await supabase.auth.getSession()
 
         if (!session?.user?.id) {
-          throw new Error('No user session')
+          throw new Error(t('noSession'))
         }
 
         const response = await fetch(
@@ -35,11 +37,11 @@ export default function StripeConnectCompletePage() {
         )
 
         if (!response.ok) {
-          throw new Error('Unable to refresh Stripe status')
+          throw new Error(t('refreshFailed'))
         }
 
         setMessage(
-          'Stripe connected successfully. Returning to profile...'
+          t('connectedSuccess')
         )
 
         setTimeout(() => {
@@ -50,7 +52,7 @@ export default function StripeConnectCompletePage() {
         setMessage(
           error instanceof Error
             ? error.message
-            : 'Stripe update failed'
+            : t('updateFailed')
         )
       }
     }

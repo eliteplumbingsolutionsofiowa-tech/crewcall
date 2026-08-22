@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
@@ -103,6 +104,8 @@ function workerTable() {
 }
 
 export default function WorkersPage() {
+  const t = useTranslations('WorkersDirectory')
+  const locale = useLocale()
   const [currentProfile, setCurrentProfile] =
     useState<CurrentProfile | null>(null)
 
@@ -342,7 +345,7 @@ export default function WorkersPage() {
 
   async function toggleSavedWorker(workerId: string) {
     if (!currentProfile?.id || currentProfile.role !== 'company') {
-      setMessage('Only company accounts can save workers.')
+      setMessage(t('onlyCompaniesCanSave'))
       return
     }
 
@@ -413,7 +416,7 @@ export default function WorkersPage() {
     return (
       <main className="min-h-screen bg-slate-950 px-4 py-8 text-white md:px-6 md:py-10">
         <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black text-white">Loading workers...</p>
+          <p className="text-lg font-black text-white">{t('loading')}</p>
         </div>
       </main>
     )
@@ -430,15 +433,15 @@ export default function WorkersPage() {
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                  Worker Discovery
+                  {t('workerDiscovery')}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Find Workers
+                  {t('title')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Search available skilled workers, view approximate locations,
+                  {t('search')} available skilled workers, view approximate locations,
                   save favorites, and build your preferred crew.
                 </p>
               </div>
@@ -457,19 +460,19 @@ export default function WorkersPage() {
                 />
 
                 <MetricBox
-                  label="Available"
+                  label={t('available')}
                   value={availableCount}
                   tone="emerald"
                 />
 
                 <MetricBox
-                  label="Online"
+                  label={t('online')}
                   value={onlineCount}
                   tone="lime"
                 />
 
                 <MetricBox
-                  label="Verified"
+                  label={t('verified')}
                   value={verifiedCount}
                   tone="blue"
                 />
@@ -535,7 +538,7 @@ export default function WorkersPage() {
             <div className="grid gap-4 rounded-3xl border border-white/10 bg-slate-950/50 p-5 md:grid-cols-4">
               <div className="md:col-span-2">
                 <label className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  Search
+                  {t('search')}
                 </label>
 
                 <input
@@ -548,7 +551,7 @@ export default function WorkersPage() {
 
               <div>
                 <label className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  Trade
+                  {t('trade')}
                 </label>
 
                 <select
@@ -568,7 +571,7 @@ export default function WorkersPage() {
 
               <div>
                 <label className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  City
+                  {t('city')}
                 </label>
 
                 <select
@@ -591,28 +594,28 @@ export default function WorkersPage() {
                   active={savedOnly}
                   onClick={() => setSavedOnly((previous) => !previous)}
                 >
-                  {savedOnly ? 'Saved Only: On' : 'Saved Only'}
+                  {savedOnly ? t('savedOnlyOn') : t('savedOnly')}
                 </FilterButton>
 
                 <FilterButton
                   active={onlineOnly}
                   onClick={() => setOnlineOnly((previous) => !previous)}
                 >
-                  {onlineOnly ? 'Online Only: On' : 'Online Only'}
+                  {onlineOnly ? t('onlineOnlyOn') : t('onlineOnly')}
                 </FilterButton>
 
                 <FilterButton
                   active={availableOnly}
                   onClick={() => setAvailableOnly((previous) => !previous)}
                 >
-                  {availableOnly ? 'Available Only: On' : 'Available Only'}
+                  {availableOnly ? t('availableOnlyOn') : t('availableOnly')}
                 </FilterButton>
 
                 <FilterButton
                   active={verifiedOnly}
                   onClick={() => setVerifiedOnly((previous) => !previous)}
                 >
-                  {verifiedOnly ? 'Verified Only: On' : 'Verified Only'}
+                  {verifiedOnly ? t('verifiedOnlyOn') : t('verifiedOnly')}
                 </FilterButton>
 
                 <button
@@ -620,7 +623,7 @@ export default function WorkersPage() {
                   onClick={resetFilters}
                   className="rounded-2xl border border-white/10 bg-slate-800/95 px-4 py-3 text-sm font-black text-white shadow-md shadow-black/20 transition hover:bg-slate-700"
                 >
-                  Clear Filters
+                  {t('clearFilters')}
                 </button>
               </div>
             </div>
@@ -785,6 +788,7 @@ function WorkerGoogleMap({
   selectedWorkerId: string | null
   onSelectWorker: (workerId: string) => void
 }) {
+  const t = useTranslations('WorkersDirectory')
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const markersRef = useRef<Map<string, google.maps.Marker>>(new Map())
@@ -798,7 +802,11 @@ function WorkerGoogleMap({
     async function initializeMap() {
       try {
         setMapError('')
-        await loadGoogleMapsScript()
+        await loadGoogleMapsScript({
+          browserOnly: t('mapBrowserOnly'),
+          scriptFailed: t('mapLoadFailed'),
+          apiKeyMissing: t('mapApiKeyMissing'),
+        })
 
         if (cancelled || !mapElementRef.current) return
 
@@ -943,28 +951,30 @@ function WorkerGoogleMap({
 
       <div className="pointer-events-none absolute left-5 top-5 z-10 rounded-2xl border border-white/10 bg-slate-950/90 px-4 py-3 shadow-xl backdrop-blur">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-          Worker Availability
+          {t('workerAvailability')}
         </p>
 
         <p className="mt-1 text-sm font-bold text-slate-300">
-          {workers.filter(hasValidCoordinates).length} visible on map
+          {t('visibleOnMap', {
+            count: workers.filter(hasValidCoordinates).length,
+          })}
         </p>
       </div>
 
       <div className="pointer-events-none absolute bottom-6 left-5 z-10 flex flex-wrap gap-3 rounded-2xl border border-white/10 bg-slate-950/90 p-3 text-xs font-black shadow-xl backdrop-blur">
         <span className="flex items-center gap-2 text-emerald-200">
           <span className="h-3 w-3 rounded-full bg-emerald-400" />
-          Available
+          {t('available')}
         </span>
 
         <span className="flex items-center gap-2 text-orange-200">
           <span className="h-3 w-3 rounded-full bg-orange-400" />
-          Not Available
+          {t('notAvailable')}
         </span>
 
         <span className="flex items-center gap-2 text-lime-200">
           <span className="h-3 w-3 rounded-full bg-lime-400" />
-          Online
+          {t('online')}
         </span>
       </div>
 
@@ -973,7 +983,7 @@ function WorkerGoogleMap({
           <div className="text-center">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-cyan-400" />
             <p className="mt-5 font-black text-white">
-              Loading Google Maps...
+              {t('loadingMaps')}
             </p>
           </div>
         </div>
@@ -985,7 +995,7 @@ function WorkerGoogleMap({
             <p className="text-4xl">🗺️</p>
 
             <h2 className="mt-5 text-2xl font-black text-white">
-              Map unavailable
+              {t('mapUnavailable')}
             </h2>
 
             <p className="mt-3 text-sm font-semibold leading-6 text-red-100">
@@ -998,10 +1008,14 @@ function WorkerGoogleMap({
   )
 }
 
-function loadGoogleMapsScript() {
+function loadGoogleMapsScript(messages: {
+  browserOnly: string
+  scriptFailed: string
+  apiKeyMissing: string
+}) {
   return new Promise<void>((resolve, reject) => {
     if (typeof window === 'undefined') {
-      reject(new Error('Google Maps can only load in the browser.'))
+      reject(new Error(messages.browserOnly))
       return
     }
 
@@ -1014,9 +1028,7 @@ function loadGoogleMapsScript() {
 
     if (!apiKey) {
       reject(
-        new Error(
-          'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is missing from .env.local.',
-        ),
+        new Error(messages.apiKeyMissing),
       )
       return
     }
@@ -1038,7 +1050,7 @@ function loadGoogleMapsScript() {
       existingScript.addEventListener(
         'error',
         () =>
-          reject(new Error('Google Maps script failed to load.')),
+          reject(new Error(messages.scriptFailed)),
         { once: true },
       )
 
@@ -1061,7 +1073,7 @@ function loadGoogleMapsScript() {
     script.addEventListener(
       'error',
       () =>
-        reject(new Error('Google Maps script failed to load.')),
+        reject(new Error(messages.scriptFailed)),
       { once: true },
     )
 
@@ -1126,8 +1138,10 @@ function WorkerCard({
   saving: boolean
   onSave: () => void
 }) {
+  const t = useTranslations('WorkersDirectory')
+
   const workerName =
-    worker.full_name || worker.company_name || 'Worker Profile'
+    worker.full_name || worker.company_name || t('workerProfile')
 
   const available = isAvailable(worker)
   const online = isActuallyOnline(worker)
@@ -1169,13 +1183,13 @@ function WorkerCard({
                 online ? 'text-lime-300' : 'text-slate-500'
               }`}
             >
-              {presenceLabel(worker)}
+              {presenceLabel(worker, t)}
             </p>
 
             <p className="mt-2 text-sm font-semibold text-slate-400">
               {[worker.trade, worker.city, worker.state]
                 .filter(Boolean)
-                .join(' • ') || 'No details listed'}
+                .join(' • ') || t('noDetailsListed')}
             </p>
           </div>
         </div>
@@ -1187,38 +1201,38 @@ function WorkerCard({
               : 'border-orange-300/20 bg-orange-400/15 text-orange-100'
           }`}
         >
-          {availabilityLabel(worker)}
+          {availabilityLabel(worker, t)}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           {worker.years_experience && (
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-black text-slate-100">
-              {worker.years_experience} years
+              {t('years', { count: worker.years_experience })}
             </span>
           )}
 
           {worker.insurance_provider && (
             <span className="rounded-full border border-blue-300/20 bg-blue-400/15 px-3 py-2 text-xs font-black text-blue-100">
-              Insured
+              {t('insured')}
             </span>
           )}
 
           {worker.liability_form_signed && (
             <span className="rounded-full border border-emerald-300/20 bg-emerald-400/15 px-3 py-2 text-xs font-black text-emerald-100">
-              Liability Signed
+              {t('liabilitySigned')}
             </span>
           )}
 
           {worker.map_visibility && (
             <span className="rounded-full border border-purple-300/20 bg-purple-400/15 px-3 py-2 text-xs font-black text-purple-100">
-              Map Visible
+              {t('mapVisible')}
             </span>
           )}
         </div>
 
         <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-4">
           <p className="line-clamp-4 text-sm leading-6 text-slate-300">
-            {worker.job_experience || 'No job experience listed yet.'}
+            {worker.job_experience || t('noJobExperience')}
           </p>
         </div>
       </Link>
@@ -1228,7 +1242,7 @@ function WorkerCard({
           href={`/profile?user=${worker.id}`}
           className="text-sm font-black text-cyan-300 no-underline hover:text-cyan-200"
         >
-          View Profile →
+          {t('viewProfile')}
         </Link>
 
         {canSave && (
@@ -1242,7 +1256,7 @@ function WorkerCard({
                 : 'border border-white/10 bg-white/10 text-white hover:bg-white/15'
             }`}
           >
-            {saving ? 'Saving...' : saved ? '★ Saved' : '☆ Save'}
+            {saving ? t('saving') : saved ? t('saved') : t('save')}
           </button>
         )}
       </div>
@@ -1265,8 +1279,10 @@ function WorkerMapDetails({
   saving: boolean
   onSave: () => void
 }) {
+  const t = useTranslations('WorkersDirectory')
+
   const workerName =
-    worker.full_name || worker.company_name || 'Worker Profile'
+    worker.full_name || worker.company_name || t('workerProfile')
 
   return (
     <div>
@@ -1287,49 +1303,49 @@ function WorkerMapDetails({
           <h2 className="truncate text-2xl font-black">{workerName}</h2>
 
           <p className="mt-1 text-sm font-bold text-cyan-300">
-            {worker.trade || 'Trade not listed'}
+            {worker.trade || t('tradeNotListed')}
           </p>
 
           <p className="mt-1 text-sm text-slate-400">
             {[worker.city, worker.state].filter(Boolean).join(', ') ||
-              'Location not listed'}
+              t('locationNotListed')}
           </p>
         </div>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
         <DetailBox
-          label="Availability"
-          value={availabilityLabel(worker)}
+          label={t('availability')}
+          value={availabilityLabel(worker, t)}
         />
 
         <DetailBox
-          label="Presence"
-          value={presenceLabel(worker)}
+          label={t('presence')}
+          value={presenceLabel(worker, t)}
         />
 
         <DetailBox
-          label="Experience"
+          label={t('experience')}
           value={
             worker.years_experience
-              ? `${worker.years_experience} years`
-              : 'Not listed'
+              ? t('years', { count: worker.years_experience })
+              : t('notListed')
           }
         />
 
         <DetailBox
-          label="Verification"
-          value={isVerified(worker) ? 'Verified details' : 'Not verified'}
+          label={t('verification')}
+          value={isVerified(worker) ? t('verifiedDetails') : t('notVerified')}
         />
       </div>
 
       <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
-          Experience
+          {t('experience')}
         </p>
 
         <p className="mt-3 text-sm leading-7 text-slate-300">
-          {worker.job_experience || 'No job experience listed yet.'}
+          {worker.job_experience || t('noJobExperience')}
         </p>
       </div>
 
@@ -1338,7 +1354,7 @@ function WorkerMapDetails({
           href={`/profile?user=${worker.id}`}
           className="rounded-2xl bg-cyan-400 px-5 py-4 text-center font-black text-slate-950 hover:bg-cyan-300"
         >
-          View Full Profile
+          {t('viewFullProfile')}
         </Link>
 
         {canSave && (
@@ -1353,10 +1369,10 @@ function WorkerMapDetails({
             }`}
           >
             {saving
-              ? 'Saving...'
+              ? t('saving')
               : saved
-                ? '★ Remove from Saved'
-                : '☆ Save Worker'}
+                ? t('removeFromSaved')
+                : t('saveWorker')}
           </button>
         )}
       </div>
@@ -1365,6 +1381,8 @@ function WorkerMapDetails({
 }
 
 function EmptyWorkers({ onReset }: { onReset: () => void }) {
+  const t = useTranslations('WorkersDirectory')
+
   return (
     <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-950/60 p-8 text-center shadow-2xl shadow-black/20 md:p-12">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(249,115,22,0.16),transparent_30%)]" />
@@ -1375,12 +1393,11 @@ function EmptyWorkers({ onReset }: { onReset: () => void }) {
         </div>
 
         <h2 className="mt-8 text-4xl font-black tracking-tight text-white">
-          No workers found
+          {t('noWorkersFound')}
         </h2>
 
         <p className="mx-auto mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-300 md:text-lg">
-          Try adjusting filters, expanding your city search, or removing
-          availability requirements.
+          {t('adjustFilters')}
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -1389,31 +1406,31 @@ function EmptyWorkers({ onReset }: { onReset: () => void }) {
             onClick={onReset}
             className="rounded-2xl bg-cyan-400 px-7 py-4 text-sm font-black text-slate-950 shadow-2xl shadow-cyan-500/20 transition hover:scale-[1.03] hover:bg-cyan-300"
           >
-            Reset Filters
+            {t('resetFilters')}
           </button>
 
           <Link
             href="/jobs"
             className="rounded-2xl border border-white/10 bg-slate-800/95 px-7 py-4 text-sm font-black text-white shadow-md shadow-black/20 transition hover:scale-[1.03] hover:bg-slate-700"
           >
-            Browse Jobs
+            {t('browseJobs')}
           </Link>
         </div>
 
         <div className="mt-10 grid gap-4 md:grid-cols-3">
           <EmptyTip
-            title="Expand your search"
-            body="Nearby cities may have active workers available immediately."
+            title={t('expandSearch')}
+            body={t('expandSearchHelp')}
           />
 
           <EmptyTip
-            title="Remove filters"
-            body="Trade and availability filters can narrow results heavily."
+            title={t('removeFilters')}
+            body={t('filterHelp')}
           />
 
           <EmptyTip
-            title="Save top workers"
-            body="Build a preferred worker list for future jobs."
+            title={t('saveTopWorkers')}
+            body={t('saveTopWorkersHelp')}
           />
         </div>
       </div>
@@ -1537,41 +1554,57 @@ function isActuallyOnline(worker: WorkerProfile) {
   return Date.now() - lastSeen < 90_000
 }
 
-function availabilityLabel(worker: WorkerProfile) {
-  if (isAvailable(worker)) return 'Available Now'
-  if (worker.currently_working) return 'Currently Working'
+function availabilityLabel(
+  worker: WorkerProfile,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (isAvailable(worker)) return t('availableNow')
+
+  if (worker.currently_working) return t('currentlyWorking')
 
   if (worker.booked_until) {
-    return `Booked Until ${formatDate(worker.booked_until)}`
+    return t('bookedUntil', {
+      date: worker.booked_until,
+    })
   }
 
-  return 'Not Available'
+  return t('notAvailable')
 }
 
-function presenceLabel(worker: WorkerProfile) {
-  if (isActuallyOnline(worker)) return 'Online now'
-  if (!worker.last_seen) return 'Offline'
+function presenceLabel(
+  worker: WorkerProfile,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (isActuallyOnline(worker)) return t('onlineNow')
 
-  return `Last seen ${formatRelativeTime(worker.last_seen)}`
+  if (!worker.last_seen) return t('offline')
+
+  return t('lastSeen', {
+    time: formatRelativeTime(worker.last_seen, t),
+  })
 }
 
-function formatRelativeTime(value: string) {
+function formatRelativeTime(
+  value: string,
+  t: ReturnType<typeof useTranslations>
+) {
   const date = new Date(value)
   const diff = Date.now() - date.getTime()
 
-  if (Number.isNaN(date.getTime())) return 'recently'
+  if (Number.isNaN(date.getTime())) return t('recently')
 
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
 
-  if (seconds < 60) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  if (hours < 24) return `${hours}h ago`
+  if (seconds < 60) return t('justNow')
+  if (minutes < 60) return t('minutesAgo', { count: minutes })
+  if (hours < 24) return t('hoursAgo', { count: hours })
 
-  return `${days}d ago`
+  return t('daysAgo', { count: days })
 }
+
 
 function formatDate(value: string) {
   const date = new Date(value)

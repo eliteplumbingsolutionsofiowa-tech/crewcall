@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Profile = {
@@ -54,6 +55,7 @@ function firstOrNull<T>(value: T | T[] | null): T | null {
 }
 
 export default function SavedWorkersPage() {
+  const t = useTranslations('SavedWorkers')
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
   const [savedWorkers, setSavedWorkers] = useState<CleanSavedWorker[]>([])
   const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
@@ -79,7 +81,7 @@ export default function SavedWorkersPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('You must be logged in as a company to view saved workers.')
+      setMessage(t('mustBeCompany'))
       setLoading(false)
       return
     }
@@ -117,7 +119,7 @@ export default function SavedWorkersPage() {
     setCurrentUser(profile)
 
     if (profile?.role !== 'company') {
-      setMessage('Only company accounts can view saved workers.')
+      setMessage(t('companyOnly'))
       setLoading(false)
       return
     }
@@ -270,8 +272,8 @@ export default function SavedWorkersPage() {
   }, [savedWorkers, search, tradeFilter, stateFilter, insuredOnly, onlineOnly])
 
   async function removeSavedWorker(item: CleanSavedWorker) {
-    const workerName = item.worker ? getWorkerName(item.worker) : 'worker'
-    const confirmed = window.confirm(`Remove ${workerName} from saved workers?`)
+    const workerName = item.worker ? getWorkerName(item.worker, t('crewCallWorker')) : t('workerFallback')
+    const confirmed = window.confirm(t('removeConfirm', { worker: workerName }))
 
     if (!confirmed) return
 
@@ -297,7 +299,7 @@ export default function SavedWorkersPage() {
       current.filter((savedWorker) => savedWorker.id !== item.id)
     )
 
-    setSuccessMessage(`${workerName} removed from saved workers.`)
+    setSuccessMessage(t('removedSuccess', { worker: workerName }))
     setRemovingId(null)
   }
 
@@ -315,7 +317,7 @@ export default function SavedWorkersPage() {
         <div className="mx-auto max-w-7xl space-y-5">
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
             <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-300">
-              Loading
+              {t('loading')}
             </p>
 
             <h1 className="mt-3 text-3xl font-black">Saved workers...</h1>
@@ -350,7 +352,7 @@ export default function SavedWorkersPage() {
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Saved Workers
+                  {t('title')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
@@ -363,7 +365,7 @@ export default function SavedWorkersPage() {
                     href="/company/worker-map"
                     className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100"
                   >
-                    Find More Workers
+                    {t('findMoreWorkers')}
                   </Link>
 
                   <Link
@@ -376,10 +378,10 @@ export default function SavedWorkersPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <StatCard label="Saved" value={savedWorkers.length} />
-                <StatCard label="Showing" value={filteredWorkers.length} />
+                <StatCard label={t('saved')} value={savedWorkers.length} />
+                <StatCard label={t('showing')} value={filteredWorkers.length} />
                 <StatCard
-                  label="Online"
+                  label={t('online')}
                   value={
                     savedWorkers.filter((item) =>
                       isActuallyOnline(item.worker)
@@ -408,13 +410,13 @@ export default function SavedWorkersPage() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
                   <div className="flex-1">
                     <label className="text-xs font-black uppercase tracking-wide text-slate-400">
-                      Search saved workers
+                      {t('searchLabel')}
                     </label>
 
                     <input
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search name, trade, city, phone, insurance, experience..."
+                      placeholder={t('searchPlaceholder')}
                       className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-orange-300/50"
                     />
                   </div>
@@ -424,7 +426,7 @@ export default function SavedWorkersPage() {
                     onClick={resetFilters}
                     className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15"
                   >
-                    Clear Filters
+                    {t('clearFilters')}
                   </button>
                 </div>
 
@@ -434,7 +436,7 @@ export default function SavedWorkersPage() {
                     onChange={(event) => setTradeFilter(event.target.value)}
                     className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-black text-white outline-none focus:border-orange-300/50"
                   >
-                    <option value="all">All Trades</option>
+                    <option value="all">{t('allTrades')}</option>
                     {trades.map((trade) => (
                       <option key={trade} value={trade}>
                         {trade}
@@ -447,7 +449,7 @@ export default function SavedWorkersPage() {
                     onChange={(event) => setStateFilter(event.target.value)}
                     className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-black text-white outline-none focus:border-orange-300/50"
                   >
-                    <option value="all">All States</option>
+                    <option value="all">{t('allStates')}</option>
                     {states.map((state) => (
                       <option key={state} value={state}>
                         {state}
@@ -465,7 +467,7 @@ export default function SavedWorkersPage() {
                   <FilterToggle
                     active={onlineOnly}
                     onClick={() => setOnlineOnly((prev) => !prev)}
-                    label={onlineOnly ? 'Online: On' : 'Online'}
+                    label={onlineOnly ? t('onlineOn') : t('online')}
                     activeClass="bg-lime-400 text-slate-950"
                   />
                 </div>
@@ -485,11 +487,11 @@ export default function SavedWorkersPage() {
             ) : savedWorkers.length === 0 ? (
               <div className="rounded-3xl border border-white/10 bg-slate-950/50 p-8 text-center">
                 <p className="text-xl font-black text-white">
-                  No saved workers yet.
+                  {t('noSavedWorkers')}
                 </p>
 
                 <p className="mx-auto mt-2 max-w-xl text-sm font-semibold text-slate-400">
-                  Go to Find Workers and tap Save on workers you want to keep
+                  {t('noSavedWorkersDescription')}
                   for future jobs.
                 </p>
 
@@ -497,13 +499,13 @@ export default function SavedWorkersPage() {
                   href="/company/worker-map"
                   className="mt-5 inline-flex rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-400"
                 >
-                  Find Workers
+                  {t('findWorkers')}
                 </Link>
               </div>
             ) : filteredWorkers.length === 0 ? (
               <div className="rounded-3xl border border-white/10 bg-slate-950/50 p-8 text-center">
                 <p className="text-xl font-black text-white">
-                  No saved workers match your filters.
+                  {t('noFilterMatches')}
                 </p>
 
                 <button
@@ -511,7 +513,7 @@ export default function SavedWorkersPage() {
                   onClick={resetFilters}
                   className="mt-5 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
                 >
-                  Clear All Filters
+                  {t('clearAllFilters')}
                 </button>
               </div>
             ) : (
@@ -520,7 +522,7 @@ export default function SavedWorkersPage() {
                   const worker = item.worker
                   if (!worker) return null
 
-                  const workerName = getWorkerName(worker)
+                  const workerName = getWorkerName(worker, t('crewCallWorker'))
                   const photo = photoByUserId.get(worker.id)
                   const online = isActuallyOnline(worker)
                   const removing = removingId === item.id
@@ -553,7 +555,7 @@ export default function SavedWorkersPage() {
                           </div>
 
                           <span className="rounded-full border border-orange-400/30 bg-orange-500/15 px-3 py-1 text-xs font-black uppercase text-orange-100 sm:mt-3 sm:inline-flex">
-                            Saved
+                            {t('saved')}
                           </span>
                         </div>
 
@@ -565,13 +567,13 @@ export default function SavedWorkersPage() {
 
                             {worker.insurance_provider && (
                               <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-black uppercase text-emerald-100">
-                                Insured
+                                {t('insured')}
                               </span>
                             )}
 
                             {worker.liability_form_signed && (
                               <span className="rounded-full bg-blue-400/15 px-3 py-1 text-xs font-black uppercase text-blue-100">
-                                Liability Signed
+                                {t('liabilitySigned')}
                               </span>
                             )}
                           </div>
@@ -585,36 +587,36 @@ export default function SavedWorkersPage() {
                           </p>
 
                           <p className="mt-3 text-sm font-semibold text-slate-300">
-                            {worker.trade || 'Trade not listed'} •{' '}
+                            {worker.trade || t('tradeNotListed')} •{' '}
                             {[worker.city, worker.state]
                               .filter(Boolean)
-                              .join(', ') || 'Location not listed'}
+                              .join(', ') || t('locationNotListed')}
                           </p>
 
                           <div className="mt-3 grid gap-2 text-sm font-semibold text-slate-300 sm:grid-cols-2">
                             <p>
                               <span className="text-cyan-300">
-                                Experience:
+                                {t('experience')}:
                               </span>{' '}
-                              {worker.years_experience || 'Not listed'}
+                              {worker.years_experience || t('notListed')}
                             </p>
 
                             <p>
-                              <span className="text-cyan-300">Phone:</span>{' '}
-                              {worker.phone || 'Not listed'}
+                              <span className="text-cyan-300">{t('phone')}:</span>{' '}
+                              {worker.phone || t('notListed')}
                             </p>
 
                             <p className="sm:col-span-2">
                               <span className="text-cyan-300">
-                                Insurance:
+                                {t('insurance')}:
                               </span>{' '}
-                              {worker.insurance_provider || 'Not listed'}
+                              {worker.insurance_provider || t('notListed')}
                             </p>
                           </div>
 
                           <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-400">
                             {worker.job_experience ||
-                              'No job experience summary added yet.'}
+                              t('noJobExperience')}
                           </p>
 
                           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -622,21 +624,21 @@ export default function SavedWorkersPage() {
                               href={`/profile?user=${worker.id}`}
                               className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-white/15"
                             >
-                              Profile
+                              {t('profile')}
                             </Link>
 
                             <Link
                               href={`/messages?user=${worker.id}`}
                               className="rounded-2xl bg-blue-500 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-blue-400"
                             >
-                              Message
+                              {t('message')}
                             </Link>
 
                             <Link
                               href={`/company/invites?workerId=${worker.id}`}
                               className="rounded-2xl bg-orange-500 px-4 py-3 text-center text-sm font-black text-white transition hover:bg-orange-400"
                             >
-                              Invite
+                              {t('invite')}
                             </Link>
 
                             <button
@@ -645,7 +647,7 @@ export default function SavedWorkersPage() {
                               disabled={removing}
                               className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              {removing ? 'Removing...' : 'Remove'}
+                              {removing ? t('removing') : t('remove')}
                             </button>
                           </div>
                         </div>
@@ -700,8 +702,11 @@ function FilterToggle({
   )
 }
 
-function getWorkerName(worker: Profile) {
-  return worker.full_name || worker.company_name || 'CrewCall Worker'
+function getWorkerName(
+  worker: Profile,
+  fallback = 'CrewCall Worker'
+) {
+  return worker.full_name || worker.company_name || fallback
 }
 
 function isActuallyOnline(profile: Profile | null) {

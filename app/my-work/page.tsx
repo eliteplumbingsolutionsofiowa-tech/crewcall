@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import MessageJobButton from '@/app/components/MessageJobButton'
@@ -37,14 +38,18 @@ type Filter =
   | 'completed'
   | 'paid'
 
-function formatDate(value: string | null) {
-  if (!value) return 'No date set'
+function formatDate(
+  value: string | null,
+  locale: string,
+  noDateSet: string
+) {
+  if (!value) return noDateSet
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) return 'No date set'
+  if (Number.isNaN(date.getTime())) return noDateSet
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString(locale)
 }
 
 function cleanStatus(value: string | null) {
@@ -88,6 +93,8 @@ function paymentTone(value: string | null) {
 }
 
 export default function MyWorkPage() {
+  const t = useTranslations('MyWork')
+  const locale = useLocale()
   const [jobs, setJobs] = useState<Job[]>([])
   const [reviewedJobIds, setReviewedJobIds] = useState<Set<string>>(
     () => new Set()
@@ -328,7 +335,7 @@ export default function MyWorkPage() {
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
           <p className="text-lg font-black">
-            Loading your work...
+            {t('loading')}
           </p>
         </div>
       </main>
@@ -342,17 +349,15 @@ export default function MyWorkPage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-                Worker
+                {t('worker')}
               </p>
 
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white">
-                My Work
+                {t('title')}
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm font-semibold text-slate-300">
-                Track assigned jobs, work status,
-                completed jobs, payout status, and
-                payment.
+                {t('description')}
               </p>
             </div>
 
@@ -361,36 +366,36 @@ export default function MyWorkPage() {
                 href="/jobs"
                 className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
               >
-                Browse Jobs
+                {t('browseJobs')}
               </Link>
 
               <Link
                 href="/completed-jobs"
                 className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/15"
               >
-                Completed Jobs
+                {t('completedJobs')}
               </Link>
             </div>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Active"
+              label={t('active')}
               value={stats.active}
             />
 
             <StatCard
-              label="In Progress"
+              label={t('inProgress')}
               value={stats.inProgress}
             />
 
             <StatCard
-              label="Completed"
+              label={t('completed')}
               value={stats.completed}
             />
 
             <StatCard
-              label="Paid"
+              label={t('paid')}
               value={stats.paid}
             />
           </div>
@@ -406,7 +411,7 @@ export default function MyWorkPage() {
           <div className="grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end">
             <div>
               <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                Search
+                {t('search')}
               </label>
 
               <input
@@ -414,14 +419,14 @@ export default function MyWorkPage() {
                 onChange={(event) =>
                   setSearch(event.target.value)
                 }
-                placeholder="Search jobs, company, trade, location..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50"
               />
             </div>
 
             <div>
               <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                Status
+                {t('status')}
               </label>
 
               <select
@@ -433,17 +438,17 @@ export default function MyWorkPage() {
                 }
                 className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none"
               >
-                <option value="all">All</option>
+                <option value="all">{t('all')}</option>
                 <option value="assigned">
-                  Assigned
+                  {t('assigned')}
                 </option>
                 <option value="in_progress">
-                  In Progress
+                  {t('inProgress')}
                 </option>
                 <option value="completed">
-                  Completed
+                  {t('completed')}
                 </option>
-                <option value="paid">Paid</option>
+                <option value="paid">{t('paid')}</option>
               </select>
             </div>
 
@@ -453,8 +458,8 @@ export default function MyWorkPage() {
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20"
             >
               {refreshing
-                ? 'Refreshing...'
-                : 'Refresh'}
+                ? t('refreshing')
+                : t('refresh')}
             </button>
           </div>
         </section>
@@ -462,7 +467,7 @@ export default function MyWorkPage() {
         {sortedJobs.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 text-center shadow-2xl backdrop-blur">
             <h2 className="text-2xl font-black text-white">
-              No assigned work yet
+              {t('noAssignedWork')}
             </h2>
 
             <p className="mt-2 text-slate-300">
@@ -474,7 +479,7 @@ export default function MyWorkPage() {
               href="/jobs"
               className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
             >
-              Find Work
+              {t('findWork')}
             </Link>
           </div>
         ) : (
@@ -483,7 +488,7 @@ export default function MyWorkPage() {
               const companyName =
                 job.company?.company_name ||
                 job.company?.full_name ||
-                'Company'
+                t('company')
 
               return (
                 <article
@@ -494,39 +499,57 @@ export default function MyWorkPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap gap-2">
                         <Badge
-                          value={
-                            job.status || 'assigned'
-                          }
+                          value={job.status || 'assigned'}
+                          label={t(
+                            job.status === 'in_progress'
+                              ? 'inProgress'
+                              : job.status === 'completed'
+                                ? 'completed'
+                                : job.status === 'cancelled'
+                                  ? 'cancelled'
+                                  : job.status === 'rejected'
+                                    ? 'rejected'
+                                    : 'assigned'
+                          )}
                         />
 
                         <Badge
-                          value={`payment: ${
-                            job.payment_status ||
-                            'unpaid'
+                          value={job.payment_status || 'unpaid'}
+                          label={`${t('payment')}: ${
+                            job.payment_status === 'paid'
+                              ? t('paid')
+                              : job.payment_status === 'pending'
+                                ? t('pending')
+                                : t('unpaid')
                           }`}
                           payment
                         />
 
                         <Badge
-                          value={`payout: ${
-                            job.payout_status ||
-                            'not released'
+                          value={job.payout_status || 'not_released'}
+                          label={`${t('payout')}: ${
+                            job.payout_status === 'paid' ||
+                            job.payout_status === 'released'
+                              ? t('paid')
+                              : job.payout_status === 'pending'
+                                ? t('pending')
+                                : t('notReleased')
                           }`}
                           payment
                         />
                       </div>
 
                       <h2 className="mt-4 text-2xl font-black text-white">
-                        {job.title || 'Untitled Job'}
+                        {job.title || t('untitledJob')}
                       </h2>
 
                       <p className="mt-2 text-sm font-semibold text-slate-300">
-                        Company: {companyName}
+                        {t('company')}: {companyName}
                       </p>
 
                       <div className="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
                         <Info
-                          label="Trade"
+                          label={t('trade')}
                           value={
                             job.trade ||
                             'Not listed'
@@ -534,7 +557,7 @@ export default function MyWorkPage() {
                         />
 
                         <Info
-                          label="Location"
+                          label={t('location')}
                           value={
                             job.location ||
                             'Not listed'
@@ -542,7 +565,7 @@ export default function MyWorkPage() {
                         />
 
                         <Info
-                          label="Pay"
+                          label={t('pay')}
                           value={
                             job.pay_rate ||
                             'Not listed'
@@ -550,9 +573,11 @@ export default function MyWorkPage() {
                         />
 
                         <Info
-                          label="Start"
+                          label={t('start')}
                           value={formatDate(
-                            job.start_date
+                            job.start_date,
+                            locale,
+                            t('noDateSet')
                           )}
                         />
                       </div>
@@ -571,12 +596,13 @@ export default function MyWorkPage() {
                       {job.payment_status ===
                         'paid' && (
                         <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
-                          Paid
                           {job.paid_at
-                            ? ` on ${new Date(
-                                job.paid_at
-                              ).toLocaleDateString()}`
-                            : ''}
+                            ? t('paidOn', {
+                                date: new Date(
+                                  job.paid_at
+                                ).toLocaleDateString(locale),
+                              })
+                            : t('paid')}
                         </div>
                       )}
                     </div>
@@ -586,14 +612,14 @@ export default function MyWorkPage() {
                         href={`/jobs/${job.id}`}
                         className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white hover:bg-white/15"
                       >
-                        View Job
+                        {t('viewJob')}
                       </Link>
 
                       {job.company_id && (
                         <MessageJobButton
                           targetUserId={job.company_id}
                           jobId={job.id}
-                          label="Message Company"
+                          label={t('messageCompany')}
                           className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-blue-400"
                         />
                       )}
@@ -606,7 +632,7 @@ export default function MyWorkPage() {
                             href={`/jobs/${job.id}/review?to=${job.company_id}`}
                             className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-orange-400"
                           >
-                            Leave Review
+                            {t('leaveReview')}
                           </Link>
                         )}
                     </div>
@@ -643,9 +669,11 @@ function StatCard({
 
 function Badge({
   value,
+  label,
   payment = false,
 }: {
   value: string
+  label?: string
   payment?: boolean
 }) {
   const lower = value.toLowerCase()
@@ -658,7 +686,7 @@ function Badge({
     <span
       className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-wide ${classes}`}
     >
-      {cleanStatus(value)}
+      {label || cleanStatus(value)}
     </span>
   )
 }

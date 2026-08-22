@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Profile = {
@@ -49,16 +50,18 @@ function money(value: number) {
   })
 }
 
-function formatDate(value: string | null) {
-  if (!value) return 'No date listed'
+function formatDate(
+  value: string | null,
+  locale: string,
+  noDateSet: string
+) {
+  if (!value) return noDateSet
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return 'No date listed'
-  }
+  if (Number.isNaN(date.getTime())) return noDateSet
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString(locale)
 }
 
 function badgeClasses(value: string) {
@@ -76,6 +79,8 @@ function badgeClasses(value: string) {
 }
 
 export default function CompletedJobsPage() {
+  const t = useTranslations('CompletedJobs')
+  const locale = useLocale()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
@@ -97,7 +102,7 @@ export default function CompletedJobsPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('You must be logged in to view completed jobs.')
+      setMessage(t('mustBeLoggedIn'))
       setLoading(false)
       setRefreshing(false)
       return
@@ -110,7 +115,7 @@ export default function CompletedJobsPage() {
       .maybeSingle()
 
     if (profileError || !profileData) {
-      setMessage(profileError?.message || 'Profile not found.')
+      setMessage(profileError?.message || t('profileNotFound'))
       setLoading(false)
       setRefreshing(false)
       return
@@ -304,7 +309,7 @@ export default function CompletedJobsPage() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading completed jobs...</p>
+          <p className="text-lg font-black">{t('loading')}</p>
         </div>
       </main>
     )
@@ -321,11 +326,11 @@ export default function CompletedJobsPage() {
               </p>
 
               <h1 className="mt-3 text-5xl font-black text-white">
-                Completed Jobs
+                {t('title')}
               </h1>
 
               <p className="mt-3 max-w-2xl text-slate-300">
-                Review completed work, payment history, payout status, and
+                {t('description')}
                 completed project records.
               </p>
             </div>
@@ -335,13 +340,13 @@ export default function CompletedJobsPage() {
               onClick={loadCompletedJobs}
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/15"
             >
-              {refreshing ? 'Refreshing...' : 'Refresh'}
+              {refreshing ? t('refreshing') : t('refresh')}
             </button>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Completed" value={String(stats.completed)} />
-            <StatCard label="Paid" value={String(stats.paid)} />
+            <StatCard label={t('completed')} value={String(stats.completed)} />
+            <StatCard label={t('paid')} value={String(stats.paid)} />
             <StatCard label="Unpaid" value={String(stats.unpaid)} />
             <StatCard label="Total Value" value={money(stats.total)} />
           </div>
@@ -390,16 +395,16 @@ export default function CompletedJobsPage() {
         {filteredJobs.length === 0 ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 text-center shadow-2xl backdrop-blur">
             <h2 className="text-2xl font-black text-white">
-              No completed jobs found
+              {t('noCompletedJobs')}
             </h2>
 
-            <p className="mt-2 text-slate-300">Completed jobs will appear here.</p>
+            <p className="mt-2 text-slate-300">{t('noCompletedJobsDescription')}</p>
 
             <Link
               href={profile?.role === 'company' ? '/my-jobs' : '/jobs'}
               className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
             >
-              {profile?.role === 'company' ? 'View My Jobs' : 'Browse Jobs'}
+              {profile?.role === 'company' ? t('viewMyJobs') : t('browseJobs')}
             </Link>
           </div>
         ) : (
@@ -407,8 +412,8 @@ export default function CompletedJobsPage() {
             {filteredJobs.map((job) => {
               const otherName =
                 profile?.role === 'company'
-                  ? job.worker?.full_name || job.worker?.company_name || 'Worker'
-                  : job.company?.company_name || job.company?.full_name || 'Company'
+                  ? job.worker?.full_name || job.worker?.company_name || t('worker')
+                  : job.company?.company_name || job.company?.full_name || t('company')
 
               const reviewTargetId =
                 profile?.role === 'company'
@@ -433,11 +438,11 @@ export default function CompletedJobsPage() {
                       </div>
 
                       <h2 className="mt-4 text-3xl font-black text-white">
-                        {job.title || 'Untitled Job'}
+                        {job.title || t('untitledJob')}
                       </h2>
 
                       <p className="mt-2 text-sm font-semibold text-slate-300">
-                        {profile?.role === 'company' ? 'Worker' : 'Company'}:{' '}
+                        {profile?.role === 'company' ? t('worker') : t('company')}:{' '}
                         <span className="font-black text-white">{otherName}</span>
                       </p>
 
@@ -448,30 +453,30 @@ export default function CompletedJobsPage() {
 
                       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <Info
-                          label="Pay"
+                          label={t('pay')}
                           value={
                             job.pay_rate
                               ? money(parsePay(job.pay_rate))
-                              : 'Not listed'
+                              : t('notListed')
                           }
                         />
-                        <Info label="Start" value={formatDate(job.start_date)} />
+                        <Info label={t('start')} value={formatDate(job.start_date, locale, t('noDateSet'))} />
                         <Info
-                          label="Completed"
-                          value={formatDate(job.completed_at)}
+                          label={t('completed')}
+                          value={formatDate(job.completed_at, locale, t('noDateSet'))}
                         />
-                        <Info label="Paid" value={formatDate(job.paid_at)} />
+                        <Info label={t('paid')} value={formatDate(job.paid_at, locale, t('noDateSet'))} />
                       </div>
 
                       {job.payment_status !== 'paid' && (
                         <div className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 text-sm font-bold text-orange-100">
-                          Payment has not been marked paid yet.
+                          {t('paymentNotPaid')}
                         </div>
                       )}
 
                       {job.payment_status === 'paid' && (
                         <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
-                          Payment completed.
+                          {t('paymentCompleted')}
                         </div>
                       )}
                     </div>
@@ -481,14 +486,14 @@ export default function CompletedJobsPage() {
                         href={`/jobs/${job.id}`}
                         className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white hover:bg-white/15"
                       >
-                        View Job
+                        {t('viewJob')}
                       </Link>
 
                       <Link
                         href={`/messages?jobId=${job.id}`}
                         className="rounded-2xl bg-blue-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-blue-400"
                       >
-                        Open Messages
+                        {t('openMessages')}
                       </Link>
 
                       {profile?.role === 'company' && (
@@ -505,7 +510,7 @@ export default function CompletedJobsPage() {
                           href={`/jobs/${job.id}/review?to=${reviewTargetId}`}
                           className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-slate-950 hover:bg-orange-400"
                         >
-                          Leave Review
+                          {t('leaveReview')}
                         </Link>
                       )}
                     </div>

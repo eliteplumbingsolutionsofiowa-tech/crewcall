@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -39,6 +40,7 @@ function getProfileName(profile: Profile | null) {
 }
 
 function ReviewContent() {
+  const t = useTranslations('JobReview')
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -86,7 +88,7 @@ function ReviewContent() {
       .maybeSingle()
 
     if (jobError || !jobData) {
-      setMessage(jobError?.message || 'Job not found.')
+      setMessage(jobError?.message || t('jobNotFound'))
       setLoading(false)
       return
     }
@@ -191,7 +193,7 @@ function ReviewContent() {
     }
 
     setSuccess(true)
-    setMessage('Review submitted successfully.')
+    setMessage(t('reviewSubmitted'))
 
     window.dispatchEvent(new Event('crewcall-refresh-nav'))
 
@@ -204,7 +206,7 @@ function ReviewContent() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-10 text-white">
         <div className="mx-auto max-w-xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-          <p className="text-lg font-black">Loading review...</p>
+          <p className="text-lg font-black">{t('loading')}</p>
         </div>
       </main>
     )
@@ -227,16 +229,16 @@ function ReviewContent() {
       <div className="mx-auto max-w-2xl overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 shadow-2xl backdrop-blur">
         <div className="bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-purple-500/10 p-8">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">
-            Completed Job Review
+            {t('title')}
           </p>
 
           <h1 className="mt-4 text-4xl font-black tracking-tight text-white">
-            Review {revieweeName}
+            {t('reviewUser', { name: revieweeName })}
           </h1>
 
           {job?.title && (
             <p className="mt-3 text-sm font-semibold text-slate-300">
-              Job:{' '}
+              {t('job')}:{' '}
               <span className="font-black text-white">
                 {job.title}
               </span>
@@ -269,7 +271,7 @@ function ReviewContent() {
           {showReviewForm && (
             <div className="mt-6">
               <label className="block text-sm font-black text-slate-200">
-                Rating
+                {t('rating')}
               </label>
 
               <select
@@ -279,7 +281,7 @@ function ReviewContent() {
               >
                 {[5, 4, 3, 2, 1].map((number) => (
                   <option key={number} value={number}>
-                    {number} Stars
+                    {t('stars', { count: number })}
                   </option>
                 ))}
               </select>
@@ -302,7 +304,7 @@ function ReviewContent() {
                 disabled={saving}
                 className="mt-6 rounded-2xl bg-blue-500 px-6 py-4 text-sm font-black text-white shadow-xl shadow-blue-500/20 transition hover:scale-[1.02] hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? 'Submitting...' : 'Submit Review'}
+                {saving ? t('submitting') : t('submitReview')}
               </button>
             </div>
           )}
@@ -312,7 +314,7 @@ function ReviewContent() {
               href="/completed-jobs"
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
             >
-              Back to Completed Jobs
+              {t('backToCompletedJobs')}
             </Link>
 
             {job && (
@@ -320,7 +322,7 @@ function ReviewContent() {
                 href={`/jobs/${job.id}`}
                 className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
               >
-                View Job
+                {t('viewJob')}
               </Link>
             )}
           </div>
@@ -354,12 +356,13 @@ function StatusPill({ value }: { value: string }) {
 }
 
 export default function ReviewPage() {
+  const t = useTranslations('JobReview')
   return (
     <Suspense
       fallback={
         <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-10 text-white">
           <div className="mx-auto max-w-xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
-            <p className="text-lg font-black">Loading review...</p>
+            <p className="text-lg font-black">{t('loading')}</p>
           </div>
         </main>
       }

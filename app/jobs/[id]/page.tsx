@@ -753,7 +753,7 @@ export default function JobDetailsPage() {
         return
       }
 
-      setMessage('Worker payout released successfully.')
+      setMessage(t('workerPayoutReleasedSuccessfully'))
       setMessageTone('success')
 
       await loadPage(true)
@@ -875,7 +875,7 @@ export default function JobDetailsPage() {
       const { error: notificationError } = await notificationsTable()
         .insert({
           user_id: job!.company_id,
-          title: 'Worker Accepted Your Counter Offer',
+          title: t('workerAcceptedCounterOffer'),
           body: `Your counter offer of $${agreedRate} for "${job!.title}" was accepted.`,
           link_url: `/my-jobs/${job!.id}/applicants`,
           read: false,
@@ -937,7 +937,7 @@ export default function JobDetailsPage() {
       const { error: notificationError } = await notificationsTable()
         .insert({
           user_id: job!.company_id,
-          title: 'Worker Declined Your Counter Offer',
+          title: t('workerDeclinedCounterOffer'),
           body: `Your counter offer for "${job!.title}" was declined.`,
           link_url: `/my-jobs/${job!.id}/applicants`,
           read: false,
@@ -1153,7 +1153,7 @@ export default function JobDetailsPage() {
                         className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {workingId === workerApplication.id
-                          ? 'Updating...'
+                          ? t('updating')
                           : `Accept ${workerApplication.company_counter_offer}`}
                       </button>
 
@@ -1450,7 +1450,7 @@ export default function JobDetailsPage() {
           <section className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 shadow-xl shadow-black/20">
             <div className="p-5 sm:p-6">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-                Assigned Worker
+                {t('assignedWorker')}
               </p>
 
               <Link
@@ -1462,7 +1462,7 @@ export default function JobDetailsPage() {
                     src={assignedPhoto}
                     alt={
                       assignedWorker.full_name ||
-                      'Assigned worker'
+                      t('assignedWorker')
                     }
                     className="h-20 w-20 rounded-3xl object-cover"
                   />
@@ -1474,11 +1474,11 @@ export default function JobDetailsPage() {
 
                 <div className="min-w-0">
                   <h2 className="text-2xl font-black text-white">
-                    {assignedWorker.full_name || 'View Worker'}
+                    {assignedWorker.full_name || t('viewWorker')}
                   </h2>
 
                   <p className="mt-2 text-sm font-black text-cyan-300">
-                    View Worker Profile →
+                    {t('viewWorkerProfile')} →
                   </p>
                 </div>
               </Link>
@@ -1592,7 +1592,7 @@ export default function JobDetailsPage() {
 
                                   {hired ? (
                                     <StatusBadge
-                                      label="Hired"
+                                      label={t('hired')}
                                       tone="green"
                                     />
                                   ) : null}
@@ -1613,16 +1613,16 @@ export default function JobDetailsPage() {
                                     t('tradeNotListed')}
                                   {' • '}
                                   {workerLocation ||
-                                    'Location not listed'}
+                                    t('locationNotListed')}
                                 </p>
 
                                 <p className="mt-3 text-sm text-slate-300">
-                                  Experience:{' '}
+                                  {t('experience')}:{' '}
                                   <span className="font-black text-white">
                                     {applicant.worker
                                       ?.years_experience
-                                      ? `${applicant.worker.years_experience} years`
-                                      : 'Not listed'}
+                                      ? t('years', { count: applicant.worker.years_experience })
+                                      : t('notListed')}
                                   </span>
                                 </p>
                               </div>
@@ -1630,20 +1630,20 @@ export default function JobDetailsPage() {
 
                             <div className="grid shrink-0 gap-3 sm:grid-cols-2 xl:w-72 xl:grid-cols-1">
                               <RateCard
-                                label="Posted Rate"
+                                label={t('postedRate')}
                                 value={
                                   job.pay_rate ||
-                                  'Not provided'
+                                  t('notProvided')
                                 }
                                 tone="cyan"
                               />
 
                               <RateCard
-                                label="Requested Rate"
+                                label={t('requestedRate')}
                                 value={
                                   applicant.requested_pay_rate ||
                                   job.pay_rate ||
-                                  'Not provided'
+                                  t('notProvided')
                                 }
                                 tone="amber"
                               />
@@ -1653,7 +1653,7 @@ export default function JobDetailsPage() {
                           {applicant.negotiation_message ? (
                             <div className="mt-5 rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-5">
                               <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
-                                Negotiation Message
+                                {t('negotiationMessage')}
                               </p>
 
                               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-cyan-100/80">
@@ -1676,9 +1676,9 @@ export default function JobDetailsPage() {
         {isCompany && isOwner ? (
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
             <SectionHeader
-              eyebrow="Job Management"
-              title="Owner Controls"
-              description="Edit this listing or permanently remove it from CrewCall."
+              eyebrow={t('jobManagement')}
+              title={t('ownerControls')}
+              description={t('ownerControlsDescription')}
             />
 
             <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-6">
@@ -1696,8 +1696,8 @@ export default function JobDetailsPage() {
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-red-400/20 bg-red-500/10 px-6 py-3 text-sm font-black text-red-200 transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {workingId === 'delete'
-                  ? 'Deleting...'
-                  : 'Delete Job'}
+                  ? t('deleting')
+                  : t('deleteJob')}
               </button>
             </div>
           </section>
@@ -1772,21 +1772,22 @@ function CompanyActions({
   jobId: string
   assignedWorkerId: string | null
 }) {
+  const t = useTranslations('JobDetail')
   const completed = currentStatus === 'completed'
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-cyan-500/10 shadow-xl shadow-black/20">
       <div className="p-5 sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-          Company Actions
+          {t('companyActions')}
         </p>
 
         <h2 className="mt-2 text-2xl font-black text-white">
-          Manage job progress and payment
+          {t('manageJobProgressAndPayment')}
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-cyan-100/70">
-          Move the job through the active work and payment
+          {t('jobPaymentLifecycle')}
           lifecycle.
         </p>
 
@@ -1801,8 +1802,8 @@ function CompanyActions({
           <ActionButton
             label={
               workingId === 'in_progress'
-                ? 'Updating...'
-                : 'Mark In Progress'
+                ? t('updating')
+                : t('markInProgress')
             }
             disabled={
               workingId === 'in_progress' ||
@@ -1816,8 +1817,8 @@ function CompanyActions({
           <ActionButton
             label={
               workingId === 'completed'
-                ? 'Updating...'
-                : 'Mark Complete'
+                ? t('updating')
+                : t('markComplete')
             }
             disabled={
               workingId === 'completed' || completed
@@ -1830,8 +1831,8 @@ function CompanyActions({
             <ActionButton
               label={
                 workingId === 'pay'
-                  ? 'Opening Secure Checkout...'
-                  : 'Fund Job'
+                  ? t('openingSecureCheckout')
+                  : t('fundJob')
               }
               disabled={workingId === 'pay'}
               onClick={onPayWorker}
@@ -1840,7 +1841,7 @@ function CompanyActions({
           ) : (
             <>
               <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
-                🔒 Funds Secured
+                🔒 {t('fundsSecured')}
               </div>
 
               {completionStatus === 'approved' &&
@@ -1849,8 +1850,8 @@ function CompanyActions({
                 <ActionButton
                   label={
                     workingId === 'release'
-                      ? 'Releasing...'
-                      : 'Release Worker Payout'
+                      ? t('releasing')
+                      : t('releaseWorkerPayout')
                   }
                   disabled={
                     workingId === 'release'
@@ -1860,15 +1861,15 @@ function CompanyActions({
                 />
               ) : jobPayoutStatus === 'released' ? (
                 <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-200">
-                  ✓ Payout Released
+                  ✓ {t('payoutReleased')}
                 </div>
               ) : completionStatus === 'submitted' ? (
                 <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200">
-                  Review Work Before Payout
+                  {t('reviewWorkBeforePayout')}
                 </div>
               ) : (
                 <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black text-slate-300">
-                  Waiting for Worker Completion
+                  {t('waitingForWorkerCompletion')}
                 </div>
               )}
             </>

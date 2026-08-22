@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -28,6 +29,7 @@ type JobUpdatePayload = {
 }
 
 export default function EditJobPage() {
+  const t = useTranslations('EditJob')
   const params = useParams()
   const router = useRouter()
 
@@ -79,7 +81,7 @@ export default function EditJobPage() {
       }
 
       if (!data) {
-        setMessage('Job not found.')
+        setMessage(t('jobNotFound'))
         setLoading(false)
         return
       }
@@ -110,7 +112,7 @@ export default function EditJobPage() {
     event.preventDefault()
 
     if (!canSave) {
-      setMessage('Job title and trade are required.')
+      setMessage(t('requiredFields'))
       return
     }
 
@@ -145,7 +147,7 @@ export default function EditJobPage() {
     return (
       <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
         <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl">
-          <p className="text-sm text-slate-300">Loading job editor...</p>
+          <p className="text-sm text-slate-300">{t('loading')}</p>
         </div>
       </main>
     )
@@ -160,10 +162,10 @@ export default function EditJobPage() {
               CrewCall
             </p>
             <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-              Edit Job
+              {t('title')}
             </h1>
             <p className="mt-2 text-sm text-slate-300">
-              Update the job details workers will see.
+              {t('description')}
             </p>
           </div>
 
@@ -171,7 +173,7 @@ export default function EditJobPage() {
             href={`/jobs/${jobId}`}
             className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/15"
           >
-            Back to Job
+            {t('backToJob')}
           </Link>
         </div>
 
@@ -188,53 +190,53 @@ export default function EditJobPage() {
           <div className="grid gap-5">
             <label className="grid gap-2">
               <span className="text-sm font-black text-slate-200">
-                Job Title
+                {t('jobTitle')}
               </span>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
-                placeholder="Example: Licensed plumber needed"
+                placeholder={t('jobTitlePlaceholder')}
               />
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-black text-slate-200">Trade</span>
+              <span className="text-sm font-black text-slate-200">{t('trade')}</span>
               <input
                 value={trade}
                 onChange={(event) => setTrade(event.target.value)}
                 className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
-                placeholder="Example: Plumbing"
+                placeholder={t('tradePlaceholder')}
               />
             </label>
 
             <label className="grid gap-2">
               <span className="text-sm font-black text-slate-200">
-                Location
+                {t('location')}
               </span>
               <input
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
                 className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
-                placeholder="Example: Des Moines, IA"
+                placeholder={t('locationPlaceholder')}
               />
             </label>
 
             <label className="grid gap-2">
               <span className="text-sm font-black text-slate-200">
-                Pay Rate
+                {t('payRate')}
               </span>
               <input
                 value={payRate}
                 onChange={(event) => setPayRate(event.target.value)}
                 className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
-                placeholder="Example: $45/hr or $2,500 flat"
+                placeholder={t('payRatePlaceholder')}
               />
             </label>
 
             <label className="grid gap-2">
               <span className="text-sm font-black text-slate-200">
-                Start Date
+                {t('startDate')}
               </span>
               <input
                 type="date"
@@ -245,31 +247,31 @@ export default function EditJobPage() {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-black text-slate-200">Status</span>
+              <span className="text-sm font-black text-slate-200">{t('status')}</span>
               <select
                 value={status}
                 onChange={(event) => setStatus(event.target.value)}
                 className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-orange-400"
               >
-                <option value="open">Open</option>
-                <option value="assigned">Assigned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="closed">Closed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="open">{t('open')}</option>
+                <option value="assigned">{t('assigned')}</option>
+                <option value="in_progress">{t('inProgress')}</option>
+                <option value="completed">{t('completed')}</option>
+                <option value="closed">{t('closed')}</option>
+                <option value="cancelled">{t('cancelled')}</option>
               </select>
             </label>
 
             <label className="grid gap-2">
               <span className="text-sm font-black text-slate-200">
-                Description
+                {t('jobDescription')}
               </span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={7}
                 className="resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400"
-                placeholder="Describe the job, scope, tools needed, schedule, and expectations..."
+                placeholder={t('jobDescriptionPlaceholder')}
               />
             </label>
           </div>
@@ -280,14 +282,14 @@ export default function EditJobPage() {
               disabled={saving || !canSave}
               className="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('saving') : t('saveChanges')}
             </button>
 
             <Link
               href={`/jobs/${jobId}`}
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/15"
             >
-              Cancel
+              {t('cancel')}
             </Link>
           </div>
         </form>
