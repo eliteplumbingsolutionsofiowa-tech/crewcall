@@ -81,12 +81,16 @@ function statusTone(value: string | null) {
 function paymentTone(value: string | null) {
   const status = value || 'unpaid'
 
-  if (status.includes('paid')) {
+  if (status === 'paid' || status === 'released') {
     return 'border-emerald-300/30 bg-emerald-400/10 text-emerald-100'
   }
 
-  if (status.includes('pending')) {
+  if (status === 'pending' || status === 'processing') {
     return 'border-orange-300/30 bg-orange-400/10 text-orange-100'
+  }
+
+  if (status === 'unpaid' || status === 'not_released') {
+    return 'border-white/10 bg-white/10 text-slate-200'
   }
 
   return 'border-white/10 bg-white/10 text-slate-200'
