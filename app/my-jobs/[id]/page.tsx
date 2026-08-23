@@ -243,6 +243,7 @@ export default function JobDetailPage() {
   const [matchLoading, setMatchLoading] = useState(false)
   const [payLoading, setPayLoading] = useState(false)
   const [approvalLoading, setApprovalLoading] = useState(false)
+  const [hasReviewedWorker, setHasReviewedWorker] = useState(false)
   const [invitingWorkerId, setInvitingWorkerId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
@@ -280,6 +281,7 @@ export default function JobDetailPage() {
     }
 
     setCurrentUserId(user.id)
+    setHasReviewedWorker(false)
 
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
@@ -441,6 +443,24 @@ export default function JobDetailPage() {
         profiles.find((profile) => profile.id === jobData.assigned_worker_id) ||
           null
       )
+
+      const { data: existingReview, error: reviewError } =
+        await supabase
+          .from('reviews')
+          .select('id')
+          .eq('job_id', jobId)
+          .eq('reviewer_id', user.id)
+          .eq('reviewee_id', jobData.assigned_worker_id)
+          .maybeSingle()
+
+      if (reviewError) {
+        console.error(
+          'Unable to check company review status:',
+          reviewError
+        )
+      }
+
+      setHasReviewedWorker(Boolean(existingReview?.id))
     }
 
     setLoading(false)
@@ -1057,7 +1077,8 @@ export default function JobDetailPage() {
                 </div>
               )}
 
-              {job.status === 'completed' && (
+              {job.status === 'completed' &&
+              !hasReviewedWorker && (
                 <Link
                   href={`/jobs/${job.id}/review?to=${assignedWorker.id}`}
                   className="rounded-2xl bg-gradient-to-r from-orange-400 to-yellow-300 px-5 py-3 text-sm font-black text-slate-950"
