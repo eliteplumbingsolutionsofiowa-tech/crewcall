@@ -28,7 +28,7 @@ const supabaseServiceRoleKey = getEnv(
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
-  'https://crewcall-tqin.vercel.app'
+  'https://usecrewcall.com'
 ).replace(/\/$/, '')
 
 const stripe = new Stripe(stripeSecretKey)

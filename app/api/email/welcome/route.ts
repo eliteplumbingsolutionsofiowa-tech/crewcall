@@ -4,7 +4,7 @@ import { sendCrewCallEmail } from '@/lib/resend'
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://crewcall-tqin.vercel.app'
+  'https://usecrewcall.com'
 
 type WelcomeRequest = {
   email?: string

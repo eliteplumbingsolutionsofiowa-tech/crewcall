@@ -30,7 +30,7 @@ const authClient = createClient(supabaseUrl, supabaseAnonKey, {
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://crewcall-tqin.vercel.app'
+  'https://usecrewcall.com'
 
 const MAX_PAY_RATE_LENGTH = 100
 const MAX_NEGOTIATION_MESSAGE_LENGTH = 2_000

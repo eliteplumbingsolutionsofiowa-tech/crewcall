@@ -6,10 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'mobile-shell',
 
   server: {
-    url: 'https://crewcall-tqin.vercel.app',
+    url: 'https://usecrewcall.com',
     cleartext: false,
     allowNavigation: [
-      'crewcall-tqin.vercel.app',
+      'usecrewcall.com',
       '*.supabase.co',
       '*.stripe.com',
     ],

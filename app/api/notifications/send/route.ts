@@ -87,7 +87,7 @@ export async function POST(req: Request) {
                   <p>${escapeHtml(message)}</p>
                   ${
                     jobId
-                      ? `<p><a href="https://crewcall-tqin.vercel.app/jobs/${jobId}">View job</a></p>`
+                      ? `<p><a href="https://usecrewcall.com/jobs/${jobId}">View job</a></p>`
                       : ''
                   }
                 </div>
