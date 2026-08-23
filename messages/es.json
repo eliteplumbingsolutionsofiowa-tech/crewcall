@@ -3119,7 +3119,16 @@
     "title": "Eliminar Tu Cuenta de CrewCall",
     "deleting": "Eliminando Cuenta...",
     "deletePermanently": "Eliminar Cuenta Permanentemente",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "sessionExpired": "Tu sesión ha expirado. Inicia sesión nuevamente.",
+    "deletionRequestFailed": "No se pudo eliminar la cuenta.",
+    "accountDeleted": "Tu cuenta de CrewCall ha sido eliminada permanentemente.",
+    "description": "Puedes eliminar permanentemente tu cuenta de CrewCall directamente desde esta pantalla. Esta acción no se puede deshacer.",
+    "informationDeleted": "Información eliminada",
+    "informationDeletedText": "CrewCall eliminará la información de tu cuenta, la información de tu perfil, los archivos subidos, las solicitudes y otros datos personales asociados.",
+    "informationRetained": "Información que puede conservarse",
+    "informationRetainedText": "Ciertos registros de transacciones, pagos, prevención de fraude o registros legales pueden conservarse cuando lo exija la ley.",
+    "deletionNotice": "Tu cuenta y los datos personales asociados se eliminarán permanentemente de inmediato."
   },
   "ResetPassword": {
     "title": "Restablecer Contraseña",
