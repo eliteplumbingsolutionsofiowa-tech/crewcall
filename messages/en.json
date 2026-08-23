@@ -894,7 +894,13 @@
     "archiving": "Archiving...",
     "restore": "Restore",
     "archive": "Archive",
-    "loadingMessages": "Loading messages..."
+    "loadingMessages": "Loading messages...",
+    "pleaseLoginToMessage": "Please log in to send a message.",
+    "couldNotLoadProfiles": "Could not load profiles.",
+    "unableToStartJobConversation": "Unable to start job conversation.",
+    "unableToCreateConversation": "Unable to create conversation.",
+    "opening": "Opening...",
+    "messageWorker": "Message Worker"
   },
   "MessageThread": {
     "loginRequired": "Please log in.",

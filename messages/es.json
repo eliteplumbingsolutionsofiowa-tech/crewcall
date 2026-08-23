@@ -894,7 +894,13 @@
     "archiving": "Archivando...",
     "restore": "Restaurar",
     "archive": "Archivar",
-    "loadingMessages": "Cargando mensajes..."
+    "loadingMessages": "Cargando mensajes...",
+    "pleaseLoginToMessage": "Inicia sesión para enviar un mensaje.",
+    "couldNotLoadProfiles": "No se pudieron cargar los perfiles.",
+    "unableToStartJobConversation": "No se pudo iniciar la conversación del trabajo.",
+    "unableToCreateConversation": "No se pudo crear la conversación.",
+    "opening": "Abriendo...",
+    "messageWorker": "Enviar Mensaje al Trabajador"
   },
   "MessageThread": {
     "loginRequired": "Inicia sesión.",

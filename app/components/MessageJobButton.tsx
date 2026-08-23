@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type Profile = {
@@ -25,6 +27,8 @@ export default function MessageJobButton({
   label = 'Message Worker',
   className = '',
 }: Props) {
+  const router = useRouter()
+  const t = useTranslations('Messages')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -38,7 +42,7 @@ export default function MessageJobButton({
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setMessage('Please log in to send a message.')
+      setMessage(t('pleaseLoginToMessage'))
       setLoading(false)
       return
     }
@@ -56,7 +60,7 @@ export default function MessageJobButton({
       .single<Profile>()
 
     if (!myProfile || !targetProfile) {
-      setMessage('Could not load profiles.')
+      setMessage(t('couldNotLoadProfiles'))
       setLoading(false)
       return
     }
@@ -84,7 +88,7 @@ export default function MessageJobButton({
     }
 
     if (!workerId || !companyId) {
-      setMessage('Unable to start job conversation.')
+      setMessage(t('unableToStartJobConversation'))
       setLoading(false)
       return
     }
@@ -103,8 +107,7 @@ export default function MessageJobButton({
       await query.maybeSingle<Conversation>()
 
     if (existingConversation?.id) {
-      window.location.href =
-        `/messages/${existingConversation.id}`
+      router.push(`/messages/${existingConversation.id}`)
       return
     }
 
@@ -121,14 +124,13 @@ export default function MessageJobButton({
 
     if (error || !newConversation) {
       setMessage(
-        error?.message || 'Unable to create conversation.'
+        error?.message || t('unableToCreateConversation')
       )
       setLoading(false)
       return
     }
 
-    window.location.href =
-      `/messages/${newConversation.id}`
+    router.push(`/messages/${newConversation.id}`)
   }
 
   return (
@@ -160,7 +162,7 @@ export default function MessageJobButton({
           ${className}
         "
       >
-        {loading ? 'Opening...' : `💬 ${label}`}
+        {loading ? t('opening') : `💬 ${label || t('messageWorker')}`}
       </button>
 
       {message && (
