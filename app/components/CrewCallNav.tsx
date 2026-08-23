@@ -14,6 +14,8 @@ import CrewCallToast from '@/app/components/CrewCallToast'
 import CommandPalette from '@/app/components/search/CommandPalette'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
+import { Capacitor } from '@capacitor/core'
+import { registerPushNotifications } from '@/lib/push/register'
 
 type Role = 'company' | 'worker' | 'admin' | null
 
@@ -90,6 +92,23 @@ export default function CrewCallNav() {
     setNotificationPulse(false)
     setMessagePulse(false)
   }, [])
+
+  useEffect(() => {
+    if (!userId) {
+      return
+    }
+
+    if (!Capacitor.isNativePlatform()) {
+      return
+    }
+
+    void registerPushNotifications().catch((error) => {
+      console.error(
+        'Unable to register CrewCall push notifications:',
+        error
+      )
+    })
+  }, [userId])
 
   const loadNavCounts = useCallback(async () => {
     const requestId = ++loadRequestRef.current
