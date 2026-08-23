@@ -338,11 +338,24 @@ export default function WorkerDashboard() {
                       </p>
 
                       {payStatus === 'paid' ? (
-                        <p className="mt-3 text-sm font-black text-emerald-300">
-                          {job.paid_at
-                            ? t('paidOn', { date: formatDate(job.paid_at, t('notScheduled')) })
-                            : t('paid')}
-                        </p>
+                        <div className="mt-3 space-y-1">
+                          <p className="text-sm font-black text-emerald-300">
+                            {job.paid_at
+                              ? t('paidOn', {
+                                  date: formatDate(
+                                    job.paid_at,
+                                    t('notScheduled')
+                                  ),
+                                })
+                              : t('paid')}
+                          </p>
+
+                          {payoutStatus === 'released' ? (
+                            <p className="text-sm font-bold text-cyan-300">
+                              ✓ {t('paymentReleased')}
+                            </p>
+                          ) : null}
+                        </div>
                       ) : null}
 
                       {isCompleted && payStatus !== 'paid' ? (
