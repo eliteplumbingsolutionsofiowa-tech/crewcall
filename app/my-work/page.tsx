@@ -528,12 +528,13 @@ export default function MyWorkPage() {
                         <Badge
                           value={job.payout_status || 'not_released'}
                           label={`${t('payout')}: ${
-                            job.payout_status === 'paid' ||
                             job.payout_status === 'released'
-                              ? t('paid')
-                              : job.payout_status === 'pending'
-                                ? t('pending')
-                                : t('notReleased')
+                              ? t('released')
+                              : job.payout_status === 'paid'
+                                ? t('paid')
+                                : job.payout_status === 'pending'
+                                  ? t('pending')
+                                  : t('notReleased')
                           }`}
                           payment
                         />
@@ -595,14 +596,22 @@ export default function MyWorkPage() {
 
                       {job.payment_status ===
                         'paid' && (
-                        <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
-                          {job.paid_at
-                            ? t('paidOn', {
-                                date: new Date(
-                                  job.paid_at
-                                ).toLocaleDateString(locale),
-                              })
-                            : t('paid')}
+                        <div className="mt-5 space-y-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
+                          <p>
+                            {job.paid_at
+                              ? t('paidOn', {
+                                  date: new Date(
+                                    job.paid_at
+                                  ).toLocaleDateString(locale),
+                                })
+                              : t('paid')}
+                          </p>
+
+                          {job.payout_status === 'released' ? (
+                            <p className="text-cyan-200">
+                              ✓ {t('paymentReleased')}
+                            </p>
+                          ) : null}
                         </div>
                       )}
                     </div>
