@@ -2557,7 +2557,8 @@
     "pending": "Pendiente",
     "notReleased": "No Liberado",
     "cancelled": "Cancelado",
-    "rejected": "Rechazado"
+    "rejected": "Rechazado",
+    "paymentReleased": "Pago liberado a tu cuenta."
   },
   "CompletedJobs": {
     "mustBeLoggedIn": "Debes iniciar sesión para ver los trabajos completados.",
@@ -3149,6 +3150,5 @@
     "referredWorkers": "5 trabajadores referidos",
     "profileBoost": "Impulso de perfil",
     "moreJobVisibility": "Mayor visibilidad de trabajos"
-  },
-  "paymentReleased": "Pago liberado a tu cuenta."
+  }
 }

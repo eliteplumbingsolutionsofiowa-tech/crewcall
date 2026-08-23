@@ -2557,7 +2557,8 @@
     "pending": "Pending",
     "notReleased": "Not Released",
     "cancelled": "Cancelled",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "paymentReleased": "Payment released to your account."
   },
   "CompletedJobs": {
     "mustBeLoggedIn": "You must be logged in to view completed jobs.",
@@ -3170,6 +3171,5 @@
     "referredWorkers": "5 referred workers",
     "profileBoost": "Profile boost",
     "moreJobVisibility": "More job visibility"
-  },
-  "paymentReleased": "Payment released to your account."
+  }
 }
