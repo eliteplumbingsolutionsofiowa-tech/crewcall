@@ -318,6 +318,47 @@ export default function MessageConversationPage() {
               'crewcall-refresh-messages'
             )
           )
+
+          if (
+            newMessage.sender_id !== userId
+          ) {
+            void (async () => {
+              try {
+                const {
+                  data: { session },
+                } = await supabase.auth.getSession()
+
+                if (!session?.access_token) {
+                  return
+                }
+
+                const response = await fetch('/api/messages/read', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({
+                    conversationId: id,
+                  }),
+                })
+
+                if (response.ok) {
+                  window.dispatchEvent(
+                    new Event('crewcall-refresh-messages')
+                  )
+                  window.dispatchEvent(
+                    new Event('crewcall-refresh-nav')
+                  )
+                }
+              } catch (readError) {
+                console.error(
+                  'Unable to mark realtime message read:',
+                  readError
+                )
+              }
+            })()
+          }
         }
       )
       .on(
