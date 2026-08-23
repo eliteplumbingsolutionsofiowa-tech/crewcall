@@ -105,6 +105,39 @@ export default function MessageConversationPage() {
     }
 
     setMessages((messageData as Message[]) || [])
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session?.access_token) {
+        const response = await fetch('/api/messages/read', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            conversationId: id,
+          }),
+        })
+
+        if (response.ok) {
+          window.dispatchEvent(
+            new Event('crewcall-refresh-messages')
+          )
+          window.dispatchEvent(
+            new Event('crewcall-refresh-nav')
+          )
+        }
+      }
+    } catch (readError) {
+      console.error(
+        'Unable to mark conversation messages read:',
+        readError
+      )
+    }
   }
 
   async function sendTypingState(
