@@ -162,23 +162,37 @@ export default function MessageConversationPage() {
 
     try {
       const {
-        data,
-        error: sendError,
-      } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: id,
-          sender_id: userId,
-          body: cleanText,
-        })
-        .select(
-          'id, body, sender_id, created_at'
-        )
-        .single()
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      if (sendError) {
-        throw sendError
+      if (!session?.access_token) {
+        throw new Error(t('loginRequired'))
       }
+
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          conversationId: id,
+          body: cleanText,
+        }),
+      })
+
+      const result = await response
+        .json()
+        .catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error || t('sendFailed')
+        )
+      }
+
+      const data =
+        result?.message as Message | undefined
 
       if (data) {
         setMessages((current) => {
@@ -193,7 +207,7 @@ export default function MessageConversationPage() {
 
           return [
             ...current,
-            data as Message,
+            data,
           ]
         })
       }
