@@ -94,13 +94,26 @@ export default function CrewCallNav() {
   }, [])
 
   useEffect(() => {
+    console.log(
+      'CREWCALL PUSH EFFECT',
+      {
+        userId,
+        platform: Capacitor.getPlatform(),
+        native: Capacitor.isNativePlatform(),
+      }
+    )
+
     if (!userId) {
+      console.log('CREWCALL PUSH STOP: no user')
       return
     }
 
     if (!Capacitor.isNativePlatform()) {
+      console.log('CREWCALL PUSH STOP: not native')
       return
     }
+
+    console.log('CREWCALL PUSH START')
 
     void registerPushNotifications().catch((error) => {
       console.error(
