@@ -119,7 +119,7 @@ export default function MyWorkPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      setError('You must be logged in to view your work.')
+      setError(t('loginRequired'))
       setJobs([])
       setLoading(false)
       setRefreshing(false)
@@ -557,7 +557,7 @@ export default function MyWorkPage() {
                           label={t('trade')}
                           value={
                             job.trade ||
-                            'Not listed'
+                            t('notListed')
                           }
                         />
 
@@ -565,7 +565,7 @@ export default function MyWorkPage() {
                           label={t('location')}
                           value={
                             job.location ||
-                            'Not listed'
+                            t('notListed')
                           }
                         />
 
@@ -573,7 +573,7 @@ export default function MyWorkPage() {
                           label={t('pay')}
                           value={
                             job.pay_rate ||
-                            'Not listed'
+                            t('notListed')
                           }
                         />
 
@@ -592,9 +592,7 @@ export default function MyWorkPage() {
                         job.payment_status !==
                           'paid' && (
                           <div className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-400/10 p-4 text-sm font-bold text-orange-100">
-                            Work is complete.
-                            Waiting for company
-                            payment.
+                            {t('workCompleteWaiting')}
                           </div>
                         )}
 

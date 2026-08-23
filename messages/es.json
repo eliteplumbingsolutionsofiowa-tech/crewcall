@@ -2559,7 +2559,8 @@
     "notReleased": "No Liberado",
     "cancelled": "Cancelado",
     "rejected": "Rechazado",
-    "paymentReleased": "Pago liberado a tu cuenta."
+    "paymentReleased": "Pago liberado a tu cuenta.",
+    "loginRequired": "Debes iniciar sesión para ver tus trabajos."
   },
   "CompletedJobs": {
     "mustBeLoggedIn": "Debes iniciar sesión para ver los trabajos completados.",

@@ -2559,7 +2559,8 @@
     "notReleased": "Not Released",
     "cancelled": "Cancelled",
     "rejected": "Rejected",
-    "paymentReleased": "Payment released to your account."
+    "paymentReleased": "Payment released to your account.",
+    "loginRequired": "You must be logged in to view your work."
   },
   "CompletedJobs": {
     "mustBeLoggedIn": "You must be logged in to view completed jobs.",
