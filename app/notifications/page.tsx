@@ -348,31 +348,63 @@ export default function NotificationsPage() {
     if (!isUnread(notification)) return true
 
     setWorkingId(notification.id)
+    setErrorMessage(null)
 
-    const { error } = await notificationsUpdateTable()
-      .update({
-        is_read: true,
-        read: true,
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setErrorMessage(t('loginRequired'))
+        return false
+      }
+
+      const response = await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          notificationId: notification.id,
+        }),
       })
-      .eq('id', notification.id)
 
-    if (error) {
-      setErrorMessage(error.message)
-      setWorkingId(null)
-      return false
-    }
+      const result = await response
+        .json()
+        .catch(() => null)
 
-    setNotifications((current) =>
-      current.map((item) =>
-        item.id === notification.id
-          ? { ...item, is_read: true, read: true }
-          : item
+      if (!response.ok) {
+        setErrorMessage(
+          result?.error || t('updateFailed')
+        )
+        return false
+      }
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id
+            ? { ...item, is_read: true, read: true }
+            : item
+        )
       )
-    )
 
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
-    setWorkingId(null)
-    return true
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+
+      return true
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : t('updateFailed')
+      )
+      return false
+    } finally {
+      setWorkingId(null)
+    }
   }
 
   async function openNotification(notification: Notification) {
@@ -386,36 +418,67 @@ export default function NotificationsPage() {
   }
 
   async function markAllRead() {
-    const unreadIds = notifications.filter(isUnread).map((item) => item.id)
+    const unreadIds = notifications
+      .filter(isUnread)
+      .map((item) => item.id)
 
     if (unreadIds.length === 0) return
 
     setMarkingAll(true)
     setErrorMessage(null)
 
-    const { error } = await notificationsUpdateTable()
-      .update({
-        is_read: true,
-        read: true,
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setErrorMessage(t('loginRequired'))
+        return
+      }
+
+      const response = await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          notificationIds: unreadIds,
+        }),
       })
-      .in('id', unreadIds)
 
-    if (error) {
-      setErrorMessage(error.message)
+      const result = await response
+        .json()
+        .catch(() => null)
+
+      if (!response.ok) {
+        setErrorMessage(
+          result?.error || t('updateFailed')
+        )
+        return
+      }
+
+      setNotifications((current) =>
+        current.map((item) => ({
+          ...item,
+          is_read: true,
+          read: true,
+        }))
+      )
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : t('updateFailed')
+      )
+    } finally {
       setMarkingAll(false)
-      return
     }
-
-    setNotifications((current) =>
-      current.map((item) => ({
-        ...item,
-        is_read: true,
-        read: true,
-      }))
-    )
-
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
-    setMarkingAll(false)
   }
 
   async function clearNotification(id: string) {
