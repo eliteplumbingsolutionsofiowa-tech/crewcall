@@ -93,7 +93,8 @@
     "requestCompletion": "Solicitar Finalización",
     "leaveReview": "Dejar Reseña",
     "inProgress": "En progreso",
-    "finishJob": "Finalizar trabajo"
+    "finishJob": "Finalizar trabajo",
+    "paymentReleased": "Pago liberado a tu cuenta."
   },
   "WorkerLocation": {
     "title": "Ubicación del Trabajador",

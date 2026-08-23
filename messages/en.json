@@ -93,7 +93,8 @@
     "requestCompletion": "Request Completion",
     "leaveReview": "Leave Review",
     "inProgress": "In Progress",
-    "finishJob": "Finish Job"
+    "finishJob": "Finish Job",
+    "paymentReleased": "Payment released to your account."
   },
   "WorkerLocation": {
     "title": "Worker Location",
