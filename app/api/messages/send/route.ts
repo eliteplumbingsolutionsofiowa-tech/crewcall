@@ -148,7 +148,7 @@ export async function POST(req: Request) {
     const requestedSenderId =
       normalizeOptionalString(payload.senderId)
 
-    const recipientId =
+    let recipientId =
       normalizeOptionalString(
         payload.recipientId
       )
@@ -165,11 +165,10 @@ export async function POST(req: Request) {
     const fileType =
       normalizeOptionalString(payload.fileType)
 
-    if (!conversationId || !recipientId) {
+    if (!conversationId) {
       return NextResponse.json(
         {
-          error:
-            'Missing conversationId or recipientId.',
+          error: 'Missing conversationId.',
         },
         { status: 400 }
       )
@@ -262,7 +261,16 @@ export async function POST(req: Request) {
       )
     }
 
+    const automaticRecipientId =
+      conversation.company_id === user.id
+        ? conversation.worker_id
+        : conversation.company_id
+
+    recipientId =
+      recipientId || automaticRecipientId
+
     if (
+      !recipientId ||
       recipientId === user.id ||
       !participants.includes(recipientId)
     ) {
