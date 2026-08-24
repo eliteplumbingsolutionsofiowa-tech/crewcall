@@ -690,18 +690,41 @@ export default function ApplicantsPage() {
         return
       }
 
-      const { error } = await supabase
-        .from('applications')
-        .update({
-          company_counter_offer: counter,
-          negotiation_message:
-            counterMessages[applicant.id] || null,
-          negotiation_status: 'open',
-        })
-        .eq('id', applicant.id)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      if (error) {
-        throw error
+      if (!session?.access_token) {
+        throw new Error(t('sessionExpired'))
+      }
+
+      const response = await fetch(
+        '/api/applications/counter-offer',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            applicationId: applicant.id,
+            counterOffer: counter,
+            message:
+              counterMessages[applicant.id] || null,
+          }),
+        }
+      )
+
+      const result = await response
+        .json()
+        .catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            t('unableToSendCounterOffer')
+        )
       }
 
       setMessage(t('counterOfferSent'))
