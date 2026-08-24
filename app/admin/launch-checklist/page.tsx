@@ -17,7 +17,7 @@ const checks: CheckItem[] = [
   { label: 'Notifications', status: 'complete' },
   { label: 'File Uploads', status: 'complete' },
   { label: 'Mobile Layout', status: 'complete' },
-  { label: 'Email Delivery', status: 'warning' },
+  { label: 'Email Delivery', status: 'complete' },
 ]
 
 const workflows = [

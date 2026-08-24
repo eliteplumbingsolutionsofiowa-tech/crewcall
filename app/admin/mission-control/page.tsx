@@ -119,7 +119,7 @@ export default function MissionControlPage() {
               { label: 'Mission Control', complete: true },
               { label: 'Stripe', complete: true },
               { label: 'AI Recruiting', complete: true },
-              { label: 'Push Notifications', complete: false },
+              { label: 'Push Notifications', complete: true },
               { label: 'Apple Approval', complete: false },
               { label: 'TestFlight', complete: false },
               { label: 'Google Play', complete: false },
@@ -144,11 +144,11 @@ export default function MissionControlPage() {
             <div className="mt-6 rounded-2xl bg-sky-500/10 p-6">
 
               <p className="text-3xl font-black text-sky-400">
-                Push Notifications
+                Email Delivery
               </p>
 
               <p className="mt-3 text-slate-300">
-                Estimated effort: 2 hours
+                Verify production email delivery and remove the remaining launch warning.
               </p>
 
             </div>

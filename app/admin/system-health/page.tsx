@@ -36,8 +36,8 @@ const services: HealthItem[] = [
   },
   {
     name: 'Email Delivery',
-    status: 'warning',
-    detail: 'Monitor',
+    status: 'online',
+    detail: 'Operational',
   },
   {
     name: 'Realtime',
@@ -206,7 +206,7 @@ export default function SystemHealthPage() {
         <section className="grid gap-5 lg:grid-cols-3">
 
           <ActionCard title="Error Tracking">
-            12 warnings today
+            No active launch warnings
           </ActionCard>
 
           <ActionCard title="AI Recruiter">

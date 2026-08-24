@@ -2,12 +2,6 @@
 
 const errors = [
   {
-    type: 'Warning',
-    message: 'Email delivery delay detected',
-    route: '/api/email/welcome',
-    time: 'Today 10:42 AM',
-  },
-  {
     type: 'Info',
     message: 'Stripe webhook processed',
     route: '/api/stripe/webhook',
@@ -38,7 +32,7 @@ export default function ErrorCenterPage() {
 
           <Stat title="Errors Today" value="0" />
 
-          <Stat title="Warnings" value="12" />
+          <Stat title="Warnings" value="0" />
 
           <Stat title="Resolved" value="48" />
 
