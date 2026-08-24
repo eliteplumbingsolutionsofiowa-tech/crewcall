@@ -121,7 +121,7 @@ export default function MissionControlPage() {
               { label: 'AI Recruiting', complete: true },
               { label: 'Push Notifications', complete: true },
               { label: 'Apple Approval', complete: false },
-              { label: 'TestFlight', complete: false },
+              { label: 'TestFlight', complete: true },
               { label: 'Google Play', complete: false },
               { label: 'Production Launch', complete: false },
             ]}
@@ -144,11 +144,11 @@ export default function MissionControlPage() {
             <div className="mt-6 rounded-2xl bg-sky-500/10 p-6">
 
               <p className="text-3xl font-black text-sky-400">
-                TestFlight Beta Testing
+                Apple Approval
               </p>
 
               <p className="mt-3 text-slate-300">
-                Create a TestFlight group and add testers to the current iOS build.
+                Complete the App Store submission and submit CrewCall for Apple review.
               </p>
 
             </div>
