@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { HiredEmail } from '@/emails/HiredEmail'
 import { sendCrewCallEmail } from '@/lib/resend'
+import { sendApnsPush } from '@/lib/push/apns'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -481,6 +482,61 @@ export async function POST(req: Request) {
       console.error(
         'Unable to create hired notification:',
         notificationError
+      )
+    }
+
+    try {
+      const {
+        data: workerDevices,
+        error: workerDevicesError,
+      } = await adminClient
+        .from('device_tokens')
+        .select('id, token')
+        .eq('user_id', workerId)
+        .eq('platform', 'ios')
+
+      if (workerDevicesError) {
+        console.error(
+          'Unable to load hired worker push devices:',
+          workerDevicesError
+        )
+      } else {
+        const pushBody = `You were hired for ${
+          job.title || 'a CrewCall job'
+        }`
+
+        for (const device of workerDevices || []) {
+          try {
+            const pushResult = await sendApnsPush({
+              deviceToken: device.token,
+              title: '🎉 You were hired',
+              body: pushBody,
+              url: `/jobs/${jobId}`,
+              badge: 1,
+            })
+
+            if (pushResult.status !== 200) {
+              console.error(
+                'APNs hired push failed:',
+                {
+                  deviceId: device.id,
+                  status: pushResult.status,
+                  response: pushResult.body,
+                }
+              )
+            }
+          } catch (pushError) {
+            console.error(
+              'Unable to send hired push:',
+              pushError
+            )
+          }
+        }
+      }
+    } catch (pushError) {
+      console.error(
+        'Hired push delivery failed:',
+        pushError
       )
     }
 
