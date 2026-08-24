@@ -71,50 +71,88 @@ export default function WorkerApplicationsPage() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>('all')
 
-  async function acceptCounter(app: Application) {
-    if (!app.company_counter_offer) return
+  async function respondToCounter(
+    app: Application,
+    action: 'accept' | 'decline'
+  ) {
+    if (
+      action === 'accept' &&
+      !app.company_counter_offer
+    ) {
+      return
+    }
 
     setWorkingId(app.id)
     setMessage(null)
 
-    const { error } = await supabase
-      .from('applications')
-      .update({
-        requested_pay_rate: app.company_counter_offer,
-        negotiation_status: 'accepted',
-        negotiation_message:
-          t('workerAcceptedCounter'),
-      })
-      .eq('id', app.id)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    if (error) {
-      setMessage(error.message)
+      if (!session?.access_token) {
+        throw new Error('Please log in again.')
+      }
+
+      const response = await fetch(
+        '/api/applications/counter-response',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            applicationId: app.id,
+            action,
+          }),
+        }
+      )
+
+      const result = await response
+        .json()
+        .catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            'Unable to respond to counter offer.'
+        )
+      }
+
+      if (action === 'accept') {
+        setMessage(
+          t('rateAccepted', {
+            rate:
+              result?.agreedRate ||
+              app.company_counter_offer,
+          })
+        )
+      }
+
+      await loadApplications()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to respond to counter offer.'
+      )
+    } finally {
       setWorkingId(null)
-      return
     }
-
-    setMessage(
-      t('rateAccepted', { rate: app.company_counter_offer })
-    )
-
-    await loadApplications()
-
-    setWorkingId(null)
   }
 
-  async function declineCounter(app: Application) {
-    setWorkingId(app.id)
+  async function acceptCounter(
+    app: Application
+  ) {
+    await respondToCounter(app, 'accept')
+  }
 
-    await supabase
-      .from('applications')
-      .update({
-        negotiation_status: 'declined',
-      })
-      .eq('id', app.id)
-
-    await loadApplications()
-
-    setWorkingId(null)
+  async function declineCounter(
+    app: Application
+  ) {
+    await respondToCounter(app, 'decline')
   }
 
   async function sendWorkerCounter(app: Application) {

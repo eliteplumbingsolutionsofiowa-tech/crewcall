@@ -860,8 +860,15 @@ export default function JobDetailsPage() {
   }
 
 
-  async function acceptCompanyCounter() {
-    if (!workerApplication?.company_counter_offer) {
+  async function respondToCompanyCounter(
+    action: 'accept' | 'decline'
+  ) {
+    if (!workerApplication) return
+
+    if (
+      action === 'accept' &&
+      !workerApplication.company_counter_offer
+    ) {
       setMessage(t('noCounterOffer'))
       setMessageTone('error')
       return
@@ -871,44 +878,64 @@ export default function JobDetailsPage() {
     setMessage(null)
 
     try {
-      const agreedRate =
-        workerApplication.company_counter_offer
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      const { error } = await supabase
-        .from('applications')
-        .update({
-          requested_pay_rate: agreedRate,
-          negotiation_status: 'accepted',
-        })
-        .eq('id', workerApplication.id)
-
-      if (error) {
-        throw error
+      if (!session?.access_token) {
+        throw new Error('Please log in again.')
       }
 
-      const { error: notificationError } = await notificationsTable()
-        .insert({
-          user_id: job!.company_id,
-          title: t('workerAcceptedCounterOffer'),
-          body: `Your counter offer of $${agreedRate} for "${job!.title}" was accepted.`,
-          link_url: `/my-jobs/${job!.id}/applicants`,
-          read: false,
-          is_read: false,
-        })
+      const response = await fetch(
+        '/api/applications/counter-response',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            applicationId:
+              workerApplication.id,
+            action,
+          }),
+        }
+      )
 
-      if (notificationError) {
-        console.warn(
-          'Unable to create company acceptance notification:',
-          notificationError
+      const result = await response
+        .json()
+        .catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            (action === 'accept'
+              ? t('unableAcceptCounter')
+              : t('unableDeclineCounter'))
         )
       }
 
-      setMessage(
-        t('counterAccepted', { rate: agreedRate })
-      )
+      if (action === 'accept') {
+        const agreedRate =
+          result?.agreedRate ||
+          workerApplication.company_counter_offer
+
+        setMessage(
+          t('counterAccepted', {
+            rate: agreedRate,
+          })
+        )
+      } else {
+        setMessage(
+          t('counterDeclinedMessage')
+        )
+      }
+
       setMessageTone('success')
 
       await loadPage(true)
+
       window.dispatchEvent(
         new Event('crewcall-refresh-nav')
       )
@@ -916,12 +943,18 @@ export default function JobDetailsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : t('unableAcceptCounter')
+          : action === 'accept'
+            ? t('unableAcceptCounter')
+            : t('unableDeclineCounter')
       )
       setMessageTone('error')
     } finally {
       setWorkingId(null)
     }
+  }
+
+  async function acceptCompanyCounter() {
+    await respondToCompanyCounter('accept')
   }
 
   async function declineCompanyCounter() {
@@ -933,55 +966,7 @@ export default function JobDetailsPage() {
 
     if (!confirmed) return
 
-    setWorkingId(workerApplication.id)
-    setMessage(null)
-
-    try {
-      const { error } = await supabase
-        .from('applications')
-        .update({
-          negotiation_status: 'declined',
-        })
-        .eq('id', workerApplication.id)
-
-      if (error) {
-        throw error
-      }
-
-      const { error: notificationError } = await notificationsTable()
-        .insert({
-          user_id: job!.company_id,
-          title: t('workerDeclinedCounterOffer'),
-          body: `Your counter offer for "${job!.title}" was declined.`,
-          link_url: `/my-jobs/${job!.id}/applicants`,
-          read: false,
-          is_read: false,
-        })
-
-      if (notificationError) {
-        console.warn(
-          'Unable to create company decline notification:',
-          notificationError
-        )
-      }
-
-      setMessage(t('counterDeclinedMessage'))
-      setMessageTone('success')
-
-      await loadPage(true)
-      window.dispatchEvent(
-        new Event('crewcall-refresh-nav')
-      )
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : t('unableDeclineCounter')
-      )
-      setMessageTone('error')
-    } finally {
-      setWorkingId(null)
-    }
+    await respondToCompanyCounter('decline')
   }
 
   if (loading) {
