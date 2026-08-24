@@ -120,7 +120,7 @@ export default function MissionControlPage() {
               { label: 'Stripe', complete: true },
               { label: 'AI Recruiting', complete: true },
               { label: 'Push Notifications', complete: true },
-              { label: 'Apple Approval', complete: false },
+              { label: 'Apple Approval', complete: true },
               { label: 'TestFlight', complete: true },
               { label: 'Google Play', complete: false },
               { label: 'Production Launch', complete: false },
@@ -144,11 +144,11 @@ export default function MissionControlPage() {
             <div className="mt-6 rounded-2xl bg-sky-500/10 p-6">
 
               <p className="text-3xl font-black text-sky-400">
-                Apple Approval
+                Google Play
               </p>
 
               <p className="mt-3 text-slate-300">
-                Complete the App Store submission and submit CrewCall for Apple review.
+                Verify the Android release and complete the Google Play launch requirements.
               </p>
 
             </div>
