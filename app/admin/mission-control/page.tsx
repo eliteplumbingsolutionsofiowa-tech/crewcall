@@ -108,7 +108,7 @@ export default function MissionControlPage() {
               { name: 'Stripe', healthy: true },
               { name: 'AI Recruiting', healthy: true },
               { name: 'Android', healthy: true },
-              { name: 'Apple', healthy: false },
+              { name: 'Apple', healthy: true },
             ]}
           />
 
@@ -144,11 +144,11 @@ export default function MissionControlPage() {
             <div className="mt-6 rounded-2xl bg-sky-500/10 p-6">
 
               <p className="text-3xl font-black text-sky-400">
-                Apple / TestFlight
+                TestFlight Beta Testing
               </p>
 
               <p className="mt-3 text-slate-300">
-                Verify the current App Store Connect and TestFlight release status.
+                Create a TestFlight group and add testers to the current iOS build.
               </p>
 
             </div>
