@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sendApnsPush } from '@/lib/push/apns'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
@@ -244,18 +245,24 @@ export async function POST(request: Request) {
           break
         }
 
-        const { error } =
-          await supabase
-            .from('jobs')
-            .update({
-              payment_status: 'paid',
-              paid: true,
-              paid_at:
-                new Date().toISOString(),
-              stripe_payment_intent_id:
-                intent.id,
-            })
-            .eq('id', jobId)
+        const {
+          data: paidJob,
+          error,
+        } = await supabase
+          .from('jobs')
+          .update({
+            payment_status: 'paid',
+            paid: true,
+            paid_at:
+              new Date().toISOString(),
+            stripe_payment_intent_id:
+              intent.id,
+          })
+          .eq('id', jobId)
+          .select(
+            'id, title, assigned_worker_id'
+          )
+          .maybeSingle()
 
         if (error) {
           throw new Error(error.message)
@@ -265,6 +272,106 @@ export async function POST(request: Request) {
           'Payment intent updated job:',
           jobId
         )
+
+        if (paidJob?.assigned_worker_id) {
+          const notificationBody =
+            `Payment for ${
+              paidJob.title ||
+              'your CrewCall job'
+            } has been secured.`
+
+          const {
+            error: notificationError,
+          } = await supabase
+            .from('notifications')
+            .insert({
+              user_id:
+                paidJob.assigned_worker_id,
+              type: 'payment',
+              title: 'Payment Secured',
+              body: notificationBody,
+              link_url:
+                `/jobs/${paidJob.id}`,
+              read: false,
+              is_read: false,
+              created_at:
+                new Date().toISOString(),
+            })
+
+          if (notificationError) {
+            console.error(
+              'Unable to create payment notification:',
+              notificationError
+            )
+          }
+
+          try {
+            const {
+              data: workerDevices,
+              error: workerDevicesError,
+            } = await supabase
+              .from('device_tokens')
+              .select('id, token')
+              .eq(
+                'user_id',
+                paidJob.assigned_worker_id
+              )
+              .eq('platform', 'ios')
+
+            if (workerDevicesError) {
+              console.error(
+                'Unable to load payment push devices:',
+                workerDevicesError
+              )
+            } else {
+              for (
+                const device of
+                workerDevices || []
+              ) {
+                try {
+                  const result =
+                    await sendApnsPush({
+                      deviceToken:
+                        device.token,
+                      title:
+                        'Payment Secured',
+                      body:
+                        notificationBody,
+                      url:
+                        `/jobs/${paidJob.id}`,
+                      badge: 1,
+                    })
+
+                  if (
+                    result.status !== 200
+                  ) {
+                    console.error(
+                      'Payment push failed:',
+                      {
+                        deviceId:
+                          device.id,
+                        status:
+                          result.status,
+                        response:
+                          result.body,
+                      }
+                    )
+                  }
+                } catch (pushError) {
+                  console.error(
+                    'Unable to send payment push:',
+                    pushError
+                  )
+                }
+              }
+            }
+          } catch (pushError) {
+            console.error(
+              'Payment push delivery failed:',
+              pushError
+            )
+          }
+        }
 
         break
       }

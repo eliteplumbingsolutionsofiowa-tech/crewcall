@@ -226,14 +226,18 @@ export default function WorkerInvitesPage() {
         data: { session },
       } = await supabase.auth.getSession()
 
+      if (!session?.access_token) {
+        throw new Error('Please log in again to accept this invite.')
+      }
+
       const response = await fetch('/api/invites/accept', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           inviteId: invite.id,
-          workerId: invite.worker_id,
         }),
       })
 
