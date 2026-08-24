@@ -523,52 +523,68 @@ export default function JobDetailPage() {
   }
 
   async function inviteMatchedWorker(match: JobMatch) {
-    if (!job || !currentUserId) return
+    if (!job) return
 
     setInvitingWorkerId(match.worker_id)
     setMessage('')
 
-    const { data: existingInvite } = await supabase
-      .from('job_invites')
-      .select('id,status')
-      .eq('company_id', currentUserId)
-      .eq('worker_id', match.worker_id)
-      .eq('job_id', job.id)
-      .maybeSingle()
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    if (existingInvite) {
-      setMessage(t('alreadyInvited'))
+      if (!session?.access_token) {
+        setMessage(t('sessionExpired'))
+        return
+      }
+
+      const response = await fetch('/api/job-invites/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+          workerId: match.worker_id,
+        }),
+      })
+
+      const result = await response
+        .json()
+        .catch(() => null)
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setMessage(t('alreadyInvited'))
+        } else {
+          setMessage(
+            result?.error || t('unableToInvite')
+          )
+        }
+        return
+      }
+
+      setMessage(
+        t('workerInvited', {
+          worker: workerName(match.profile),
+        })
+      )
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
+      )
+
+      await load()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : t('unableToInvite')
+      )
+    } finally {
       setInvitingWorkerId(null)
-      return
     }
-
-    const { error } = await supabase.from('job_invites').insert({
-      company_id: currentUserId,
-      worker_id: match.worker_id,
-      job_id: job.id,
-      status: 'pending',
-      company_seen: true,
-      worker_seen: false,
-    })
-
-    if (error) {
-      setMessage(error.message)
-      setInvitingWorkerId(null)
-      return
-    }
-
-    await supabase.from('notifications').insert({
-      user_id: match.worker_id,
-      title: 'New job invite',
-      body: `You were invited to ${job.title || 'a CrewCall job'}.`,
-      link_url: '/invites',
-      read: false,
-      is_read: false,
-    })
-
-    setMessage(t('workerInvited', { worker: workerName(match.profile) }))
-    setInvitingWorkerId(null)
-    window.dispatchEvent(new Event('crewcall-refresh-nav'))
   }
 
   async function regenerateMatches() {
