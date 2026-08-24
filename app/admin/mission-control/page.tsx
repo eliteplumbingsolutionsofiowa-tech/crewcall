@@ -144,11 +144,11 @@ export default function MissionControlPage() {
             <div className="mt-6 rounded-2xl bg-sky-500/10 p-6">
 
               <p className="text-3xl font-black text-sky-400">
-                Email Delivery
+                Apple / TestFlight
               </p>
 
               <p className="mt-3 text-slate-300">
-                Verify production email delivery and remove the remaining launch warning.
+                Verify the current App Store Connect and TestFlight release status.
               </p>
 
             </div>
