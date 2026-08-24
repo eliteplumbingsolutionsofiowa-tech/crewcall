@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { MessageEmail } from '@/emails/MessageEmail'
 import { sendCrewCallEmail } from '@/lib/resend'
+import { sendApnsPush } from '@/lib/push/apns'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -390,6 +391,62 @@ export async function POST(req: Request) {
       console.error(
         'Unable to create message notification:',
         notificationError
+      )
+    }
+
+    try {
+      const {
+        data: recipientDevices,
+        error: deviceError,
+      } = await adminClient
+        .from('device_tokens')
+        .select('id, token, platform')
+        .eq('user_id', recipientId)
+        .eq('platform', 'ios')
+
+      if (deviceError) {
+        console.error(
+          'Unable to load recipient push devices:',
+          deviceError
+        )
+      } else if (recipientDevices?.length) {
+        const pushBody =
+          safeBody.length > 140
+            ? `${safeBody.slice(0, 137)}...`
+            : safeBody
+
+        for (const device of recipientDevices) {
+          try {
+            const pushResult = await sendApnsPush({
+              deviceToken: device.token,
+              title: `New message from ${senderName}`,
+              body: pushBody,
+              url: `/messages/${conversationId}`,
+              badge: 1,
+            })
+
+            if (pushResult.status !== 200) {
+              console.error(
+                'APNs message push failed:',
+                {
+                  deviceId: device.id,
+                  status: pushResult.status,
+                  response: pushResult.body,
+                }
+              )
+            }
+          } catch (pushError) {
+            console.error(
+              'Unable to send message push:',
+              pushError
+            )
+          }
+        }
+      }
+    } catch (pushError) {
+      console.error(
+        'Message push delivery failed:',
+        pushError
       )
     }
 
