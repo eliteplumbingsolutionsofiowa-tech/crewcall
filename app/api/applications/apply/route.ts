@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sendApnsPush } from '@/lib/push/apns'
 import { createClient } from '@supabase/supabase-js'
 import { ApplicantEmail } from '@/emails/ApplicantEmail'
 import { sendCrewCallEmail } from '@/lib/resend'
@@ -334,6 +335,61 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: appError.message },
         { status: 400 }
+      )
+    }
+
+    try {
+      const {
+        data: companyDevices,
+        error: companyDevicesError,
+      } = await adminClient
+        .from('device_tokens')
+        .select('id, token')
+        .eq('user_id', job.company_id)
+        .eq('platform', 'ios')
+
+      if (companyDevicesError) {
+        console.error(
+          'Unable to load application push devices:',
+          companyDevicesError
+        )
+      } else {
+        const pushBody = `A worker applied for ${
+          job.title || 'your CrewCall job'
+        }.`
+
+        for (const device of companyDevices || []) {
+          try {
+            const result = await sendApnsPush({
+              deviceToken: device.token,
+              title: 'New Job Application',
+              body: pushBody,
+              url: `/my-jobs/${job.id}/applicants`,
+              badge: 1,
+            })
+
+            if (result.status !== 200) {
+              console.error(
+                'Application push failed:',
+                {
+                  deviceId: device.id,
+                  status: result.status,
+                  response: result.body,
+                }
+              )
+            }
+          } catch (pushError) {
+            console.error(
+              'Unable to send application push:',
+              pushError
+            )
+          }
+        }
+      }
+    } catch (pushError) {
+      console.error(
+        'Application push delivery failed:',
+        pushError
       )
     }
 

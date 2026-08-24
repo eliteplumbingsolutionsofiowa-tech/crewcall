@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sendApnsPush } from '@/lib/push/apns'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -191,6 +192,61 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: notificationError.message },
         { status: 400 }
+      )
+    }
+
+    try {
+      const {
+        data: companyDevices,
+        error: companyDevicesError,
+      } = await adminClient
+        .from('device_tokens')
+        .select('id, token')
+        .eq('user_id', job.company_id)
+        .eq('platform', 'ios')
+
+      if (companyDevicesError) {
+        console.error(
+          'Unable to load completion request push devices:',
+          companyDevicesError
+        )
+      } else {
+        const pushBody = `The worker assigned to ${
+          job.title || 'your CrewCall job'
+        } says the work is complete.`
+
+        for (const device of companyDevices || []) {
+          try {
+            const result = await sendApnsPush({
+              deviceToken: device.token,
+              title: 'Job Ready for Review',
+              body: pushBody,
+              url: `/my-jobs/${job.id}`,
+              badge: 1,
+            })
+
+            if (result.status !== 200) {
+              console.error(
+                'Completion request push failed:',
+                {
+                  deviceId: device.id,
+                  status: result.status,
+                  response: result.body,
+                }
+              )
+            }
+          } catch (pushError) {
+            console.error(
+              'Unable to send completion request push:',
+              pushError
+            )
+          }
+        }
+      }
+    } catch (pushError) {
+      console.error(
+        'Completion request push delivery failed:',
+        pushError
       )
     }
 

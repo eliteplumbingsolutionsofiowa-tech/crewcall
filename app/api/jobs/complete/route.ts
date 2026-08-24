@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { sendApnsPush } from '@/lib/push/apns'
 import { createClient } from '@supabase/supabase-js'
 import { resolveCompanyContext } from '@/lib/company-context'
 
@@ -284,6 +285,58 @@ export async function POST(req: Request) {
             : result.value.error
         )
       }
+    }
+
+    try {
+      const {
+        data: workerDevices,
+        error: workerDevicesError,
+      } = await adminClient
+        .from('device_tokens')
+        .select('id, token')
+        .eq('user_id', job.assigned_worker_id)
+        .eq('platform', 'ios')
+
+      if (workerDevicesError) {
+        console.error(
+          'Unable to load completed job push devices:',
+          workerDevicesError
+        )
+      } else {
+        for (const device of workerDevices || []) {
+          try {
+            const result = await sendApnsPush({
+              deviceToken: device.token,
+              title: 'Job Completed',
+              body:
+                'The company approved your work and marked the job completed.',
+              url: `/jobs/${jobId}`,
+              badge: 1,
+            })
+
+            if (result.status !== 200) {
+              console.error(
+                'Completed job push failed:',
+                {
+                  deviceId: device.id,
+                  status: result.status,
+                  response: result.body,
+                }
+              )
+            }
+          } catch (pushError) {
+            console.error(
+              'Unable to send completed job push:',
+              pushError
+            )
+          }
+        }
+      }
+    } catch (pushError) {
+      console.error(
+        'Completed job push delivery failed:',
+        pushError
+      )
     }
 
     return NextResponse.json({
