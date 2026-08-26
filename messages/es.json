@@ -390,7 +390,8 @@
     "account": "Cuenta",
     "accountDescription": "Administra tu cuenta de CrewCall y tus datos personales.",
     "deleteAccount": "Eliminar Cuenta",
-    "aboutMePlaceholder": "Ejemplo: Plomero oficial con licencia especializado en instalaciones comerciales, servicio, hospitales, escuelas y mejoras para inquilinos."
+    "aboutMePlaceholder": "Ejemplo: Plomero oficial con licencia especializado en instalaciones comerciales, servicio, hospitales, escuelas y mejoras para inquilinos.",
+    "review": "Revisar"
   },
   "ProfileFiles": {
     "uploading": "Subiendo...",

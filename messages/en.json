@@ -390,7 +390,8 @@
     "account": "Account",
     "accountDescription": "Manage your CrewCall account and personal data.",
     "deleteAccount": "Delete Account",
-    "aboutMePlaceholder": "Example: Licensed journeyman plumber specializing in commercial rough-ins, service work, hospitals, schools, and tenant improvements."
+    "aboutMePlaceholder": "Example: Licensed journeyman plumber specializing in commercial rough-ins, service work, hospitals, schools, and tenant improvements.",
+    "review": "Review"
   },
   "ProfileFiles": {
     "uploading": "Uploading...",
