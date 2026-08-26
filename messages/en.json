@@ -901,7 +901,13 @@
     "unableToStartJobConversation": "Unable to start job conversation.",
     "unableToCreateConversation": "Unable to create conversation.",
     "opening": "Opening...",
-    "messageWorker": "Message Worker"
+    "messageWorker": "Message Worker",
+    "noArchivedConversations": "No archived conversations",
+    "noConversationsMatch": "No conversations match",
+    "noConversationsYet": "No conversations yet",
+    "archivedConversationsDescription": "Conversations you archive will appear here.",
+    "tryClearingSearchOrFilters": "Try clearing your search or filters.",
+    "conversationsEmptyDescription": "Your CrewCall job conversations will appear here after you connect with a worker or company."
   },
   "MessageThread": {
     "loginRequired": "Please log in.",

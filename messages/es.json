@@ -901,7 +901,13 @@
     "unableToStartJobConversation": "No se pudo iniciar la conversación del trabajo.",
     "unableToCreateConversation": "No se pudo crear la conversación.",
     "opening": "Abriendo...",
-    "messageWorker": "Enviar Mensaje al Trabajador"
+    "messageWorker": "Enviar Mensaje al Trabajador",
+    "noArchivedConversations": "No hay conversaciones archivadas",
+    "noConversationsMatch": "Ninguna conversación coincide",
+    "noConversationsYet": "Aún no hay conversaciones",
+    "archivedConversationsDescription": "Las conversaciones que archives aparecerán aquí.",
+    "tryClearingSearchOrFilters": "Intenta limpiar la búsqueda o los filtros.",
+    "conversationsEmptyDescription": "Tus conversaciones de trabajos de CrewCall aparecerán aquí después de conectarte con un trabajador o una empresa."
   },
   "MessageThread": {
     "loginRequired": "Inicia sesión.",

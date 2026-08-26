@@ -1074,7 +1074,7 @@ export default function MessagesPage() {
 
                             {showArchived ? (
                               <StatusBadge
-                                label="Archived"
+                                label={t('archived')}
                                 tone="cyan"
                               />
                             ) : null}
@@ -1361,6 +1361,7 @@ function EmptyState({
   hasFilters: boolean
   onClear: () => void
 }) {
+  const t = useTranslations('Messages')
   return (
     <div className="rounded-[2rem] border border-dashed border-white/15 bg-white/[0.035] px-6 py-14 text-center shadow-xl shadow-black/20">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-cyan-400/20 bg-cyan-500/10 text-2xl font-black text-cyan-300">
@@ -1369,18 +1370,18 @@ function EmptyState({
 
       <h2 className="mt-5 text-2xl font-black text-white">
         {showArchived
-          ? 'No archived conversations'
+          ? t('noArchivedConversations')
           : hasFilters
-            ? 'No conversations match'
-            : 'No conversations yet'}
+            ? t('noConversationsMatch')
+            : t('noConversationsYet')}
       </h2>
 
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
         {showArchived
-          ? 'Conversations you archive will appear here.'
+          ? t('archivedConversationsDescription')
           : hasFilters
-            ? 'Try clearing your search or filters.'
-            : 'Your CrewCall job conversations will appear here after you connect with a worker or company.'}
+            ? t('tryClearingSearchOrFilters')
+            : t('conversationsEmptyDescription')}
       </p>
 
       {hasFilters ? (
@@ -1411,6 +1412,7 @@ function Notice({
     info:
       'border-blue-400/20 bg-blue-500/10 text-blue-200',
   }
+  const t = useTranslations('Messages')
 
   return (
     <div
