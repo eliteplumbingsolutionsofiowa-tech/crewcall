@@ -684,7 +684,7 @@ export default function MyJobsPage() {
                     )}
 
                     <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
-                      <Info label={t('pay')} value={job.pay_rate || 'Not set'} />
+                      <Info label={t('pay')} value={job.pay_rate || t('notSet')} />
 
                       <Info label={t('start')} value={formatDate(job.start_date, locale, t('notSet'))} />
 
