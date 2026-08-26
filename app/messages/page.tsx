@@ -1067,7 +1067,7 @@ export default function MessagesPage() {
 
                             {card.unreadCount > 0 ? (
                               <StatusBadge
-                                label={`${card.unreadCount} Unread`}
+                                label={t('unreadCount', { count: card.unreadCount })}
                                 tone="amber"
                               />
                             ) : null}
