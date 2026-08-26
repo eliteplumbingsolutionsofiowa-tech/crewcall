@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -409,6 +411,14 @@ export default function MessageConversationPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
+      <div className="mx-auto w-full max-w-4xl px-4 pt-4">
+        <Link
+          href="/messages"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+        >
+          ← Back to Messages
+        </Link>
+      </div>
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <h1 className="text-3xl font-black">
