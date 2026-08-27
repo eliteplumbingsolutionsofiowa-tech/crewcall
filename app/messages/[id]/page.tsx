@@ -416,7 +416,7 @@ export default function MessageConversationPage() {
           href="/messages"
           className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
         >
-          ← Back to Messages
+          ← {t('backToMessages')}
         </Link>
       </div>
       <div className="mx-auto max-w-4xl space-y-6">

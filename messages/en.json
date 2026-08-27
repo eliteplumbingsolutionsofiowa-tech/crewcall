@@ -920,7 +920,8 @@
     "typing": "Typing...",
     "placeholder": "Type message...",
     "sending": "Sending...",
-    "send": "Send"
+    "send": "Send",
+    "backToMessages": "Back to Messages"
   },
   "Notifications": {
     "newAlert": "New CrewCall Alert",

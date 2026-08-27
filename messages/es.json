@@ -920,7 +920,8 @@
     "typing": "Escribiendo...",
     "placeholder": "Escribe un mensaje...",
     "sending": "Enviando...",
-    "send": "Enviar"
+    "send": "Enviar",
+    "backToMessages": "Volver a Mensajes"
   },
   "Notifications": {
     "newAlert": "Nueva Alerta de CrewCall",
