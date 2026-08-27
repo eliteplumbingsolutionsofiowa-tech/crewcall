@@ -1,39 +1,42 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 export default function DemoPage() {
+  const t = useTranslations('Demo')
+
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
       <div className="mx-auto max-w-6xl space-y-8">
 
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            CrewCall Demo
+            {t('eyebrow')}
           </p>
 
           <h1 className="mt-3 text-5xl font-black">
-            See CrewCall In Action
+            {t('title')}
           </h1>
 
           <p className="mt-4 max-w-3xl text-slate-400">
-            Explore how contractors find workers, manage jobs,
-            and use AI recruiting to fill positions faster.
+            {t('description')}
           </p>
         </section>
 
         <section className="grid gap-5 md:grid-cols-3">
 
           <Card
-            title="Active Jobs"
+            title={t('activeJobs')}
             value="24"
           />
 
           <Card
-            title="Available Workers"
+            title={t('availableWorkers')}
             value="486"
           />
 
           <Card
-            title="AI Matches"
+            title={t('aiMatches')}
             value="92%"
           />
 
@@ -41,20 +44,20 @@ export default function DemoPage() {
 
         <section className="grid gap-5 md:grid-cols-2">
 
-          <Panel title="AI Recruiter">
-            Found 18 qualified workers for your plumbing job.
+          <Panel title={t('aiRecruiter')}>
+            {t('aiRecruiterText')}
           </Panel>
 
-          <Panel title="Operations Center">
-            6 active crews, 12 applications, 3 jobs needing attention.
+          <Panel title={t('operationsCenter')}>
+            {t('operationsText')}
           </Panel>
 
-          <Panel title="Payments">
-            Workers paid securely through CrewCall.
+          <Panel title={t('payments')}>
+            {t('paymentsText')}
           </Panel>
 
-          <Panel title="Worker Network">
-            Search verified skilled trades near your projects.
+          <Panel title={t('workerNetwork')}>
+            {t('workerNetworkText')}
           </Panel>
 
         </section>
@@ -62,11 +65,11 @@ export default function DemoPage() {
         <section className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-8 text-center">
 
           <h2 className="text-3xl font-black">
-            Ready to build your crew?
+            {t('ready')}
           </h2>
 
           <button className="mt-5 rounded-xl bg-cyan-400 px-8 py-4 font-black text-slate-950">
-            Create Free Account
+            {t('createFreeAccount')}
           </button>
 
         </section>

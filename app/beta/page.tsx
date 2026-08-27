@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 const trades = [
   'Plumbing',
@@ -13,6 +14,7 @@ const trades = [
 ]
 
 export default function BetaPage() {
+  const t = useTranslations('Beta')
   const [type, setType] = useState('Company')
   const [referralSource, setReferralSource] = useState('')
 
@@ -70,12 +72,12 @@ export default function BetaPage() {
 
       if (!response.ok) {
         throw new Error(
-          result.error || 'Submission failed',
+          result.error || t('submissionFailed'),
         )
       }
 
       setMessage(
-        'Thanks! We will contact you soon.',
+        t('thanks'),
       )
 
       setForm({
@@ -91,7 +93,7 @@ export default function BetaPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to submit.',
+          : t('unableToSubmit'),
       )
     } finally {
       setLoading(false)
@@ -105,15 +107,15 @@ export default function BetaPage() {
         <section className="rounded-3xl border border-cyan-400/20 bg-white/5 p-8 text-center">
 
           <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">
-            CrewCall Early Access
+            {t('earlyAccess')}
           </p>
 
           <h1 className="mt-4 text-5xl font-black">
-            Join the CrewCall Launch
+            {t('title')}
           </h1>
 
           <p className="mt-4 text-slate-400">
-            Connect skilled trades with companies that need help fast.
+            {t('description')}
           </p>
 
         </section>
@@ -133,7 +135,9 @@ export default function BetaPage() {
                     : 'rounded-xl bg-white/10 px-5 py-3 font-black'
                 }
               >
-                {item}
+                {item === 'Company'
+                  ? t('company')
+                  : t('worker')}
               </button>
             ))}
 
@@ -143,7 +147,7 @@ export default function BetaPage() {
           <div className="mt-6 grid gap-4">
 
             <input
-              placeholder="Name"
+              placeholder={t('name')}
               value={form.name}
               onChange={(e) =>
                 updateField('name', e.target.value)
@@ -152,7 +156,7 @@ export default function BetaPage() {
             />
 
             <input
-              placeholder="Email"
+              placeholder={t('email')}
               value={form.email}
               onChange={(e) =>
                 updateField('email', e.target.value)
@@ -161,7 +165,7 @@ export default function BetaPage() {
             />
 
             <input
-              placeholder="Phone"
+              placeholder={t('phone')}
               value={form.phone}
               onChange={(e) =>
                 updateField('phone', e.target.value)
@@ -170,7 +174,7 @@ export default function BetaPage() {
             />
 
             <input
-              placeholder="City / State"
+              placeholder={t('cityState')}
               value={form.location}
               onChange={(e) =>
                 updateField('location', e.target.value)
@@ -195,7 +199,7 @@ export default function BetaPage() {
 
             {type === 'Company' ? (
               <input
-                placeholder="Company Name"
+                placeholder={t('companyName')}
                 value={form.company_name}
                 onChange={(e) =>
                   updateField(
@@ -209,7 +213,7 @@ export default function BetaPage() {
 
 
             <textarea
-              placeholder="Tell us what you need..."
+              placeholder={t('tellUsWhatYouNeed')}
               value={form.message}
               onChange={(e) =>
                 updateField(
@@ -227,8 +231,8 @@ export default function BetaPage() {
               className="rounded-xl bg-cyan-400 px-6 py-4 font-black text-slate-950 disabled:opacity-50"
             >
               {loading
-                ? 'Submitting...'
-                : 'Request Early Access'}
+                ? t('submitting')
+                : t('requestEarlyAccess')}
             </button>
 
 

@@ -1,60 +1,40 @@
 'use client'
 
-const companyBenefits = [
-  'Fill labor shortages faster',
-  'AI-powered worker matching',
-  'Verified skilled trades',
-  'Secure payments',
-  'Build your trusted crew',
-]
+import { useTranslations } from 'next-intl'
 
-const workerBenefits = [
-  'Find local jobs',
-  'Work with better companies',
-  'Control your availability',
-  'Get paid securely',
-  'Build your reputation',
-]
+const companyBenefitKeys = [
+  'companyBenefit1',
+  'companyBenefit2',
+  'companyBenefit3',
+  'companyBenefit4',
+  'companyBenefit5',
+] as const
 
-const stats = [
-  {
-    value: 'AI Powered',
-    label: 'Smart worker matching',
-  },
-  {
-    value: 'Verified',
-    label: 'Trade profiles',
-  },
-  {
-    value: 'Secure',
-    label: 'Stripe payments',
-  },
-  {
-    value: 'Growing',
-    label: 'Nationwide network',
-  },
-]
+const workerBenefitKeys = [
+  'workerBenefit1',
+  'workerBenefit2',
+  'workerBenefit3',
+  'workerBenefit4',
+  'workerBenefit5',
+] as const
 
-const faqs = [
-  {
-    q: 'How does CrewCall work?',
-    a: 'Companies post jobs and skilled workers can apply, receive invites, and get hired through the platform.',
-  },
-  {
-    q: 'What trades are supported?',
-    a: 'CrewCall is built for skilled trades including plumbing, HVAC, electrical, construction, and more.',
-  },
-  {
-    q: 'How do payments work?',
-    a: 'Companies pay through CrewCall and workers receive secure payouts after job completion.',
-  },
-  {
-    q: 'How much does CrewCall cost?',
-    a: 'CrewCall offers simple pricing with no long-term contracts.',
-  },
-]
+const statKeys = [
+  ['stat1Value', 'stat1Label'],
+  ['stat2Value', 'stat2Label'],
+  ['stat3Value', 'stat3Label'],
+  ['stat4Value', 'stat4Label'],
+] as const
+
+const faqKeys = [
+  ['faq1Question', 'faq1Answer'],
+  ['faq2Question', 'faq2Answer'],
+  ['faq3Question', 'faq3Answer'],
+  ['faq4Question', 'faq4Answer'],
+] as const
 
 export default function LaunchPage() {
+  const t = useTranslations('Launch')
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
 
@@ -63,30 +43,29 @@ export default function LaunchPage() {
         <div className="rounded-3xl border border-cyan-400/20 bg-white/5 p-10 text-center">
 
           <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-            CrewCall Launch
+            {t('eyebrow')}
           </p>
 
           <h1 className="mt-5 text-5xl font-black">
-            Find Help.
+            {t('findHelp')}
             <br />
-            Find Work.
+            {t('findWork')}
             <br />
-            Fast.
+            {t('fast')}
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-400">
-            The blue-collar hiring network built for skilled trades.
-            Connect companies with qualified workers when they need help most.
+            {t('description')}
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
 
             <button className="rounded-xl bg-cyan-400 px-8 py-4 font-black text-slate-950">
-              Join as Company
+              {t('joinCompany')}
             </button>
 
             <button className="rounded-xl bg-white/10 px-8 py-4 font-black">
-              Join as Worker
+              {t('joinWorker')}
             </button>
 
           </div>
@@ -96,17 +75,17 @@ export default function LaunchPage() {
 
         <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
-          {stats.map((item) => (
+          {statKeys.map(([valueKey, labelKey]) => (
             <div
-              key={item.label}
+              key={labelKey}
               className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center"
             >
               <p className="text-2xl font-black text-cyan-300">
-                {item.value}
+                {t(valueKey)}
               </p>
 
               <p className="mt-2 text-sm text-slate-400">
-                {item.label}
+                {t(labelKey)}
               </p>
             </div>
           ))}
@@ -119,14 +98,14 @@ export default function LaunchPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
 
             <h2 className="text-3xl font-black">
-              For Companies
+              {t('forCompanies')}
             </h2>
 
             <ul className="mt-5 space-y-3 text-slate-300">
 
-              {companyBenefits.map((item) => (
-                <li key={item}>
-                  ✓ {item}
+              {companyBenefitKeys.map((key) => (
+                <li key={key}>
+                  ✓ {t(key)}
                 </li>
               ))}
 
@@ -138,14 +117,14 @@ export default function LaunchPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
 
             <h2 className="text-3xl font-black">
-              For Workers
+              {t('forWorkers')}
             </h2>
 
             <ul className="mt-5 space-y-3 text-slate-300">
 
-              {workerBenefits.map((item) => (
-                <li key={item}>
-                  ✓ {item}
+              {workerBenefitKeys.map((key) => (
+                <li key={key}>
+                  ✓ {t(key)}
                 </li>
               ))}
 
@@ -159,21 +138,21 @@ export default function LaunchPage() {
         <section className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-8">
 
           <h2 className="text-3xl font-black">
-            Why CrewCall?
+            {t('whyCrewCall')}
           </h2>
 
           <div className="mt-5 grid gap-4 md:grid-cols-3">
 
-            <Feature title="AI Recruiting">
-              Find qualified workers faster.
+            <Feature title={t('aiRecruiting')}>
+              {t('aiRecruitingText')}
             </Feature>
 
-            <Feature title="Verified Trades">
-              See experience, insurance, and ratings.
+            <Feature title={t('verifiedTrades')}>
+              {t('verifiedTradesText')}
             </Feature>
 
-            <Feature title="Secure Hiring">
-              Manage jobs and payments in one place.
+            <Feature title={t('secureHiring')}>
+              {t('secureHiringText')}
             </Feature>
 
           </div>
@@ -184,27 +163,27 @@ export default function LaunchPage() {
         <section className="mt-12 rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-8">
 
           <h2 className="text-3xl font-black">
-            Get Early Access
+            {t('getEarlyAccess')}
           </h2>
 
           <p className="mt-3 text-slate-300">
-            Join contractors and skilled workers building the future of trade hiring.
+            {t('earlyAccessText')}
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
 
             <input
-              placeholder="Name"
+              placeholder={t('name')}
               className="rounded-xl bg-slate-950 px-4 py-3"
             />
 
             <input
-              placeholder="Email"
+              placeholder={t('email')}
               className="rounded-xl bg-slate-950 px-4 py-3"
             />
 
             <button className="rounded-xl bg-cyan-400 font-black text-slate-950">
-              Request Access
+              {t('requestAccess')}
             </button>
 
           </div>
@@ -220,17 +199,17 @@ export default function LaunchPage() {
 
           <div className="mt-5 space-y-4">
 
-            {faqs.map((item) => (
+            {faqKeys.map(([questionKey, answerKey]) => (
               <div
-                key={item.q}
+                key={questionKey}
                 className="rounded-xl border border-white/10 bg-white/5 p-5"
               >
                 <h3 className="font-black">
-                  {item.q}
+                  {t(questionKey)}
                 </h3>
 
                 <p className="mt-2 text-slate-400">
-                  {item.a}
+                  {t(answerKey)}
                 </p>
 
               </div>
