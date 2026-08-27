@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import {
   Suspense,
   useCallback,
@@ -180,6 +182,7 @@ function getInitial(value: string | null | undefined) {
 }
 
 function ProfilePageInner() {
+  const t = useTranslations('PublicWorkerProfile')
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -929,7 +932,7 @@ function ProfilePageInner() {
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge
                       label={
-                        onlineNow ? 'Online Now' : 'Offline'
+                        onlineNow ? t('onlineNow') : t('offline')
                       }
                       tone={onlineNow ? 'green' : 'slate'}
                     />
@@ -947,14 +950,14 @@ function ProfilePageInner() {
 
                     {profile.available_for_work ? (
                       <StatusBadge
-                        label="Available for Work"
+                        label={t('availableForWork')}
                         tone="green"
                       />
                     ) : null}
 
                     {profile.currently_working ? (
                       <StatusBadge
-                        label="Currently Working"
+                        label={t('currentlyWorking')}
                         tone="blue"
                       />
                     ) : null}
@@ -965,7 +968,7 @@ function ProfilePageInner() {
                   </h1>
 
                   <p className="mt-3 text-base font-semibold text-slate-300 sm:text-lg">
-                    {profile.trade || 'Trade not added yet'}
+                    {profile.trade || t('tradeNotAddedYet')}
                   </p>
 
                   <p className="mt-2 text-sm font-semibold text-slate-400">
@@ -1021,25 +1024,25 @@ function ProfilePageInner() {
 
               <div className="grid w-full shrink-0 grid-cols-2 gap-3 sm:grid-cols-4 xl:w-[470px]">
                 <HeroStat
-                  label="Complete"
+                  label={t('complete')}
                   value={`${completionScore}%`}
                   tone="cyan"
                 />
 
                 <HeroStat
-                  label="Files"
+                  label={t('files')}
                   value={String(profileFiles.length)}
                   tone="blue"
                 />
 
                 <HeroStat
-                  label="Certs"
+                  label={t('certs')}
                   value={String(certificationFiles.length)}
                   tone="violet"
                 />
 
                 <HeroStat
-                  label="Licenses"
+                  label={t('licenses')}
                   value={String(licenseFiles.length)}
                   tone="green"
                 />
@@ -1052,7 +1055,7 @@ function ProfilePageInner() {
           <div className="space-y-6">
             <SectionCard>
               <SectionHeader
-                eyebrow="Professional Profile"
+                eyebrow={t('professionalProfile')}
                 title={
                   isOwnProfile
                     ? 'Edit Profile'
@@ -1079,7 +1082,7 @@ function ProfilePageInner() {
 
               <div className="p-5 sm:p-6">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <FieldBlock label="Role">
+                  <FieldBlock label={t('role')}>
                     {isOwnProfile ? (
                       <select
                         value={profile.role || ''}
@@ -1091,20 +1094,20 @@ function ProfilePageInner() {
                         }
                         className="input-dark"
                       >
-                        <option value="">Select role</option>
-                        <option value="worker">Worker</option>
-                        <option value="company">Company</option>
+                        <option value="">{t('selectRole')}</option>
+                        <option value="worker">{t('worker')}</option>
+                        <option value="company">{t('company')}</option>
                       </select>
                     ) : (
                       <ReadOnlyValue
                         value={
-                          profile.role || 'Not added yet'
+                          profile.role || t('notAddedYet')
                         }
                       />
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Full Name">
+                  <FieldBlock label={t('fullName')}>
                     {isOwnProfile ? (
                       <input
                         value={profile.full_name || ''}
@@ -1115,7 +1118,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="Your name"
+                        placeholder={t('yourName')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1124,7 +1127,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Company Name">
+                  <FieldBlock label={t('companyName')}>
                     {isOwnProfile ? (
                       <input
                         value={profile.company_name || ''}
@@ -1135,7 +1138,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="Company name"
+                        placeholder={t('companyNamePlaceholder')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1146,7 +1149,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Phone">
+                  <FieldBlock label={t('phone')}>
                     {isOwnProfile ? (
                       <input
                         value={profile.phone || ''}
@@ -1157,7 +1160,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="Phone number"
+                        placeholder={t('phoneNumber')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1166,7 +1169,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="City">
+                  <FieldBlock label={t('city')}>
                     {isOwnProfile ? (
                       <input
                         value={profile.city || ''}
@@ -1177,7 +1180,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="City"
+                        placeholder={t('city')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1186,7 +1189,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="State">
+                  <FieldBlock label={t('state')}>
                     {isOwnProfile ? (
                       <input
                         value={profile.state || ''}
@@ -1197,7 +1200,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="State"
+                        placeholder={t('state')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1206,7 +1209,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Trade">
+                  <FieldBlock label={t('trade')}>
                     {isOwnProfile ? (
                       <input
                         value={profile.trade || ''}
@@ -1217,7 +1220,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="Plumbing, electrical, HVAC..."
+                        placeholder={t('tradePlaceholder')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1226,7 +1229,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Years Experience">
+                  <FieldBlock label={t('yearsExperience')}>
                     {isOwnProfile ? (
                       <input
                         value={
@@ -1239,7 +1242,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="Example: 8 years"
+                        placeholder={t('yearsExperiencePlaceholder')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1250,7 +1253,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Insurance Provider">
+                  <FieldBlock label={t('insuranceProvider')}>
                     {isOwnProfile ? (
                       <input
                         value={
@@ -1263,7 +1266,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark"
-                        placeholder="Insurance provider"
+                        placeholder={t('insuranceProvider')}
                       />
                     ) : (
                       <ReadOnlyValue
@@ -1274,7 +1277,7 @@ function ProfilePageInner() {
                     )}
                   </FieldBlock>
 
-                  <FieldBlock label="Booked Until">
+                  <FieldBlock label={t('bookedUntilLabel')}>
                     {isOwnProfile ? (
                       <input
                         type="date"
@@ -1298,7 +1301,7 @@ function ProfilePageInner() {
                 </div>
 
                 <div className="mt-4">
-                  <FieldBlock label="Job Experience">
+                  <FieldBlock label={t('jobExperience')}>
                     {isOwnProfile ? (
                       <textarea
                         value={profile.job_experience || ''}
@@ -1309,7 +1312,7 @@ function ProfilePageInner() {
                           )
                         }
                         className="input-dark min-h-36 resize-y"
-                        placeholder="Tell companies what kind of work you do best."
+                        placeholder={t('jobExperiencePlaceholder')}
                       />
                     ) : (
                       <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-5 text-sm font-semibold leading-7 text-slate-300">
@@ -1324,8 +1327,8 @@ function ProfilePageInner() {
                 {isOwnProfile ? (
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
                     <ToggleCard
-                      label="Liability Signed"
-                      description="Compliance form completed"
+                      label={t('liabilitySigned')}
+                      description={t('complianceFormCompleted')}
                       checked={Boolean(
                         profile.liability_form_signed
                       )}
@@ -1338,8 +1341,8 @@ function ProfilePageInner() {
                     />
 
                     <ToggleCard
-                      label="Available"
-                      description="Open to new job offers"
+                      label={t('available')}
+                      description={t('openToNewOffers')}
                       checked={Boolean(
                         profile.available_for_work
                       )}
@@ -1352,8 +1355,8 @@ function ProfilePageInner() {
                     />
 
                     <ToggleCard
-                      label="Currently Working"
-                      description="Actively assigned to a job"
+                      label={t('currentlyWorking')}
+                      description={t('activelyAssigned')}
                       checked={Boolean(
                         profile.currently_working
                       )}
@@ -1372,9 +1375,9 @@ function ProfilePageInner() {
             {isOwnProfile ? (
               <SectionCard>
                 <SectionHeader
-                  eyebrow="Profile Verification"
-                  title="Upload Profile Files"
-                  description="Add a profile photo, trade licenses, certifications, and insurance documents."
+                  eyebrow={t('profileVerification')}
+                  title={t('uploadProfileFiles')}
+                  description={t('uploadProfileFilesDescription')}
                 />
 
                 <div className="grid gap-4 p-5 md:grid-cols-2 sm:p-6">
@@ -1382,8 +1385,8 @@ function ProfilePageInner() {
                     <ProfileFileUpload
                       userId={profile.id}
                       category="profile_photo"
-                      label="Profile Photo"
-                      description="Upload a clear photo or company logo."
+                      label={t('profilePhoto')}
+                      description={t('profilePhotoDescription')}
                       accept="image/*"
                       onUploadComplete={loadProfile}
                     />
@@ -1393,8 +1396,8 @@ function ProfilePageInner() {
                     <ProfileFileUpload
                       userId={profile.id}
                       category="license"
-                      label="License"
-                      description="Upload trade licenses or cards."
+                      label={t('license')}
+                      description={t('licenseDescription')}
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfile}
                     />
@@ -1404,8 +1407,8 @@ function ProfilePageInner() {
                     <ProfileFileUpload
                       userId={profile.id}
                       category="certification"
-                      label="Certification"
-                      description="Upload safety cards, certifications, or training documents."
+                      label={t('certification')}
+                      description={t('certificationDescription')}
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfile}
                     />
@@ -1415,8 +1418,8 @@ function ProfilePageInner() {
                     <ProfileFileUpload
                       userId={profile.id}
                       category="insurance"
-                      label="Insurance"
-                      description="Upload insurance documents."
+                      label={t('insurance')}
+                      description={t('insuranceDescription')}
                       accept="image/*,.pdf"
                       onUploadComplete={loadProfile}
                     />
@@ -1427,9 +1430,9 @@ function ProfilePageInner() {
 
             <SectionCard>
               <SectionHeader
-                eyebrow="Verification Documents"
-                title="Uploaded Documents"
-                description="Licenses, insurance, certifications, and profile files."
+                eyebrow={t('verificationDocuments')}
+                title={t('uploadedDocuments')}
+                description={t('uploadedDocumentsDescription')}
                 badge={`${profileFiles.length} ${
                   profileFiles.length === 1
                     ? 'file'
@@ -1450,9 +1453,9 @@ function ProfilePageInner() {
 
             <SectionCard>
               <SectionHeader
-                eyebrow="CrewCall Reputation"
-                title="Reviews"
-                description="Ratings and feedback from completed CrewCall work."
+                eyebrow={t('crewCallReputation')}
+                title={t('reviews')}
+                description={t('reviewsDescriptionProfile')}
               />
 
               <div className="p-5 sm:p-6">
@@ -1466,9 +1469,9 @@ function ProfilePageInner() {
           <aside className="space-y-6">
             {canInviteWorker ? (
               <SidebarCard
-                eyebrow="Company Action"
-                title="Invite Worker"
-                description="Invite this worker to one of your open or assigned jobs."
+                eyebrow={t('companyAction')}
+                title={t('inviteWorker')}
+                description={t('inviteWorkerDescription')}
               >
                 <div className="space-y-3">
                   <select
@@ -1482,14 +1485,14 @@ function ProfilePageInner() {
                   >
                     {companyJobs.length === 0 ? (
                       <option value="">
-                        No open jobs available
+                        {t('noOpenJobsAvailable')}
                       </option>
                     ) : null}
 
                     {companyJobs.map((job) => (
                       <option key={job.id} value={job.id}>
-                        {job.title || 'Untitled job'} ·{' '}
-                        {job.location || 'No location'}
+                        {job.title || t('untitledJob')} ·{' '}
+                        {job.location || t('noLocation')}
                       </option>
                     ))}
                   </select>
@@ -1511,13 +1514,13 @@ function ProfilePageInner() {
 
             {isOwnProfile && isWorkerProfile ? (
               <SidebarCard
-                eyebrow="Payments"
-                title="Stripe Payouts"
-                description="Connect Stripe so companies can pay you through CrewCall."
+                eyebrow={t('payments')}
+                title={t('stripePayouts')}
+                description={t('stripePayoutsDescription')}
               >
                 <div className="space-y-3">
                   <StatusRow
-                    label="Onboarding"
+                    label={t('onboarding')}
                     value={
                       profile.stripe_onboarding_complete
                         ? 'Complete'
@@ -1529,7 +1532,7 @@ function ProfilePageInner() {
                   />
 
                   <StatusRow
-                    label="Charges"
+                    label={t('charges')}
                     value={
                       profile.stripe_charges_enabled
                         ? 'Enabled'
@@ -1541,7 +1544,7 @@ function ProfilePageInner() {
                   />
 
                   <StatusRow
-                    label="Payouts"
+                    label={t('payouts')}
                     value={
                       profile.stripe_payouts_enabled
                         ? 'Enabled'
@@ -1570,9 +1573,9 @@ function ProfilePageInner() {
             ) : null}
 
             <SidebarCard
-              eyebrow="CrewCall Trust"
-              title="Trust Score"
-              description="Complete profiles are easier for workers and companies to trust."
+              eyebrow={t('crewCallTrust')}
+              title={t('trustScore')}
+              description={t('trustScoreDescription')}
             >
               <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-5">
                 <div className="flex items-end justify-between gap-4">
@@ -1582,7 +1585,7 @@ function ProfilePageInner() {
                     </p>
 
                     <p className="mt-1 text-sm font-semibold text-cyan-100/60">
-                      Profile completion
+                      {t('profileCompletion')}
                     </p>
                   </div>
 
@@ -1623,13 +1626,13 @@ function ProfilePageInner() {
             </SidebarCard>
 
             <SidebarCard
-              eyebrow="Availability"
-              title="Work Status"
-              description="Current availability and recent activity."
+              eyebrow={t('availability')}
+              title={t('workStatus')}
+              description={t('workStatusDescription')}
             >
               <div className="space-y-3">
                 <StatusRow
-                  label="Available"
+                  label={t('available')}
                   value={
                     profile.available_for_work
                       ? 'Yes'
@@ -1641,7 +1644,7 @@ function ProfilePageInner() {
                 />
 
                 <StatusRow
-                  label="Currently Working"
+                  label={t('currentlyWorking')}
                   value={
                     profile.currently_working
                       ? 'Yes'
@@ -1653,13 +1656,13 @@ function ProfilePageInner() {
                 />
 
                 <StatusRow
-                  label="Booked Until"
+                  label={t('bookedUntilLabel')}
                   value={formatDate(profile.booked_until)}
                   active={Boolean(profile.booked_until)}
                 />
 
                 <StatusRow
-                  label="Last Seen"
+                  label={t('lastSeenLabel')}
                   value={formatDateTime(profile.last_seen)}
                   active={onlineNow}
                 />
@@ -1667,33 +1670,33 @@ function ProfilePageInner() {
             </SidebarCard>
 
             <SidebarCard
-              eyebrow="At a Glance"
-              title="Quick Details"
-              description="Core profile and contact information."
+              eyebrow={t('atAGlance')}
+              title={t('quickDetails')}
+              description={t('quickDetailsDescription')}
             >
               <div className="space-y-3">
                 <InfoLine
-                  label="Name"
+                  label={t('name')}
                   value={profile.full_name}
                 />
 
                 <InfoLine
-                  label="Company"
+                  label={t('company')}
                   value={profile.company_name}
                 />
 
                 <InfoLine
-                  label="Phone"
+                  label={t('phone')}
                   value={profile.phone}
                 />
 
                 <InfoLine
-                  label="Trade"
+                  label={t('trade')}
                   value={profile.trade}
                 />
 
                 <InfoLine
-                  label="Location"
+                  label={t('location')}
                   value={
                     [profile.city, profile.state]
                       .filter(Boolean)
@@ -1702,7 +1705,7 @@ function ProfilePageInner() {
                 />
 
                 <InfoLine
-                  label="Experience"
+                  label={t('experience')}
                   value={profile.years_experience}
                 />
               </div>
