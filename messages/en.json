@@ -309,7 +309,16 @@
     "viewWorkerProfile": "View Worker Profile",
     "workerPayoutReleasedSuccessfully": "Worker payout released successfully.",
     "workerAcceptedCounterOffer": "Worker Accepted Your Counter Offer",
-    "workerDeclinedCounterOffer": "Worker Declined Your Counter Offer"
+    "workerDeclinedCounterOffer": "Worker Declined Your Counter Offer",
+    "jobMarkedStatus": "Job marked {status}.",
+    "unableUpdateJob": "Unable to update job.",
+    "unableSubmitCompletedWork": "Unable to submit completed work.",
+    "deleteJobConfirm": "Are you sure you want to delete this job?",
+    "failedDeleteJob": "Failed to delete job.",
+    "workReadyForApproval": "Work ready for approval",
+    "crewCallJobFallback": "A CrewCall job",
+    "submittedForApprovalNotification": "{job} has been submitted for approval.",
+    "workSubmittedAlertFailed": "Work was submitted, but the company alert failed: {error}"
   },
   "Profile": {
     "company": "Company",

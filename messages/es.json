@@ -309,7 +309,16 @@
     "viewWorkerProfile": "Ver perfil del trabajador",
     "workerPayoutReleasedSuccessfully": "El pago al trabajador se liberó correctamente.",
     "workerAcceptedCounterOffer": "El trabajador aceptó tu contraoferta",
-    "workerDeclinedCounterOffer": "El trabajador rechazó tu contraoferta"
+    "workerDeclinedCounterOffer": "El trabajador rechazó tu contraoferta",
+    "jobMarkedStatus": "Trabajo marcado como {status}.",
+    "unableUpdateJob": "No se pudo actualizar el trabajo.",
+    "unableSubmitCompletedWork": "No se pudo enviar el trabajo completado.",
+    "deleteJobConfirm": "¿Estás seguro de que quieres eliminar este trabajo?",
+    "failedDeleteJob": "No se pudo eliminar el trabajo.",
+    "workReadyForApproval": "Trabajo listo para aprobación",
+    "crewCallJobFallback": "Un trabajo de CrewCall",
+    "submittedForApprovalNotification": "{job} se ha enviado para aprobación.",
+    "workSubmittedAlertFailed": "El trabajo se envió, pero falló la alerta a la empresa: {error}"
   },
   "Profile": {
     "company": "Empresa",

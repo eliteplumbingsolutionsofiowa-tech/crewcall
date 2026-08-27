@@ -568,7 +568,7 @@ export default function JobDetailsPage() {
         return
       }
 
-      setMessage(`Job marked ${cleanStatus(nextStatus)}.`)
+      setMessage(t('jobMarkedStatus', { status: cleanStatus(nextStatus) }))
       setMessageTone('success')
 
       await loadPage(true)
@@ -576,7 +576,7 @@ export default function JobDetailsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to update job.'
+          : t('unableUpdateJob')
       )
       setMessageTone('error')
     } finally {
@@ -629,8 +629,8 @@ export default function JobDetailsPage() {
         .insert({
           user_id: job.company_id,
           type: 'general',
-          title: 'Work ready for approval',
-          body: `${job.title || 'A CrewCall job'} has been submitted for approval.`,
+          title: t('workReadyForApproval'),
+          body: t('submittedForApprovalNotification', { job: job.title || t('crewCallJobFallback') }),
           link_url: `/my-jobs/${job.id}`,
           read: false,
           is_read: false,
@@ -643,7 +643,7 @@ export default function JobDetailsPage() {
         )
 
         setMessage(
-          `Work was submitted, but the company alert failed: ${notificationError.message}`
+          t('workSubmittedAlertFailed', { error: notificationError.message })
         )
         setMessageTone('error')
         await loadPage(true)
@@ -664,7 +664,7 @@ export default function JobDetailsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to submit completed work.'
+          : t('unableSubmitCompletedWork')
       )
       setMessageTone('error')
     } finally {
@@ -785,7 +785,7 @@ export default function JobDetailsPage() {
     }
 
     const confirmed = window.confirm(
-      'Are you sure you want to delete this job?'
+      t('deleteJobConfirm')
     )
 
     if (!confirmed) {
@@ -812,7 +812,7 @@ export default function JobDetailsPage() {
       }
 
       if (!response.ok) {
-        setMessage(data.error || 'Failed to delete job.')
+        setMessage(data.error || t('failedDeleteJob'))
         setMessageTone('error')
         setWorkingId(null)
         return
