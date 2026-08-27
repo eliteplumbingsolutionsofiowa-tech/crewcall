@@ -957,7 +957,7 @@ export default function OrganizationPage() {
               className="rounded-xl bg-slate-900 px-4 py-3"
             >
               {roles.map((role) => (
-                <option key={roleLabel(role)} value={roleLabel(role)}>
+                <option key={role} value={role}>
                   {roleLabel(role)}
                 </option>
               ))}
