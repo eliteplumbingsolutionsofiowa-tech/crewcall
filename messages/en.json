@@ -2120,7 +2120,11 @@
     "sendCounterAgain": "Send Counter Again",
     "applied": "Applied",
     "viewJob": "View Job",
-    "message": "Message"
+    "message": "Message",
+    "unableRespondCounter": "Unable to respond to counter offer.",
+    "companyFallback": "Company",
+    "applicationsDescription": "Track every CrewCall application in realtime and monitor hiring progress.",
+    "emptyApplicationsDescription": "Apply to jobs and they will appear here."
   },
   "MyJobs": {
     "loadingJobs": "Loading your jobs...",

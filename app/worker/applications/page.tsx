@@ -117,7 +117,7 @@ export default function WorkerApplicationsPage() {
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            'Unable to respond to counter offer.'
+            t('unableRespondCounter')
         )
       }
 
@@ -136,7 +136,7 @@ export default function WorkerApplicationsPage() {
       setMessage(
         error instanceof Error
           ? error.message
-          : 'Unable to respond to counter offer.'
+          : t('unableRespondCounter')
       )
     } finally {
       setWorkingId(null)
@@ -240,20 +240,20 @@ export default function WorkerApplicationsPage() {
 
           job_title:
             app.jobs?.title ||
-            'Untitled Job',
+            t('untitledJob'),
 
           job_location:
             app.jobs?.location ||
-            'Location not listed',
+            t('locationNotListed'),
 
           pay_rate:
             app.jobs?.pay_rate ||
-            'Pay not listed',
+            t('payNotListed'),
 
           company_name:
             app.jobs?.company
               ?.company_name ||
-            'Company',
+            t('companyFallback'),
 
           requested_pay_rate:
             app.requested_pay_rate || null,
@@ -437,7 +437,7 @@ export default function WorkerApplicationsPage() {
       <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl backdrop-blur">
           <p className="text-lg font-black">
-            Loading applications...
+            {t('loadingApplications')}
           </p>
         </div>
       </main>
@@ -460,10 +460,7 @@ export default function WorkerApplicationsPage() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Track every CrewCall
-                  application in realtime
-                  and monitor hiring
-                  progress.
+                  {t('applicationsDescription')}
                 </p>
               </div>
 
@@ -578,8 +575,7 @@ export default function WorkerApplicationsPage() {
                 </p>
 
                 <p className="mt-2 text-sm font-bold text-slate-400">
-                  Apply to jobs and they
-                  will appear here.
+                  {t('emptyApplicationsDescription')}
                 </p>
 
                 <div className="mt-5">

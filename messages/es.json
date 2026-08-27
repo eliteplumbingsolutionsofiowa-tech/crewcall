@@ -2085,9 +2085,9 @@
   "WorkerApplications": {
     "workerAcceptedCounter": "El trabajador aceptó la contraoferta de la empresa.",
     "rateAccepted": "Tarifa aceptada en ${rate}. Esperando que la empresa te contrate.",
-    "untitledJob": "Trabajo Sin Título",
-    "locationNotListed": "Ubicación no especificada",
-    "payNotListed": "Pago no especificado",
+    "untitledJob": "Trabajo sin título",
+    "locationNotListed": "Ubicación no indicada",
+    "payNotListed": "Pago no indicado",
     "company": "Empresa",
     "loadingApplications": "Cargando solicitudes...",
     "workerDashboard": "Panel del Trabajador",
@@ -2120,7 +2120,11 @@
     "sendCounterAgain": "Enviar Otra Contraoferta",
     "applied": "Solicitud enviada",
     "viewJob": "Ver Trabajo",
-    "message": "Mensaje"
+    "message": "Mensaje",
+    "unableRespondCounter": "No se pudo responder a la contraoferta.",
+    "companyFallback": "Empresa",
+    "applicationsDescription": "Sigue cada solicitud de CrewCall en tiempo real y monitorea el progreso de contratación.",
+    "emptyApplicationsDescription": "Solicita trabajos y aparecerán aquí."
   },
   "MyJobs": {
     "loadingJobs": "Cargando tus trabajos...",
