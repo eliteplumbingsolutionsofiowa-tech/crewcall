@@ -912,7 +912,7 @@ export default function JobDetailPage() {
                       <div className="p-4">
                         <p className="truncate text-sm font-black text-white">
                           {file.file_name ||
-                            'Completion photo'}
+                            t('completionPhoto')}
                         </p>
                       </div>
                     </a>
@@ -1253,7 +1253,7 @@ export default function JobDetailPage() {
                               href={`/profile?user=${match.worker_id}`}
                               className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15"
                             >
-                              View Profile
+                              {t('viewProfile')}
                             </Link>
 
                             {applicantWorkerIds.has(match.worker_id) && (
@@ -1277,8 +1277,7 @@ export default function JobDetailPage() {
 
               {applicants.length === 0 ? (
                 <p className="mt-4 rounded-3xl border border-white/10 bg-slate-950/60 p-5 text-slate-300">
-                  No applicants yet. Use {t('bestWorkerMatches')} above to invite
-                  qualified workers directly.
+                  {t('noApplicantsDescription')}
                 </p>
               ) : (
                 <div className="mt-5 space-y-4">
