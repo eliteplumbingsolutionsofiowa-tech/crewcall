@@ -1099,7 +1099,7 @@ export default function JobDetailsPage() {
                   />
 
                   <DetailChip
-                    label="Trade"
+                    label={t('trade')}
                     value={job.trade || t('notListed')}
                   />
                 </div>
@@ -1351,7 +1351,7 @@ export default function JobDetailsPage() {
                     jobId={job.id}
                     userId={profile.id}
                     category="completion_photo"
-                    title="Completion Photos"
+                    title={t('completionPhotos')}
                     description="Upload photos showing the finished work."
                     accept="image/*"
                     buttonLabel="Upload Photos"
@@ -1403,7 +1403,7 @@ export default function JobDetailsPage() {
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
             eyebrow="Job Information"
-            title="Description"
+            title={t('description')}
             description="Review the company’s job scope and requirements."
           />
 
@@ -1419,7 +1419,7 @@ export default function JobDetailsPage() {
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
             eyebrow="Plans and Documents"
-            title="Job Files"
+            title={t('jobFiles')}
             description="Upload and review plans, photos, PDFs, specifications, and job documents."
             badge={`${jobFiles.length} ${
               jobFiles.length === 1 ? 'file' : 'files'
@@ -1489,7 +1489,7 @@ export default function JobDetailsPage() {
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
             <SectionHeader
               eyebrow="Hiring Pipeline"
-              title="Applicants"
+              title={t('applicants')}
               description="Review worker details, requested rates, and negotiation messages."
               badge={`${applicants.length} ${
                 applicants.length === 1

@@ -567,7 +567,7 @@ export default function AiWorkerMatchesPage() {
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <StatCard
-                  label="Reviewed"
+                  label={t('reviewed')}
                   value={totalWorkersReviewed}
                 />
                 <StatCard

@@ -266,28 +266,28 @@ export default function CompanyInvitesPage() {
             <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap gap-2">
                 <FilterButton
-                  label="All"
+                  label={t('all')}
                   active={filter === 'all'}
                   count={counts.all}
                   onClick={() => setFilter('all')}
                 />
 
                 <FilterButton
-                  label="Pending"
+                  label={t('pending')}
                   active={filter === 'pending'}
                   count={counts.pending}
                   onClick={() => setFilter('pending')}
                 />
 
                 <FilterButton
-                  label="Accepted"
+                  label={t('accepted')}
                   active={filter === 'accepted'}
                   count={counts.accepted}
                   onClick={() => setFilter('accepted')}
                 />
 
                 <FilterButton
-                  label="Declined"
+                  label={t('declined')}
                   active={filter === 'declined'}
                   count={counts.declined}
                   onClick={() => setFilter('declined')}
@@ -363,7 +363,7 @@ export default function CompanyInvitesPage() {
 
                         <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
                           <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                            Job Invite
+                            {t('jobInvite')}
                           </p>
 
                           <h3 className="mt-2 text-lg font-black text-white">
@@ -382,14 +382,14 @@ export default function CompanyInvitesPage() {
                           href={`/jobs/${invite.job_id}`}
                           className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20"
                         >
-                          View Job
+                          {t('viewJob')}
                         </Link>
 
                         <Link
                           href={`/profile/${invite.worker_id}`}
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                         >
-                          Worker Profile
+                          {t('workerProfile')}
                         </Link>
                       </div>
                     </div>

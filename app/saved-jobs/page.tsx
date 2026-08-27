@@ -206,7 +206,7 @@ export default function JobsPage() {
             checked={verifiedOnly}
             onChange={() => setVerifiedOnly((current) => !current)}
           />
-          Verified Only
+          {t('verifiedOnly')}
         </label>
 
         <label className="flex items-center gap-2 text-sm">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendCrewCallEmail } from '@/lib/resend'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -112,42 +113,13 @@ export async function POST(req: Request) {
       )
     }
 
-    const { data: profile } = await adminClient
-      .from('profiles')
-      .select('id, role, company_name, full_name')
-      .eq('id', user.id)
-      .maybeSingle()
+    const companyContext =
+      await resolveCompanyContext(
+        adminClient,
+        user.id
+      )
 
-    let canManageOrganization =
-      profile?.role === 'company' ||
-      profile?.role === 'admin'
-
-    if (!canManageOrganization) {
-      const [
-        branchResult,
-        jobResult,
-      ] = await Promise.all([
-        adminClient
-          .from('company_branches')
-          .select('id')
-          .eq('company_id', user.id)
-          .limit(1)
-          .maybeSingle(),
-
-        adminClient
-          .from('jobs')
-          .select('id')
-          .eq('company_id', user.id)
-          .limit(1)
-          .maybeSingle(),
-      ])
-
-      canManageOrganization =
-        Boolean(branchResult.data) ||
-        Boolean(jobResult.data)
-    }
-
-    if (!canManageOrganization) {
+    if (!companyContext.companyId) {
       return NextResponse.json(
         {
           error:
@@ -156,6 +128,14 @@ export async function POST(req: Request) {
         { status: 403 }
       )
     }
+
+    const companyId = companyContext.companyId
+
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('id, role, company_name, full_name')
+      .eq('id', companyId)
+      .maybeSingle()
 
     const { data: invite, error: inviteError } =
       await adminClient
@@ -171,7 +151,7 @@ export async function POST(req: Request) {
           `
         )
         .eq('id', inviteId)
-        .eq('company_id', user.id)
+        .eq('company_id', companyId)
         .maybeSingle()
 
     if (inviteError) {
@@ -202,7 +182,7 @@ export async function POST(req: Request) {
         .from('company_branches')
         .select('name')
         .eq('id', invite.branch_id)
-        .eq('company_id', user.id)
+        .eq('company_id', companyId)
         .maybeSingle()
 
       if (branch?.name) {

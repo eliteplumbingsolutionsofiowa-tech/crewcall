@@ -212,7 +212,7 @@ export default function CompanyOperationsPage() {
         setCompanyName(
           companyProfile?.company_name ||
             companyProfile?.full_name ||
-            'Your Company',
+            t('yourCompany'),
         )
 
         const { data: jobsData, error: jobsError } = await supabase
@@ -1044,7 +1044,7 @@ export default function CompanyOperationsPage() {
                     </p>
 
                     <p className="mt-2 text-sm font-semibold text-amber-100/70">
-                      Items needing review
+                      {t('itemsNeedingReview')}
                     </p>
                   </div>
                 </div>
@@ -1268,7 +1268,7 @@ export default function CompanyOperationsPage() {
                     <QuickAction
                       href="/workers"
                       icon="⌖"
-                      title="Find Workers"
+                      title={t('findWorkers')}
                       description={t('searchAvailableHelp')}
                     />
 
@@ -1531,7 +1531,7 @@ export default function CompanyOperationsPage() {
                       />
 
                       <FunnelMetric
-                        label="Applications"
+                        label={t('applications')}
                         value={applications.length}
                         maximum={Math.max(
                           applications.length,

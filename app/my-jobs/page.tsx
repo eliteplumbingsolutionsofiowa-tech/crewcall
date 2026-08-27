@@ -483,8 +483,7 @@ export default function MyJobsPage() {
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Manage active jobs, applicants, hires, payments, completed
-                  work, and worker communication.
+                  {t('description')}
                 </p>
               </div>
 
@@ -582,7 +581,7 @@ export default function MyJobsPage() {
               onClick={clearFilters}
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
             >
-              Clear
+              {t('clear')}
             </button>
 
             <button

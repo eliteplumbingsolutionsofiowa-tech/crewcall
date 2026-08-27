@@ -1611,7 +1611,7 @@ export default function CompanyDashboardPage() {
                   description={t('jobsNoApplicantsDescription')}
                   action={
                     <SecondaryButton href="/company/jobs" size="sm">
-                      Manage Jobs
+                      {t('manageJobs')}
                     </SecondaryButton>
                   }
                 />

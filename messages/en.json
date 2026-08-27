@@ -406,7 +406,13 @@
     "accountDescription": "Manage your CrewCall account and personal data.",
     "deleteAccount": "Delete Account",
     "aboutMePlaceholder": "Example: Licensed journeyman plumber specializing in commercial rough-ins, service work, hospitals, schools, and tenant improvements.",
-    "review": "Review"
+    "review": "Review",
+    "score": "Score",
+    "experience": "Experience",
+    "travel": "Travel",
+    "rate": "Rate",
+    "yourName": "Your name",
+    "noOpenJobsAvailable": "No open jobs available"
   },
   "ProfileFiles": {
     "uploading": "Uploading...",
@@ -1750,7 +1756,10 @@
     "waitingForDelay": "Waiting for Delay",
     "completed": "Completed",
     "companyDashboard": "Company Dashboard",
-    "operationsCenter": "Operations Center"
+    "operationsCenter": "Operations Center",
+    "recruiterQueue": "Recruiter Queue",
+    "automatedRecruitingJobs": "Automated Recruiting Jobs",
+    "noRecruitingJobsDescription": "Start AI recruiting from a job in Company Operations."
   },
   "CompanyInvites": {
     "loginRequired": "You must be logged in to view company invites.",
@@ -1920,7 +1929,16 @@
     "unknownEmailError": "Unknown email error.",
     "inviteResent": "Invitation re-sent to {email}.",
     "inviteSent": "Invitation emailed to {email}.",
-    "inviteCreateFailed": "Could not create team member invite."
+    "inviteCreateFailed": "Could not create team member invite.",
+    "resendInvite": "Resend Invite",
+    "cancelInvite": "Cancel Invite",
+    "removeMember": "Remove Member",
+    "inviteCancelled": "Invitation cancelled.",
+    "memberRemoved": "Team member removed.",
+    "teamActionFailed": "Could not update the team member.",
+    "headquartersShort": "HQ",
+    "cancelInviteConfirm": "Cancel the invitation for {email}?",
+    "removeMemberConfirm": "Remove {email} from this company?"
   },
   "CompanyPayments": {
     "paymentHistory": "Payment History",
@@ -2082,7 +2100,10 @@
     "accepting": "Accepting...",
     "accept": "Accept",
     "declining": "Declining...",
-    "decline": "Decline"
+    "decline": "Decline",
+    "loginAgainToAccept": "Please log in again to accept this invite.",
+    "workerDeclinedInvite": "Worker declined invite",
+    "workerDeclinedInviteBody": "A worker declined your job invite."
   },
   "WorkerApplications": {
     "workerAcceptedCounter": "Worker accepted the company counter offer.",
@@ -2549,7 +2570,8 @@
     "notScored": "Not scored",
     "available": "Available",
     "activity": "Activity",
-    "itemsToConfirm": "Items to confirm"
+    "itemsToConfirm": "Items to confirm",
+    "reviewed": "Reviewed"
   },
   "MyWork": {
     "mustBeLoggedIn": "You must be logged in to view your work.",
@@ -2638,7 +2660,10 @@
     "payout": "Payout",
     "released": "Released",
     "pending": "Pending",
-    "notReleased": "Not Released"
+    "notReleased": "Not Released",
+    "filter": "Filter",
+    "noTradeLocation": "No trade/location listed",
+    "viewApplicants": "View Applicants"
   },
   "Billing": {
     "backToProfile": "Back to Profile",
@@ -2681,7 +2706,8 @@
     "viewJob": "View Job",
     "saved": "Saved ❤️",
     "saveJob": "Save Job 🤍",
-    "viewCompany": "View Company"
+    "viewCompany": "View Company",
+    "verifiedOnly": "Verified Only"
   },
   "SavedWorkers": {
     "mustBeCompany": "You must be logged in as a company to view saved workers.",

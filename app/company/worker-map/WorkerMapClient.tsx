@@ -1304,7 +1304,7 @@ export default function WorkerMapClient() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">
-                    CrewCall AI Recruiter
+                    {t('aiRecruiter')}
                   </p>
 
                   <h2 className="mt-2 text-2xl font-bold text-white">
@@ -1538,8 +1538,7 @@ export default function WorkerMapClient() {
 
                       {!jobId ? (
                         <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-100">
-                          Open this recruiter from a job in the Operations
-                          Center to send invitations.
+                          {t('openRecruiterFromJob')}
                         </div>
                       ) : null}
 

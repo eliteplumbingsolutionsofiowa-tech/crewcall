@@ -331,7 +331,6 @@ export default function CompletedJobsPage() {
 
               <p className="mt-3 max-w-2xl text-slate-300">
                 {t('description')}
-                completed project records.
               </p>
             </div>
 
@@ -347,8 +346,8 @@ export default function CompletedJobsPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label={t('completed')} value={String(stats.completed)} />
             <StatCard label={t('paid')} value={String(stats.paid)} />
-            <StatCard label="Unpaid" value={String(stats.unpaid)} />
-            <StatCard label="Total Value" value={money(stats.total)} />
+            <StatCard label={t('unpaid')} value={String(stats.unpaid)} />
+            <StatCard label={t('totalValue')} value={money(stats.total)} />
           </div>
         </section>
 
@@ -356,20 +355,20 @@ export default function CompletedJobsPage() {
           <div className="grid gap-4 md:grid-cols-[1fr_220px]">
             <div>
               <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                Search
+                {t('search')}
               </label>
 
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search company, worker, trade, location..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500"
               />
             </div>
 
             <div>
               <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
-                Filter
+                {t('filter')}
               </label>
 
               <select
@@ -377,10 +376,10 @@ export default function CompletedJobsPage() {
                 onChange={(event) => setFilter(event.target.value as Filter)}
                 className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none"
               >
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="completed">Completed</option>
+                <option value="all">{t('all')}</option>
+                <option value="paid">{t('paid')}</option>
+                <option value="unpaid">{t('unpaid')}</option>
+                <option value="completed">{t('completed')}</option>
               </select>
             </div>
           </div>
@@ -448,7 +447,7 @@ export default function CompletedJobsPage() {
 
                       <p className="mt-2 text-sm font-semibold text-slate-400">
                         {[job.trade, job.location].filter(Boolean).join(' • ') ||
-                          'No trade/location listed'}
+                          t('noTradeLocation')}
                       </p>
 
                       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -501,7 +500,7 @@ export default function CompletedJobsPage() {
                           href={`/my-jobs/${job.id}/applicants`}
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white hover:bg-white/15"
                         >
-                          View Applicants
+                          {t('viewApplicants')}
                         </Link>
                       )}
 

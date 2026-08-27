@@ -895,10 +895,10 @@ export default function CompanyRecruitingPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-5 py-5 sm:px-6">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
-                {t('live')} Recruiter Queue
+                {t('live')} {t('recruiterQueue')}
               </p>
               <h2 className="mt-1 text-xl font-black">
-                Automated Recruiting Jobs
+                {t('automatedRecruitingJobs')}
               </h2>
             </div>
 
@@ -913,8 +913,7 @@ export default function CompanyRecruitingPage() {
                 {t('noRecruitingJobs')}
               </p>
               <p className="mt-2 text-sm font-semibold text-slate-400">
-                Start AI recruiting from a job in Company
-                {t('operations')}.
+                {t('noRecruitingJobsDescription')}
               </p>
               <Link
                 href="/company/operations"
@@ -1075,7 +1074,7 @@ export default function CompanyRecruitingPage() {
 
                     {busy && (
                       <p className="mt-3 text-xs font-bold text-cyan-300">
-                        {t('updating')} recruiter...
+                        {t('updatingRecruiter')}
                       </p>
                     )}
                   </article>

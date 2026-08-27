@@ -809,13 +809,13 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:min-w-[420px]">
-                <StatCard label="Score" value={String(crewcallScore)} />
+                <StatCard label={t('score')} value={String(crewcallScore)} />
                 <StatCard
-                  label="Experience"
+                  label={t('experience')}
                   value={textValue(profile.years_experience)}
                 />
                 <StatCard
-                  label="Travel"
+                  label={t('travel')}
                   value={
                     profile.travel_radius
                       ? `${profile.travel_radius} mi`
@@ -823,7 +823,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   }
                 />
                 <StatCard
-                  label="Rate"
+                  label={t('rate')}
                   value={
                     profile.expected_pay_min || profile.expected_pay_max
                       ? `$${profile.expected_pay_min || '?'}-${
@@ -874,7 +874,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           updateField('full_name', event.target.value)
                         }
                         className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="Your name"
+                        placeholder={t('yourName')}
                       />
                     ) : (
                       <ReadOnlyValue value={textValue(profile.full_name)} />
@@ -1267,7 +1267,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
                     >
                       {companyJobs.length === 0 && (
-                        <option value="">No open jobs available</option>
+                        <option value="">{t('noOpenJobsAvailable')}</option>
                       )}
 
                       {companyJobs.map((job) => (

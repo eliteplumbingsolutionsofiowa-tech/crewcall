@@ -602,6 +602,112 @@ export default function OrganizationPage() {
     }
   }
 
+  async function resendTeamInvite(member: TeamMember) {
+    setSaving(true)
+    setInviteError(null)
+    setInviteMessage(null)
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        throw new Error(t('inviteSessionError'))
+      }
+
+      const emailResponse = await fetch(
+        '/api/company/team-invite',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            inviteId: member.id,
+          }),
+        }
+      )
+
+      const result = await emailResponse.json()
+
+      if (!emailResponse.ok) {
+        throw new Error(
+          result?.error || t('teamActionFailed')
+        )
+      }
+
+      setInviteMessage(
+        t('inviteResent', {
+          email: member.email,
+        })
+      )
+    } catch (error) {
+      setInviteError(
+        error instanceof Error
+          ? error.message
+          : t('teamActionFailed')
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function removeTeamMember(
+    member: TeamMember
+  ) {
+    if (!companyId) return
+
+    const isPendingInvite =
+      member.status === 'invited'
+
+    const confirmed = window.confirm(
+      isPendingInvite
+        ? t('cancelInviteConfirm', {
+            email: member.email,
+          })
+        : t('removeMemberConfirm', {
+            email: member.email,
+          })
+    )
+
+    if (!confirmed) return
+
+    setSaving(true)
+    setInviteError(null)
+    setInviteMessage(null)
+
+    try {
+      const { error } = await supabaseAny
+        .from('company_team_members')
+        .delete()
+        .eq('id', member.id)
+        .eq('company_id', companyId)
+
+      if (error) {
+        throw error
+      }
+
+      setInviteMessage(
+        isPendingInvite
+          ? t('inviteCancelled')
+          : t('memberRemoved')
+      )
+
+      await loadOrganization()
+    } catch (error) {
+      setInviteError(
+        error instanceof Error
+          ? error.message
+          : t('teamActionFailed')
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
@@ -673,8 +779,8 @@ export default function OrganizationPage() {
             <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-white/5 p-6">
               <h3 className="text-xl font-black">
                 {editingBranchId
-                  ? 'Edit Branch'
-                  : 'Add Branch'}
+                  ? t('editBranch')
+                  : t('addBranch')}
               </h3>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -822,18 +928,18 @@ export default function OrganizationPage() {
 
                       {branch.is_headquarters && (
                         <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black text-cyan-300">
-                          HQ
+                          {t('headquartersShort')}
                         </span>
                       )}
                     </div>
 
                     <div className="mt-5 grid grid-cols-2 gap-3">
                       <Stat
-                        label="Team Members"
+                        label={t('teamMembers')}
                         value={branchMembers.length}
                       />
                       <Stat
-                        label="Pending Invites"
+                        label={t('pendingInvites')}
                         value={
                           branchMembers.filter(
                             (member) =>
@@ -936,7 +1042,7 @@ export default function OrganizationPage() {
             {t('addTeamDescription')}
           </p>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <input
               value={inviteEmail}
               onChange={(event) => {
@@ -1033,7 +1139,7 @@ export default function OrganizationPage() {
                 return (
                   <div
                     key={member.id}
-                    className="flex flex-col gap-2 rounded-xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 rounded-xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="font-black">
@@ -1041,15 +1147,43 @@ export default function OrganizationPage() {
                       </p>
 
                       <p className="text-sm font-semibold text-slate-400">
-                        {member.role} ·{' '}
+                        {roleLabel(member.role)} ·{' '}
                         {branch?.name ||
                           t('noBranch')}
                       </p>
                     </div>
 
-                    <span className="w-fit rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase text-cyan-300">
-                      {memberStatusLabel(member.status)}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      <span className="w-fit rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase text-cyan-300">
+                        {memberStatusLabel(member.status)}
+                      </span>
+
+                      {member.status === 'invited' && (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() =>
+                            void resendTeamInvite(member)
+                          }
+                          className="rounded-lg bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {t('resendInvite')}
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() =>
+                          void removeTeamMember(member)
+                        }
+                        className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {member.status === 'invited'
+                          ? t('cancelInvite')
+                          : t('removeMember')}
+                      </button>
+                    </div>
                   </div>
                 )
               })}

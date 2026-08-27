@@ -227,7 +227,7 @@ export default function WorkerInvitesPage() {
       } = await supabase.auth.getSession()
 
       if (!session?.access_token) {
-        throw new Error('Please log in again to accept this invite.')
+        throw new Error(t('loginAgainToAccept'))
       }
 
       const response = await fetch('/api/invites/accept', {
@@ -294,8 +294,8 @@ export default function WorkerInvitesPage() {
     await supabase.from('notifications').insert({
       user_id: invite.company_id,
       type: 'invite',
-      title: 'Worker declined invite',
-      body: 'A worker declined your job invite.',
+      title: t('workerDeclinedInvite'),
+      body: t('workerDeclinedInviteBody'),
       link_url: `/jobs/${invite.job_id}`,
       is_read: false,
       read: false,
@@ -346,7 +346,7 @@ export default function WorkerInvitesPage() {
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                  Invites
+                  {t('invites')}
                 </h1>
 
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
@@ -477,7 +477,7 @@ export default function WorkerInvitesPage() {
                           href={`/messages?user=${invite.company_id}&job=${invite.job_id}`}
                           className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white hover:bg-blue-400"
                         >
-                          Message
+                          {t('message')}
                         </Link>
 
                         {invite.status === 'pending' && (

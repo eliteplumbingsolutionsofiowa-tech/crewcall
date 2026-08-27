@@ -406,7 +406,13 @@
     "accountDescription": "Administra tu cuenta de CrewCall y tus datos personales.",
     "deleteAccount": "Eliminar Cuenta",
     "aboutMePlaceholder": "Ejemplo: Plomero oficial con licencia especializado en instalaciones comerciales, servicio, hospitales, escuelas y mejoras para inquilinos.",
-    "review": "Revisar"
+    "review": "Revisar",
+    "score": "Puntuación",
+    "experience": "Experiencia",
+    "travel": "Viajes",
+    "rate": "Tarifa",
+    "yourName": "Tu nombre",
+    "noOpenJobsAvailable": "No hay trabajos abiertos disponibles"
   },
   "ProfileFiles": {
     "uploading": "Subiendo...",
@@ -1750,7 +1756,10 @@
     "waitingForDelay": "Esperando Intervalo",
     "completed": "Completados",
     "companyDashboard": "Panel de la Empresa",
-    "operationsCenter": "Centro de Operaciones"
+    "operationsCenter": "Centro de Operaciones",
+    "recruiterQueue": "Cola del Reclutador",
+    "automatedRecruitingJobs": "Trabajos de Reclutamiento Automatizado",
+    "noRecruitingJobsDescription": "Inicia el reclutamiento con IA desde un trabajo en Operaciones de la Empresa."
   },
   "CompanyInvites": {
     "loginRequired": "Debes iniciar sesión para ver las invitaciones de la empresa.",
@@ -1920,7 +1929,16 @@
     "unknownEmailError": "Error de correo desconocido.",
     "inviteResent": "Invitación reenviada a {email}.",
     "inviteSent": "Invitación enviada por correo a {email}.",
-    "inviteCreateFailed": "No se pudo crear la invitación para el miembro del equipo."
+    "inviteCreateFailed": "No se pudo crear la invitación para el miembro del equipo.",
+    "resendInvite": "Reenviar Invitación",
+    "cancelInvite": "Cancelar Invitación",
+    "removeMember": "Eliminar Miembro",
+    "inviteCancelled": "Invitación cancelada.",
+    "memberRemoved": "Miembro del equipo eliminado.",
+    "teamActionFailed": "No se pudo actualizar al miembro del equipo.",
+    "headquartersShort": "Sede",
+    "cancelInviteConfirm": "¿Cancelar la invitación para {email}?",
+    "removeMemberConfirm": "¿Eliminar a {email} de esta empresa?"
   },
   "CompanyPayments": {
     "paymentHistory": "Historial de Pagos",
@@ -2082,7 +2100,10 @@
     "accepting": "Aceptando...",
     "accept": "Aceptar",
     "declining": "Rechazando...",
-    "decline": "Rechazar"
+    "decline": "Rechazar",
+    "loginAgainToAccept": "Inicia sesión nuevamente para aceptar esta invitación.",
+    "workerDeclinedInvite": "El trabajador rechazó la invitación",
+    "workerDeclinedInviteBody": "Un trabajador rechazó tu invitación de trabajo."
   },
   "WorkerApplications": {
     "workerAcceptedCounter": "El trabajador aceptó la contraoferta de la empresa.",
@@ -2549,7 +2570,8 @@
     "notScored": "Sin puntuación",
     "available": "Disponible",
     "activity": "Actividad",
-    "itemsToConfirm": "Aspectos por confirmar"
+    "itemsToConfirm": "Aspectos por confirmar",
+    "reviewed": "Revisados"
   },
   "MyWork": {
     "mustBeLoggedIn": "Debes iniciar sesión para ver tu trabajo.",
@@ -2638,7 +2660,10 @@
     "payout": "Desembolso",
     "released": "Liberado",
     "pending": "Pendiente",
-    "notReleased": "No Liberado"
+    "notReleased": "No Liberado",
+    "filter": "Filtrar",
+    "noTradeLocation": "Oficio/ubicación no especificados",
+    "viewApplicants": "Ver Solicitantes"
   },
   "Billing": {
     "backToProfile": "Volver al Perfil",
@@ -2681,7 +2706,8 @@
     "viewJob": "Ver Trabajo",
     "saved": "Guardado ❤️",
     "saveJob": "Guardar Trabajo 🤍",
-    "viewCompany": "Ver Empresa"
+    "viewCompany": "Ver Empresa",
+    "verifiedOnly": "Solo Verificados"
   },
   "SavedWorkers": {
     "mustBeCompany": "Debes iniciar sesión como empresa para ver los trabajadores guardados.",
