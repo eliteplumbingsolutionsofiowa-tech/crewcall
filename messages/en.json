@@ -234,7 +234,13 @@
     "updating": "Updating...",
     "submitting": "Submitting...",
     "submitApplication": "Submit Application",
-    "myApplications": "My Applications"
+    "myApplications": "My Applications",
+    "statusOpen": "Open",
+    "statusAssigned": "Assigned",
+    "statusInProgress": "In Progress",
+    "statusCompleted": "Completed",
+    "statusClosed": "Closed",
+    "statusCancelled": "Cancelled"
   },
   "JobDetail": {
     "profileNotFound": "Profile not found.",

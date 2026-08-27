@@ -234,7 +234,13 @@
     "updating": "Actualizando...",
     "submitting": "Enviando...",
     "submitApplication": "Enviar Solicitud",
-    "myApplications": "Mis Solicitudes"
+    "myApplications": "Mis Solicitudes",
+    "statusOpen": "Abierto",
+    "statusAssigned": "Asignado",
+    "statusInProgress": "En progreso",
+    "statusCompleted": "Completado",
+    "statusClosed": "Cerrado",
+    "statusCancelled": "Cancelado"
   },
   "JobDetail": {
     "profileNotFound": "Perfil no encontrado.",

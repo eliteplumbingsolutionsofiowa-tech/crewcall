@@ -373,7 +373,19 @@ export default function ApplyPage() {
 
                 <PayCard
                   label={t('status')}
-                  value={cleanStatus(job?.status || 'open')}
+                  value={
+                    job?.status === 'assigned'
+                      ? t('statusAssigned')
+                      : job?.status === 'in_progress'
+                        ? t('statusInProgress')
+                        : job?.status === 'completed'
+                          ? t('statusCompleted')
+                          : job?.status === 'closed'
+                            ? t('statusClosed')
+                            : job?.status === 'cancelled'
+                              ? t('statusCancelled')
+                              : t('statusOpen')
+                  }
                   tone="orange"
                 />
               </div>
