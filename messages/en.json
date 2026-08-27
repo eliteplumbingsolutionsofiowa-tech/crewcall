@@ -1246,7 +1246,9 @@
     "workerRejected": "{worker} rejected.",
     "applicationsAppear": "Applications will appear here when workers apply to your jobs.",
     "applicantCount": "{count, plural, one {# Applicant} other {# Applicants}}",
-    "reviewCount": "{count, plural, one {# review} other {# reviews}}"
+    "reviewCount": "{count, plural, one {# review} other {# reviews}}",
+    "noApplicationsFound": "No applications found.",
+    "emptyApplicationsDescription": "Applications will appear here when workers apply to your jobs."
   },
   "CompanyJobs": {
     "deleteConfirm": "Delete this job? This cannot be undone.",

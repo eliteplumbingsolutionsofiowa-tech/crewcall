@@ -1222,8 +1222,8 @@
     "applicant": "Candidato",
     "applicants": "Candidatos",
     "viewJob": "Ver Trabajo",
-    "showApplicants": "Mostrar Candidatos ({count})",
-    "hideApplicants": "Ocultar Candidatos",
+    "showApplicants": "Mostrar Solicitantes ({count})",
+    "hideApplicants": "Ocultar Solicitantes",
     "workerProfile": "Perfil del trabajador",
     "reviews": "reseñas",
     "applied": "Solicitó",
@@ -1246,7 +1246,9 @@
     "workerRejected": "{worker} fue rechazado.",
     "applicationsAppear": "Las solicitudes aparecerán aquí cuando los trabajadores soliciten tus trabajos.",
     "applicantCount": "{count, plural, one {# Candidato} other {# Candidatos}}",
-    "reviewCount": "{count, plural, one {# reseña} other {# reseñas}}"
+    "reviewCount": "{count, plural, one {# reseña} other {# reseñas}}",
+    "noApplicationsFound": "No se encontraron solicitudes.",
+    "emptyApplicationsDescription": "Las solicitudes aparecerán aquí cuando los trabajadores soliciten tus trabajos."
   },
   "CompanyJobs": {
     "deleteConfirm": "¿Eliminar este trabajo? Esta acción no se puede deshacer.",

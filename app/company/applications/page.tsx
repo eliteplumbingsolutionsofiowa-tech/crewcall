@@ -483,11 +483,11 @@ export default function CompanyApplicationsPage() {
             {grouped.length === 0 ? (
               <div className="rounded-[2rem] border border-white/10 bg-slate-950/60 p-8 text-center">
                 <p className="text-xl font-black text-white">
-                  No applications found.
+                  {t('noApplicationsFound')}
                 </p>
 
                 <p className="mt-2 text-sm font-bold text-slate-400">
-                  Applications will appear here when workers apply to your jobs.
+                  {t('emptyApplicationsDescription')}
                 </p>
 
                 <div className="mt-5">
@@ -530,7 +530,7 @@ export default function CompanyApplicationsPage() {
                           href={`/jobs/${jobId}`}
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                         >
-                          View Job
+                          {t('viewJob')}
                         </Link>
 
                         <button
@@ -544,8 +544,8 @@ export default function CompanyApplicationsPage() {
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
                         >
                           {collapsedJobs[jobId]
-                            ? `Show Applicants (${apps.length})`
-                            : 'Hide Applicants'}
+                            ? t('showApplicants', { count: apps.length })
+                            : t('hideApplicants')}
                         </button>
                       </div>
                     </div>
@@ -639,8 +639,8 @@ export default function CompanyApplicationsPage() {
                                   className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-400 disabled:opacity-60"
                                 >
                                   {actionLoading === app.id
-                                    ? 'Rejecting...'
-                                    : 'Reject'}
+                                    ? t('rejecting')
+                                    : t('reject')}
                                 </button>
                               )}
                           </div>
