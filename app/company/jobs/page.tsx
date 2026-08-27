@@ -254,14 +254,14 @@ export default function CompanyJobsPage() {
               href={`/jobs/${job.id}`}
               className="rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-cyan-300"
             >
-              View Job
+              {t('viewJob')}
             </Link>
 
             <Link
               href={`/my-jobs/${job.id}/applicants`}
               className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
             >
-              Applicants
+              {t('applicants')}
             </Link>
           </div>
         </div>
@@ -274,7 +274,7 @@ export default function CompanyJobsPage() {
               disabled={isUpdating}
               className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Mark Open
+              {t('markOpen')}
             </button>
           )}
 
@@ -285,7 +285,7 @@ export default function CompanyJobsPage() {
               disabled={isUpdating}
               className="rounded-2xl border border-orange-300/30 bg-orange-400/10 px-4 py-2 text-sm font-black text-orange-100 transition hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Mark Active
+              {t('markActive')}
             </button>
           )}
 
@@ -296,7 +296,7 @@ export default function CompanyJobsPage() {
               disabled={isUpdating}
               className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-100 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Complete
+              {t('complete')}
             </button>
           )}
 
@@ -307,7 +307,7 @@ export default function CompanyJobsPage() {
               disabled={isUpdating}
               className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Cancel
+              {t('cancel')}
             </button>
           )}
 
@@ -348,7 +348,7 @@ export default function CompanyJobsPage() {
 
         {jobs.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] p-6 text-sm font-bold text-slate-400">
-            No jobs in this section.
+            {t('noJobsSection')}
           </div>
         ) : (
           <div className="space-y-4">
@@ -368,15 +368,15 @@ export default function CompanyJobsPage() {
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
-                CrewCall Company
+                {t('crewCallCompany')}
               </p>
 
               <h1 className="mt-2 text-3xl font-black tracking-tight md:text-5xl">
-                My Company Jobs
+                {t('title')}
               </h1>
 
               <p className="mt-3 max-w-2xl text-slate-300">
-                Manage posted jobs, applicants, job status, and completed work.
+                {t('description')}
               </p>
             </div>
 
@@ -386,14 +386,14 @@ export default function CompanyJobsPage() {
                 onClick={() => void loadJobs()}
                 className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20"
               >
-                Refresh
+                {t('refresh')}
               </button>
 
               <Link
                 href="/post-job"
                 className="rounded-2xl bg-cyan-400 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-cyan-300"
               >
-                Post New Job
+                {t('postNewJob')}
               </Link>
             </div>
           </div>
@@ -414,23 +414,23 @@ export default function CompanyJobsPage() {
 
         {loading ? (
           <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-sm font-black text-slate-300 shadow-xl">
-            Loading company jobs...
+            {t('loading')}
           </div>
         ) : jobs.length === 0 ? (
           <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center shadow-xl">
             <h2 className="text-2xl font-black text-white">
-              No jobs posted yet
+              {t('noJobsYet')}
             </h2>
 
             <p className="mt-2 text-slate-300">
-              Create your first job and start getting matched with workers.
+              {t('noJobsYetDescription')}
             </p>
 
             <Link
               href="/post-job"
               className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
             >
-              Post a Job
+              {t('postJob')}
             </Link>
           </div>
         ) : (
