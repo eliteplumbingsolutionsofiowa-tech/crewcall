@@ -60,9 +60,41 @@ export async function POST(req: Request) {
     }
 
     let accountId = profile.stripe_account_id
+    let account: Stripe.Account | null = null
+
+    if (accountId) {
+      try {
+        account = await stripe.accounts.retrieve(accountId)
+      } catch (retrieveError) {
+        console.warn(
+          'Existing Stripe account is inaccessible. Creating a new CrewCall account.',
+          retrieveError
+        )
+
+        accountId = null
+
+        const { error: clearError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            stripe_account_id: null,
+            stripe_charges_enabled: false,
+            stripe_payouts_enabled: false,
+            stripe_details_submitted: false,
+            stripe_onboarding_complete: false,
+          })
+          .eq('id', userId)
+
+        if (clearError) {
+          return NextResponse.json(
+            { error: clearError.message },
+            { status: 400 }
+          )
+        }
+      }
+    }
 
     if (!accountId) {
-      const account = await stripe.accounts.create({
+      account = await stripe.accounts.create({
         type: 'express',
         email,
         capabilities: {
@@ -76,9 +108,12 @@ export async function POST(req: Request) {
         .from('profiles')
         .update({
           stripe_account_id: accountId,
-          stripe_charges_enabled: account.charges_enabled || false,
-          stripe_payouts_enabled: account.payouts_enabled || false,
-          stripe_details_submitted: account.details_submitted || false,
+          stripe_charges_enabled: Boolean(account.charges_enabled),
+          stripe_payouts_enabled: Boolean(account.payouts_enabled),
+          stripe_details_submitted: Boolean(account.details_submitted),
+          stripe_onboarding_complete:
+            Boolean(account.details_submitted) &&
+            Boolean(account.payouts_enabled),
         })
         .eq('id', userId)
 
@@ -88,15 +123,16 @@ export async function POST(req: Request) {
           { status: 400 }
         )
       }
-    } else {
-      const account = await stripe.accounts.retrieve(accountId)
-
+    } else if (account) {
       const { error: syncError } = await supabaseAdmin
         .from('profiles')
         .update({
-          stripe_charges_enabled: account.charges_enabled || false,
-          stripe_payouts_enabled: account.payouts_enabled || false,
-          stripe_details_submitted: account.details_submitted || false,
+          stripe_charges_enabled: Boolean(account.charges_enabled),
+          stripe_payouts_enabled: Boolean(account.payouts_enabled),
+          stripe_details_submitted: Boolean(account.details_submitted),
+          stripe_onboarding_complete:
+            Boolean(account.details_submitted) &&
+            Boolean(account.payouts_enabled),
         })
         .eq('id', userId)
 

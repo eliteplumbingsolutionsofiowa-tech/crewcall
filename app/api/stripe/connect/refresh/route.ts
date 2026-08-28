@@ -37,9 +37,27 @@ export async function POST(req: Request) {
       )
     }
 
-    const account = await stripe.accounts.retrieve(
-      profile.stripe_account_id
-    )
+    let account: Stripe.Account
+
+    try {
+      account = await stripe.accounts.retrieve(
+        profile.stripe_account_id
+      )
+    } catch (retrieveError) {
+      console.warn(
+        'Existing Stripe account is inaccessible during refresh.',
+        retrieveError
+      )
+
+      return NextResponse.json(
+        {
+          error:
+            'Your previous Stripe connection is no longer available. Please reconnect Stripe from your CrewCall profile.',
+          reconnect_required: true,
+        },
+        { status: 409 }
+      )
+    }
 
     const onboardingComplete =
       Boolean(account.details_submitted) &&
