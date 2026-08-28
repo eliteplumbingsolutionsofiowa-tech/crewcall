@@ -348,9 +348,27 @@ export async function POST(req: Request) {
       )
     }
 
-    const stripeAccount = await stripe.accounts.retrieve(
-      worker.stripe_account_id
-    )
+    let stripeAccount: Stripe.Account
+
+    try {
+      stripeAccount = await stripe.accounts.retrieve(
+        worker.stripe_account_id
+      )
+    } catch (retrieveError) {
+      console.error(
+        'Unable to access worker Stripe account during payout release.',
+        retrieveError
+      )
+
+      return NextResponse.json(
+        {
+          error:
+            'The worker Stripe account is no longer accessible. The worker must reconnect Stripe before this payout can be released.',
+          reconnect_required: true,
+        },
+        { status: 409 }
+      )
+    }
 
     if (
       !stripeAccount.details_submitted ||
