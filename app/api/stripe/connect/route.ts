@@ -98,6 +98,7 @@ export async function POST(req: Request) {
         type: 'express',
         email,
         capabilities: {
+          card_payments: { requested: true },
           transfers: { requested: true },
         },
       })
