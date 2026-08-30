@@ -767,6 +767,29 @@ export async function POST(req: Request) {
       )
     }
 
+    const { data: companyTeamMembers, error: companyTeamError } =
+      await supabaseAdmin
+        .from('company_team_members')
+        .select('user_id')
+        .eq('company_id', job.company_id)
+        .eq('status', 'joined')
+
+    if (companyTeamError) {
+      return NextResponse.json(
+        {
+          error: `Unable to load company team members: ${companyTeamError.message}`,
+        },
+        { status: 500 }
+      )
+    }
+
+    const excludedWorkerIds = new Set<string>([
+      job.company_id,
+      ...(companyTeamMembers || [])
+        .map((member) => member.user_id)
+        .filter((userId): userId is string => Boolean(userId)),
+    ])
+
     const { data: workers, error: workersError } = await supabaseAdmin
       .from('profiles')
       .select(
@@ -813,6 +836,7 @@ export async function POST(req: Request) {
     const rankedMatches: RankedMatch[] = (
       (workers ?? []) as WorkerProfile[]
     )
+      .filter((worker) => !excludedWorkerIds.has(worker.id))
       .map((worker) => scoreWorker(job as Job, worker))
       .filter((match) => match.match_score >= 0)
       .sort((a, b) => {
