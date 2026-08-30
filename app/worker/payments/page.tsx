@@ -57,7 +57,45 @@ export default function WorkerPaymentsPage() {
         return
       }
 
-      setProfile(profile)
+      let currentProfile = profile
+
+      if (profile.stripe_account_id) {
+        try {
+          const refreshResponse = await fetch(
+            '/api/stripe/connect/refresh',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: user.id,
+              }),
+            }
+          )
+
+          if (refreshResponse.ok) {
+            const { data: refreshedProfile } = await supabase
+              .from('profiles')
+              .select(
+                'id, stripe_account_id, stripe_onboarding_complete'
+              )
+              .eq('id', user.id)
+              .single<WorkerProfile>()
+
+            if (refreshedProfile) {
+              currentProfile = refreshedProfile
+            }
+          }
+        } catch (error) {
+          console.error(
+            'Stripe status refresh failed:',
+            error
+          )
+        }
+      }
+
+      setProfile(currentProfile)
 
       const { data, error } = await supabase
         .from('jobs')
@@ -127,7 +165,10 @@ export default function WorkerPaymentsPage() {
         },
       })
 
-      const data = await response.json()
+      const responseText = await response.text()
+      const data = responseText
+        ? JSON.parse(responseText)
+        : {}
 
       if (!response.ok || !data.url) {
         setMessage(
