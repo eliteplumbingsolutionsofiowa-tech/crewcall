@@ -245,6 +245,9 @@ export default function JobDetailPage() {
   const [approvalLoading, setApprovalLoading] = useState(false)
   const [hasReviewedWorker, setHasReviewedWorker] = useState(false)
   const [invitingWorkerId, setInvitingWorkerId] = useState<string | null>(null)
+  const [invitedWorkerIds, setInvitedWorkerIds] = useState<Set<string>>(
+    () => new Set()
+  )
   const [message, setMessage] = useState('')
 
   const hiredWorkerIds = useMemo(() => {
@@ -563,6 +566,12 @@ export default function JobDetailPage() {
         }
         return
       }
+
+      setInvitedWorkerIds((current) => {
+        const next = new Set(current)
+        next.add(match.worker_id)
+        return next
+      })
 
       setMessage(
         t('workerInvited', {
@@ -1233,12 +1242,17 @@ export default function JobDetailPage() {
                             <button
                               type="button"
                               onClick={() => inviteMatchedWorker(match)}
-                              disabled={invitingWorkerId === match.worker_id}
+                              disabled={
+                                invitingWorkerId === match.worker_id ||
+                                invitedWorkerIds.has(match.worker_id)
+                              }
                               className="rounded-2xl bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              {invitingWorkerId === match.worker_id
-                                ? t('inviting')
-                                : t('invite')}
+                              {invitedWorkerIds.has(match.worker_id)
+                                ? 'Invited ✓'
+                                : invitingWorkerId === match.worker_id
+                                  ? t('inviting')
+                                  : t('invite')}
                             </button>
 
                             <Link
