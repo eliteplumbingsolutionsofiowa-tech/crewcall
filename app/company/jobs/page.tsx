@@ -134,29 +134,55 @@ export default function CompanyJobsPage() {
     setUpdatingId(jobId)
     setMessage(null)
 
-    const { error } = await supabase
-      .from('jobs')
-      .update({ status })
-      .eq('id', jobId)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    if (error) {
-      setMessage(error.message)
-      setUpdatingId(null)
-      return
-    }
+      if (!session?.access_token) {
+        setMessage(t('sessionExpired'))
+        return
+      }
 
-    setJobs((current) =>
-      current.map((job) =>
-        job.id === jobId
-          ? {
-              ...job,
-              status,
-            }
-          : job
+      const response = await fetch('/api/company/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId,
+          status,
+        }),
+      })
+
+      const responseText = await response.text()
+      const data = responseText ? JSON.parse(responseText) : {}
+
+      if (!response.ok) {
+        setMessage(data.error || t('statusUpdateFailed'))
+        return
+      }
+
+      setJobs((current) =>
+        current.map((job) =>
+          job.id === jobId
+            ? {
+                ...job,
+                status,
+              }
+            : job
+        )
       )
-    )
-
-    setUpdatingId(null)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : t('statusUpdateFailed')
+      )
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   async function deleteJob(jobId: string) {
@@ -171,16 +197,47 @@ export default function CompanyJobsPage() {
     setUpdatingId(jobId)
     setMessage(null)
 
-    const { error } = await supabase.from('jobs').delete().eq('id', jobId)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    if (error) {
-      setMessage(error.message)
+      if (!session?.access_token) {
+        setMessage(t('sessionExpired'))
+        return
+      }
+
+      const response = await fetch('/api/jobs/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId,
+        }),
+      })
+
+      const responseText = await response.text()
+      const data = responseText ? JSON.parse(responseText) : {}
+
+      if (!response.ok) {
+        setMessage(data.error || t('deleteFailed'))
+        return
+      }
+
+      setJobs((current) =>
+        current.filter((job) => job.id !== jobId)
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : t('deleteFailed')
+      )
+    } finally {
       setUpdatingId(null)
-      return
     }
-
-    setJobs((current) => current.filter((job) => job.id !== jobId))
-    setUpdatingId(null)
   }
 
   function formatDate(value: string | null) {
@@ -217,6 +274,9 @@ export default function CompanyJobsPage() {
   function JobCard({ job }: { job: Job }) {
     const status = getSafeStatus(job)
     const isUpdating = updatingId === job.id
+    const fundsSecured = job.payment_status === 'paid'
+    const hasPaymentActivity =
+      fundsSecured || job.payment_status === 'pending'
 
     return (
       <article className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl">
@@ -266,8 +326,21 @@ export default function CompanyJobsPage() {
           </div>
         </div>
 
+        {fundsSecured ? (
+          <div className="mt-5 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
+            <p className="font-black text-emerald-200">
+              🔒 {t('fundsSecured')}
+            </p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-emerald-100/80">
+              {t('fundedJobLocked')}
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
-          {status !== 'open' && (
+          {!hasPaymentActivity ? (
+            <>
+              {status !== 'open' && (
             <button
               type="button"
               onClick={() => void updateJobStatus(job.id, 'open')}
@@ -311,14 +384,20 @@ export default function CompanyJobsPage() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => void deleteJob(job.id)}
-            disabled={isUpdating}
-            className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isUpdating ? t('updating') : t('delete')}
-          </button>
+              <button
+                type="button"
+                onClick={() => void deleteJob(job.id)}
+                disabled={isUpdating}
+                className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUpdating ? t('updating') : t('delete')}
+              </button>
+            </>
+          ) : (
+            <span className="inline-flex items-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-black text-emerald-200">
+              🔒 {fundsSecured ? t('securedWorkflowOnly') : t('paymentInProgress')}
+            </span>
+          )}
         </div>
       </article>
     )

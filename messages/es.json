@@ -1304,7 +1304,14 @@
     "cancelledJobsDescription": "Trabajos cerrados sin ser completados.",
     "paymentPending": "Pago Pendiente",
     "paid": "Pagado",
-    "pending": "Pendiente"
+    "pending": "Pendiente",
+    "fundsSecured": "Fondos Asegurados",
+    "fundedJobLocked": "Este trabajo ha sido financiado. La cancelación, eliminación y los cambios manuales de estado están bloqueados. Usa el proceso de finalización y pago de CrewCall para avanzar este trabajo.",
+    "securedWorkflowOnly": "Asegurado — Solo Proceso",
+    "paymentInProgress": "Pago en Proceso",
+    "sessionExpired": "Tu sesión ha expirado. Inicia sesión nuevamente.",
+    "statusUpdateFailed": "No se pudo actualizar el estado del trabajo.",
+    "deleteFailed": "No se pudo eliminar el trabajo."
   },
   "WorkerMap": {
     "locationUnavailable": "Actualización de ubicación no disponible",

@@ -1304,7 +1304,14 @@
     "cancelledJobsDescription": "Jobs that were closed without completion.",
     "paymentPending": "Payment Pending",
     "paid": "Paid",
-    "pending": "Pending"
+    "pending": "Pending",
+    "fundsSecured": "Funds Secured",
+    "fundedJobLocked": "This job has been funded. Cancellation, deletion, and manual status changes are locked. Use the CrewCall completion and payout workflow to move this job forward.",
+    "securedWorkflowOnly": "Secured — Workflow Only",
+    "paymentInProgress": "Payment In Progress",
+    "sessionExpired": "Your login session expired. Please log in again.",
+    "statusUpdateFailed": "Unable to update the job status.",
+    "deleteFailed": "Unable to delete the job."
   },
   "WorkerMap": {
     "locationUnavailable": "Location update unavailable",
