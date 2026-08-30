@@ -538,14 +538,13 @@ export default function JobDetailPage() {
         return
       }
 
-      const response = await fetch('/api/job-invites/create', {
+      const response = await fetch(`/api/jobs/${job.id}/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          jobId: job.id,
           workerId: match.worker_id,
         }),
       })
