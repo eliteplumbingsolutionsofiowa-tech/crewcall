@@ -132,6 +132,20 @@ function nameOf(profile: Profile) {
   )
 }
 
+function isActuallyOnline(profile: Profile) {
+  if (!profile.is_online || !profile.last_seen) {
+    return false
+  }
+
+  const lastSeen = new Date(profile.last_seen).getTime()
+
+  if (Number.isNaN(lastSeen)) {
+    return false
+  }
+
+  return Date.now() - lastSeen < 90_000
+}
+
 export default function AdminUserDetailPage() {
   const db = supabase as any
   const params = useParams<{ id: string }>()
@@ -1243,7 +1257,7 @@ export default function AdminUserDetailPage() {
 
                 <Credential
                   label="Online"
-                  active={profile.is_online}
+                  active={isActuallyOnline(profile)}
                 />
               </div>
             </Panel>
