@@ -10,7 +10,6 @@ import {
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
-import { resolveCompanyContext } from '@/lib/company-context'
 
 type Job = {
   id: string
@@ -134,53 +133,51 @@ export default function MyJobsPage() {
       return
     }
 
-    const companyContext =
-      await resolveCompanyContext(
-        supabase,
-        user.id
-      )
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    if (!companyContext.companyId) {
-      router.push('/worker/dashboard')
+    if (!session?.access_token) {
+      router.push('/login')
       return
     }
 
-    const companyId =
-      companyContext.companyId
+    const response = await fetch('/api/company/jobs', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
 
-    const { data: jobsData, error: jobsError } = await supabase
-      .from('jobs')
-      .select(
-        `
-        id,
-        title,
-        description,
-        trade,
-        location,
-        pay_rate,
-        start_date,
-        status,
-        payment_status,
-        payout_status,
-        company_id,
-        assigned_worker_id,
-        created_at
-      `
-      )
-      .eq('company_id', companyId)
-      .order('created_at', {
-        ascending: false,
-      })
+    const responseText = await response.text()
 
-    if (jobsError) {
-      setMessage(jobsError.message)
+    let data: {
+      jobs?: Omit<Job, 'applicant_count' | 'view_count'>[]
+      error?: string
+    } = {}
+
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText)
+      } catch {
+        data = {}
+      }
+    }
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        router.push('/worker/dashboard')
+        return
+      }
+
+      setMessage(data.error || 'Unable to load company jobs.')
       setJobs([])
       setLoading(false)
       setRefreshing(false)
       return
     }
 
-    const cleanJobs = (jobsData || []) as Omit<
+    const cleanJobs = (data.jobs || []) as Omit<
       Job,
       'applicant_count' | 'view_count'
     >[]
