@@ -293,14 +293,62 @@ export async function POST(req: Request) {
           existingSession.payment_status ===
           'paid'
         ) {
-          return NextResponse.json(
+          const paymentIntentId =
+            typeof existingSession.payment_intent ===
+            'string'
+              ? existingSession.payment_intent
+              : existingSession.payment_intent?.id ||
+                null
+
+          const { error: reconcileError } =
+            await adminClient
+              .from('jobs')
+              .update({
+                payment_status: 'paid',
+                paid: true,
+                paid_at: new Date().toISOString(),
+                stripe_payment_intent_id:
+                  paymentIntentId,
+                stripe_checkout_session_id:
+                  existingSession.id,
+              })
+              .eq('id', job.id)
+              .neq('payment_status', 'paid')
+
+          if (reconcileError) {
+            console.error(
+              'Stripe payment reconciliation failed:',
+              {
+                jobId: job.id,
+                sessionId: existingSession.id,
+                error: reconcileError,
+              }
+            )
+
+            return NextResponse.json(
+              {
+                error:
+                  'Stripe confirms payment, but CrewCall could not update the job.',
+              },
+              { status: 500 }
+            )
+          }
+
+          console.log(
+            'CrewCall reconciled paid Stripe session:',
             {
-              error:
-                'Stripe shows this job is already paid. Refresh the page.',
-              alreadyPaid: true,
-            },
-            { status: 409 }
+              jobId: job.id,
+              sessionId: existingSession.id,
+              paymentIntentId,
+            }
           )
+
+          return NextResponse.json({
+            success: true,
+            alreadyPaid: true,
+            reconciled: true,
+            paymentStatus: 'paid',
+          })
         }
       } catch (sessionError) {
         console.error(
