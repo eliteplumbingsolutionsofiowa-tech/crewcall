@@ -327,7 +327,8 @@
     "workSubmittedAlertFailed": "Work was submitted, but the company alert failed: {error}",
     "completionPhotos": "Completion Photos",
     "description": "Job Description",
-    "jobFiles": "Job Files"
+    "jobFiles": "Job Files",
+    "trade": "Trade"
   },
   "Profile": {
     "company": "Company",

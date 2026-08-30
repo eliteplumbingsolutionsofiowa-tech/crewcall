@@ -327,7 +327,8 @@
     "workSubmittedAlertFailed": "El trabajo se envió, pero falló la alerta a la empresa: {error}",
     "completionPhotos": "Fotos de Finalización",
     "description": "Descripción del Trabajo",
-    "jobFiles": "Archivos del Trabajo"
+    "jobFiles": "Archivos del Trabajo",
+    "trade": "Oficio"
   },
   "Profile": {
     "company": "Empresa",
