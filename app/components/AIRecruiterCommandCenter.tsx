@@ -178,9 +178,9 @@ export default function AIRecruiterCommandCenter({
         }),
         db
           .from('job_matches')
-          .select('worker_id, match_score, rank')
+          .select('worker_id, match_score, match_rank')
           .eq('job_id', jobId)
-          .order('rank', { ascending: true }),
+          .order('match_rank', { ascending: true }),
         db
           .from('job_invites')
           .select(

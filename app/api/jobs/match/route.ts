@@ -43,7 +43,7 @@ type WorkerProfile = {
   last_seen: string | null
 }
 
-type MatchInsert = {
+type MatchBase = {
   job_id: string
   worker_id: string
   match_score: number
@@ -56,7 +56,11 @@ type MatchInsert = {
   reason: string
 }
 
-type RankedMatch = MatchInsert & {
+type MatchInsert = MatchBase & {
+  match_rank: number
+}
+
+type RankedMatch = MatchBase & {
   worker: WorkerProfile
   rank: number
   match_label: string
@@ -859,12 +863,15 @@ export async function POST(req: Request) {
     const databaseMatches: MatchInsert[] = rankedMatches.map(
       ({
         worker: _worker,
-        rank: _rank,
+        rank,
         match_label: _matchLabel,
         match_reasons: _matchReasons,
         warnings: _warnings,
         ...match
-      }) => match
+      }) => ({
+        ...match,
+        match_rank: rank,
+      })
     )
 
     const { error: deleteError } = await supabaseAdmin

@@ -6,9 +6,25 @@ begin
     where table_schema = 'public'
       and table_name = 'job_matches'
       and column_name = 'rank'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'job_matches'
+      and column_name = 'match_rank'
   ) then
     alter table public.job_matches
       rename column rank to match_rank;
+
+  elsif not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'job_matches'
+      and column_name = 'match_rank'
+  ) then
+    alter table public.job_matches
+      add column match_rank integer;
   end if;
 end
 $$;
