@@ -19,6 +19,11 @@ type Profile = {
   company_verified: boolean | null
   insurance_verified: boolean | null
   liability_form_verified: boolean | null
+  trade: string | null
+  city: string | null
+  state: string | null
+  is_online: boolean | null
+  last_seen: string | null
   created_at: string | null
 }
 
@@ -145,6 +150,24 @@ function getInitial(profile: Profile) {
     .toUpperCase()
 }
 
+function isActuallyOnline(profile: Profile) {
+  if (
+    profile.role !== 'worker' ||
+    !profile.is_online ||
+    !profile.last_seen
+  ) {
+    return false
+  }
+
+  const lastSeen = new Date(profile.last_seen).getTime()
+
+  if (Number.isNaN(lastSeen)) {
+    return false
+  }
+
+  return Date.now() - lastSeen < 90_000
+}
+
 function getVerificationCount(profile: Profile) {
   return [
     profile.company_verified,
@@ -258,6 +281,11 @@ export default function AdminPage() {
               company_verified,
               insurance_verified,
               liability_form_verified,
+              trade,
+              city,
+              state,
+              is_online,
+              last_seen,
               created_at
             `
             )
@@ -581,6 +609,21 @@ export default function AdminPage() {
     }
   }, [profiles, jobs, applications, invites])
 
+  const liveWorkers = useMemo(() => {
+    return profiles
+      .filter(isActuallyOnline)
+      .sort((a, b) => {
+        const aTime = a.last_seen
+          ? new Date(a.last_seen).getTime()
+          : 0
+        const bTime = b.last_seen
+          ? new Date(b.last_seen).getTime()
+          : 0
+
+        return bTime - aTime
+      })
+  }, [profiles])
+
   const filteredProfiles = useMemo(() => {
     const term = userSearch.trim().toLowerCase()
 
@@ -677,6 +720,11 @@ export default function AdminPage() {
           company_verified,
           insurance_verified,
           liability_form_verified,
+          trade,
+          city,
+          state,
+          is_online,
+          last_seen,
           created_at
         `
         )
@@ -859,6 +907,99 @@ export default function AdminPage() {
           />
         </section>
 
+        <section className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-emerald-400/[0.06] shadow-2xl shadow-black/20">
+          <div className="flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400" />
+                </span>
+
+                <h2 className="text-xl font-black text-white">
+                  Live Workers
+                </h2>
+
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-200">
+                  {liveWorkers.length} online now
+                </span>
+              </div>
+
+              <p className="mt-2 text-sm font-semibold text-slate-400">
+                Workers actively connected to CrewCall within the last 90 seconds.
+              </p>
+            </div>
+
+            <Link
+              href="/admin/users"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/10"
+            >
+              View All Users
+            </Link>
+          </div>
+
+          {liveWorkers.length === 0 ? (
+            <div className="p-6 text-center sm:p-8">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xl">
+                ○
+              </div>
+
+              <p className="mt-4 font-black text-white">
+                No workers online right now
+              </p>
+
+              <p className="mt-2 text-sm font-semibold text-slate-500">
+                Workers will appear here automatically when they become active.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+              {liveWorkers.map((worker) => (
+                <Link
+                  key={worker.id}
+                  href={`/profile/${worker.id}`}
+                  className="group rounded-2xl border border-white/10 bg-slate-950/55 p-4 transition hover:border-emerald-400/30 hover:bg-slate-900/80"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-400/10 text-sm font-black text-emerald-200">
+                      {getInitial(worker)}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+
+                        <p className="truncate font-black text-white">
+                          {worker.full_name ||
+                            worker.company_name ||
+                            'CrewCall Worker'}
+                        </p>
+                      </div>
+
+                      <p className="mt-1 truncate text-sm font-semibold text-slate-400">
+                        {worker.trade || 'Trade not listed'}
+                      </p>
+
+                      <p className="mt-1 truncate text-xs font-semibold text-slate-500">
+                        {[worker.city, worker.state]
+                          .filter(Boolean)
+                          .join(', ') || 'Location not listed'}
+                      </p>
+
+                      <p className="mt-3 text-xs font-black uppercase tracking-wide text-emerald-300">
+                        Last seen {formatDateTime(worker.last_seen)}
+                      </p>
+                    </div>
+
+                    <span className="text-slate-500 transition group-hover:text-emerald-300">
+                      →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="grid gap-4 md:grid-cols-3">
           <a
