@@ -62,16 +62,18 @@ export default function WorkerPaymentsPage() {
 
       if (profile.stripe_account_id) {
         try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+
           const refreshResponse = await fetch(
             '/api/stripe/connect/refresh',
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                Authorization: `Bearer ${session?.access_token || ''}`,
               },
-              body: JSON.stringify({
-                userId: user.id,
-              }),
             }
           )
 

@@ -29,10 +29,8 @@ export default function StripeConnectCompletePage() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify({
-              userId: session.user.id,
-            }),
           }
         )
 

@@ -15,14 +15,39 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await req.json()
+    const authorization = req.headers.get('authorization')
 
-    if (!userId) {
+    if (!authorization?.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Missing userId' },
-        { status: 400 }
+        { error: 'Authorization token required.' },
+        { status: 401 }
       )
     }
+
+    const accessToken = authorization
+      .slice('Bearer '.length)
+      .trim()
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'Authorization token required.' },
+        { status: 401 }
+      )
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAdmin.auth.getUser(accessToken)
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid or expired authorization token.' },
+        { status: 401 }
+      )
+    }
+
+    const userId = user.id
 
     const { data: profile, error } = await supabaseAdmin
       .from('profiles')
