@@ -356,6 +356,24 @@ export default function JobDetailPage() {
 
     const apps = (rawApps || []) as ApplicationRow[]
 
+    const { data: rawInvites, error: invitesError } = await supabase
+      .from('job_invites')
+      .select('worker_id, status')
+      .eq('job_id', jobId)
+
+    if (invitesError) {
+      console.error('Unable to load job invites:', invitesError)
+    } else {
+      setInvitedWorkerIds(
+        new Set(
+          (rawInvites || [])
+            .filter((invite) => invite.status !== 'declined')
+            .map((invite) => invite.worker_id)
+            .filter((workerId): workerId is string => Boolean(workerId))
+        )
+      )
+    }
+
     const { data: rawMatches, error: matchesError } = await (supabase as any)
       .from('job_matches')
       .select(
