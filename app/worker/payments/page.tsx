@@ -26,6 +26,7 @@ export default function WorkerPaymentsPage() {
   const t = useTranslations('WorkerPayments')
   const locale = useLocale()
   const [payments, setPayments] = useState<PaymentRow[]>([])
+  const [securedPayments, setSecuredPayments] = useState<PaymentRow[]>([])
   const [profile, setProfile] = useState<WorkerProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [connectingStripe, setConnectingStripe] = useState(false)
@@ -123,6 +124,33 @@ export default function WorkerPaymentsPage() {
         return
       }
 
+      const { data: securedData, error: securedError } = await supabase
+        .from('jobs')
+        .select(
+          `
+          id,
+          title,
+          pay_rate,
+          worker_payout_cents,
+          platform_fee_cents,
+          payout_released_at,
+          stripe_transfer_id
+          `
+        )
+        .eq('assigned_worker_id', profile.id)
+        .eq('payment_status', 'paid')
+        .eq('payout_status', 'not_released')
+        .order('id', {
+          ascending: false,
+        })
+
+      if (securedError) {
+        console.error('Secured funds error:', securedError.message)
+        setSecuredPayments([])
+      } else {
+        setSecuredPayments((securedData || []) as PaymentRow[])
+      }
+
       setPayments((data || []) as PaymentRow[])
       setLoading(false)
     }
@@ -130,9 +158,34 @@ export default function WorkerPaymentsPage() {
     loadPayments()
   }, [])
 
+  function securedAmountCents(payment: PaymentRow) {
+    if (payment.worker_payout_cents !== null) {
+      return payment.worker_payout_cents
+    }
+
+    const gross = Number(
+      String(payment.pay_rate || '')
+        .replace(/[$,]/g, '')
+        .trim()
+    )
+
+    if (!Number.isFinite(gross) || gross <= 0) {
+      return 0
+    }
+
+    const grossCents = Math.round(gross * 100)
+    return grossCents - Math.round(grossCents * 0.10)
+  }
+
   const total = payments.reduce(
     (sum, payment) =>
       sum + (payment.worker_payout_cents || 0),
+    0
+  )
+
+  const securedTotal = securedPayments.reduce(
+    (sum, payment) =>
+      sum + securedAmountCents(payment),
     0
   )
 
@@ -245,6 +298,70 @@ export default function WorkerPaymentsPage() {
             )}
           </div>
         </div>
+
+        {securedPayments.length > 0 ? (
+          <div className="mt-8 rounded-3xl border border-emerald-400/30 bg-emerald-500/10 p-6 sm:p-8">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                  {t('securedFunds')}
+                </p>
+                <h2 className="mt-2 text-3xl font-black text-white">
+                  {t('fundsSecured')}
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-emerald-100/80">
+                  {t('securedFundsDescription')}
+                </p>
+              </div>
+              <div className="text-left sm:text-right">
+                <div className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-400/15 px-5 py-3 text-sm font-black text-emerald-100">
+                  ✓ {t('securedStatus')}
+                </div>
+                <p className="mt-3 text-3xl font-black text-white">
+                  {formatMoney(securedTotal / 100)}
+                </p>
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-200/70">
+                  {t('securedTotal')}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {securedPayments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="rounded-2xl border border-emerald-400/20 bg-slate-950/40 p-5"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-xl font-black text-white">
+                        {payment.title || t('crewCallJob')}
+                      </h3>
+                      <p className="mt-1 text-sm font-semibold text-emerald-100/70">
+                        {t('securedForJob')}
+                      </p>
+                    </div>
+
+                    <div className="text-left sm:text-right">
+                      <p className="text-xs font-black uppercase tracking-[0.15em] text-emerald-300">
+                        {t('securedAmount')}
+                      </p>
+                      <p className="mt-1 text-3xl font-black text-white">
+                        {formatMoney(
+                          securedAmountCents(payment) / 100
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-emerald-400/10 bg-emerald-400/5 p-4 text-sm font-semibold leading-6 text-emerald-100/80">
+                    {t('securedProtection')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-8">
           <p className="text-sm text-slate-400">

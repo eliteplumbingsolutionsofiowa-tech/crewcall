@@ -2046,7 +2046,15 @@
     "date": "Released On",
     "transfer": "Transfer",
     "sessionExpired": "Your login session expired. Please log in again.",
-    "stripeConnectFailed": "Unable to connect Stripe."
+    "stripeConnectFailed": "Unable to connect Stripe.",
+    "securedFunds": "Secured Funds",
+    "fundsSecured": "Your Funds Are Secured",
+    "securedFundsDescription": "These funds have been received for your job and are being held for release after the work is approved.",
+    "securedStatus": "Funds Secured",
+    "securedForJob": "Payment secured for this job",
+    "securedAmount": "Amount Secured",
+    "securedProtection": "CrewCall shows this payment as funded and secured. The company cannot release these funds back through the normal CrewCall job controls.",
+    "securedTotal": "Total Secured"
   },
   "WorkerInviteDetail": {
     "inviteNotLoaded": "Invite not loaded.",

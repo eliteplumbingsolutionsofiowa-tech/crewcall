@@ -2046,7 +2046,15 @@
     "date": "Liberado El",
     "transfer": "Transferencia",
     "sessionExpired": "Tu sesión ha expirado. Inicia sesión nuevamente.",
-    "stripeConnectFailed": "No se pudo conectar Stripe."
+    "stripeConnectFailed": "No se pudo conectar Stripe.",
+    "securedFunds": "Fondos Asegurados",
+    "fundsSecured": "Tus Fondos Están Asegurados",
+    "securedFundsDescription": "Estos fondos han sido recibidos para tu trabajo y se mantienen para ser liberados después de que el trabajo sea aprobado.",
+    "securedStatus": "Fondos Asegurados",
+    "securedForJob": "Pago asegurado para este trabajo",
+    "securedAmount": "Monto Asegurado",
+    "securedProtection": "CrewCall muestra este pago como financiado y asegurado. La empresa no puede devolver estos fondos mediante los controles normales del trabajo en CrewCall.",
+    "securedTotal": "Total Asegurado"
   },
   "WorkerInviteDetail": {
     "inviteNotLoaded": "La invitación no se ha cargado.",
