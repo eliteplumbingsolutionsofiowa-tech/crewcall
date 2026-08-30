@@ -100,6 +100,15 @@ export default function PayPage() {
       return
     }
 
+    if (
+      res.ok &&
+      result.reconciled === true &&
+      result.paymentStatus === 'paid'
+    ) {
+      window.location.href = `/jobs/${job.id}`
+      return
+    }
+
     if (!res.ok || !result.url) {
       setMessage(result.error || 'Could not start payment.')
       setPaying(false)
