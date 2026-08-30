@@ -606,6 +606,7 @@ export async function POST(
         .from('notifications')
         .insert({
           user_id: worker.id,
+          type: 'invite',
           title: '🤖 CrewCall AI matched you',
           body: `You were selected for ${
             job.title || 'a CrewCall job'
