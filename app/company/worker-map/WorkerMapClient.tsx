@@ -387,27 +387,6 @@ export default function WorkerMapClient() {
       return
     }
 
-    const { data: profile, error: profileError } = await db
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (profileError) {
-      setMessage(profileError.message)
-      setLoading(false)
-      return
-    }
-
-    if (
-      !profile ||
-      (profile.role !== 'company' && profile.role !== 'admin')
-    ) {
-      setMessage(t('companyAdminOnly'))
-      setLoading(false)
-      return
-    }
-
     const {
       data: { session },
     } = await supabase.auth.getSession()

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -67,23 +68,12 @@ export async function GET(request: Request) {
       )
     }
 
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .maybeSingle()
+    const companyContext = await resolveCompanyContext(
+      supabaseAdmin,
+      user.id
+    )
 
-    if (profileError) {
-      return NextResponse.json(
-        { error: profileError.message },
-        { status: 500 }
-      )
-    }
-
-    if (
-      !profile ||
-      (profile.role !== 'company' && profile.role !== 'admin')
-    ) {
+    if (!companyContext.companyId && !companyContext.isPlatformAdmin) {
       return NextResponse.json(
         { error: 'Company or admin access required.' },
         { status: 403 }
