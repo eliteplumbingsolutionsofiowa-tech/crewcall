@@ -607,46 +607,47 @@ export default function JobDetailsPage() {
     setMessage(null)
 
     try {
-      const submittedAt = new Date().toISOString()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-      const { error } = await supabase
-        .from('jobs')
-        .update({
-          completion_status: 'submitted',
-          completion_submitted_at: submittedAt,
-        } as never)
-        .eq('id', job.id)
-        .eq('assigned_worker_id', profile.id)
-
-      if (error) {
-        setMessage(error.message)
+      if (!session?.access_token) {
+        setMessage(t('sessionExpired'))
         setMessageTone('error')
         return
       }
 
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: job.company_id,
-          type: 'general',
-          title: t('workReadyForApproval'),
-          body: t('submittedForApprovalNotification', { job: job.title || t('crewCallJobFallback') }),
-          link_url: `/my-jobs/${job.id}`,
-          read: false,
-          is_read: false,
-        } as never)
+      const response = await fetch('/api/jobs/request-completion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          jobId: job.id,
+        }),
+      })
 
-      if (notificationError) {
-        console.error(
-          'Unable to create work approval notification:',
-          notificationError
-        )
+      const responseText = await response.text()
 
+      let data: {
+        error?: string
+        message?: string
+      } = {}
+
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText)
+        } catch {
+          data = {}
+        }
+      }
+
+      if (!response.ok) {
         setMessage(
-          t('workSubmittedAlertFailed', { error: notificationError.message })
+          data.error || t('unableSubmitCompletedWork')
         )
         setMessageTone('error')
-        await loadPage(true)
         return
       }
 

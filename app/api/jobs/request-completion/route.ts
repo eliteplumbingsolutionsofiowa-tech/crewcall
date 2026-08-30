@@ -172,21 +172,59 @@ export async function POST(req: Request) {
 
     const createdAt = new Date().toISOString()
 
-    const { error: notificationError } =
+    const { error: completionError } = await adminClient
+      .from('jobs')
+      .update({
+        completion_status: 'submitted',
+        completion_submitted_at: createdAt,
+      })
+      .eq('id', job.id)
+      .eq('assigned_worker_id', user.id)
+
+    if (completionError) {
+      return NextResponse.json(
+        { error: completionError.message },
+        { status: 400 }
+      )
+    }
+
+    const { data: teamMembers, error: teamMembersError } =
       await adminClient
-        .from('notifications')
-        .insert({
-          user_id: job.company_id,
-          type: 'job',
-          title: 'Worker says job is complete',
-          body: `The worker assigned to ${
-            job.title || 'your job'
-          } says the work is complete. Review the job and mark it complete when ready.`,
-          link_url: `/my-jobs/${job.id}`,
-          read: false,
-          is_read: false,
-          created_at: createdAt,
-        })
+        .from('company_team_members')
+        .select('user_id')
+        .eq('company_id', job.company_id)
+        .eq('status', 'joined')
+
+    if (teamMembersError) {
+      return NextResponse.json(
+        { error: teamMembersError.message },
+        { status: 400 }
+      )
+    }
+
+    const recipientIds = Array.from(
+      new Set(
+        [
+          job.company_id,
+          ...(teamMembers || []).map((member) => member.user_id),
+        ].filter((userId): userId is string => Boolean(userId))
+      )
+    )
+
+    const notificationRows = recipientIds.map((recipientId) => ({
+      user_id: recipientId,
+      type: 'job',
+      title: 'Work ready for approval',
+      body: `${job.title || 'Your CrewCall job'} has been submitted for approval.`,
+      link_url: `/my-jobs/${job.id}`,
+      read: false,
+      is_read: false,
+      created_at: createdAt,
+    }))
+
+    const { error: notificationError } = await adminClient
+      .from('notifications')
+      .insert(notificationRows)
 
     if (notificationError) {
       return NextResponse.json(
@@ -201,8 +239,8 @@ export async function POST(req: Request) {
         error: companyDevicesError,
       } = await adminClient
         .from('device_tokens')
-        .select('id, token')
-        .eq('user_id', job.company_id)
+        .select('id, token, user_id')
+        .in('user_id', recipientIds)
         .eq('platform', 'ios')
 
       if (companyDevicesError) {
@@ -211,15 +249,15 @@ export async function POST(req: Request) {
           companyDevicesError
         )
       } else {
-        const pushBody = `The worker assigned to ${
-          job.title || 'your CrewCall job'
-        } says the work is complete.`
+        const pushBody = `${
+          job.title || 'Your CrewCall job'
+        } has been submitted for approval.`
 
         for (const device of companyDevices || []) {
           try {
             const result = await sendApnsPush({
               deviceToken: device.token,
-              title: 'Job Ready for Review',
+              title: 'Work Ready for Approval',
               body: pushBody,
               url: `/my-jobs/${job.id}`,
               badge: 1,
