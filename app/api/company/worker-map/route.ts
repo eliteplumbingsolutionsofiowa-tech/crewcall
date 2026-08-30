@@ -91,6 +91,7 @@ export async function GET(request: Request) {
         latitude,
         longitude,
         is_online,
+        last_seen,
         location_visible,
         location_updated_at,
         insurance_verified,

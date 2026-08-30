@@ -26,6 +26,7 @@ type Worker = {
   latitude: number | null
   longitude: number | null
   is_online: boolean | null
+  last_seen: string | null
   location_visible: boolean | null
   location_updated_at: string | null
   insurance_verified: boolean | null
@@ -281,11 +282,21 @@ function formatWorkerAvailability(
     return worker.availability_status
   }
 
-  if (worker.is_online === true) {
+  if (isActuallyOnline(worker)) {
     return t('onlineAvailabilityUnknown')
   }
 
   return t('availabilityUnknown')
+}
+
+function isActuallyOnline(worker: Worker) {
+  if (!worker.is_online || !worker.last_seen) return false
+
+  const lastSeen = new Date(worker.last_seen).getTime()
+
+  if (Number.isNaN(lastSeen)) return false
+
+  return Date.now() - lastSeen < 90_000
 }
 
 export default function WorkerMapClient() {
@@ -628,7 +639,7 @@ export default function WorkerMapClient() {
           matchScore += 5
         }
 
-        if (worker.is_online === true) {
+        if (isActuallyOnline(worker)) {
           matchScore += 15
           matchReasons.push(t('onlineNow'))
         }
@@ -777,7 +788,7 @@ export default function WorkerMapClient() {
         }
       })
       .filter((worker) => {
-        if (onlineOnly && worker.is_online !== true) {
+        if (onlineOnly && !isActuallyOnline(worker)) {
           return false
         }
 
@@ -1712,13 +1723,13 @@ export default function WorkerMapClient() {
                       color:
                         recruiterActive && index === 0
                           ? '#7c3aed'
-                          : worker.is_online === true
+                          : isActuallyOnline(worker)
                             ? '#047857'
                             : '#475569',
                       fillColor:
                         recruiterActive && index === 0
                           ? '#a78bfa'
-                          : worker.is_online === true
+                          : isActuallyOnline(worker)
                             ? '#34d399'
                             : '#94a3b8',
                       fillOpacity: 0.9,
@@ -1816,12 +1827,12 @@ export default function WorkerMapClient() {
                     ) : (
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          worker.is_online
+                          isActuallyOnline(worker)
                             ? 'bg-emerald-400/15 text-emerald-300'
                             : 'bg-slate-700 text-slate-300'
                         }`}
                       >
-                        {worker.is_online ? t('online') : t('offline')}
+                        {isActuallyOnline(worker) ? t('online') : t('offline')}
                       </span>
                     )}
                   </div>
@@ -1859,7 +1870,7 @@ export default function WorkerMapClient() {
                   ) : null}
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {worker.is_online ? (
+                    {isActuallyOnline(worker) ? (
                       <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
                         {t('onlineNow')}
                       </span>
