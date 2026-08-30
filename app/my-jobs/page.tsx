@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
+import { formatMoney } from '@/lib/formatMoney'
 
 type Job = {
   id: string
@@ -737,7 +738,14 @@ export default function MyJobsPage() {
                     )}
 
                     <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
-                      <Info label={t('pay')} value={job.pay_rate || t('notSet')} />
+                      <Info
+                        label={t('pay')}
+                        value={
+                          job.pay_rate
+                            ? formatMoney(job.pay_rate)
+                            : t('notSet')
+                        }
+                      />
 
                       <Info label={t('start')} value={formatDate(job.start_date, locale, t('notSet'))} />
 
