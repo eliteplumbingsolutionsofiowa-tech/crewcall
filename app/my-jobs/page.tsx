@@ -449,6 +449,63 @@ export default function MyJobsPage() {
     }
   }, [dedupedJobs])
 
+  async function deleteJob(job: Job) {
+    const canDelete =
+      job.status === 'open' &&
+      !job.assigned_worker_id &&
+      job.payment_status !== 'paid' &&
+      job.payment_status !== 'pending'
+
+    if (!canDelete) {
+      setMessage('Only open, unpaid, unassigned jobs can be deleted.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${job.title || 'this job'}"? This cannot be undone.`
+    )
+
+    if (!confirmed) return
+
+    setMessage(null)
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+      router.push('/login')
+      return
+    }
+
+    const response = await fetch('/api/jobs/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ jobId: job.id }),
+    })
+
+    const responseText = await response.text()
+    let payload: { error?: string } = {}
+
+    if (responseText) {
+      try {
+        payload = JSON.parse(responseText)
+      } catch {
+        payload = {}
+      }
+    }
+
+    if (!response.ok) {
+      setMessage(payload.error || 'Unable to delete job.')
+      return
+    }
+
+    await loadJobs()
+  }
+
   function clearFilters() {
     setSearch('')
     setFilter('all')
@@ -745,6 +802,19 @@ export default function MyJobsPage() {
                     >
                       {t('viewJob')}
                     </Link>
+
+                    {job.status === 'open' &&
+                      !job.assigned_worker_id &&
+                      job.payment_status !== 'paid' &&
+                      job.payment_status !== 'pending' && (
+                        <button
+                          type="button"
+                          onClick={() => deleteJob(job)}
+                          className="rounded-2xl border border-red-400/30 bg-red-500/15 px-5 py-3 text-center text-sm font-black text-red-100 transition hover:bg-red-500/25"
+                        >
+                          Delete Job
+                        </button>
+                      )}
 
                     {canPay && (
                       <Link
