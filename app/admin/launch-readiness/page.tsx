@@ -123,6 +123,13 @@ export default function LaunchReadinessPage() {
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white">
 
       <div className="mx-auto max-w-6xl">
+        <a
+          href="/admin"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-300 transition hover:border-cyan-400/30 hover:bg-white/10 hover:text-white"
+        >
+          ← Back to Control Center
+        </a>
+
 
         <h1 className="text-4xl font-black">
           CrewCall Launch Readiness
