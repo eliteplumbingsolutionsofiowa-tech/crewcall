@@ -124,6 +124,29 @@ function notificationsTable() {
   return supabase.from('notifications')
 }
 
+function formatMoney(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const amount = Number(
+    typeof value === 'string'
+      ? value.replace(/[$,]/g, '').trim()
+      : value
+  )
+
+  if (!Number.isFinite(amount)) {
+    return String(value)
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
 export default function JobDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -1117,7 +1140,7 @@ export default function JobDetailsPage() {
               </h2>
 
               <p className="text-sm text-emerald-100/80">
-                {t('requestedPay')}: {workerApplication.requested_pay_rate || job.pay_rate || t('notSpecified')}
+                {t('requestedPay')}: {formatMoney(workerApplication.requested_pay_rate || job.pay_rate) || t('notSpecified')}
               </p>
 
               {workerApplication.company_counter_offer ? (
@@ -1203,7 +1226,7 @@ export default function JobDetailsPage() {
                   </p>
 
                   <p className="mt-3 break-words text-4xl font-black tracking-tight text-white">
-                    {job.pay_rate || t('notListed')}
+                    {formatMoney(job.pay_rate) || t('notListed')}
                   </p>
 
                   <p className="mt-3 text-sm leading-6 text-cyan-100/60">
