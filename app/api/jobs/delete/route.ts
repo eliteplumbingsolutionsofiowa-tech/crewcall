@@ -197,7 +197,12 @@ export async function POST(request: Request) {
       adminClient
         .from('notifications')
         .delete()
-        .eq('job_id', jobId),
+        .in('link_url', [
+          `/jobs/${jobId}`,
+          `/my-jobs/${jobId}`,
+          `/my-jobs/${jobId}/applicants`,
+          `/my-jobs/${jobId}/recruiter`,
+        ]),
 
       adminClient
         .from('messages')
