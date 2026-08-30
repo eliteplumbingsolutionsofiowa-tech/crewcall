@@ -408,68 +408,40 @@ export default function WorkerMapClient() {
       return
     }
 
-    const { data, error } = await db
-      .from('profiles')
-      .select(
-        `
-        id,
-        full_name,
-        trade,
-        city,
-        state,
-        latitude,
-        longitude,
-        is_online,
-        location_visible,
-        location_updated_at,
-        insurance_verified,
-        liability_form_verified,
-        avatar_url,
-        years_experience,
-        skills,
-        crewcall_score,
-        license_number,
-        osha10,
-        osha30,
-        med_gas,
-        background_verified,
-        drug_tested,
-        availability_status,
-        available_for_work,
-        currently_working,
-        booked_until,
-        preferred_work,
-        willing_to_travel
-      `
-      )
-      .eq('role', 'worker')
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    console.log('==============================')
-    console.log('Raw workers from Supabase:')
-    console.log(data)
-    console.log('==============================')
-
-    if (error) {
-      setMessage(error.message)
+    if (!session?.access_token) {
+      setMessage(t('loginCompany'))
       setWorkers([])
       setLoading(false)
       return
     }
 
-    const availableWorkers = ((data || []) as Worker[]).map(
-      (worker) => {
-        const locationIsUsable =
-          worker.location_visible === true &&
-          typeof worker.latitude === 'number' &&
-          typeof worker.longitude === 'number'
+    const response = await fetch('/api/company/worker-map', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      cache: 'no-store',
+    })
 
-        return {
-          ...worker,
-          latitude: locationIsUsable ? worker.latitude : null,
-          longitude: locationIsUsable ? worker.longitude : null,
-        }
-      }
-    )
+    const result = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      setMessage(
+        result?.error ||
+          'Unable to load workers.'
+      )
+      setWorkers([])
+      setLoading(false)
+      return
+    }
+
+    const availableWorkers = Array.isArray(result?.workers)
+      ? (result.workers as Worker[])
+      : []
 
     console.log('==============================')
     console.log('Workers available to recruiter:')
@@ -524,12 +496,30 @@ export default function WorkerMapClient() {
   }
 
   const trades = useMemo(() => {
-    const tradeNames = workers
+    const coreTrades = [
+      'Plumbing',
+      'HVAC',
+      'Electrical',
+      'Carpentry',
+      'Welding',
+      'Concrete',
+      'Roofing',
+      'Painting',
+      'Drywall',
+      'Masonry',
+      'Excavation',
+      'General Labor',
+      'Heavy Equipment',
+      'Landscaping',
+      'Fire Protection',
+    ]
+
+    const workerTrades = workers
       .map((worker) => worker.trade?.trim())
       .filter((trade): trade is string => Boolean(trade))
 
-    return Array.from(new Set(tradeNames)).sort((a, b) =>
-      a.localeCompare(b)
+    return Array.from(new Set([...coreTrades, ...workerTrades])).sort(
+      (a, b) => a.localeCompare(b)
     )
   }, [workers])
 
@@ -1638,8 +1628,7 @@ export default function WorkerMapClient() {
               onChange={(event) =>
                 setRadius(Number(event.target.value) as RadiusOption)
               }
-              disabled={!companyLocation}
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white disabled:opacity-50"
+              className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-sm text-white"
             >
               <option value={10}>{t('withinDistance', { count: 10 })}</option>
               <option value={25}>{t('withinDistance', { count: 25 })}</option>
