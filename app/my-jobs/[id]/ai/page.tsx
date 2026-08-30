@@ -47,6 +47,16 @@ type WorkerProfile = {
   last_seen: string | null
 }
 
+function isActuallyOnline(worker: WorkerProfile) {
+  if (!worker.is_online || !worker.last_seen) return false
+
+  const lastSeen = new Date(worker.last_seen).getTime()
+
+  if (Number.isNaN(lastSeen)) return false
+
+  return Date.now() - lastSeen < 90_000
+}
+
 type AiMatch = {
   job_id: string
   worker_id: string
@@ -769,7 +779,7 @@ export default function AiWorkerMatchesPage() {
                             {match.match_label}
                           </span>
 
-                          {worker.is_online && (
+                          {isActuallyOnline(worker) && (
                             <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100">
                               {t('online')}
                             </span>

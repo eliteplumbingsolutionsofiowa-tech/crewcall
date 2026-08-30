@@ -234,7 +234,7 @@ function isRecentlyOnline(value: unknown) {
 
   if (Number.isNaN(lastSeen)) return false
 
-  return Date.now() - lastSeen < 1000 * 60 * 2
+  return Date.now() - lastSeen < 90_000
 }
 
 function ProfilePageInner() {
@@ -343,7 +343,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
   ])
 
   const onlineNow = useMemo(() => {
-    return Boolean(profile?.is_online) || isRecentlyOnline(profile?.last_seen)
+    return Boolean(profile?.is_online) && isRecentlyOnline(profile?.last_seen)
   }, [profile?.is_online, profile?.last_seen])
 
   const verificationBadges = useMemo(() => {

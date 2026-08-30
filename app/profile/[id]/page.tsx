@@ -174,7 +174,7 @@ function isRecentlyOnline(value: string | null | undefined) {
     return false
   }
 
-  return Date.now() - lastSeen < 1000 * 60 * 2
+  return Date.now() - lastSeen < 90_000
 }
 
 function getInitial(value: string | null | undefined) {
@@ -286,7 +286,7 @@ function ProfilePageInner() {
 
   const onlineNow = useMemo(() => {
     return (
-      Boolean(profile?.is_online) ||
+      Boolean(profile?.is_online) &&
       isRecentlyOnline(profile?.last_seen)
     )
   }, [profile?.is_online, profile?.last_seen])

@@ -85,6 +85,16 @@ type WorkerProfile = {
   longitude: number | null
 }
 
+function isActuallyOnline(worker: WorkerProfile) {
+  if (!worker.is_online || !worker.last_seen) return false
+
+  const lastSeen = new Date(worker.last_seen).getTime()
+
+  if (Number.isNaN(lastSeen)) return false
+
+  return Date.now() - lastSeen < 90_000
+}
+
 type CompanyProfile = {
   company_name: string | null
   full_name: string | null
@@ -415,7 +425,7 @@ export default function CompanyDashboardPage() {
       workers
         .filter(
           (worker) =>
-            worker.is_online ||
+            isActuallyOnline(worker) ||
             worker.available_for_work ||
             worker.currently_working,
         )
@@ -1146,7 +1156,7 @@ export default function CompanyDashboardPage() {
                             <div className="flex items-center gap-2">
                               <span
                                 className={`h-2.5 w-2.5 rounded-full ${
-                                  worker.is_online
+                                  isActuallyOnline(worker)
                                     ? 'bg-emerald-400'
                                     : 'bg-amber-400'
                                 }`}
