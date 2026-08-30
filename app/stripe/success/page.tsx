@@ -145,16 +145,7 @@ function StripeSuccessContent() {
 
   const icon = success ? '✓' : loading ? '…' : '!'
 
-  const reviewTargetId =
-    currentUserId && job
-      ? currentUserId === job.company_id
-        ? job.assigned_worker_id
-        : currentUserId === job.assigned_worker_id
-          ? job.company_id
-          : null
-      : job?.assigned_worker_id || null
 
-  const canLeaveReview = Boolean(job?.id && reviewTargetId)
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-white to-orange-100 px-4 py-10">
@@ -232,14 +223,7 @@ function StripeSuccessContent() {
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {canLeaveReview && (
-              <Link
-                href={`/jobs/${job?.id}/review?to=${reviewTargetId}`}
-                className="rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 px-5 py-4 text-center text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:scale-[1.02]"
-              >
-                {t('leaveReview')}
-              </Link>
-            )}
+
 
             <Link
               href="/completed-jobs"
@@ -263,12 +247,7 @@ function StripeSuccessContent() {
             </Link>
           </div>
 
-          {!canLeaveReview && job?.id && (
-            <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm font-bold text-orange-800">
-              Review is not available yet because CrewCall could not determine
-              the other user on this job.
-            </div>
-          )}
+
 
           <div className="mt-8 rounded-3xl bg-gradient-to-r from-blue-600 via-purple-600 to-orange-500 p-5 text-white shadow-xl">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
