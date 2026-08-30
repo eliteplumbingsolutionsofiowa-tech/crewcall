@@ -324,7 +324,10 @@
     "workReadyForApproval": "Work ready for approval",
     "crewCallJobFallback": "A CrewCall job",
     "submittedForApprovalNotification": "{job} has been submitted for approval.",
-    "workSubmittedAlertFailed": "Work was submitted, but the company alert failed: {error}"
+    "workSubmittedAlertFailed": "Work was submitted, but the company alert failed: {error}",
+    "completionPhotos": "Completion Photos",
+    "description": "Job Description",
+    "jobFiles": "Job Files"
   },
   "Profile": {
     "company": "Company",

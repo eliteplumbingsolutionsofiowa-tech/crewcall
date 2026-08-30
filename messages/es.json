@@ -324,7 +324,10 @@
     "workReadyForApproval": "Trabajo listo para aprobación",
     "crewCallJobFallback": "Un trabajo de CrewCall",
     "submittedForApprovalNotification": "{job} se ha enviado para aprobación.",
-    "workSubmittedAlertFailed": "El trabajo se envió, pero falló la alerta a la empresa: {error}"
+    "workSubmittedAlertFailed": "El trabajo se envió, pero falló la alerta a la empresa: {error}",
+    "completionPhotos": "Fotos de Finalización",
+    "description": "Descripción del Trabajo",
+    "jobFiles": "Archivos del Trabajo"
   },
   "Profile": {
     "company": "Empresa",
