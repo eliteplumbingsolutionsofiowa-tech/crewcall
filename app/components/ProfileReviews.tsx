@@ -241,7 +241,7 @@ export default function ProfileReviews({ profileId }: { profileId?: string }) {
               {trustLevel()}
             </div>
 
-            <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-bold text-yellow-200">
+            <div className="rounded-2xl border border-amber-400/50 bg-slate-900 px-4 py-2 text-sm font-bold text-amber-300">
               {fiveStarCount} Five-Star Reviews
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function ProfileReviews({ profileId }: { profileId?: string }) {
             {reviews.length ? averageRating.toFixed(1) : '—'}
           </p>
 
-          <p className="mt-2 text-xl text-yellow-400">
+          <p className="mt-2 text-xl text-amber-300">
             {renderStars(averageRating)}
           </p>
 
@@ -270,7 +270,7 @@ export default function ProfileReviews({ profileId }: { profileId?: string }) {
 
       <div className="mt-8">
         {reviews.length === 0 ? (
-          <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-6 text-sm font-semibold text-yellow-100">
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-950/40 p-6 text-sm font-semibold text-amber-200">
             No reviews yet. Completed job reviews will appear here.
           </div>
         ) : (
@@ -297,7 +297,7 @@ export default function ProfileReviews({ profileId }: { profileId?: string }) {
                       )}
                     </div>
 
-                    <p className="mt-2 text-lg font-bold text-yellow-400">
+                    <p className="mt-2 text-lg font-bold text-amber-300">
                       {renderStars(review.rating)}
                     </p>
 

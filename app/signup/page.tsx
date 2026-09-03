@@ -9,6 +9,7 @@ import {
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useTranslations } from 'next-intl'
+import { Eye, EyeOff } from 'lucide-react'
 
 type Role = 'worker' | 'company'
 
@@ -39,6 +40,8 @@ function SignupForm() {
 
   const [password, setPassword] =
     useState('')
+  const [showPassword, setShowPassword] =
+    useState(false)
 
   const [fullName, setFullName] =
     useState('')
@@ -517,20 +520,38 @@ function SignupForm() {
               label={t('password')}
               htmlFor="existingPassword"
             >
-              <input
-                id="existingPassword"
-                type="password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(
-                    e.target.value
-                  )
-                }
-                required
-                minLength={6}
-                autoFocus
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
-              />
+              <div className="relative">
+                <input
+                  id="existingPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(
+                      e.target.value
+                    )
+                  }
+                  required
+                  minLength={6}
+                  autoFocus
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 pr-12 text-white outline-none focus:border-cyan-400"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((current) => !current)
+                  }
+                  aria-label={
+                    showPassword ? 'Hide password' : 'Show password'
+                  }
+                  className="absolute inset-y-0 right-3 z-10 flex items-center text-xl text-slate-400 transition hover:text-white"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </Field>
 
             <button
@@ -647,19 +668,37 @@ function SignupForm() {
               label={t('password')}
               htmlFor="password"
             >
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(
-                    e.target.value
-                  )
-                }
-                required
-                minLength={6}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(
+                      e.target.value
+                    )
+                  }
+                  required
+                  minLength={6}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 pr-12 text-white outline-none focus:border-cyan-400"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((current) => !current)
+                  }
+                  aria-label={
+                    showPassword ? 'Hide password' : 'Show password'
+                  }
+                  className="absolute inset-y-0 right-3 z-10 flex items-center text-xl text-slate-400 transition hover:text-white"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </Field>
 
             <button
