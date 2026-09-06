@@ -236,7 +236,13 @@ export default function AdminUserDetailPage() {
         adminProfile?.role !== 'admin' &&
         adminProfile?.is_admin !== true
       ) {
-        throw new Error('Admin access only.')
+        throw new Error(
+          `Admin access only. DEBUG role=${String(
+            adminProfile?.role
+          )} is_admin=${String(
+            adminProfile?.is_admin
+          )}`
+        )
       }
 
       const [
