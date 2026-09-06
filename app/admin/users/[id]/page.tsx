@@ -224,7 +224,7 @@ export default function AdminUserDetailPage() {
         error: adminError,
       } = await db
         .from('profiles')
-        .select('role')
+        .select('role, is_admin')
         .eq('id', user.id)
         .maybeSingle()
 
@@ -232,7 +232,10 @@ export default function AdminUserDetailPage() {
         throw adminError
       }
 
-      if (adminProfile?.role !== 'admin') {
+      if (
+        adminProfile?.role !== 'admin' &&
+        adminProfile?.is_admin !== true
+      ) {
         throw new Error('Admin access only.')
       }
 
