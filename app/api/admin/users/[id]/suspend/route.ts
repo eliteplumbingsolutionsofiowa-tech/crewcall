@@ -210,6 +210,7 @@ export async function POST(
       .select(`
         id,
         role,
+        is_admin,
         full_name,
         company_name,
         is_suspended,
@@ -236,7 +237,10 @@ export async function POST(
 
     if (
       action === 'suspend' &&
-      recipient.role === 'admin'
+      (
+        recipient.role === 'admin' ||
+        recipient.is_admin === true
+      )
     ) {
       return jsonError(
         'Administrator accounts cannot be suspended from this page.',

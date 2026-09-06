@@ -15,6 +15,7 @@ type Profile = {
   full_name: string | null
   company_name: string | null
   role: string | null
+  is_admin: boolean | null
   phone: string | null
   city: string | null
   state: string | null
@@ -252,6 +253,7 @@ export default function AdminUserDetailPage() {
             full_name,
             company_name,
             role,
+            is_admin,
             phone,
             city,
             state,
@@ -731,7 +733,8 @@ export default function AdminUserDetailPage() {
       : 0
 
   const isAdmin =
-    profile.role === 'admin'
+    profile.role === 'admin' ||
+    profile.is_admin === true
 
   const isSuspended = Boolean(
     profile.is_suspended
