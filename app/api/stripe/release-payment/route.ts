@@ -59,6 +59,8 @@ type JobRow = {
   title: string | null
   status: string | null
   pay_rate: string | null
+  escrow_amount_cents: number | null
+  escrow_status: string | null
   payment_status: string | null
   payout_status: string | null
   company_id: string | null
@@ -100,28 +102,6 @@ function normalizeString(value: unknown) {
   const trimmed = value.trim()
 
   return trimmed || null
-}
-
-function centsFromPayRate(value: string | null) {
-  if (!value) {
-    return 0
-  }
-
-  const cleaned = String(value).replace(
-    /[^0-9.]/g,
-    ''
-  )
-
-  const dollars = Number(cleaned)
-
-  if (
-    !Number.isFinite(dollars) ||
-    dollars <= 0
-  ) {
-    return 0
-  }
-
-  return Math.round(dollars * 100)
 }
 
 async function resetProcessingStatus(jobId: string) {
@@ -194,6 +174,8 @@ export async function POST(req: Request) {
           title,
           status,
           pay_rate,
+          escrow_amount_cents,
+          escrow_status,
           payment_status,
           payout_status,
           company_id,
@@ -395,14 +377,19 @@ export async function POST(req: Request) {
       })
       .eq('id', worker.id)
 
-    const grossAmount = centsFromPayRate(
-      job.pay_rate
-    )
+    const grossAmount =
+      job.escrow_amount_cents || 0
 
-    if (grossAmount <= 0) {
+    if (
+      grossAmount <= 0 ||
+      job.escrow_status !== 'funded'
+    ) {
       return NextResponse.json(
-        { error: 'Invalid job pay amount.' },
-        { status: 400 }
+        {
+          error:
+            'No confirmed funded amount is available for this payout.',
+        },
+        { status: 409 }
       )
     }
 

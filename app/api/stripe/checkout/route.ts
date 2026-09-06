@@ -59,6 +59,7 @@ const adminClient = createClient(
 
 type CheckoutRequest = {
   jobId?: string
+  amount?: string | number
 }
 
 type JobRow = {
@@ -163,6 +164,9 @@ export async function POST(req: Request) {
         | null
 
     const jobId = normalizeString(body?.jobId)
+    const requestedAmount = parseDollarAmount(
+      body?.amount
+    )
 
     if (!jobId) {
       return NextResponse.json(
@@ -269,6 +273,30 @@ export async function POST(req: Request) {
       )
     }
 
+    if (requestedAmount <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            'Enter a valid final payment amount.',
+        },
+        { status: 400 }
+      )
+    }
+
+    const amountInCents = Math.round(
+      requestedAmount * 100
+    )
+
+    if (amountInCents < 50) {
+      return NextResponse.json(
+        {
+          error:
+            'The payment amount is below Stripe’s minimum.',
+        },
+        { status: 400 }
+      )
+    }
+
     if (
       job.payment_status === 'pending' &&
       job.stripe_checkout_session_id
@@ -278,16 +306,6 @@ export async function POST(req: Request) {
           await stripe.checkout.sessions.retrieve(
             job.stripe_checkout_session_id
           )
-
-        if (
-          existingSession.status === 'open' &&
-          existingSession.url
-        ) {
-          return NextResponse.json({
-            url: existingSession.url,
-            reused: true,
-          })
-        }
 
         if (
           existingSession.payment_status ===
@@ -307,6 +325,9 @@ export async function POST(req: Request) {
                 payment_status: 'paid',
                 paid: true,
                 paid_at: new Date().toISOString(),
+                escrow_amount_cents:
+                  existingSession.amount_total,
+                escrow_status: 'funded',
                 stripe_payment_intent_id:
                   paymentIntentId,
                 stripe_checkout_session_id:
@@ -350,40 +371,31 @@ export async function POST(req: Request) {
             paymentStatus: 'paid',
           })
         }
+
+        if (
+          existingSession.status === 'open' &&
+          existingSession.url
+        ) {
+          if (
+            existingSession.amount_total ===
+            amountInCents
+          ) {
+            return NextResponse.json({
+              url: existingSession.url,
+              reused: true,
+            })
+          }
+
+          await stripe.checkout.sessions.expire(
+            existingSession.id
+          )
+        }
       } catch (sessionError) {
         console.error(
           'Unable to reuse existing Stripe checkout session:',
           sessionError
         )
       }
-    }
-
-    const grossAmount = parseDollarAmount(
-      job.pay_rate
-    )
-
-    if (grossAmount <= 0) {
-      return NextResponse.json(
-        {
-          error:
-            'This job does not have a valid pay amount.',
-        },
-        { status: 400 }
-      )
-    }
-
-    const amountInCents = Math.round(
-      grossAmount * 100
-    )
-
-    if (amountInCents < 50) {
-      return NextResponse.json(
-        {
-          error:
-            'The payment amount is below Stripe’s minimum.',
-        },
-        { status: 400 }
-      )
     }
 
     const session =

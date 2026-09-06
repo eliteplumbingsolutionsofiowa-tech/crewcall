@@ -25,6 +25,7 @@ export default function PayPage() {
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [finalAmount, setFinalAmount] = useState('')
 
   useEffect(() => {
     loadJob()
@@ -71,7 +72,13 @@ export default function PayPage() {
       return
     }
 
-    const amount = job.pay_rate || '0'
+    const amount = finalAmount.trim()
+
+    if (!amount) {
+      setMessage('Enter the final payment amount for this job.')
+      setPaying(false)
+      return
+    }
 
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
@@ -150,7 +157,38 @@ export default function PayPage() {
           </p>
 
           <p>
-            <strong>{t('amount')}:</strong> {formatMoney(job.pay_rate)}
+            <strong>Agreed Rate:</strong> {formatMoney(job.pay_rate)}
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <label
+            htmlFor="final-payment-amount"
+            className="mb-2 block text-sm font-bold text-gray-700"
+          >
+            Final Job Amount
+          </label>
+
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 font-semibold text-gray-500">
+              $
+            </span>
+
+            <input
+              id="final-payment-amount"
+              type="text"
+              inputMode="decimal"
+              value={finalAmount}
+              onChange={(event) =>
+                setFinalAmount(event.target.value)
+              }
+              placeholder="0.00"
+              className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 text-lg font-semibold text-gray-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <p className="mt-2 text-sm text-gray-500">
+            Enter the total amount being paid for this completed job.
           </p>
         </div>
 

@@ -696,57 +696,12 @@ export default function JobDetailsPage() {
     }
   }
 
-  async function payWorker() {
+  function payWorker() {
     if (!job) {
       return
     }
 
-    setWorkingId('pay')
-    setMessage(null)
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session?.access_token) {
-        setMessage(t('sessionExpired'))
-        setMessageTone('error')
-        setWorkingId(null)
-        return
-      }
-
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          jobId: job.id,
-        }),
-      })
-
-      const data = (await response.json()) as {
-        url?: string
-        error?: string
-      }
-
-      if (!response.ok || !data.url) {
-        setMessage(
-          data.error || t('unableCheckout')
-        )
-        setMessageTone('error')
-        setWorkingId(null)
-        return
-      }
-
-      window.location.href = data.url
-    } catch {
-      setMessage(t('unableCheckout'))
-      setMessageTone('error')
-      setWorkingId(null)
-    }
+    router.push(`/jobs/${job.id}/pay`)
   }
 
   async function releasePayment() {

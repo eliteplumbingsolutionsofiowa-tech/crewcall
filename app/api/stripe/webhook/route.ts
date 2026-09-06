@@ -143,6 +143,9 @@ export async function POST(request: Request) {
                 paid: true,
                 paid_at:
                   new Date().toISOString(),
+                escrow_amount_cents:
+                  session.amount_total,
+                escrow_status: 'funded',
                 stripe_payment_intent_id:
                   typeof session.payment_intent ===
                   'string'
@@ -255,6 +258,9 @@ export async function POST(request: Request) {
             paid: true,
             paid_at:
               new Date().toISOString(),
+            escrow_amount_cents:
+              intent.amount_received,
+            escrow_status: 'funded',
             stripe_payment_intent_id:
               intent.id,
           })
