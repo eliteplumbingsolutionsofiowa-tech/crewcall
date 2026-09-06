@@ -163,10 +163,23 @@ export default function LoginPage() {
         JSON.stringify(profile)
       )
 
+      const requestedRedirect =
+        new URLSearchParams(
+          window.location.search
+        ).get('redirect')
+
+      const safeRedirect =
+        requestedRedirect &&
+        requestedRedirect.startsWith('/') &&
+        !requestedRedirect.startsWith('//')
+          ? requestedRedirect
+          : null
+
       const destination =
         profile?.is_admin
           ? '/admin'
-          : destinationForRole(
+          : safeRedirect ||
+            destinationForRole(
               profile?.role || null
             )
 
