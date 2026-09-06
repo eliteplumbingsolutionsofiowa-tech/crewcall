@@ -371,7 +371,7 @@ export default function AdminReportsPage() {
           error: adminError,
         } = await db
           .from('profiles')
-          .select('role')
+          .select('role, is_admin')
           .eq('id', user.id)
           .maybeSingle()
 
@@ -380,7 +380,8 @@ export default function AdminReportsPage() {
         }
 
         if (
-          adminProfile?.role !== 'admin'
+          adminProfile?.role !== 'admin' &&
+          adminProfile?.is_admin !== true
         ) {
           throw new Error(
             'Admin access only.'

@@ -133,7 +133,7 @@ export async function GET(request: Request) {
 
     const { data: profile, error: profileError } = await adminClient
       .from('profiles')
-      .select('id, role')
+      .select('id, role, is_admin')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -144,7 +144,13 @@ export async function GET(request: Request) {
       )
     }
 
-    if (!profile || profile.role !== 'admin') {
+    if (
+      !profile ||
+      (
+        profile.role !== 'admin' &&
+        profile.is_admin !== true
+      )
+    ) {
       return NextResponse.json(
         { error: 'Administrator access is required.' },
         { status: 403 }

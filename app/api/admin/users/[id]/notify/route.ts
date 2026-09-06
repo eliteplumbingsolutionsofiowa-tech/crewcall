@@ -114,7 +114,7 @@ export async function POST(
       error: adminError,
     } = await adminClient
       .from('profiles')
-      .select('id, role')
+      .select('id, role, is_admin')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -125,7 +125,10 @@ export async function POST(
       )
     }
 
-    if (adminProfile?.role !== 'admin') {
+    if (
+      adminProfile?.role !== 'admin' &&
+      adminProfile?.is_admin !== true
+    ) {
       return jsonError(
         'Admin access only.',
         403
