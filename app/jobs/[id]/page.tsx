@@ -1463,6 +1463,7 @@ export default function JobDetailsPage() {
               <JobFileList
                 files={jobFiles}
                 canDelete={isCompany && isOwner}
+                currentUserId={profile.id}
                 onDeleteComplete={() => void loadPage(true)}
               />
             </div>

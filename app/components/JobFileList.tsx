@@ -8,12 +8,14 @@ type JobFile = {
   file_name: string | null
   file_url: string | null
   file_type: string | null
+  uploaded_by: string | null
   created_at: string
 }
 
 type Props = {
   files: JobFile[]
   canDelete?: boolean
+  currentUserId?: string | null
   onDeleteComplete?: () => void
 }
 
@@ -65,6 +67,7 @@ function getFileIcon(fileType: string | null, fileName: string | null) {
 export default function JobFileList({
   files,
   canDelete = false,
+  currentUserId = null,
   onDeleteComplete,
 }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -160,6 +163,9 @@ export default function JobFileList({
           const isImage = file.file_type?.startsWith('image/')
           const badge = getFileBadge(file.file_type, file.file_name)
           const icon = getFileIcon(file.file_type, file.file_name)
+          const canDeleteFile =
+            canDelete ||
+            (!!currentUserId && file.uploaded_by === currentUserId)
 
           return (
             <div
@@ -205,7 +211,7 @@ export default function JobFileList({
                 </div>
               </a>
 
-              {canDelete && (
+              {canDeleteFile && (
                 <div className="border-t border-white/10 p-4">
                   <button
                     type="button"
