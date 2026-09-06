@@ -701,7 +701,7 @@ export default function JobDetailsPage() {
       return
     }
 
-    router.push(`/jobs/${job.id}/pay`)
+    window.location.href = `/jobs/${job.id}/pay`
   }
 
   async function releasePayment() {
