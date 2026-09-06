@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Role = 'company' | 'worker' | null
 type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
@@ -70,7 +71,13 @@ export default function CompanyJobsPage() {
       return
     }
 
-    if (profileData.role !== 'company') {
+    const companyContext =
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+    if (!companyContext.companyId) {
       router.replace('/worker/dashboard')
       return
     }
@@ -93,7 +100,10 @@ export default function CompanyJobsPage() {
         assigned_worker_id
       `
       )
-      .eq('company_id', user.id)
+      .eq(
+        'company_id',
+        companyContext.companyId
+      )
       .order('created_at', { ascending: false })
       .returns<Job[]>()
 
