@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Role = 'company' | 'worker' | null
-type JobStatus = 'open' | 'active' | 'completed' | 'cancelled'
+type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
 
 type Profile = {
   id: string
@@ -115,7 +115,12 @@ export default function CompanyJobsPage() {
   const groupedJobs = useMemo(() => {
     return {
       open: jobs.filter((job) => job.status === 'open' || !job.status),
-      active: jobs.filter((job) => job.status === 'active'),
+      assigned: jobs.filter((job) => job.status === 'assigned'),
+      inProgress: jobs.filter(
+        (job) =>
+          job.status === 'in_progress' ||
+          job.status === 'active'
+      ),
       completed: jobs.filter((job) => job.status === 'completed'),
       cancelled: jobs.filter((job) => job.status === 'cancelled'),
     }
@@ -125,7 +130,8 @@ export default function CompanyJobsPage() {
     return {
       all: jobs.length,
       open: groupedJobs.open.length,
-      active: groupedJobs.active.length,
+      assigned: groupedJobs.assigned.length,
+      inProgress: groupedJobs.inProgress.length,
       completed: groupedJobs.completed.length,
     }
   }, [groupedJobs, jobs.length])
@@ -144,16 +150,22 @@ export default function CompanyJobsPage() {
         return
       }
 
-      const response = await fetch('/api/company/jobs', {
+      const endpoint =
+        status === 'completed'
+          ? '/api/jobs/complete'
+          : '/api/company/jobs'
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          jobId,
-          status,
-        }),
+        body: JSON.stringify(
+          status === 'completed'
+            ? { jobId }
+            : { jobId, status }
+        ),
       })
 
       const responseText = await response.text()
@@ -173,6 +185,10 @@ export default function CompanyJobsPage() {
               }
             : job
         )
+      )
+
+      window.dispatchEvent(
+        new Event('crewcall-refresh-nav')
       )
     } catch (error) {
       setMessage(
@@ -261,11 +277,16 @@ export default function CompanyJobsPage() {
   function getSafeStatus(job: Job): JobStatus {
     if (
       job.status === 'open' ||
-      job.status === 'active' ||
+      job.status === 'assigned' ||
+      job.status === 'in_progress' ||
       job.status === 'completed' ||
       job.status === 'cancelled'
     ) {
       return job.status
+    }
+
+    if (job.status === 'active') {
+      return 'in_progress'
     }
 
     return 'open'
@@ -340,58 +361,66 @@ export default function CompanyJobsPage() {
         <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
           {!hasPaymentActivity ? (
             <>
-              {status !== 'open' && (
-            <button
-              type="button"
-              onClick={() => void updateJobStatus(job.id, 'open')}
-              disabled={isUpdating}
-              className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {t('markOpen')}
-            </button>
-          )}
+              {status === 'cancelled' && (
+                <button
+                  type="button"
+                  onClick={() => void updateJobStatus(job.id, 'open')}
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('markOpen')}
+                </button>
+              )}
 
-          {status !== 'active' && (
-            <button
-              type="button"
-              onClick={() => void updateJobStatus(job.id, 'active')}
-              disabled={isUpdating}
-              className="rounded-2xl border border-orange-300/30 bg-orange-400/10 px-4 py-2 text-sm font-black text-orange-100 transition hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {t('markActive')}
-            </button>
-          )}
+              {status === 'assigned' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateJobStatus(job.id, 'in_progress')
+                  }
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-orange-300/30 bg-orange-400/10 px-4 py-2 text-sm font-black text-orange-100 transition hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('markInProgress')}
+                </button>
+              )}
 
-          {status !== 'completed' && (
-            <button
-              type="button"
-              onClick={() => void updateJobStatus(job.id, 'completed')}
-              disabled={isUpdating}
-              className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-100 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {t('complete')}
-            </button>
-          )}
+              {status === 'in_progress' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateJobStatus(job.id, 'completed')
+                  }
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-100 transition hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('complete')}
+                </button>
+              )}
 
-          {status !== 'cancelled' && (
-            <button
-              type="button"
-              onClick={() => void updateJobStatus(job.id, 'cancelled')}
-              disabled={isUpdating}
-              className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {t('cancel')}
-            </button>
-          )}
+              {status === 'open' && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateJobStatus(job.id, 'cancelled')
+                  }
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('cancel')}
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => void deleteJob(job.id)}
-                disabled={isUpdating}
-                className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isUpdating ? t('updating') : t('delete')}
-              </button>
+              {(status === 'open' || status === 'cancelled') && (
+                <button
+                  type="button"
+                  onClick={() => void deleteJob(job.id)}
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isUpdating ? t('updating') : t('delete')}
+                </button>
+              )}
             </>
           ) : (
             <span className="inline-flex items-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-black text-emerald-200">
@@ -487,7 +516,7 @@ export default function CompanyJobsPage() {
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label={t('allJobs')} value={totals.all} />
           <StatCard label={t('open')} value={totals.open} />
-          <StatCard label={t('active')} value={totals.active} />
+          <StatCard label={t('inProgress')} value={totals.inProgress} />
           <StatCard label={t('completed')} value={totals.completed} />
         </section>
 
@@ -521,9 +550,15 @@ export default function CompanyJobsPage() {
             />
 
             <JobSection
-              title={t('activeJobs')}
-              description={t('activeJobsDescription')}
-              jobs={groupedJobs.active}
+              title={t('assignedJobs')}
+              description={t('assignedJobsDescription')}
+              jobs={groupedJobs.assigned}
+            />
+
+            <JobSection
+              title={t('inProgressJobs')}
+              description={t('inProgressJobsDescription')}
+              jobs={groupedJobs.inProgress}
             />
 
             <JobSection
@@ -576,7 +611,11 @@ function statusBadgeClass(status: JobStatus) {
     return base + 'bg-emerald-400/15 text-emerald-200'
   }
 
-  if (status === 'active') {
+  if (status === 'assigned') {
+    return base + 'bg-blue-400/15 text-blue-200'
+  }
+
+  if (status === 'in_progress') {
     return base + 'bg-orange-400/15 text-orange-200'
   }
 

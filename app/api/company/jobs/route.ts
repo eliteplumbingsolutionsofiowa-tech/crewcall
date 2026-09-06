@@ -164,8 +164,7 @@ export async function POST(request: Request) {
 
     const allowedStatuses = new Set([
       'open',
-      'active',
-      'completed',
+      'in_progress',
       'cancelled',
     ])
 
@@ -247,6 +246,24 @@ export async function POST(request: Request) {
       cannot move the job backward or bypass CrewCall's
       completion / payout workflow.
     */
+    const allowedTransitions: Record<string, string[]> = {
+      open: ['cancelled'],
+      assigned: ['in_progress'],
+      cancelled: ['open'],
+    }
+
+    if (
+      !allowedTransitions[job.status || 'open']?.includes(status)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'This job status change is not allowed in the CrewCall job workflow.',
+        },
+        { status: 409 }
+      )
+    }
+
     if (
       job.payment_status === 'paid' ||
       job.payment_status === 'pending' ||
