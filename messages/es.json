@@ -3122,7 +3122,7 @@
     "missingSessionId": "Falta el ID de sesión de Stripe.",
     "jobNotFound": "El pago terminó, pero CrewCall no pudo encontrar el trabajo correspondiente.",
     "alreadyCompleted": "El pago y el desembolso al trabajador ya se completaron correctamente.",
-    "paymentConfirmed": "Pago confirmado. El pago del trabajador está asegurado. Completa el trabajo cuando termine para liberar el desembolso.",
+    "paymentConfirmed": "Pago confirmado. El pago del trabajador está asegurado.",
     "waitingForStripe": "Pago recibido. Esperando confirmación de Stripe...",
     "stillConfirming": "Stripe todavía está confirmando el pago. Actualiza esta página en un momento.",
     "paymentSuccessful": "¡Pago Exitoso!",
@@ -3135,7 +3135,7 @@
     "completedJobs": "Trabajos Completados",
     "myJobs": "Mis Trabajos",
     "reviewUnavailable": "La reseña aún no está disponible porque CrewCall no pudo determinar quién debe recibirla.",
-    "releaseHelp": "Pago asegurado. Completa el trabajo para liberar el desembolso al trabajador.",
+    "releaseHelp": "El pago está asegurado. El desembolso al trabajador puede liberarse después de que el trabajo se complete y sea aprobado.",
     "goToMessages": "Ir a Mensajes",
     "loadingPayment": "Cargando pago...",
     "confirmingStripePayment": "Confirmando pago de Stripe."

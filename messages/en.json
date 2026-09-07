@@ -3122,7 +3122,7 @@
     "missingSessionId": "Missing Stripe session ID.",
     "jobNotFound": "Payment finished, but CrewCall could not find the matching job.",
     "alreadyCompleted": "Payment and worker payout already completed successfully.",
-    "paymentConfirmed": "Payment confirmed. Worker payment is secured. Complete the job when the work is finished to release payout.",
+    "paymentConfirmed": "Payment confirmed. Worker payment is secured.",
     "waitingForStripe": "Payment received. Waiting for Stripe confirmation...",
     "stillConfirming": "Stripe is still confirming the payment. Refresh this page in a moment.",
     "paymentSuccessful": "Payment Successful!",
@@ -3135,7 +3135,7 @@
     "completedJobs": "Completed Jobs",
     "myJobs": "My Jobs",
     "reviewUnavailable": "Review is not available yet because CrewCall could not determine who should receive it.",
-    "releaseHelp": "Payment secured. Complete the job to release worker payout.",
+    "releaseHelp": "Payment is secured. Worker payout can be released after the work is completed and approved.",
     "goToMessages": "Go to Messages",
     "loadingPayment": "Loading payment...",
     "confirmingStripePayment": "Confirming Stripe payment."
