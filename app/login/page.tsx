@@ -22,6 +22,7 @@ export default function LoginPage() {
   const t = useTranslations('Login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [resetMode, setResetMode] = useState(false)
@@ -336,19 +337,56 @@ export default function LoginPage() {
                     </button>
                   </div>
 
-                  <input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    disabled={loading}
-                    onChange={(event) =>
-                      setPassword(event.target.value)
-                    }
-                    required
-                    placeholder={t('passwordPlaceholder')}
-                    className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
-                  />
+                  <div className="relative mt-2">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      value={password}
+                      disabled={loading}
+                      onChange={(event) =>
+                        setPassword(event.target.value)
+                      }
+                      required
+                      placeholder={t('passwordPlaceholder')}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 pr-12 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50 disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      disabled={loading}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {showPassword ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-5 w-5"
+                          aria-hidden="true"
+                        >
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                          <path d="M9.9 4.2A10.5 10.5 0 0112 4c5.5 0 9 5 9 5a15.4 15.4 0 01-2.1 2.6" />
+                          <path d="M6.6 6.6C4.4 8 3 10 3 10s3.5 5 9 5c1 0 1.9-.2 2.8-.4" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="h-5 w-5"
+                          aria-hidden="true"
+                        >
+                          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {message ? (
