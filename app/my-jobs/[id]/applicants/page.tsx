@@ -1966,7 +1966,7 @@ export default function ApplicantsPage() {
                                 label={t('experience')}
                                 value={
                                   worker?.years_experience
-                                    ? `${worker.years_experience} {t('years')}`
+                                    ? `${worker.years_experience} ${t('years')}`
                                     : t('notListed')
                                 }
                               />
