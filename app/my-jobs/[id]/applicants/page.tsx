@@ -1430,14 +1430,11 @@ export default function ApplicantsPage() {
                       )}
                     </p>
 
-                    {job.status !== 'completed' ? (
+                    {job.status === 'assigned' ? (
                       <div className="mt-5 flex flex-wrap gap-3">
                         <LifecycleButton
                           label={t('markInProgress')}
-                          disabled={
-                            actionLoadingId === 'in_progress' ||
-                            job.status === 'in_progress'
-                          }
+                          disabled={actionLoadingId === 'in_progress'}
                           onClick={() => updateJobStatus('in_progress')}
                         />
                       </div>
