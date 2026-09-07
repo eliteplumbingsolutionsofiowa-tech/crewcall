@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { formatMoney } from '@/lib/formatMoney'
+import { formatPayRate } from '@/lib/formatPayRate'
 
 type Job = {
   id: string
@@ -157,7 +157,7 @@ export default function PayPage() {
           </p>
 
           <p>
-            <strong>Agreed Rate:</strong> {formatMoney(job.pay_rate)}
+            <strong>Agreed Rate:</strong> {formatPayRate(job.pay_rate)}
           </p>
         </div>
 

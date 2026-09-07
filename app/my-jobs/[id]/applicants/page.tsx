@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 import { resolveCompanyContext } from '@/lib/company-context'
 import { formatMoney } from '@/lib/formatMoney'
+import { formatPayRate } from '@/lib/formatPayRate'
 
 type Job = {
   id: string
@@ -1393,7 +1394,7 @@ export default function ApplicantsPage() {
                   <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <JobMetric
                       label={t('pay')}
-                      value={formatMoney(job.pay_rate)}
+                      value={formatPayRate(job.pay_rate)}
                     />
                     <JobMetric
                       label={t('applicants')}
@@ -1422,7 +1423,7 @@ export default function ApplicantsPage() {
 
                     <p className="mt-2 text-sm font-semibold text-emerald-100/80">
                       {t('agreedPay')}:{' '}
-                      {formatMoney(
+                      {formatPayRate(
                         assignedApplicant.company_counter_offer ||
                           assignedApplicant.requested_pay_rate ||
                           assignedApplicant.requested_pay ||
@@ -2039,15 +2040,15 @@ export default function ApplicantsPage() {
                               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                 <OfferCard
                                   label={t('originalJobRate')}
-                                  value={formatMoney(job.pay_rate)}
+                                  value={formatPayRate(job.pay_rate)}
                                   tone="cyan"
                                 />
                                 <OfferCard
                                   label={t('finalAgreedRate')}
                                   value={
                                     agreedRate
-                                      ? formatMoney(agreedRate)
-                                      : formatMoney(job.pay_rate)
+                                      ? formatPayRate(agreedRate)
+                                      : formatPayRate(job.pay_rate)
                                   }
                                   tone="green"
                                 />
@@ -2058,7 +2059,7 @@ export default function ApplicantsPage() {
                                   label={t('workerRequest')}
                                   value={
                                     workerOffer
-                                      ? formatMoney(workerOffer)
+                                      ? formatPayRate(workerOffer)
                                       : t('notSubmitted')
                                   }
                                   tone="orange"
@@ -2078,7 +2079,7 @@ export default function ApplicantsPage() {
                                   label={t('agreedRate')}
                                   value={
                                     agreedRate
-                                      ? formatMoney(agreedRate)
+                                      ? formatPayRate(agreedRate)
                                       : t('notAgreed')
                                   }
                                   tone="green"
@@ -2171,7 +2172,7 @@ export default function ApplicantsPage() {
                                   >
                                     {actionLoadingId === applicant.id
                                       ? t('hiring')
-                                      : t('hireAtRate', { worker: workerName, rate: formatMoney(agreedRate) })}
+                                      : t('hireAtRate', { worker: workerName, rate: formatPayRate(agreedRate) })}
                                   </button>
                                 )}
                               </div>

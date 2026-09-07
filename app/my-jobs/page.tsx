@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
-import { formatMoney } from '@/lib/formatMoney'
+import { formatPayRate } from '@/lib/formatPayRate'
 
 type Job = {
   id: string
@@ -742,7 +742,7 @@ export default function MyJobsPage() {
                         label={t('pay')}
                         value={
                           job.pay_rate
-                            ? formatMoney(job.pay_rate)
+                            ? formatPayRate(job.pay_rate)
                             : t('notSet')
                         }
                       />
