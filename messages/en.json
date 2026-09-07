@@ -597,7 +597,15 @@
     "privacy": "Privacy",
     "terms": "Terms",
     "jobs": "Jobs",
-    "bestLaunchDeal": "BEST LAUNCH DEAL"
+    "bestLaunchDeal": "BEST LAUNCH DEAL",
+    "construction": "Construction",
+    "roofing": "Roofing",
+    "painting": "Painting",
+    "drywall": "Drywall",
+    "masonry": "Masonry",
+    "landscaping": "Landscaping",
+    "heavyEquipment": "Heavy Equipment",
+    "maintenanceHandyman": "Maintenance / Handyman"
   },
   "Contact": {
     "eyebrow": "Contact",

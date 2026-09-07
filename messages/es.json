@@ -597,7 +597,15 @@
     "privacy": "Privacidad",
     "terms": "Términos",
     "jobs": "Trabajos",
-    "bestLaunchDeal": "MEJOR OFERTA DE LANZAMIENTO"
+    "bestLaunchDeal": "MEJOR OFERTA DE LANZAMIENTO",
+    "construction": "Construcción",
+    "roofing": "Techado",
+    "painting": "Pintura",
+    "drywall": "Paneles de Yeso",
+    "masonry": "Albañilería",
+    "landscaping": "Paisajismo",
+    "heavyEquipment": "Equipo Pesado",
+    "maintenanceHandyman": "Mantenimiento / Reparaciones"
   },
   "Contact": {
     "eyebrow": "Contacto",

@@ -328,6 +328,14 @@ export default function HomePage() {
               t('carpentry'),
               t('concrete'),
               t('generalLabor'),
+              t('construction'),
+              t('roofing'),
+              t('painting'),
+              t('drywall'),
+              t('masonry'),
+              t('landscaping'),
+              t('heavyEquipment'),
+              t('maintenanceHandyman'),
             ].map((trade) => (
               <div
                 key={trade}
