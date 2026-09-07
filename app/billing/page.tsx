@@ -72,7 +72,9 @@ function BillingContent() {
     useState(false)
 
   const [loading, setLoading] = useState(true)
-  const [startingCheckout, setStartingCheckout] = useState(false)
+  const [startingCheckout, setStartingCheckout] = useState<
+    'founding_member' | 'worker_pro' | 'worker_membership' | null
+  >(null)
   const [connectingStripe, setConnectingStripe] = useState(false)
   const [openingPortal, setOpeningPortal] = useState(false)
   const [message, setMessage] = useState('')
@@ -235,7 +237,7 @@ function BillingContent() {
       return
     }
 
-    setStartingCheckout(true)
+    setStartingCheckout(plan)
     setMessage('')
 
     try {
@@ -281,7 +283,7 @@ function BillingContent() {
       if (data.upgraded) {
         setMessage('Worker Pro upgrade completed successfully.')
         setMessageTone('success')
-        setStartingCheckout(false)
+        setStartingCheckout(null)
         window.location.reload()
         return
       }
@@ -298,7 +300,7 @@ function BillingContent() {
           : 'Unable to start membership.'
       )
       setMessageTone('error')
-      setStartingCheckout(false)
+      setStartingCheckout(null)
     }
   }
 
@@ -554,7 +556,9 @@ function BillingContent() {
                     membershipActive={membershipActive}
                     trialActive={trialActive}
                     trialDaysRemaining={trialDaysRemaining}
-                    startingCheckout={startingCheckout}
+                    startingCheckout={
+                      startingCheckout === 'founding_member'
+                    }
                     onStartSubscription={() =>
                       void handleStartSubscription()
                     }
@@ -571,7 +575,9 @@ function BillingContent() {
                     <WorkerMembershipSection
                       subscription={subscription}
                       membershipActive={membershipActive}
-                      startingCheckout={startingCheckout}
+                      startingCheckout={
+                        startingCheckout === 'worker_membership'
+                      }
                       onStartSubscription={() =>
                         void handleStartSubscription('worker_membership')
                       }
@@ -585,7 +591,9 @@ function BillingContent() {
                     <WorkerProSection
                       subscription={subscription}
                       membershipActive={membershipActive}
-                      startingCheckout={startingCheckout}
+                      startingCheckout={
+                        startingCheckout === 'worker_pro'
+                      }
                       onStartSubscription={() =>
                         void handleStartSubscription('worker_pro')
                       }
