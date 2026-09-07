@@ -157,20 +157,12 @@ export default function CompletedJobsPage() {
         ascending: false,
       })
 
-    if (currentProfile.role === 'company') {
-      const companyContext = await resolveCompanyContext(
-        supabase,
-        user.id
-      )
+    const companyContext = await resolveCompanyContext(
+      supabase,
+      user.id
+    )
 
-      if (!companyContext.companyId) {
-        setMessage(t('profileNotFound'))
-        setJobs([])
-        setLoading(false)
-        setRefreshing(false)
-        return
-      }
-
+    if (companyContext.companyId) {
       query = query.eq(
         'company_id',
         companyContext.companyId
