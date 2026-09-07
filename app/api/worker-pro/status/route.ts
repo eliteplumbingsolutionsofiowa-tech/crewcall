@@ -61,6 +61,26 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url)
     const workerId = url.searchParams.get('workerId')?.trim()
+    const mode = url.searchParams.get('mode')?.trim()
+
+    if (mode === 'list') {
+      const { data: subscriptions, error: subscriptionsError } =
+        await adminClient
+          .from('subscriptions')
+          .select('user_id,status')
+          .eq('plan', 'worker_pro')
+          .in('status', ['active', 'trialing', 'past_due'])
+
+      if (subscriptionsError) {
+        throw subscriptionsError
+      }
+
+      const workerIds = (subscriptions || [])
+        .map((subscription) => subscription.user_id)
+        .filter((id): id is string => Boolean(id))
+
+      return NextResponse.json({ workerIds })
+    }
 
     if (!workerId) {
       return NextResponse.json(

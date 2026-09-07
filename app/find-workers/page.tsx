@@ -75,6 +75,7 @@ export default function FindWorkersPage() {
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
   const [workers, setWorkers] = useState<Profile[]>([])
+  const [workerProIds, setWorkerProIds] = useState<Set<string>>(new Set())
   const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
   const [savedWorkers, setSavedWorkers] = useState<SavedWorker[]>([])
   const [savingWorkerId, setSavingWorkerId] = useState<string | null>(null)
@@ -184,6 +185,15 @@ export default function FindWorkersPage() {
         matchesOnline &&
         matchesSaved
       )
+    }).sort((a, b) => {
+      const aIsPro = workerProIds.has(a.id)
+      const bIsPro = workerProIds.has(b.id)
+
+      if (aIsPro !== bIsPro) {
+        return aIsPro ? -1 : 1
+      }
+
+      return getWorkerName(a).localeCompare(getWorkerName(b))
     })
   }, [
     workers,
@@ -194,6 +204,7 @@ export default function FindWorkersPage() {
     onlineOnly,
     savedOnly,
     savedWorkerIdSet,
+    workerProIds,
   ])
 
   const mappableWorkers = useMemo(() => {
@@ -259,6 +270,35 @@ export default function FindWorkersPage() {
 
     const safeWorkers = workerData || []
     setWorkers(safeWorkers)
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (session?.access_token) {
+      try {
+        const response = await fetch('/api/worker-pro/status?mode=list', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        })
+
+        if (response.ok) {
+          const result = (await response.json()) as {
+            workerIds?: string[]
+          }
+
+          setWorkerProIds(new Set(result.workerIds || []))
+        } else {
+          setWorkerProIds(new Set())
+        }
+      } catch (workerProError) {
+        console.error('Unable to load Worker Pro workers:', workerProError)
+        setWorkerProIds(new Set())
+      }
+    } else {
+      setWorkerProIds(new Set())
+    }
 
     const workerIds = safeWorkers.map((worker) => worker.id)
 
@@ -573,6 +613,7 @@ export default function FindWorkersPage() {
                   key={worker.id}
                   worker={worker}
                   photo={photoByUserId.get(worker.id)}
+                  isPro={workerProIds.has(worker.id)}
                   isSaved={savedWorkerIdSet.has(worker.id)}
                   saving={savingWorkerId === worker.id}
                   onSave={() => void toggleSavedWorker(worker)}
@@ -749,6 +790,7 @@ function WorkerMap({
 function WorkerCard({
   worker,
   photo,
+  isPro,
   isSaved,
   saving,
   onSave,
@@ -756,6 +798,7 @@ function WorkerCard({
 }: {
   worker: Profile
   photo?: string
+  isPro: boolean
   isSaved: boolean
   saving: boolean
   onSave: () => void
@@ -791,6 +834,12 @@ function WorkerCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-black">{workerName}</h2>
+
+            {isPro && (
+              <span className="rounded-full bg-amber-300 px-3 py-1 text-xs font-black tracking-wide text-amber-950">
+                WORKER PRO
+              </span>
+            )}
 
             {worker.insurance_provider && (
               <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-black uppercase text-emerald-100">
