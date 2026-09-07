@@ -26,6 +26,43 @@ function getCustomerId(
     : customer.id
 }
 
+function unixToIso(value: number | null | undefined) {
+  return typeof value === 'number'
+    ? new Date(value * 1000).toISOString()
+    : null
+}
+
+function getSubscriptionPeriods(
+  subscription: Stripe.Subscription
+) {
+  const items = subscription.items?.data ?? []
+
+  const starts = items
+    .map((item) => item.current_period_start)
+    .filter(
+      (value): value is number =>
+        typeof value === 'number'
+    )
+
+  const ends = items
+    .map((item) => item.current_period_end)
+    .filter(
+      (value): value is number =>
+        typeof value === 'number'
+    )
+
+  return {
+    currentPeriodStartsAt:
+      starts.length > 0
+        ? unixToIso(Math.min(...starts))
+        : null,
+    currentPeriodEndsAt:
+      ends.length > 0
+        ? unixToIso(Math.max(...ends))
+        : null,
+  }
+}
+
 export async function POST(request: Request) {
   if (
     !stripeSecretKey ||
@@ -199,13 +236,33 @@ export async function POST(request: Request) {
               : session.subscription?.id ||
                 null
 
+          if (!subscriptionId) {
+            throw new Error(
+              'Subscription checkout completed without a Stripe subscription ID.'
+            )
+          }
+
+          const stripeSubscription =
+            await stripe.subscriptions.retrieve(
+              subscriptionId
+            )
+
+          const periods =
+            getSubscriptionPeriods(
+              stripeSubscription
+            )
+
           const { error } =
             await supabase
               .from('subscriptions')
               .upsert(
                 {
                   user_id: userId,
-                  status: 'active',
+                  status:
+                    stripeSubscription.status ===
+                    'trialing'
+                      ? 'trialing'
+                      : 'active',
                   stripe_customer_id:
                     customerId,
                   stripe_subscription_id:
@@ -213,6 +270,29 @@ export async function POST(request: Request) {
                   plan:
                     session.metadata?.plan ||
                     'founding_member',
+                  stripe_price_id:
+                    stripeSubscription.items
+                      ?.data?.[0]?.price?.id ??
+                    null,
+                  current_period_starts_at:
+                    periods.currentPeriodStartsAt,
+                  current_period_ends_at:
+                    periods.currentPeriodEndsAt,
+                  trial_starts_at:
+                    unixToIso(
+                      stripeSubscription.trial_start
+                    ),
+                  trial_ends_at:
+                    unixToIso(
+                      stripeSubscription.trial_end
+                    ),
+                  cancel_at_period_end:
+                    stripeSubscription
+                      .cancel_at_period_end,
+                  canceled_at:
+                    unixToIso(
+                      stripeSubscription.canceled_at
+                    ),
                   updated_at:
                     new Date().toISOString(),
                 },
@@ -406,6 +486,9 @@ export async function POST(request: Request) {
             ? 'canceled'
             : subscription.status
 
+        const periods =
+          getSubscriptionPeriods(subscription)
+
         const { error } =
           await supabase
             .from('subscriptions')
@@ -413,6 +496,28 @@ export async function POST(request: Request) {
               status,
               stripe_subscription_id:
                 subscription.id,
+              stripe_price_id:
+                subscription.items
+                  ?.data?.[0]?.price?.id ??
+                null,
+              current_period_starts_at:
+                periods.currentPeriodStartsAt,
+              current_period_ends_at:
+                periods.currentPeriodEndsAt,
+              trial_starts_at:
+                unixToIso(
+                  subscription.trial_start
+                ),
+              trial_ends_at:
+                unixToIso(
+                  subscription.trial_end
+                ),
+              cancel_at_period_end:
+                subscription.cancel_at_period_end,
+              canceled_at:
+                unixToIso(
+                  subscription.canceled_at
+                ),
               updated_at:
                 new Date().toISOString(),
             })
