@@ -213,6 +213,43 @@ export default function PricingPage() {
           </div>
         </section>
 
+        <section>
+          <div className="rounded-[2rem] border-2 border-amber-300 bg-amber-300/10 p-8 shadow-2xl shadow-amber-400/10">
+            <div className="mb-6 inline-flex rounded-full bg-amber-300 px-4 py-2 text-sm font-black text-amber-950">
+              {t('workerPro')}
+            </div>
+
+            <h2 className="text-2xl font-black">
+              {t('workerProTitle')}
+            </h2>
+
+            <p className="mt-6 text-5xl font-black text-amber-300">
+              {t('workerProPrice')}
+            </p>
+
+            <p className="mt-2 text-sm font-bold text-slate-400">
+              {t('workerProMonthly')}
+            </p>
+
+            <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+              {t('workerProDescription')}
+            </p>
+
+            <ul className="mt-8 space-y-4 text-slate-200">
+              <li>⭐ {t('workerProBadge')}</li>
+              <li>⭐ {t('workerProPriority')}</li>
+              <li>⭐ {t('workerProVisibility')}</li>
+            </ul>
+
+            <Link
+              href="/signup"
+              className="mt-10 inline-flex w-full justify-center rounded-2xl bg-amber-300 px-6 py-4 text-lg font-black text-amber-950 hover:bg-amber-200"
+            >
+              {t('workerProJoin')}
+            </Link>
+          </div>
+        </section>
+
         <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8">
           <h2 className="text-center text-3xl font-black text-cyan-300">
             {t('everythingIncluded')}

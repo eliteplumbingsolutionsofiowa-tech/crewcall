@@ -739,7 +739,16 @@
     "analyticsText": "Track views, applications, and hiring performance.",
     "fileUploadsText": "Upload plans, photos, and documents.",
     "mobileAccessText": "Manage jobs from anywhere.",
-    "growth": "Growth"
+    "growth": "Growth",
+    "workerPro": "WORKER PRO",
+    "workerProTitle": "Worker Pro",
+    "workerProPrice": "$59/year",
+    "workerProMonthly": "About $4.92/month, billed annually",
+    "workerProDescription": "Stand out to companies looking for skilled workers.",
+    "workerProBadge": "Worker Pro badge on your profile",
+    "workerProPriority": "Priority placement in worker searches",
+    "workerProVisibility": "More visibility to hiring companies",
+    "workerProJoin": "Join CrewCall"
   },
   "Terms": {
     "eyebrow": "Terms of Service",

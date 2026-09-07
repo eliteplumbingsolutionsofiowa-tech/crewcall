@@ -739,7 +739,16 @@
     "analyticsText": "Consulta vistas, solicitudes y rendimiento de contratación.",
     "fileUploadsText": "Sube planos, fotos y documentos.",
     "mobileAccessText": "Administra trabajos desde cualquier lugar.",
-    "growth": "Crecimiento"
+    "growth": "Crecimiento",
+    "workerPro": "WORKER PRO",
+    "workerProTitle": "Worker Pro",
+    "workerProPrice": "$59/año",
+    "workerProMonthly": "Aproximadamente $4.92/mes, facturado anualmente",
+    "workerProDescription": "Destácate ante empresas que buscan trabajadores calificados.",
+    "workerProBadge": "Insignia Worker Pro en tu perfil",
+    "workerProPriority": "Prioridad en las búsquedas de trabajadores",
+    "workerProVisibility": "Mayor visibilidad para empresas que están contratando",
+    "workerProJoin": "Únete a CrewCall"
   },
   "Terms": {
     "eyebrow": "Términos de Servicio",
