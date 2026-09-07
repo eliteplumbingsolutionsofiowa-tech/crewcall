@@ -2635,6 +2635,7 @@
     "unknown": "Unknown",
     "unpaid": "Unpaid",
     "pending": "Pending",
+    "released": "Released",
     "notReleased": "Not Released",
     "cancelled": "Cancelled",
     "rejected": "Rejected",
