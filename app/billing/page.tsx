@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 import { isNativeIOS } from '@/app/lib/nativePlatform'
 
 type BillingProfile = {
@@ -67,6 +68,8 @@ function BillingContent() {
   const [profile, setProfile] = useState<BillingProfile | null>(null)
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [hasCompanyBillingAccess, setHasCompanyBillingAccess] =
+    useState(false)
 
   const [loading, setLoading] = useState(true)
   const [startingCheckout, setStartingCheckout] = useState(false)
@@ -150,6 +153,18 @@ function BillingContent() {
         if (!active) return
 
         setProfile(profileResult.data as BillingProfile | null)
+
+        const companyContext = await withTimeout(
+          resolveCompanyContext(supabase, authUser.id),
+          'Company context request'
+        )
+
+        if (!active) return
+
+        setHasCompanyBillingAccess(
+          companyContext.isCompanyOwner ||
+            companyContext.isPlatformAdmin
+        )
 
         const subscriptionResult = await withTimeout(
           supabase
@@ -325,9 +340,13 @@ function BillingContent() {
   }
 
   const isCompany =
-    profile?.role === 'company' || profile?.role === 'staffing_agency' || profile?.role === 'admin'
+    hasCompanyBillingAccess ||
+    profile?.role === 'company' ||
+    profile?.role === 'staffing_agency' ||
+    profile?.role === 'admin'
 
-  const isWorker = profile?.role === 'worker'
+  const isWorker =
+    profile?.role === 'worker' && !isCompany
 
   const stripeConnected = Boolean(
     profile?.stripe_account_id &&

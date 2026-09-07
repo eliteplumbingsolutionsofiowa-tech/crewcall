@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 export const runtime = 'nodejs'
 
@@ -147,11 +148,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const isWorker = profile.role === 'worker'
+    const companyContext = await resolveCompanyContext(
+      supabase,
+      user.id
+    )
+
     const isCompanyMembershipRole =
-      profile.role === 'company' ||
-      profile.role === 'staffing_agency' ||
-      profile.role === 'admin'
+      companyContext.isCompanyOwner ||
+      companyContext.isPlatformAdmin
+
+    const isWorker =
+      profile.role === 'worker' &&
+      !isCompanyMembershipRole
 
     if (
       (requestedPlan === 'worker_pro' && !isWorker) ||
