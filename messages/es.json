@@ -2668,6 +2668,8 @@
     "trade": "Oficio",
     "location": "Ubicación",
     "pay": "Pago",
+    "agreedRate": "Tarifa Acordada",
+    "finalAmount": "Monto Final",
     "start": "Inicio",
     "completed": "Completado",
     "notListed": "No especificado",

@@ -2668,6 +2668,8 @@
     "trade": "Trade",
     "location": "Location",
     "pay": "Pay",
+    "agreedRate": "Agreed Rate",
+    "finalAmount": "Final Amount",
     "start": "Start",
     "completed": "Completed",
     "notListed": "Not listed",

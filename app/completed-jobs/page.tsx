@@ -17,6 +17,7 @@ type Job = {
   trade: string | null
   location: string | null
   pay_rate: string | null
+  escrow_amount_cents: number | null
   start_date: string | null
   status: string | null
   payment_status: string | null
@@ -135,6 +136,7 @@ export default function CompletedJobsPage() {
         trade,
         location,
         pay_rate,
+        escrow_amount_cents,
         start_date,
         status,
         payment_status,
@@ -282,7 +284,15 @@ export default function CompletedJobsPage() {
       completed: jobs.length,
       paid: paid.length,
       unpaid: unpaid.length,
-      total: jobs.reduce((sum, job) => sum + parsePay(job.pay_rate), 0),
+      total: jobs.reduce(
+        (sum, job) =>
+          sum +
+          (job.payment_status === 'paid' &&
+          typeof job.escrow_amount_cents === 'number'
+            ? job.escrow_amount_cents / 100
+            : parsePay(job.pay_rate)),
+        0
+      ),
     }
   }, [jobs])
 
@@ -467,10 +477,15 @@ export default function CompletedJobsPage() {
 
                       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <Info
-                          label={t('pay')}
+                          label={t('agreedRate')}
+                          value={job.pay_rate || t('notListed')}
+                        />
+                        <Info
+                          label={t('finalAmount')}
                           value={
-                            job.pay_rate
-                              ? money(parsePay(job.pay_rate))
+                            job.payment_status === 'paid' &&
+                            typeof job.escrow_amount_cents === 'number'
+                              ? money(job.escrow_amount_cents / 100)
                               : t('notListed')
                           }
                         />
