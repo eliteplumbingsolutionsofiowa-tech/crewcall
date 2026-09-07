@@ -83,6 +83,7 @@ export default function CompletedJobsPage() {
   const t = useTranslations('CompletedJobs')
   const locale = useLocale()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [isCompanyView, setIsCompanyView] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -162,10 +163,15 @@ export default function CompletedJobsPage() {
       user.id
     )
 
-    if (companyContext.companyId) {
+    const companyId = companyContext.companyId
+    const resolvedCompanyView = Boolean(companyId)
+
+    setIsCompanyView(resolvedCompanyView)
+
+    if (companyId) {
       query = query.eq(
         'company_id',
-        companyContext.companyId
+        companyId
       )
     } else {
       query = query.eq('assigned_worker_id', user.id)
@@ -291,7 +297,7 @@ export default function CompletedJobsPage() {
         (filter === 'completed' && job.status === 'completed')
 
       const otherName =
-        profile?.role === 'company'
+        isCompanyView
           ? job.worker?.full_name || job.worker?.company_name
           : job.company?.company_name || job.company?.full_name
 
@@ -312,7 +318,7 @@ export default function CompletedJobsPage() {
 
       return matchesFilter && matchesSearch
     })
-  }, [jobs, filter, search, profile])
+  }, [jobs, filter, search, isCompanyView])
 
   if (loading) {
     return (
@@ -409,22 +415,22 @@ export default function CompletedJobsPage() {
             <p className="mt-2 text-slate-300">{t('noCompletedJobsDescription')}</p>
 
             <Link
-              href={profile?.role === 'company' ? '/my-jobs' : '/jobs'}
+              href={isCompanyView ? '/my-jobs' : '/jobs'}
               className="mt-6 inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
             >
-              {profile?.role === 'company' ? t('viewMyJobs') : t('browseJobs')}
+              {isCompanyView ? t('viewMyJobs') : t('browseJobs')}
             </Link>
           </div>
         ) : (
           <section className="grid gap-5">
             {filteredJobs.map((job) => {
               const otherName =
-                profile?.role === 'company'
+                isCompanyView
                   ? job.worker?.full_name || job.worker?.company_name || t('worker')
                   : job.company?.company_name || job.company?.full_name || t('company')
 
               const reviewTargetId =
-                profile?.role === 'company'
+                isCompanyView
                   ? job.assigned_worker_id
                   : job.company_id
 
@@ -450,7 +456,7 @@ export default function CompletedJobsPage() {
                       </h2>
 
                       <p className="mt-2 text-sm font-semibold text-slate-300">
-                        {profile?.role === 'company' ? t('worker') : t('company')}:{' '}
+                        {isCompanyView ? t('worker') : t('company')}:{' '}
                         <span className="font-black text-white">{otherName}</span>
                       </p>
 
@@ -504,7 +510,7 @@ export default function CompletedJobsPage() {
                         {t('openMessages')}
                       </Link>
 
-                      {profile?.role === 'company' && (
+                      {isCompanyView && (
                         <Link
                           href={`/my-jobs/${job.id}/applicants`}
                           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white hover:bg-white/15"
@@ -512,6 +518,18 @@ export default function CompletedJobsPage() {
                           {t('viewApplicants')}
                         </Link>
                       )}
+
+                      {isCompanyView &&
+                        job.status === 'completed' &&
+                        job.payment_status === 'paid' &&
+                        job.payout_status !== 'released' && (
+                          <Link
+                            href={`/jobs/${job.id}/release-payout`}
+                            className="rounded-2xl bg-green-500 px-5 py-3 text-center text-sm font-black text-slate-950 hover:bg-green-400"
+                          >
+                            Release Payout
+                          </Link>
+                        )}
 
                       {canLeaveReview && (
                         <Link
