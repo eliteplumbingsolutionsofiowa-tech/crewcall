@@ -1400,46 +1400,6 @@ export default function JobDetailsPage() {
           />
         ) : null}
 
-        {(job.assigned_worker_id === profile.id ||
-          (isCompany && isOwner)) &&
-        jobFiles.some(
-          (file) => file.category === 'completion_photo'
-        ) ? (
-          <section className="mt-6 overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-cyan-500/10 shadow-xl shadow-black/20">
-            <div className="p-5 sm:p-6">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                Completion Package
-              </p>
-              <h2 className="mt-2 text-2xl font-black text-white">
-                Completion Photos
-              </h2>
-              <p className="mt-2 text-sm font-semibold leading-6 text-cyan-100/70">
-                Photos submitted by the worker showing the completed work.
-              </p>
-
-              <div className="mt-5">
-                <JobFileList
-                  files={jobFiles
-                    .filter(
-                      (file) =>
-                        file.category === 'completion_photo'
-                    )
-                    .map((file) => ({
-                      id: file.id,
-                      file_name: file.file_name,
-                      file_url: file.file_url,
-                      file_type: file.file_type,
-                      uploaded_by: file.uploaded_by,
-                      created_at: file.created_at,
-                    }))}
-                  canDelete={false}
-                  onDeleteComplete={() => void loadPage(true)}
-                />
-              </div>
-            </div>
-          </section>
-        ) : null}
-
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
             eyebrow="Job Information"
