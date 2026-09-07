@@ -339,12 +339,9 @@ export default function HomePage() {
             ].map((trade) => (
               <div
                 key={trade}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6"
+                className="flex min-h-[110px] items-center rounded-3xl border border-white/10 bg-white/5 p-6"
               >
                 <p className="text-2xl font-black">{trade}</p>
-                <p className="mt-2 text-sm font-semibold text-slate-400">
-                  {t('tradeCardText')}
-                </p>
               </div>
             ))}
           </div>
