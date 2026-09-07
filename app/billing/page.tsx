@@ -511,11 +511,13 @@ function BillingContent() {
                   <BillingStatCard
                     label={t('role')}
                     value={
-                      profile.role === 'admin'
-                        ? t('companyAdmin')
-                        : profile.role
-                          ? capitalize(profile.role)
-                          : t('roleMissing')
+                      hasCompanyBillingAccess
+                        ? 'Company Owner'
+                        : profile.role === 'admin'
+                          ? t('companyAdmin')
+                          : profile.role
+                            ? capitalize(profile.role)
+                            : t('roleMissing')
                     }
                   />
 
