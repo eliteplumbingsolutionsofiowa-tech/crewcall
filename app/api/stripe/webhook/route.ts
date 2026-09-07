@@ -32,6 +32,15 @@ function unixToIso(value: number | null | undefined) {
     : null
 }
 
+function isSubscriptionScheduledToCancel(
+  subscription: Stripe.Subscription
+) {
+  return (
+    subscription.cancel_at_period_end ||
+    typeof subscription.cancel_at === 'number'
+  )
+}
+
 function getSubscriptionPeriods(
   subscription: Stripe.Subscription
 ) {
@@ -287,8 +296,9 @@ export async function POST(request: Request) {
                       stripeSubscription.trial_end
                     ),
                   cancel_at_period_end:
-                    stripeSubscription
-                      .cancel_at_period_end,
+                    isSubscriptionScheduledToCancel(
+                      stripeSubscription
+                    ),
                   canceled_at:
                     unixToIso(
                       stripeSubscription.canceled_at
@@ -513,7 +523,9 @@ export async function POST(request: Request) {
                   subscription.trial_end
                 ),
               cancel_at_period_end:
-                subscription.cancel_at_period_end,
+                isSubscriptionScheduledToCancel(
+                  subscription
+                ),
               canceled_at:
                 unixToIso(
                   subscription.canceled_at
