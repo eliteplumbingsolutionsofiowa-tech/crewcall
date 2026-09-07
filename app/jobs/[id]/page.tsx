@@ -7,9 +7,10 @@ import { useTranslations } from 'next-intl'
 import JobFileList from '@/app/components/JobFileList'
 import JobFileUpload from '@/app/components/JobFileUpload'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 import MessageJobButton from '@/app/components/MessageJobButton'
 
-type UserRole = 'worker' | 'company' | 'admin'
+type UserRole = 'worker' | 'company' | 'staffing_agency' | 'admin'
 
 type Job = {
   id: string
@@ -450,9 +451,20 @@ export default function JobDetailsPage() {
       )
     }
 
+    const companyContext =
+      profileData.role === 'company' ||
+      profileData.role === 'staffing_agency'
+        ? await resolveCompanyContext(
+            supabase,
+            user.id
+          )
+        : null
+
     const isOwner =
-      profileData.role === 'company' &&
-      jobData.company_id === user.id
+      (profileData.role === 'company' ||
+        profileData.role === 'staffing_agency') &&
+      jobData.company_id ===
+        companyContext?.companyId
 
     if (isOwner) {
       const { data: applicantData, error: applicantError } =
@@ -975,6 +987,7 @@ export default function JobDetailsPage() {
 
   const isCompany =
   profile.role === 'company' ||
+  profile.role === 'staffing_agency' ||
   profile.role === 'admin'
   const isWorker = profile.role === 'worker'
   const isOwner = job.company_id === profile.id
@@ -1416,7 +1429,9 @@ export default function JobDetailsPage() {
 
             <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4 sm:p-5">
               <JobFileList
-                files={jobFiles}
+                files={jobFiles.filter(
+                  (file) => file.category !== 'completion_photo'
+                )}
                 canDelete={isCompany && isOwner}
                 currentUserId={profile.id}
                 onDeleteComplete={() => void loadPage(true)}
