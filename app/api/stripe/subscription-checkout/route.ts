@@ -7,6 +7,8 @@ export const runtime = 'nodejs'
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 const foundingMemberPriceId =
   process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID
+const workerProPriceId =
+  process.env.STRIPE_WORKER_PRO_PRICE_ID
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -115,18 +117,60 @@ export async function POST(request: Request) {
       )
     }
 
+    const body = (await request.json().catch(() => ({}))) as {
+      plan?: string
+    }
+
+    const requestedPlan =
+      body.plan || 'founding_member'
+
     if (
-      profile.role !== 'company' &&
-      profile.role !== 'admin'
+      requestedPlan !== 'founding_member' &&
+      requestedPlan !== 'worker_pro'
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid CrewCall membership plan.' },
+        { status: 400 }
+      )
+    }
+
+    if (
+      requestedPlan === 'worker_pro' &&
+      !workerProPriceId
     ) {
       return NextResponse.json(
         {
           error:
-            'Only company and admin accounts can purchase this membership.',
+            'Missing STRIPE_WORKER_PRO_PRICE_ID.',
+        },
+        { status: 500 }
+      )
+    }
+
+    const isWorker = profile.role === 'worker'
+    const isCompanyMembershipRole =
+      profile.role === 'company' ||
+      profile.role === 'staffing_agency' ||
+      profile.role === 'admin'
+
+    if (
+      (requestedPlan === 'worker_pro' && !isWorker) ||
+      (requestedPlan === 'founding_member' &&
+        !isCompanyMembershipRole)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'This membership is not available for this account type.',
         },
         { status: 403 }
       )
     }
+
+    const selectedPriceId =
+      requestedPlan === 'worker_pro'
+        ? workerProPriceId
+        : foundingMemberPriceId
 
     const {
       data: existingSubscription,
@@ -187,11 +231,11 @@ export async function POST(request: Request) {
         .upsert(
           {
             user_id: user.id,
-            plan: 'founding_member',
+            plan: requestedPlan,
             status:
               existingSubscription?.status || 'trialing',
             stripe_customer_id: stripeCustomerId,
-            stripe_price_id: foundingMemberPriceId,
+            stripe_price_id: selectedPriceId,
             updated_at: new Date().toISOString(),
           },
           {
@@ -215,7 +259,7 @@ export async function POST(request: Request) {
         customer: stripeCustomerId,
         line_items: [
           {
-            price: foundingMemberPriceId,
+            price: selectedPriceId,
             quantity: 1,
           },
         ],
@@ -226,12 +270,12 @@ export async function POST(request: Request) {
         client_reference_id: user.id,
         metadata: {
           crewcall_user_id: user.id,
-          plan: 'founding_member',
+          plan: requestedPlan,
         },
         subscription_data: {
           metadata: {
             crewcall_user_id: user.id,
-            plan: 'founding_member',
+            plan: requestedPlan,
           },
         },
       })

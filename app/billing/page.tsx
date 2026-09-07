@@ -9,7 +9,7 @@ import { isNativeIOS } from '@/app/lib/nativePlatform'
 
 type BillingProfile = {
   id: string
-  role: 'worker' | 'company' | 'admin' | null
+  role: 'worker' | 'company' | 'staffing_agency' | 'admin' | null
   full_name: string | null
   company_name: string | null
   stripe_account_id: string | null
@@ -209,7 +209,9 @@ function BillingContent() {
   }, [])
 
 
-  async function handleStartSubscription() {
+  async function handleStartSubscription(
+    plan: 'founding_member' | 'worker_pro' = 'founding_member'
+  ) {
     if (nativeIOS) {
       setMessage(
         'Membership purchasing is not available in the iOS app.'
@@ -243,6 +245,7 @@ function BillingContent() {
             Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ plan }),
         }
       )
 
@@ -322,7 +325,7 @@ function BillingContent() {
   }
 
   const isCompany =
-    profile?.role === 'company' || profile?.role === 'admin'
+    profile?.role === 'company' || profile?.role === 'staffing_agency' || profile?.role === 'admin'
 
   const isWorker = profile?.role === 'worker'
 
@@ -533,12 +536,28 @@ function BillingContent() {
                 )}
 
                 {isWorker && (
-                  <WorkerStripeSection
-                    profile={profile}
-                    stripeConnected={stripeConnected}
-                    connectingStripe={connectingStripe}
-                    onConnect={() => void handleConnectStripe()}
-                  />
+                  <>
+                    <WorkerProSection
+                      subscription={subscription}
+                      membershipActive={membershipActive}
+                      startingCheckout={startingCheckout}
+                      onStartSubscription={() =>
+                        void handleStartSubscription('worker_pro')
+                      }
+                      openingPortal={openingPortal}
+                      onOpenCustomerPortal={() =>
+                        void openCustomerPortal()
+                      }
+                      nativeIOS={nativeIOS}
+                    />
+
+                    <WorkerStripeSection
+                      profile={profile}
+                      stripeConnected={stripeConnected}
+                      connectingStripe={connectingStripe}
+                      onConnect={() => void handleConnectStripe()}
+                    />
+                  </>
                 )}
 
                 {!isCompany && !isWorker && (
@@ -801,6 +820,158 @@ function CompanyMembershipSection({
   )
 }
 
+function WorkerProSection({
+  subscription,
+  membershipActive,
+  startingCheckout,
+  onStartSubscription,
+  openingPortal,
+  onOpenCustomerPortal,
+  nativeIOS,
+}: {
+  subscription: Subscription | null
+  membershipActive: boolean
+  startingCheckout: boolean
+  onStartSubscription: () => void
+  openingPortal: boolean
+  onOpenCustomerPortal: () => void
+  nativeIOS: boolean
+}) {
+  const locale = useLocale()
+  const hasWorkerPro =
+    subscription?.plan === 'worker_pro' &&
+    membershipActive
+
+  const features = [
+    'Annual Worker Pro membership',
+    'Built for skilled tradespeople',
+    'One simple annual price',
+    'No monthly Worker Pro fee',
+  ]
+
+  return (
+    <section className="rounded-[2rem] border-2 border-cyan-400 bg-cyan-400/10 p-7 shadow-2xl shadow-cyan-500/10 md:p-8">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="inline-flex rounded-full bg-cyan-400 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-950">
+            WORKER PRO
+          </div>
+
+          <h2 className="mt-5 text-3xl font-black">
+            Stand out. Get noticed. Get hired.
+          </h2>
+
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+            Upgrade your CrewCall worker profile with premium tools
+            designed to help companies find you faster.
+          </p>
+        </div>
+
+        {!nativeIOS ? (
+          <div className="text-left sm:text-right">
+            <p className="text-5xl font-black text-cyan-300">
+              $59
+            </p>
+            <p className="mt-1 font-bold text-slate-300">
+              per year
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      {hasWorkerPro && (
+        <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
+          <p className="font-black text-emerald-200">
+            Your Worker Pro membership is active.
+          </p>
+
+          {subscription?.current_period_ends_at && (
+            <p className="mt-2 text-sm font-semibold text-emerald-100/80">
+              Current billing period ends{' '}
+              {new Date(
+                subscription.current_period_ends_at
+              ).toLocaleDateString(locale)}.
+            </p>
+          )}
+
+          {!nativeIOS && (
+            <button
+              type="button"
+              onClick={onOpenCustomerPortal}
+              disabled={openingPortal}
+              className="mt-4 rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20 disabled:opacity-50"
+            >
+              {openingPortal
+                ? 'Opening...'
+                : 'Manage Subscription'}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        {features.map((feature) => (
+          <div
+            key={feature}
+            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-xs font-black text-slate-950">
+              ✓
+            </span>
+
+            <p className="text-sm font-bold text-slate-200">
+              {feature}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {nativeIOS ? (
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center">
+          <p className="text-lg font-black text-white">
+            {hasWorkerPro
+              ? 'Worker Pro Active'
+              : 'Worker Pro'}
+          </p>
+
+          <p className="mt-2 text-sm font-semibold text-slate-400">
+            Membership purchasing is available on the CrewCall website.
+          </p>
+        </div>
+      ) : hasWorkerPro ? (
+        <button
+          type="button"
+          disabled
+          className="mt-8 w-full cursor-not-allowed rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-6 py-4 text-lg font-black text-emerald-200"
+        >
+          Worker Pro Active
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onStartSubscription}
+          disabled={startingCheckout}
+          className={`mt-8 w-full rounded-2xl px-6 py-4 text-lg font-black transition ${
+            startingCheckout
+              ? 'cursor-not-allowed bg-slate-600 text-slate-300'
+              : 'bg-cyan-400 text-slate-950 hover:bg-cyan-300'
+          }`}
+        >
+          {startingCheckout
+            ? 'Opening Checkout...'
+            : 'Upgrade to Worker Pro — $59/year'}
+        </button>
+      )}
+
+      {!nativeIOS && !hasWorkerPro && (
+        <p className="mt-4 text-center text-sm font-bold text-slate-400">
+          One annual payment. No monthly Worker Pro subscription.
+        </p>
+      )}
+    </section>
+  )
+}
+
 function WorkerStripeSection({
   profile,
   stripeConnected,
@@ -1048,6 +1219,7 @@ function formatPlan(
     enterprise: t('enterprise'),
     monthly: t('monthly'),
     annual: t('annual'),
+    worker_pro: 'Worker Pro',
   }
 
   return (
