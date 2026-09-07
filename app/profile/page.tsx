@@ -1569,6 +1569,31 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
               </CrewCard>
 
+              {isOwnProfile && isWorkerProfile && (
+                <CrewCard>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">
+                        Worker Pro
+                      </p>
+                      <h2 className="mt-1 text-2xl font-black text-slate-950">
+                        $59/year
+                      </h2>
+                      <p className="mt-2 text-sm font-semibold text-slate-500">
+                        Manage your Worker Pro membership and billing.
+                      </p>
+                    </div>
+
+                    <a
+                      href="/billing"
+                      className="flex min-h-12 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800"
+                    >
+                      View Worker Pro
+                    </a>
+                  </div>
+                </CrewCard>
+              )}
+
               {isOwnProfile && (
                 <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
