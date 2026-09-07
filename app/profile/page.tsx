@@ -246,6 +246,7 @@ function ProfilePageInner() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [isWorkerPro, setIsWorkerPro] = useState(false)
   const [profileFiles, setProfileFiles] = useState<ProfileFile[]>([])
   const [companyJobs, setCompanyJobs] = useState<CompanyJob[]>([])
   const [selectedInviteJobId, setSelectedInviteJobId] = useState('')
@@ -451,6 +452,39 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
       (profileId === user.id ? emptyProfile(user.id) : null)
 
     setProfile(loadedProfile)
+    setIsWorkerPro(false)
+
+    if (loadedProfile?.role === 'worker') {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session?.access_token) {
+        try {
+          const response = await fetch(
+            `/api/worker-pro/status?workerId=${encodeURIComponent(profileId)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }
+          )
+
+          if (response.ok) {
+            const result = (await response.json()) as {
+              isWorkerPro?: boolean
+            }
+
+            setIsWorkerPro(result.isWorkerPro === true)
+          }
+        } catch (workerProError) {
+          console.error(
+            'Unable to load Worker Pro status:',
+            workerProError
+          )
+        }
+      }
+    }
 
     if (loadedProfile) {
       setSkillsText(arrayToInput(loadedProfile.skills))
@@ -786,6 +820,12 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                         CrewCall Score {crewcallScore}
                       </span>
                     )}
+
+                  {isWorkerProfile && isWorkerPro && (
+                    <span className="rounded-full bg-amber-300 px-3 py-1 text-xs font-black tracking-wide text-amber-950">
+                      WORKER PRO
+                    </span>
+                  )}
                   </div>
 
                   <h1 className="text-2xl font-black tracking-tight sm:text-5xl">
