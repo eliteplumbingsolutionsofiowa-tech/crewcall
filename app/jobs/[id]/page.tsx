@@ -180,6 +180,9 @@ export default function JobDetailsPage() {
   const [workerApplication, setWorkerApplication] =
     useState<Applicant | null>(null)
 
+  const [hasWorkerMembership, setHasWorkerMembership] =
+    useState(false)
+
   useEffect(() => {
     void loadPage()
 
@@ -355,6 +358,30 @@ export default function JobDetailsPage() {
     }
 
     setProfile(profileData)
+
+    if (profileData.role === 'worker') {
+      const {
+        data: workerMembership,
+        error: workerMembershipError,
+      } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('plan', ['worker_membership', 'worker_pro'])
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (workerMembershipError) {
+        console.warn(
+          'Unable to verify Worker Membership:',
+          workerMembershipError.message
+        )
+      }
+
+      setHasWorkerMembership(Boolean(workerMembership))
+    } else {
+      setHasWorkerMembership(false)
+    }
 
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
@@ -1009,6 +1036,14 @@ export default function JobDetailsPage() {
 
   const canApply =
     isWorker &&
+    hasWorkerMembership &&
+    currentStatus === 'open' &&
+    !isAssigned &&
+    !alreadyApplied
+
+  const canUnlockJobs =
+    isWorker &&
+    !hasWorkerMembership &&
     currentStatus === 'open' &&
     !isAssigned &&
     !alreadyApplied
@@ -1192,6 +1227,19 @@ export default function JobDetailsPage() {
                       {t('applyForJob')}
                     </Link>
                   </div>
+                ) : canUnlockJobs ? (
+                  <div className="mt-7">
+                    <Link
+                      href="/billing"
+                      className="inline-flex min-h-13 w-full items-center justify-center rounded-2xl bg-cyan-400 px-7 py-4 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300 sm:w-auto"
+                    >
+                      Unlock Jobs — $4.99/month
+                    </Link>
+                    <p className="mt-3 text-sm text-slate-400">
+                      Create your worker profile free. A Worker Membership
+                      unlocks CrewCall job opportunities and applications.
+                    </p>
+                  </div>
                 ) : null}
               </div>
 
@@ -1301,6 +1349,32 @@ export default function JobDetailsPage() {
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-7 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
               >
                 {t('applyNow')}
+              </Link>
+            </div>
+          </section>
+        ) : canUnlockJobs ? (
+          <section className="rounded-[2rem] border border-cyan-400/20 bg-cyan-500/10 p-5 shadow-xl shadow-cyan-950/20 sm:p-6">
+            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+                  WORKER MEMBERSHIP
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  Unlock CrewCall jobs.
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-cyan-100/70">
+                  Worker Membership is $4.99 per month and unlocks
+                  job opportunities and applications.
+                </p>
+              </div>
+
+              <Link
+                href="/billing"
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-7 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300"
+              >
+                Unlock Jobs — $4.99/month
               </Link>
             </div>
           </section>

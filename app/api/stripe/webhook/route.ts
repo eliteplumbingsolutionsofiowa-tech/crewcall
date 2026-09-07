@@ -504,6 +504,9 @@ export async function POST(request: Request) {
             .from('subscriptions')
             .update({
               status,
+              plan:
+                subscription.metadata?.plan ||
+                undefined,
               stripe_subscription_id:
                 subscription.id,
               stripe_price_id:

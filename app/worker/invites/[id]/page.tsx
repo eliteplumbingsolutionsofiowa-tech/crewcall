@@ -38,8 +38,42 @@ export default function WorkerInviteDetailPage() {
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState('')
+  const [hasWorkerMembership, setHasWorkerMembership] =
+    useState(false)
 
   const loadInvite = useCallback(async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage(t('mustBeLoggedIn'))
+      setHasWorkerMembership(false)
+      setLoading(false)
+      return
+    }
+
+    const {
+      data: workerMembership,
+      error: workerMembershipError,
+    } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .in('plan', ['worker_membership', 'worker_pro'])
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (workerMembershipError) {
+      console.warn(
+        'Unable to verify Worker Membership:',
+        workerMembershipError.message
+      )
+    }
+
+    setHasWorkerMembership(Boolean(workerMembership))
+
     const { data, error } = await supabase
       .from('job_invites')
       .select(`
@@ -258,13 +292,22 @@ export default function WorkerInviteDetailPage() {
           {invite.status === 'pending' && (
             <div className="mt-8 flex gap-4">
 
-              <button
-                disabled={working}
-                onClick={() => updateInvite('accepted')}
-                className="rounded-2xl bg-green-500 px-6 py-3 font-black text-white"
-              >
-                {t('accept')}
-              </button>
+              {hasWorkerMembership ? (
+                <button
+                  disabled={working}
+                  onClick={() => updateInvite('accepted')}
+                  className="rounded-2xl bg-green-500 px-6 py-3 font-black text-white"
+                >
+                  {t('accept')}
+                </button>
+              ) : (
+                <Link
+                  href="/billing"
+                  className="rounded-2xl bg-cyan-400 px-6 py-3 font-black text-slate-950 hover:bg-cyan-300"
+                >
+                  Unlock Jobs — $4.99/month
+                </Link>
+              )}
 
               <button
                 disabled={working}

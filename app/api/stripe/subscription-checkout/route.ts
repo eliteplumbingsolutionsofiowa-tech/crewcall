@@ -10,6 +10,8 @@ const foundingMemberPriceId =
   process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID
 const workerProPriceId =
   process.env.STRIPE_WORKER_PRO_PRICE_ID
+const workerMembershipPriceId =
+  process.env.STRIPE_WORKER_MEMBERSHIP_PRICE_ID
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -127,7 +129,8 @@ export async function POST(request: Request) {
 
     if (
       requestedPlan !== 'founding_member' &&
-      requestedPlan !== 'worker_pro'
+      requestedPlan !== 'worker_pro' &&
+      requestedPlan !== 'worker_membership'
     ) {
       return NextResponse.json(
         { error: 'Invalid CrewCall membership plan.' },
@@ -148,6 +151,19 @@ export async function POST(request: Request) {
       )
     }
 
+    if (
+      requestedPlan === 'worker_membership' &&
+      !workerMembershipPriceId
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Missing STRIPE_WORKER_MEMBERSHIP_PRICE_ID.',
+        },
+        { status: 500 }
+      )
+    }
+
     const companyContext = await resolveCompanyContext(
       supabase,
       user.id
@@ -162,7 +178,9 @@ export async function POST(request: Request) {
       !isCompanyMembershipRole
 
     if (
-      (requestedPlan === 'worker_pro' && !isWorker) ||
+      ((requestedPlan === 'worker_pro' ||
+        requestedPlan === 'worker_membership') &&
+        !isWorker) ||
       (requestedPlan === 'founding_member' &&
         !isCompanyMembershipRole)
     ) {
@@ -176,9 +194,11 @@ export async function POST(request: Request) {
     }
 
     const selectedPriceId =
-      requestedPlan === 'worker_pro'
-        ? workerProPriceId
-        : foundingMemberPriceId
+      requestedPlan === 'worker_membership'
+        ? workerMembershipPriceId
+        : requestedPlan === 'worker_pro'
+          ? workerProPriceId
+          : foundingMemberPriceId
 
     const {
       data: existingSubscription,
@@ -186,7 +206,7 @@ export async function POST(request: Request) {
     } = await supabase
       .from('subscriptions')
       .select(
-        'user_id, stripe_customer_id, stripe_subscription_id, status'
+        'user_id, plan, stripe_customer_id, stripe_subscription_id, status'
       )
       .eq('user_id', user.id)
       .maybeSingle()
@@ -198,23 +218,90 @@ export async function POST(request: Request) {
       )
     }
 
-    if (
-      existingSubscription?.stripe_subscription_id &&
+    const stripe = new Stripe(stripeSecretKey)
+
+    const hasCurrentStripeSubscription =
+      Boolean(existingSubscription?.stripe_subscription_id) &&
       ['active', 'trialing', 'past_due'].includes(
-        existingSubscription.status
+        existingSubscription?.status || ''
       )
-    ) {
+
+    if (hasCurrentStripeSubscription) {
+      if (
+        existingSubscription?.plan === 'worker_membership' &&
+        requestedPlan === 'worker_pro'
+      ) {
+        const stripeSubscription =
+          await stripe.subscriptions.retrieve(
+            existingSubscription.stripe_subscription_id!
+          )
+
+        const subscriptionItem =
+          stripeSubscription.items.data[0]
+
+        if (!subscriptionItem) {
+          return NextResponse.json(
+            {
+              error:
+                'Unable to locate the current Stripe subscription item.',
+            },
+            { status: 500 }
+          )
+        }
+
+        const updatedStripeSubscription =
+          await stripe.subscriptions.update(
+            stripeSubscription.id,
+            {
+              items: [
+                {
+                  id: subscriptionItem.id,
+                  price: selectedPriceId,
+                },
+              ],
+              proration_behavior: 'create_prorations',
+              metadata: {
+                ...stripeSubscription.metadata,
+                crewcall_user_id: user.id,
+                plan: requestedPlan,
+              },
+            }
+          )
+
+        const { error: upgradeError } = await supabase
+          .from('subscriptions')
+          .update({
+            plan: requestedPlan,
+            status: updatedStripeSubscription.status,
+            stripe_price_id: selectedPriceId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+
+        if (upgradeError) {
+          return NextResponse.json(
+            { error: upgradeError.message },
+            { status: 500 }
+          )
+        }
+
+        return NextResponse.json({
+          upgraded: true,
+          plan: requestedPlan,
+        })
+      }
+
       return NextResponse.json(
         {
           error:
-            'This account already has a Stripe subscription.',
+            existingSubscription?.plan === requestedPlan
+              ? 'This membership is already active.'
+              : 'This account already has a Stripe subscription.',
           code: 'SUBSCRIPTION_ALREADY_EXISTS',
         },
         { status: 409 }
       )
     }
-
-    const stripe = new Stripe(stripeSecretKey)
 
     let stripeCustomerId =
       existingSubscription?.stripe_customer_id ?? null

@@ -210,6 +210,42 @@ export async function POST(req: Request) {
       )
     }
 
+    const {
+      data: workerMembership,
+      error: workerMembershipError,
+    } = await adminClient
+      .from('subscriptions')
+      .select('id, plan, status')
+      .eq('user_id', user.id)
+      .in('plan', ['worker_membership', 'worker_pro'])
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (workerMembershipError) {
+      console.error(
+        'Unable to verify worker membership:',
+        workerMembershipError
+      )
+
+      return NextResponse.json(
+        {
+          error: 'Unable to verify your Worker Membership.',
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!workerMembership) {
+      return NextResponse.json(
+        {
+          error:
+            'An active Worker Membership is required to apply to jobs.',
+          code: 'WORKER_MEMBERSHIP_REQUIRED',
+        },
+        { status: 403 }
+      )
+    }
+
     const { data: job, error: jobError } = await adminClient
       .from('jobs')
       .select(

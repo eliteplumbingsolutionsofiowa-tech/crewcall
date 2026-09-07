@@ -225,7 +225,7 @@ function BillingContent() {
 
 
   async function handleStartSubscription(
-    plan: 'founding_member' | 'worker_pro' = 'founding_member'
+    plan: 'founding_member' | 'worker_pro' | 'worker_membership' = 'founding_member'
   ) {
     if (nativeIOS) {
       setMessage(
@@ -266,6 +266,8 @@ function BillingContent() {
 
       const data = (await response.json()) as {
         url?: string
+        upgraded?: boolean
+        plan?: string
         error?: string
         code?: string
       }
@@ -274,6 +276,14 @@ function BillingContent() {
         throw new Error(
           data.error || 'Unable to open Stripe Checkout.'
         )
+      }
+
+      if (data.upgraded) {
+        setMessage('Worker Pro upgrade completed successfully.')
+        setMessageTone('success')
+        setStartingCheckout(false)
+        window.location.reload()
+        return
       }
 
       if (!data.url) {
@@ -558,6 +568,20 @@ function BillingContent() {
 
                 {isWorker && (
                   <>
+                    <WorkerMembershipSection
+                      subscription={subscription}
+                      membershipActive={membershipActive}
+                      startingCheckout={startingCheckout}
+                      onStartSubscription={() =>
+                        void handleStartSubscription('worker_membership')
+                      }
+                      openingPortal={openingPortal}
+                      onOpenCustomerPortal={() =>
+                        void openCustomerPortal()
+                      }
+                      nativeIOS={nativeIOS}
+                    />
+
                     <WorkerProSection
                       subscription={subscription}
                       membershipActive={membershipActive}
@@ -837,6 +861,159 @@ function CompanyMembershipSection({
           </p>
         </div>
       </aside>
+    </section>
+  )
+}
+
+function WorkerMembershipSection({
+  subscription,
+  membershipActive,
+  startingCheckout,
+  onStartSubscription,
+  openingPortal,
+  onOpenCustomerPortal,
+  nativeIOS,
+}: {
+  subscription: Subscription | null
+  membershipActive: boolean
+  startingCheckout: boolean
+  onStartSubscription: () => void
+  openingPortal: boolean
+  onOpenCustomerPortal: () => void
+  nativeIOS: boolean
+}) {
+  const locale = useLocale()
+  const hasWorkerMembership =
+    (subscription?.plan === 'worker_membership' ||
+      subscription?.plan === 'worker_pro') &&
+    membershipActive
+
+  const features = [
+    'Full access to CrewCall job opportunities',
+    'Apply to jobs posted by hiring companies',
+    'Accept job invitations from companies',
+    'Cancel anytime',
+  ]
+
+  return (
+    <section className="rounded-[2rem] border-2 border-cyan-400 bg-cyan-400/10 p-7 shadow-2xl shadow-cyan-500/10 md:p-8">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="inline-flex rounded-full bg-cyan-400 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-950">
+            WORKER MEMBERSHIP
+          </div>
+
+          <h2 className="mt-5 text-3xl font-black">
+            Unlock CrewCall jobs.
+          </h2>
+
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+            Create your worker profile for free. A Worker Membership
+            unlocks job opportunities and applications on CrewCall.
+          </p>
+        </div>
+
+        {!nativeIOS ? (
+          <div className="text-left sm:text-right">
+            <p className="text-5xl font-black text-cyan-300">
+              $4.99
+            </p>
+            <p className="mt-1 font-bold text-slate-300">
+              per month
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      {hasWorkerMembership && (
+        <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
+          <p className="font-black text-emerald-200">
+            Your Worker Membership is active.
+          </p>
+
+          {subscription?.current_period_ends_at && (
+            <p className="mt-2 text-sm font-semibold text-emerald-100/80">
+              Current billing period ends{' '}
+              {new Date(
+                subscription.current_period_ends_at
+              ).toLocaleDateString(locale)}.
+            </p>
+          )}
+
+          {!nativeIOS && (
+            <button
+              type="button"
+              onClick={onOpenCustomerPortal}
+              disabled={openingPortal}
+              className="mt-4 rounded-2xl bg-white/10 px-5 py-3 text-sm font-black text-white hover:bg-white/20 disabled:opacity-50"
+            >
+              {openingPortal
+                ? 'Opening...'
+                : 'Manage Subscription'}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        {features.map((feature) => (
+          <div
+            key={feature}
+            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-xs font-black text-slate-950">
+              ✓
+            </span>
+
+            <p className="text-sm font-bold text-slate-200">
+              {feature}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {nativeIOS ? (
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center">
+          <p className="text-lg font-black text-white">
+            {hasWorkerMembership
+              ? 'Worker Membership Active'
+              : 'Worker Membership'}
+          </p>
+
+          <p className="mt-2 text-sm font-semibold text-slate-400">
+            Membership purchasing is available on the CrewCall website.
+          </p>
+        </div>
+      ) : hasWorkerMembership ? (
+        <button
+          type="button"
+          disabled
+          className="mt-8 w-full cursor-not-allowed rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-6 py-4 text-lg font-black text-emerald-200"
+        >
+          Worker Membership Active
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onStartSubscription}
+          disabled={startingCheckout}
+          className={`mt-8 w-full rounded-2xl px-6 py-4 text-lg font-black transition ${
+            startingCheckout
+              ? 'cursor-not-allowed bg-slate-600 text-slate-300'
+              : 'bg-cyan-400 text-slate-950 hover:bg-cyan-300'
+          }`}
+        >
+          {startingCheckout
+            ? 'Opening Checkout...'
+            : 'Unlock Jobs — $4.99/month'}
+        </button>
+      )}
+
+      {!nativeIOS && !hasWorkerMembership && (
+        <p className="mt-4 text-center text-sm font-bold text-slate-400">
+          Sign up and build your profile free. Job access is $4.99/month.
+        </p>
+      )}
     </section>
   )
 }
@@ -1241,6 +1418,7 @@ function formatPlan(
     monthly: t('monthly'),
     annual: t('annual'),
     worker_pro: 'Worker Pro',
+    worker_membership: 'Worker Membership',
   }
 
   return (
