@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Profile = {
   id: string
@@ -157,7 +158,23 @@ export default function CompletedJobsPage() {
       })
 
     if (currentProfile.role === 'company') {
-      query = query.eq('company_id', user.id)
+      const companyContext = await resolveCompanyContext(
+        supabase,
+        user.id
+      )
+
+      if (!companyContext.companyId) {
+        setMessage(t('profileNotFound'))
+        setJobs([])
+        setLoading(false)
+        setRefreshing(false)
+        return
+      }
+
+      query = query.eq(
+        'company_id',
+        companyContext.companyId
+      )
     } else {
       query = query.eq('assigned_worker_id', user.id)
     }
