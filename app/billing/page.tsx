@@ -892,9 +892,15 @@ function WorkerMembershipSection({
 }) {
   const locale = useLocale()
   const hasWorkerMembership =
-    (subscription?.plan === 'worker_membership' ||
-      subscription?.plan === 'worker_pro') &&
+    subscription?.plan === 'worker_membership' &&
     membershipActive
+
+  const includedWithWorkerPro =
+    subscription?.plan === 'worker_pro' &&
+    membershipActive
+
+  const hasWorkerAccess =
+    hasWorkerMembership || includedWithWorkerPro
 
   const features = [
     'Full access to CrewCall job opportunities',
@@ -933,10 +939,12 @@ function WorkerMembershipSection({
         ) : null}
       </div>
 
-      {hasWorkerMembership && (
+      {hasWorkerAccess && (
         <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
           <p className="font-black text-emerald-200">
-            Your Worker Membership is active.
+            {includedWithWorkerPro
+              ? 'Worker job access is included with Worker Pro.'
+              : 'Your Worker Membership is active.'}
           </p>
 
           {subscription?.current_period_ends_at && (
@@ -983,22 +991,26 @@ function WorkerMembershipSection({
       {nativeIOS ? (
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center">
           <p className="text-lg font-black text-white">
-            {hasWorkerMembership
-              ? 'Worker Membership Active'
-              : 'Worker Membership'}
+            {includedWithWorkerPro
+              ? 'Included with Worker Pro'
+              : hasWorkerMembership
+                ? 'Worker Membership Active'
+                : 'Worker Membership'}
           </p>
 
           <p className="mt-2 text-sm font-semibold text-slate-400">
             Membership purchasing is available on the CrewCall website.
           </p>
         </div>
-      ) : hasWorkerMembership ? (
+      ) : hasWorkerAccess ? (
         <button
           type="button"
           disabled
           className="mt-8 w-full cursor-not-allowed rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-6 py-4 text-lg font-black text-emerald-200"
         >
-          Worker Membership Active
+          {includedWithWorkerPro
+            ? 'Included with Worker Pro'
+            : 'Worker Membership Active'}
         </button>
       ) : (
         <button
@@ -1017,7 +1029,7 @@ function WorkerMembershipSection({
         </button>
       )}
 
-      {!nativeIOS && !hasWorkerMembership && (
+      {!nativeIOS && !hasWorkerAccess && (
         <p className="mt-4 text-center text-sm font-bold text-slate-400">
           Sign up and build your profile free. Job access is $4.99/month.
         </p>
