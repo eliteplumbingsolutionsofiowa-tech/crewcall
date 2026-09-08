@@ -369,7 +369,7 @@ export async function POST(request: Request) {
         },
         subscription_data: {
           ...(requestedPlan === 'founding_member'
-            ? { trial_period_days: 3 }
+            ? { trial_period_days: 14 }
             : {}),
           metadata: {
             crewcall_user_id: user.id,
