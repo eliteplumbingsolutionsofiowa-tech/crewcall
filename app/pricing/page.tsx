@@ -269,6 +269,7 @@ export default function PricingPage() {
             </p>
 
             <ul className="mt-8 space-y-4 text-slate-200">
+              <li>✓ {t('workerProAccess')}</li>
               <li>⭐ {t('workerProBadge')}</li>
               <li>⭐ {t('workerProPriority')}</li>
               <li>⭐ {t('workerProVisibility')}</li>
