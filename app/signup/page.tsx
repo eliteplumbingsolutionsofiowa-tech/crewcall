@@ -640,7 +640,7 @@ function SignupForm() {
                     {t('company')}
                   </option>
                   <option value="staffing_agency">
-                    Staffing Agency
+                    {t('staffingAgency')}
                   </option>
                 </select>
               </Field>

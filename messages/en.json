@@ -476,6 +476,7 @@
     "worker": "Worker",
     "workerFreeDescription": "Creating your worker profile is free. Upgrade only when you're ready to apply for jobs.",
     "company": "Company",
+    "staffingAgency": "Staffing Agency",
     "joiningTeam": "Joining team...",
     "signInJoinTeam": "Sign In & Join Team",
     "backToCreateAccount": "Back to Create Account",
