@@ -214,6 +214,39 @@ export default function PricingPage() {
         </section>
 
         <section>
+          <div className="rounded-[2rem] border-2 border-cyan-300 bg-cyan-300/10 p-8 shadow-2xl shadow-cyan-400/10">
+            <div className="mb-6 inline-flex rounded-full bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950">
+              {t('workerMembership')}
+            </div>
+
+            <h2 className="text-2xl font-black">
+              {t('workerMembershipTitle')}
+            </h2>
+
+            <p className="mt-6 text-5xl font-black text-cyan-300">
+              {t('workerMembershipPrice')}
+            </p>
+
+            <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+              {t('workerMembershipDescription')}
+            </p>
+
+            <ul className="mt-8 space-y-4 text-slate-200">
+              <li>✓ {t('workerMembershipApply')}</li>
+              <li>✓ {t('workerMembershipInvites')}</li>
+              <li>✓ {t('workerMembershipAccess')}</li>
+            </ul>
+
+            <Link
+              href="/signup"
+              className="mt-10 inline-flex w-full justify-center rounded-2xl bg-cyan-300 px-6 py-4 text-lg font-black text-slate-950 hover:bg-cyan-200"
+            >
+              {t('workerMembershipJoin')}
+            </Link>
+          </div>
+        </section>
+
+        <section>
           <div className="rounded-[2rem] border-2 border-amber-300 bg-amber-300/10 p-8 shadow-2xl shadow-amber-400/10">
             <div className="mb-6 inline-flex rounded-full bg-amber-300 px-4 py-2 text-sm font-black text-amber-950">
               {t('workerPro')}
