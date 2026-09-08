@@ -441,6 +441,30 @@ function SignupForm() {
       )
     }
 
+    try {
+      await fetch(
+        '/api/email/signup-notify',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            email: cleanEmail,
+            fullName: cleanFullName,
+            phone: cleanPhone,
+            role,
+          }),
+        }
+      )
+    } catch (error) {
+      console.error(
+        'Signup notification failed:',
+        error
+      )
+    }
+
     if (data.session?.access_token && !inviteCode) {
       window.location.assign('/profile')
       return
