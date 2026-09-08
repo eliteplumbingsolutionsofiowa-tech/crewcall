@@ -213,13 +213,7 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url)
     const jobId = url.searchParams.get('jobId')?.trim() || ''
-
-    if (!jobId) {
-      return NextResponse.json(
-        { error: 'Missing job ID.' },
-        { status: 400 }
-      )
-    }
+    const mine = url.searchParams.get('mine') === '1'
 
     const companyContext = await resolveCompanyContext(
       supabaseAdmin,
@@ -233,6 +227,47 @@ export async function GET(request: Request) {
             'A CrewCall company account is required to view contractor bids.',
         },
         { status: 403 }
+      )
+    }
+
+    if (mine) {
+      const { data: myBids, error: myBidsError } =
+        await supabaseAdmin
+          .from('job_bids')
+          .select(`
+            id,
+            job_id,
+            company_id,
+            submitted_by,
+            amount_cents,
+            availability,
+            estimated_duration,
+            note,
+            status,
+            created_at,
+            updated_at
+          `)
+          .eq('company_id', companyContext.companyId)
+          .order('created_at', { ascending: false })
+
+      if (myBidsError) {
+        return NextResponse.json(
+          { error: myBidsError.message },
+          { status: 400 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        role: 'bidder',
+        bids: myBids || [],
+      })
+    }
+
+    if (!jobId) {
+      return NextResponse.json(
+        { error: 'Missing job ID.' },
+        { status: 400 }
       )
     }
 

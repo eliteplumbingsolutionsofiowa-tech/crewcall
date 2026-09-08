@@ -123,47 +123,42 @@ export default function BidOpportunitiesPage() {
         return Number.isNaN(deadline) || deadline > now
       })
 
-      const checked = await Promise.all(
-        active.map(async (job) => {
-          try {
-            const response = await fetch(
-              `/api/job-bids?jobId=${encodeURIComponent(job.id)}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-                cache: 'no-store',
-              }
-            )
+      const bidsResponse = await fetch(
+        '/api/job-bids?mine=1',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: 'no-store',
+        }
+      )
 
-            if (!response.ok) {
-              return {
-                job,
-                alreadyBid: false,
-              }
-            }
+      if (!bidsResponse.ok) {
+        const body = await bidsResponse.json().catch(() => null)
+        throw new Error(
+          body?.error || t('loadOpportunitiesError')
+        )
+      }
 
-            const body = await response.json()
+      const bidsBody = await bidsResponse.json()
 
-            return {
-              job,
-              alreadyBid:
-                Array.isArray(body?.bids) &&
-                body.bids.length > 0,
-            }
-          } catch {
-            return {
-              job,
-              alreadyBid: false,
-            }
-          }
-        })
+      const bidJobIds = new Set<string>(
+        Array.isArray(bidsBody?.bids)
+          ? bidsBody.bids
+              .map((bid: { job_id?: unknown }) =>
+                typeof bid.job_id === 'string'
+                  ? bid.job_id
+                  : null
+              )
+              .filter(
+                (jobId: string | null): jobId is string =>
+                  Boolean(jobId)
+              )
+          : []
       )
 
       setOpportunities(
-        checked
-          .filter((item) => !item.alreadyBid)
-          .map((item) => item.job)
+        active.filter((job) => !bidJobIds.has(job.id))
       )
     } catch (error) {
       setOpportunities([])

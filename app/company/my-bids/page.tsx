@@ -152,42 +152,46 @@ export default function MyBidsPage() {
 
       const jobs = (data ?? []) as BidJob[]
 
-      const checked = await Promise.all(
-        jobs.map(async (job) => {
-          try {
-            const response = await fetch(
-              `/api/job-bids?jobId=${encodeURIComponent(job.id)}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-                cache: 'no-store',
-              }
-            )
+      const bidsResponse = await fetch(
+        '/api/job-bids?mine=1',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: 'no-store',
+        }
+      )
 
-            if (!response.ok) return null
+      if (!bidsResponse.ok) {
+        const body = await bidsResponse.json().catch(() => null)
+        throw new Error(
+          body?.error || t('loadMyBidsError')
+        )
+      }
 
-            const body = await response.json()
+      const bidsBody = await bidsResponse.json()
 
-            const bid =
-              Array.isArray(body?.bids) && body.bids.length > 0
-                ? (body.bids[0] as BidRecord)
-                : null
+      const myBids = Array.isArray(bidsBody?.bids)
+        ? (bidsBody.bids as BidRecord[])
+        : []
 
-            if (!bid) return null
-
-            return {
-              job,
-              bid,
-            } satisfies MyBidItem
-          } catch {
-            return null
-          }
-        })
+      const bidByJobId = new Map(
+        myBids.map((bid) => [bid.job_id, bid])
       )
 
       setItems(
-        checked.filter((item): item is MyBidItem => item !== null)
+        jobs.flatMap((job) => {
+          const bid = bidByJobId.get(job.id)
+
+          if (!bid) return []
+
+          return [
+            {
+              job,
+              bid,
+            } satisfies MyBidItem,
+          ]
+        })
       )
     } catch (error) {
       setItems([])
