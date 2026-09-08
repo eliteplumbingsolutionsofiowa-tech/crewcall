@@ -42,6 +42,93 @@ type BidRequest = {
   note?: string | null
 }
 
+async function notifyCompany({
+  companyId,
+  type,
+  title,
+  body,
+  jobId,
+  extraUserIds = [],
+}: {
+  companyId: string
+  type: string
+  title: string
+  body: string
+  jobId: string
+  extraUserIds?: string[]
+}) {
+  if (!supabaseAdmin) return
+
+  try {
+    const { data: teamMembers, error: teamError } =
+      await supabaseAdmin
+        .from('company_team_members')
+        .select('user_id')
+        .eq('company_id', companyId)
+        .eq('status', 'joined')
+
+    if (teamError) {
+      console.error(
+        'Unable to load company notification recipients:',
+        teamError
+      )
+    }
+
+    const recipientIds = Array.from(
+      new Set(
+        [
+          companyId,
+          ...(teamMembers || []).map(
+            (member) => member.user_id
+          ),
+          ...extraUserIds,
+        ].filter(
+          (userId): userId is string =>
+            typeof userId === 'string' &&
+            userId.length > 0
+        )
+      )
+    )
+
+    if (recipientIds.length === 0) return
+
+    const now = new Date().toISOString()
+    const linkUrl = `/jobs/${jobId}#bids`
+
+    const notifications = recipientIds.map(
+      (userId) => ({
+        user_id: userId,
+        type,
+        title,
+        body,
+        message: body,
+        job_id: jobId,
+        link_url: linkUrl,
+        is_read: false,
+        read: false,
+        created_at: now,
+      })
+    )
+
+    const { error: notificationError } =
+      await supabaseAdmin
+        .from('notifications')
+        .insert(notifications as never)
+
+    if (notificationError) {
+      console.error(
+        'Unable to create bid notification:',
+        notificationError
+      )
+    }
+  } catch (notificationError) {
+    console.error(
+      'Bid notification delivery failed:',
+      notificationError
+    )
+  }
+}
+
 function getBearerToken(request: Request) {
   const authorization = request.headers.get('authorization')
 
@@ -590,6 +677,26 @@ export async function POST(request: Request) {
       )
     }
 
+    const { data: bidderProfile } =
+      await supabaseAdmin
+        .from('profiles')
+        .select('company_name, full_name')
+        .eq('id', companyContext.companyId)
+        .maybeSingle()
+
+    const bidderName =
+      bidderProfile?.company_name ||
+      bidderProfile?.full_name ||
+      'A contractor'
+
+    await notifyCompany({
+      companyId: job.company_id,
+      type: 'bid_received',
+      title: 'New contractor bid',
+      body: `${bidderName} submitted a bid on your project.`,
+      jobId: job.id,
+    })
+
     return NextResponse.json(
       {
         success: true,
@@ -706,6 +813,7 @@ export async function PATCH(request: Request) {
           id,
           job_id,
           company_id,
+          submitted_by,
           status
         `)
         .eq('id', bidId)
@@ -961,6 +1069,17 @@ export async function PATCH(request: Request) {
         )
       }
 
+      await notifyCompany({
+        companyId: bid.company_id,
+        type: 'bid_declined',
+        title: 'Bid not selected',
+        body: 'Your company bid was not selected for this project.',
+        jobId: job.id,
+        extraUserIds: bid.submitted_by
+          ? [bid.submitted_by]
+          : [],
+      })
+
       return NextResponse.json({
         success: true,
         message: 'Bid declined.',
@@ -978,6 +1097,23 @@ export async function PATCH(request: Request) {
       return NextResponse.json(
         { error: 'Only a pending bid can be accepted.' },
         { status: 409 }
+      )
+    }
+
+    const {
+      data: otherPendingBids,
+      error: otherPendingBidsError,
+    } = await supabaseAdmin
+      .from('job_bids')
+      .select('id, company_id, submitted_by')
+      .eq('job_id', job.id)
+      .eq('status', 'pending')
+      .neq('id', bid.id)
+
+    if (otherPendingBidsError) {
+      console.error(
+        'Unable to load other pending bids before acceptance:',
+        otherPendingBidsError
       )
     }
 
@@ -1056,6 +1192,32 @@ export async function PATCH(request: Request) {
         { status: 400 }
       )
     }
+
+    await notifyCompany({
+      companyId: bid.company_id,
+      type: 'bid_accepted',
+      title: 'Your bid was accepted',
+      body: 'Your company bid was accepted for this project.',
+      jobId: job.id,
+      extraUserIds: bid.submitted_by
+        ? [bid.submitted_by]
+        : [],
+    })
+
+    await Promise.all(
+      (otherPendingBids || []).map((otherBid) =>
+        notifyCompany({
+          companyId: otherBid.company_id,
+          type: 'bid_declined',
+          title: 'Bid not selected',
+          body: 'Your company bid was not selected for this project.',
+          jobId: job.id,
+          extraUserIds: otherBid.submitted_by
+            ? [otherBid.submitted_by]
+            : [],
+        })
+      )
+    )
 
     return NextResponse.json({
       success: true,
