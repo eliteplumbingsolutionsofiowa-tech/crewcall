@@ -449,7 +449,25 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
     const loadedProfile =
       (data as Profile | null) ||
-      (profileId === user.id ? emptyProfile(user.id) : null)
+      (profileId === user.id
+        ? {
+            ...emptyProfile(user.id),
+            role:
+              user.user_metadata?.role === 'worker' ||
+              user.user_metadata?.role === 'company' ||
+              user.user_metadata?.role === 'staffing_agency'
+                ? user.user_metadata.role
+                : null,
+            full_name:
+              typeof user.user_metadata?.full_name === 'string'
+                ? user.user_metadata.full_name
+                : '',
+            phone:
+              typeof user.user_metadata?.phone === 'string'
+                ? user.user_metadata.phone
+                : '',
+          }
+        : null)
 
     setProfile(loadedProfile)
     setIsWorkerPro(false)
