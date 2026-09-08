@@ -9,6 +9,7 @@ import JobFileUpload from '@/app/components/JobFileUpload'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 import MessageJobButton from '@/app/components/MessageJobButton'
+import BidRequestPanel from '@/app/components/BidRequestPanel'
 
 type UserRole = 'worker' | 'company' | 'staffing_agency' | 'admin'
 
@@ -29,6 +30,9 @@ type Job = {
   completion_notes: string | null
   completion_submitted_at: string | null
   completion_approved_at: string | null
+  job_type: 'worker_job' | 'bid_request'
+  bid_deadline: string | null
+  work_deadline: string | null
 }
 
 type Profile = {
@@ -402,7 +406,10 @@ export default function JobDetailsPage() {
         completion_status,
         completion_notes,
         completion_submitted_at,
-        completion_approved_at
+        completion_approved_at,
+        job_type,
+        bid_deadline,
+        work_deadline
       `
       )
       .eq('id', jobId)
@@ -1028,6 +1035,7 @@ export default function JobDetailsPage() {
     job.company_id === resolvedCompanyId
 
   const currentStatus = normalize(job.status || 'open')
+  const isBidRequest = job.job_type === 'bid_request'
   const isAssigned = Boolean(job.assigned_worker_id)
   const paymentPaid =
     normalize(job.payment_status) === 'paid'
@@ -1035,6 +1043,7 @@ export default function JobDetailsPage() {
   const assignedPhoto = getPhoto(assignedWorker?.id)
 
   const canApply =
+    !isBidRequest &&
     isWorker &&
     hasWorkerMembership &&
     currentStatus === 'open' &&
@@ -1042,6 +1051,7 @@ export default function JobDetailsPage() {
     !alreadyApplied
 
   const canUnlockJobs =
+    !isBidRequest &&
     isWorker &&
     !hasWorkerMembership &&
     currentStatus === 'open' &&
@@ -1093,14 +1103,16 @@ export default function JobDetailsPage() {
                     tone={getJobStatusTone(currentStatus)}
                   />
 
-                  <StatusBadge
-                    label={cleanStatus(
-                      job.payment_status || 'unpaid'
-                    )}
-                    tone={
-                      paymentPaid ? 'green' : 'amber'
-                    }
-                  />
+                  {!isBidRequest ? (
+                    <StatusBadge
+                      label={cleanStatus(
+                        job.payment_status || 'unpaid'
+                      )}
+                      tone={
+                        paymentPaid ? 'green' : 'amber'
+                      }
+                    />
+                  ) : null}
 
                   <StatusBadge
                     label={job.trade || t('tradeNotListed')}
@@ -1139,7 +1151,9 @@ export default function JobDetailsPage() {
                   />
                 </div>
 
-                {isWorker && workerApplication ? (
+                {!isBidRequest &&
+                isWorker &&
+                workerApplication ? (
           <section className="rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 p-5 shadow-xl shadow-emerald-950/20 sm:p-6">
             <div className="flex flex-col gap-3">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
@@ -1244,20 +1258,38 @@ export default function JobDetailsPage() {
               </div>
 
               <div className="w-full shrink-0 xl:w-80">
-                <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-6">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
-                    {t('postedPay')}
-                  </p>
+                {job.job_type === 'bid_request' ? (
+                  <div className="rounded-3xl border border-blue-400/20 bg-blue-500/10 p-6">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
+                      Request Bids
+                    </p>
 
-                  <p className="mt-3 break-words text-4xl font-black tracking-tight text-white">
-                    {formatMoney(job.pay_rate) || t('notListed')}
-                  </p>
+                    <p className="mt-3 text-2xl font-black tracking-tight text-white">
+                      Contractor Pricing
+                    </p>
 
-                  <p className="mt-3 text-sm leading-6 text-cyan-100/60">
-                    Confirm final pay, schedule, and job terms with
-                    the hiring company.
-                  </p>
-                </div>
+                    <p className="mt-3 text-sm leading-6 text-blue-100/70">
+                      Contractors submit their own price,
+                      availability, estimated duration, and project
+                      notes.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-6">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
+                      {t('postedPay')}
+                    </p>
+
+                    <p className="mt-3 break-words text-4xl font-black tracking-tight text-white">
+                      {formatMoney(job.pay_rate) || t('notListed')}
+                    </p>
+
+                    <p className="mt-3 text-sm leading-6 text-cyan-100/60">
+                      Confirm final pay, schedule, and job terms with
+                      the hiring company.
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-3 grid gap-3">
                   <SummaryCard
@@ -1265,25 +1297,29 @@ export default function JobDetailsPage() {
                     value={cleanStatus(currentStatus)}
                   />
 
-                  <SummaryCard
-                    label={t('payment')}
-                    value={cleanStatus(
-                      job.payment_status || 'unpaid'
-                    )}
-                  />
-
-                  <SummaryCard
-                    label={t('payout')}
-                    value={cleanStatus(
-                      job.payout_status || 'not released'
-                    )}
-                  />
+                  {!isBidRequest ? (
+                    <>
+                          <SummaryCard
+                            label={t('payment')}
+                            value={cleanStatus(
+                              job.payment_status || 'unpaid'
+                            )}
+                          />
+                          <SummaryCard
+                            label={t('payout')}
+                            value={cleanStatus(
+                              job.payout_status || 'not released'
+                            )}
+                          />
+                    </>
+                  ) : null}
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {FLOW_STEPS.map((step, index) => {
+            {!isBidRequest ? (
+              <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {FLOW_STEPS.map((step, index) => {
                 const active = isStepActive(step, index)
 
                 return (
@@ -1321,8 +1357,9 @@ export default function JobDetailsPage() {
                     </div>
                   </div>
                 )
-              })}
-            </div>
+                })}
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -1380,7 +1417,9 @@ export default function JobDetailsPage() {
           </section>
         ) : null}
 
-        {isWorker && currentStatus !== 'open' ? (
+        {!isBidRequest &&
+        isWorker &&
+        currentStatus !== 'open' ? (
           <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
             <p className="text-sm font-bold text-slate-300">
               This job is currently{' '}
@@ -1392,7 +1431,8 @@ export default function JobDetailsPage() {
           </section>
         ) : null}
 
-        {isWorker &&
+        {!isBidRequest &&
+        isWorker &&
         job.assigned_worker_id === profile.id &&
         currentStatus !== 'completed' ? (
           <section className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-5">
@@ -1454,7 +1494,10 @@ export default function JobDetailsPage() {
           </section>
         ) : null}
 
-        {isCompany && isOwner && isAssigned ? (
+        {!isBidRequest &&
+        isCompany &&
+        isOwner &&
+        isAssigned ? (
           <CompanyActions
             currentStatus={currentStatus}
             paymentPaid={paymentPaid}
@@ -1489,6 +1532,14 @@ export default function JobDetailsPage() {
             </div>
           </div>
         </section>
+
+        {job.job_type === 'bid_request' ? (
+          <BidRequestPanel
+            jobId={job.id}
+            bidDeadline={job.bid_deadline}
+            workDeadline={job.work_deadline}
+          />
+        ) : null}
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
@@ -1528,7 +1579,9 @@ export default function JobDetailsPage() {
           </div>
         </section>
 
-        {isAssigned && assignedWorker ? (
+        {!isBidRequest &&
+        isAssigned &&
+        assignedWorker ? (
           <section className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-emerald-500/10 shadow-xl shadow-black/20">
             <div className="p-5 sm:p-6">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
@@ -1568,7 +1621,9 @@ export default function JobDetailsPage() {
           </section>
         ) : null}
 
-        {isCompany && isOwner ? (
+        {!isBidRequest &&
+        isCompany &&
+        isOwner ? (
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
             <SectionHeader
               eyebrow="Hiring Pipeline"

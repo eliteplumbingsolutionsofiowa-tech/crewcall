@@ -117,6 +117,10 @@ export default function InviteWorkerPage() {
         'company_id',
         user.id
       )
+      .eq(
+        'job_type',
+        'worker_job'
+      )
       .in(
         'status',
         [

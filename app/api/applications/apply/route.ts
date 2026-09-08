@@ -49,6 +49,7 @@ type JobRow = {
   company_id: string | null
   pay_rate: string | null
   status: string | null
+  job_type?: string | null
   assigned_worker_id?: string | null
 }
 
@@ -249,7 +250,7 @@ export async function POST(req: Request) {
     const { data: job, error: jobError } = await adminClient
       .from('jobs')
       .select(
-        'id, title, company_id, pay_rate, status, assigned_worker_id'
+        'id, title, company_id, pay_rate, status, job_type, assigned_worker_id'
       )
       .eq('id', jobId)
       .maybeSingle<JobRow>()
@@ -265,6 +266,20 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Job not found.' },
         { status: 404 }
+      )
+    }
+
+    if (
+      job.job_type &&
+      job.job_type !== 'worker_job'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'This project accepts contractor bids instead of worker applications.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 400 }
       )
     }
 

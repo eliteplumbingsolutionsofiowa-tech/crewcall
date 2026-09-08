@@ -71,6 +71,7 @@ type JobRow = {
   assigned_worker_id: string | null
   status: string | null
   stripe_checkout_session_id: string | null
+  job_type: string | null
 }
 
 function getBearerToken(request: Request) {
@@ -187,7 +188,8 @@ export async function POST(req: Request) {
           company_id,
           assigned_worker_id,
           status,
-          stripe_checkout_session_id
+          stripe_checkout_session_id,
+          job_type
         `
         )
         .eq('id', jobId)
@@ -204,6 +206,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Job not found.' },
         { status: 404 }
+      )
+    }
+
+    if (job.job_type !== 'worker_job') {
+      return NextResponse.json(
+        {
+          error:
+            'Contractor bid requests cannot use the worker payment flow.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 409 }
       )
     }
 

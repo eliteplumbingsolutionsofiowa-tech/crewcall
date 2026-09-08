@@ -54,6 +54,7 @@ type JobRow = {
   status: string | null
   payment_status: string | null
   completed_at: string | null
+  job_type: string | null
 }
 
 function getBearerToken(request: Request) {
@@ -136,7 +137,8 @@ export async function POST(req: Request) {
           assigned_worker_id,
           status,
           payment_status,
-          completed_at
+          completed_at,
+          job_type
         `
         )
         .eq('id', jobId)
@@ -153,6 +155,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Job not found.' },
         { status: 404 }
+      )
+    }
+
+    if (job.job_type !== 'worker_job') {
+      return NextResponse.json(
+        {
+          error:
+            'Contractor bid requests cannot use the worker completion flow.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 409 }
       )
     }
 

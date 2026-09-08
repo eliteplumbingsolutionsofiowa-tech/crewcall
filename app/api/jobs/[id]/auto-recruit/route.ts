@@ -200,6 +200,7 @@ export async function POST(
           id,
           title,
           company_id,
+          job_type,
           assigned_worker_id,
           status,
           ai_recruiting,
@@ -228,6 +229,20 @@ export async function POST(
           error: 'Job not found.',
         },
         { status: 404 }
+      )
+    }
+
+    if (
+      job.job_type &&
+      job.job_type !== 'worker_job'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'AI recruiting is only available for worker jobs.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 400 }
       )
     }
 

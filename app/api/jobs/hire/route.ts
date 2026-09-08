@@ -62,6 +62,7 @@ type JobRow = {
   start_date: string | null
   location: string | null
   status: string | null
+  job_type: string | null
 }
 
 type ProfileRow = {
@@ -170,7 +171,8 @@ export async function POST(req: Request) {
           pay_rate,
           start_date,
           location,
-          status
+          status,
+          job_type
         `
         )
         .eq('id', jobId)
@@ -187,6 +189,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Job not found.' },
         { status: 404 }
+      )
+    }
+
+    if (job.job_type !== 'worker_job') {
+      return NextResponse.json(
+        {
+          error:
+            'Contractor bid requests cannot use the worker hiring flow.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 409 }
       )
     }
 
@@ -558,7 +571,8 @@ export async function POST(req: Request) {
                 'APNs hired push failed:',
                 {
                   deviceId: device.id,
-                  status: pushResult.status,
+                  status,
+            job_type: pushResult.status,
                   response: pushResult.body,
                 }
               )

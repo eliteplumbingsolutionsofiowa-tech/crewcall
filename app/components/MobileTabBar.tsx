@@ -1,4 +1,5 @@
 'use client'
+import { useTranslations } from 'next-intl'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -12,6 +13,7 @@ type Profile = {
 }
 
 export default function MobileTabBar() {
+  const tNav = useTranslations('Nav')
   const pathname = usePathname()
   const router = useRouter()
 
@@ -153,7 +155,7 @@ export default function MobileTabBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/90 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-2xl shadow-black/40 backdrop-blur-xl lg:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-6 gap-2 rounded-[2rem] border border-white/10 bg-white/10 p-2">
+      <div className="mx-auto grid max-w-lg grid-cols-7 gap-1 rounded-[2rem] border border-white/10 bg-white/10 p-2">
         <TabItem
           href="/dashboard"
           label="Home"
@@ -171,6 +173,18 @@ export default function MobileTabBar() {
             pathname.startsWith('/company/jobs')
           }
         />
+
+        {(role === 'company' || role === 'staffing_agency') ? (
+          <TabItem
+            href="/company/bid-opportunities"
+            label={tNav('bids')}
+            icon="$"
+            active={
+              pathname.startsWith('/company/bid-opportunities') ||
+              pathname.startsWith('/company/my-bids')
+            }
+          />
+        ) : null}
 
         <TabItem
           href="/messages"

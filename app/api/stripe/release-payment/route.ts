@@ -66,6 +66,7 @@ type JobRow = {
   company_id: string | null
   assigned_worker_id: string | null
   stripe_transfer_id: string | null
+  job_type: string | null
 }
 
 type WorkerRow = {
@@ -180,7 +181,8 @@ export async function POST(req: Request) {
           payout_status,
           company_id,
           assigned_worker_id,
-          stripe_transfer_id
+          stripe_transfer_id,
+          job_type
         `
         )
         .eq('id', jobId)
@@ -201,6 +203,17 @@ export async function POST(req: Request) {
     }
 
     const job = jobData
+
+    if (job.job_type !== 'worker_job') {
+      return NextResponse.json(
+        {
+          error:
+            'Contractor bid requests cannot use the worker payout flow.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 409 }
+      )
+    }
 
     const companyContext =
       await resolveCompanyContext(

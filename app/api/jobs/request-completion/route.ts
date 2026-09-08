@@ -52,6 +52,7 @@ type JobRow = {
   company_id: string | null
   assigned_worker_id: string | null
   status: string | null
+  job_type: string | null
 }
 
 function getBearerToken(request: Request) {
@@ -118,7 +119,7 @@ export async function POST(req: Request) {
       await adminClient
         .from('jobs')
         .select(
-          'id, title, company_id, assigned_worker_id, status'
+          'id, title, company_id, assigned_worker_id, status, job_type'
         )
         .eq('id', jobId)
         .maybeSingle<JobRow>()
@@ -134,6 +135,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Job not found.' },
         { status: 404 }
+      )
+    }
+
+    if (job.job_type !== 'worker_job') {
+      return NextResponse.json(
+        {
+          error:
+            'Contractor bid requests cannot use the worker completion flow.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 409 }
       )
     }
 

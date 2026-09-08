@@ -596,6 +596,7 @@ export type Database = {
           assigned_to: string | null
           assigned_worker_id: string | null
           boost_expires_at: string | null
+          bid_deadline: string | null
           company_id: string
           completed_at: string | null
           completion_approved_at: string | null
@@ -611,6 +612,7 @@ export type Database = {
           hired_worker_id: string | null
           id: string
           is_featured: boolean | null
+          job_type: string
           lat: number | null
           lng: number | null
           location: string
@@ -635,6 +637,7 @@ export type Database = {
           trade: string
           urgent: boolean | null
           urgent_until: string | null
+          work_deadline: string | null
           worker_id: string | null
           worker_payout_amount: number | null
           worker_payout_cents: number | null
@@ -651,6 +654,7 @@ export type Database = {
           assigned_to?: string | null
           assigned_worker_id?: string | null
           boost_expires_at?: string | null
+          bid_deadline?: string | null
           company_id: string
           completed_at?: string | null
           completion_approved_at?: string | null
@@ -666,6 +670,7 @@ export type Database = {
           hired_worker_id?: string | null
           id?: string
           is_featured?: boolean | null
+          job_type?: string
           lat?: number | null
           lng?: number | null
           location: string
@@ -690,6 +695,7 @@ export type Database = {
           trade: string
           urgent?: boolean | null
           urgent_until?: string | null
+          work_deadline?: string | null
           worker_id?: string | null
           worker_payout_amount?: number | null
           worker_payout_cents?: number | null
@@ -706,6 +712,7 @@ export type Database = {
           assigned_to?: string | null
           assigned_worker_id?: string | null
           boost_expires_at?: string | null
+          bid_deadline?: string | null
           company_id?: string
           completed_at?: string | null
           completion_approved_at?: string | null
@@ -721,6 +728,7 @@ export type Database = {
           hired_worker_id?: string | null
           id?: string
           is_featured?: boolean | null
+          job_type?: string
           lat?: number | null
           lng?: number | null
           location?: string
@@ -745,6 +753,7 @@ export type Database = {
           trade?: string
           urgent?: boolean | null
           urgent_until?: string | null
+          work_deadline?: string | null
           worker_id?: string | null
           worker_payout_amount?: number | null
           worker_payout_cents?: number | null

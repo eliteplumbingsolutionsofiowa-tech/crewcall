@@ -151,6 +151,7 @@ export default function WorkerProfilePage() {
         .from('jobs')
         .select('id, title, trade, location, status')
         .eq('company_id', user.id)
+        .eq('job_type', 'worker_job')
         .in('status', ['open', 'active', 'assigned'])
         .order('created_at', { ascending: false })
 

@@ -17,6 +17,8 @@ type Profile = {
   full_name: string | null
 }
 
+type JobType = 'worker_job' | 'bid_request'
+
 type JobInsert = {
   company_id: string
   title: string
@@ -26,6 +28,9 @@ type JobInsert = {
   description: string
   status: 'open'
   payment_status: 'unpaid'
+  job_type: JobType
+  bid_deadline: string | null
+  work_deadline: string | null
 }
 
 type JobRow = {
@@ -108,17 +113,32 @@ export default function PostJobPage() {
   const [location, setLocation] = useState('')
   const [payRate, setPayRate] = useState('')
   const [description, setDescription] = useState('')
+  const [jobType, setJobType] = useState<JobType>('worker_job')
+  const [bidDeadline, setBidDeadline] = useState('')
+  const [workDeadline, setWorkDeadline] = useState('')
+
+  const isBidRequest = jobType === 'bid_request'
 
   const canPost = useMemo(() => {
     return (
-      (profile?.role === 'company' || profile?.role === 'staffing_agency' || profile?.role === 'admin') &&
+      (profile?.role === 'company' ||
+        profile?.role === 'staffing_agency' ||
+        profile?.role === 'admin') &&
       title.trim().length > 1 &&
       trade.trim().length > 1 &&
       location.trim().length > 1 &&
-      payRate.trim().length > 0 &&
+      (isBidRequest || payRate.trim().length > 0) &&
       description.trim().length > 5
     )
-  }, [description, location, payRate, profile?.role, title, trade])
+  }, [
+    description,
+    isBidRequest,
+    location,
+    payRate,
+    profile?.role,
+    title,
+    trade,
+  ])
 
   useEffect(() => {
     let active = true
@@ -317,6 +337,40 @@ export default function PostJobPage() {
       return
     }
 
+    if (isBidRequest) {
+      if (!bidDeadline) {
+        setMessage(t('chooseBidDeadline'))
+        return
+      }
+
+      const bidDeadlineDate = new Date(bidDeadline)
+
+      if (
+        Number.isNaN(bidDeadlineDate.getTime()) ||
+        bidDeadlineDate.getTime() <= Date.now()
+      ) {
+        setMessage(t('bidDeadlineFuture'))
+        return
+      }
+
+      if (workDeadline) {
+        const workDeadlineDate = new Date(
+          `${workDeadline}T23:59:59`
+        )
+
+        if (
+          Number.isNaN(workDeadlineDate.getTime()) ||
+          workDeadlineDate.getTime() <
+            bidDeadlineDate.getTime()
+        ) {
+          setMessage(
+            t('workDeadlineAfterBid')
+          )
+          return
+        }
+      }
+    }
+
     setSaving(true)
     setMessage(t('postingJob'))
 
@@ -326,10 +380,19 @@ export default function PostJobPage() {
         title: title.trim(),
         trade: trade.trim(),
         location: location.trim(),
-        pay_rate: payRate.trim(),
+        pay_rate: isBidRequest ? '' : payRate.trim(),
         description: description.trim(),
         status: 'open',
         payment_status: 'unpaid',
+        job_type: jobType,
+        bid_deadline:
+          isBidRequest && bidDeadline
+            ? new Date(bidDeadline).toISOString()
+            : null,
+        work_deadline:
+          isBidRequest && workDeadline
+            ? workDeadline
+            : null,
       }
 
       const { data, error } = await jobsTable()
@@ -349,13 +412,20 @@ export default function PostJobPage() {
         return
       }
 
-      setMessage(t('findingMatches'))
-
-      await generateMatches(data.id)
+      if (!isBidRequest) {
+        setMessage(t('findingMatches'))
+        await generateMatches(data.id)
+      } else {
+        setMessage(t('bidRequestPosted'))
+      }
 
       window.dispatchEvent(new Event('crewcall-refresh-nav'))
 
-      router.replace(`/my-jobs/${data.id}`)
+      if (isBidRequest) {
+        router.replace(`/jobs/${data.id}#bids`)
+      } else {
+        router.replace(`/my-jobs/${data.id}`)
+      }
       router.refresh()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t('unableToPost'))
@@ -471,6 +541,77 @@ export default function PostJobPage() {
             </div>
           ) : null}
 
+          <section className="mb-6">
+            <p className="text-sm font-black text-slate-200">
+              What do you need?
+            </p>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setJobType('worker_job')
+                  setBidDeadline('')
+                  setWorkDeadline('')
+                  setMessage('')
+                }}
+                className={`rounded-2xl border p-5 text-left transition ${
+                  !isBidRequest
+                    ? 'border-cyan-300 bg-cyan-300/15 ring-2 ring-cyan-300/20'
+                    : 'border-white/10 bg-slate-950/50 hover:bg-white/10'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">👷</span>
+                  <div>
+                    <p className="text-lg font-black text-white">
+                      {t('findWorkers')}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-slate-300">
+                      {t('findWorkersDescription')}
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setJobType('bid_request')
+                  setPayRate('')
+                  setGeneratedJob(null)
+                  setAiMessage('')
+                  setMessage('')
+                }}
+                className={`rounded-2xl border p-5 text-left transition ${
+                  isBidRequest
+                    ? 'border-emerald-300 bg-emerald-300/15 ring-2 ring-emerald-300/20'
+                    : 'border-white/10 bg-slate-950/50 hover:bg-white/10'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">📋</span>
+                  <div>
+                    <p className="text-lg font-black text-white">
+                      {t('requestBids')}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-slate-300">
+                      {t('requestBidsDescription')}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {isBidRequest ? (
+              <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+                <p className="text-sm font-black text-emerald-100">
+                  {t('requestBidsNotice')}
+                </p>
+              </div>
+            ) : null}
+          </section>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-sm font-black text-slate-200">
@@ -512,20 +653,63 @@ export default function PostJobPage() {
               />
             </label>
 
-            <label className="block">
-              <span className="text-sm font-black text-slate-200">
-                {t('payRate')}
-              </span>
+            {!isBidRequest ? (
+              <label className="block">
+                <span className="text-sm font-black text-slate-200">
+                  {t('payRate')}
+                </span>
 
-              <input
-                value={payRate}
-                onChange={(event) => setPayRate(event.target.value)}
-                inputMode="text"
-                placeholder={t('payPlaceholder')}
-                autoComplete="off"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
-              />
-            </label>
+                <input
+                  value={payRate}
+                  onChange={(event) => setPayRate(event.target.value)}
+                  inputMode="text"
+                  placeholder={t('payPlaceholder')}
+                  autoComplete="off"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
+                />
+              </label>
+            ) : (
+              <label className="block">
+                <span className="text-sm font-black text-slate-200">
+                  {t('bidDeadline')}
+                </span>
+
+                <input
+                  type="datetime-local"
+                  value={bidDeadline}
+                  onChange={(event) =>
+                    setBidDeadline(event.target.value)
+                  }
+                  required={isBidRequest}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-emerald-300/40 focus:ring-4"
+                />
+
+                <span className="mt-2 block text-xs font-semibold text-slate-400">
+                  {t('bidDeadlineHelp')}
+                </span>
+              </label>
+            )}
+
+            {isBidRequest ? (
+              <label className="block">
+                <span className="text-sm font-black text-slate-200">
+                  {t('workDeadline')}
+                </span>
+
+                <input
+                  type="date"
+                  value={workDeadline}
+                  onChange={(event) =>
+                    setWorkDeadline(event.target.value)
+                  }
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-emerald-300/40 focus:ring-4"
+                />
+
+                <span className="mt-2 block text-xs font-semibold text-slate-400">
+                  {t('workDeadlineHelp')}
+                </span>
+              </label>
+            ) : null}
           </div>
 
           <label className="mt-4 block">
@@ -542,7 +726,7 @@ export default function PostJobPage() {
             />
           </label>
 
-          {generatedJob ? (
+          {!isBidRequest && generatedJob ? (
             <section className="mt-5 rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -634,11 +818,20 @@ export default function PostJobPage() {
             </section>
           ) : null}
 
-          <div className="mt-5 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
-            <p className="text-sm font-black text-orange-100">
-              {t('matchingNotice')}
-            </p>
-          </div>
+          {!isBidRequest ? (
+            <div className="mt-5 rounded-2xl border border-orange-400/25 bg-orange-400/10 p-4">
+              <p className="text-sm font-black text-orange-100">
+                {t('matchingNotice')}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
+              <p className="text-sm font-black text-emerald-100">
+                Your project will be posted for contractors to review
+                and submit bids.
+              </p>
+            </div>
+          )}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Link
@@ -653,7 +846,13 @@ export default function PostJobPage() {
               disabled={saving || !canPost}
               className="rounded-2xl bg-cyan-300 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 transition hover:bg-cyan-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? t('postingMatching') : t('postFindMatches')}
+              {saving
+                ? isBidRequest
+                  ? 'Posting Bid Request...'
+                  : t('postingMatching')
+                : isBidRequest
+                  ? 'Post Request for Bids'
+                  : t('postFindMatches')}
             </button>
           </div>
         </form>

@@ -736,7 +736,7 @@ export async function POST(req: Request) {
     const { data: job, error: jobError } = await supabaseAdmin
       .from('jobs')
       .select(
-        'id, company_id, title, trade, location, pay_rate, description'
+        'id, company_id, title, trade, location, pay_rate, description, job_type'
       )
       .eq('id', jobId)
       .single()
@@ -747,6 +747,20 @@ export async function POST(req: Request) {
           error: jobError?.message || 'Job not found.',
         },
         { status: 404 }
+      )
+    }
+
+    if (
+      job.job_type &&
+      job.job_type !== 'worker_job'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Worker matching is not available for contractor bid requests.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 400 }
       )
     }
 

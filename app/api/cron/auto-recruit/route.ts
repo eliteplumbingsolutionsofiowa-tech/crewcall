@@ -9,6 +9,7 @@ type RecruitingJob = {
   id: string
   title: string | null
   company_id: string
+  job_type: 'worker_job' | 'bid_request' | null
   assigned_worker_id: string | null
   status: string | null
   ai_recruiting: boolean | null
@@ -190,6 +191,7 @@ async function processRecruitingJob(
           id,
           title,
           company_id,
+          job_type,
           assigned_worker_id,
           status,
           ai_recruiting,
@@ -215,6 +217,29 @@ async function processRecruitingJob(
     }
 
     const freshJob = currentJob as RecruitingJob
+
+    if (
+      freshJob.job_type &&
+      freshJob.job_type !== 'worker_job'
+    ) {
+      const { error: stopError } =
+        await markRecruitingComplete(
+          adminClient,
+          freshJob.id,
+        )
+
+      if (stopError) {
+        throw stopError
+      }
+
+      return {
+        jobId: freshJob.id,
+        title,
+        status: 'stopped',
+        message:
+          'AI recruiting is not available for contractor bid requests.',
+      }
+    }
 
     if (!freshJob.ai_recruiting) {
       return {

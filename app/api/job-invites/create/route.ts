@@ -118,7 +118,7 @@ export async function POST(req: Request) {
       error: jobError,
     } = await adminClient
       .from('jobs')
-      .select('id, title, company_id')
+      .select('id, title, company_id, job_type')
       .eq('id', jobId)
       .maybeSingle()
 
@@ -133,6 +133,20 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Job not found.' },
         { status: 404 }
+      )
+    }
+
+    if (
+      job.job_type &&
+      job.job_type !== 'worker_job'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Worker invitations are not available for contractor bid requests.',
+          code: 'BID_REQUEST_JOB',
+        },
+        { status: 400 }
       )
     }
 

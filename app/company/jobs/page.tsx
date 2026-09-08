@@ -28,6 +28,9 @@ type Job = {
   created_at: string | null
   company_id: string | null
   assigned_worker_id: string | null
+  job_type: 'worker_job' | 'bid_request' | null
+  bid_deadline: string | null
+  work_deadline: string | null
 }
 
 export default function CompanyJobsPage() {
@@ -97,7 +100,10 @@ export default function CompanyJobsPage() {
         payment_status,
         created_at,
         company_id,
-        assigned_worker_id
+        assigned_worker_id,
+        job_type,
+        bid_deadline,
+        work_deadline
       `
       )
       .eq(
@@ -305,9 +311,14 @@ export default function CompanyJobsPage() {
   function JobCard({ job }: { job: Job }) {
     const status = getSafeStatus(job)
     const isUpdating = updatingId === job.id
-    const fundsSecured = job.payment_status === 'paid'
+    const isBidRequest = job.job_type === 'bid_request'
+
+    const fundsSecured =
+      !isBidRequest && job.payment_status === 'paid'
+
     const hasPaymentActivity =
-      fundsSecured || job.payment_status === 'pending'
+      !isBidRequest &&
+      (fundsSecured || job.payment_status === 'pending')
 
     return (
       <article className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl">
@@ -318,11 +329,25 @@ export default function CompanyJobsPage() {
                 {job.trade || t('tradeNotSet')}
               </span>
 
-              <span className={statusBadgeClass(status)}>{t(status)}</span>
+              {isBidRequest && (
+                <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-black uppercase tracking-wider text-blue-200">
+                  Request Bids
+                </span>
+              )}
 
-              <span className={paymentBadgeClass(job.payment_status)}>
-                {job.payment_status === 'paid' ? t('paid') : job.payment_status === 'pending' ? t('pending') : t('paymentPending')}
+              <span className={statusBadgeClass(status)}>
+                {t(status)}
               </span>
+
+              {!isBidRequest && (
+                <span className={paymentBadgeClass(job.payment_status)}>
+                  {job.payment_status === 'paid'
+                    ? t('paid')
+                    : job.payment_status === 'pending'
+                      ? t('pending')
+                      : t('paymentPending')}
+                </span>
+              )}
             </div>
 
             <h2 className="mt-4 text-2xl font-black text-white">
@@ -335,8 +360,35 @@ export default function CompanyJobsPage() {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <Info label={t('location')} value={job.location || t('noLocation')} />
-              <Info label={t('pay')} value={job.pay_rate || t('noPayRate')} />
-              <Info label={t('start')} value={formatDate(job.start_date)} />
+              {isBidRequest ? (
+                <>
+                  <Info
+                    label="Bid Deadline"
+                    value={formatDate(job.bid_deadline)}
+                  />
+
+                  <Info
+                    label="Work Deadline"
+                    value={
+                      job.work_deadline
+                        ? formatDate(job.work_deadline)
+                        : 'Not set'
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <Info
+                    label={t('pay')}
+                    value={job.pay_rate || t('noPayRate')}
+                  />
+
+                  <Info
+                    label={t('start')}
+                    value={formatDate(job.start_date)}
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -348,16 +400,25 @@ export default function CompanyJobsPage() {
               {t('viewJob')}
             </Link>
 
-            <Link
-              href={`/my-jobs/${job.id}/applicants`}
-              className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
-            >
-              {t('applicants')}
-            </Link>
+            {isBidRequest ? (
+              <Link
+                href={`/jobs/${job.id}#bids`}
+                className="rounded-2xl border border-blue-400/30 bg-blue-500/10 px-5 py-3 text-center text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
+              >
+                Manage Bids
+              </Link>
+            ) : (
+              <Link
+                href={`/my-jobs/${job.id}/applicants`}
+                className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
+              >
+                {t('applicants')}
+              </Link>
+            )}
           </div>
         </div>
 
-        {fundsSecured ? (
+        {!isBidRequest && fundsSecured ? (
           <div className="mt-5 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
             <p className="font-black text-emerald-200">
               🔒 {t('fundsSecured')}
@@ -368,8 +429,9 @@ export default function CompanyJobsPage() {
           </div>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
-          {!hasPaymentActivity ? (
+        {!isBidRequest && (
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+            {!hasPaymentActivity ? (
             <>
               {status === 'cancelled' && (
                 <button
@@ -436,8 +498,47 @@ export default function CompanyJobsPage() {
             <span className="inline-flex items-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-black text-emerald-200">
               🔒 {fundsSecured ? t('securedWorkflowOnly') : t('paymentInProgress')}
             </span>
+            )}
+          </div>
+        )}
+
+        {isBidRequest &&
+          (status === 'open' || status === 'cancelled') && (
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+              {status === 'cancelled' ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateJobStatus(job.id, 'open')
+                  }
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('markOpen')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void updateJobStatus(job.id, 'cancelled')
+                  }
+                  disabled={isUpdating}
+                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t('cancel')}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void deleteJob(job.id)}
+                disabled={isUpdating}
+                className="rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-black text-red-200 transition hover:bg-red-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUpdating ? t('updating') : t('delete')}
+              </button>
+            </div>
           )}
-        </div>
       </article>
     )
   }
