@@ -8,6 +8,16 @@ export const dynamic = 'force-dynamic'
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+const foundingMemberPriceId =
+  process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID
+
+const workerProPriceId =
+  process.env.STRIPE_WORKER_PRO_PRICE_ID
+
+const workerMembershipPriceId =
+  process.env.STRIPE_WORKER_MEMBERSHIP_PRICE_ID
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -505,8 +515,17 @@ export async function POST(request: Request) {
             .update({
               status,
               plan:
-                subscription.metadata?.plan ||
-                undefined,
+                subscription.items?.data?.[0]?.price?.id ===
+                workerMembershipPriceId
+                  ? 'worker_membership'
+                  : subscription.items?.data?.[0]?.price?.id ===
+                      workerProPriceId
+                    ? 'worker_pro'
+                    : subscription.items?.data?.[0]?.price?.id ===
+                        foundingMemberPriceId
+                      ? 'founding_member'
+                      : subscription.metadata?.plan ||
+                        undefined,
               stripe_subscription_id:
                 subscription.id,
               stripe_price_id:
