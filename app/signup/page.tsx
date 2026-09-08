@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { useTranslations } from 'next-intl'
 import { Eye, EyeOff } from 'lucide-react'
 
-type Role = 'worker' | 'company'
+type Role = 'worker' | 'company' | 'staffing_agency'
 
 export default function SignupPage() {
   return (
@@ -638,6 +638,9 @@ function SignupForm() {
                   </option>
                   <option value="company">
                     {t('company')}
+                  </option>
+                  <option value="staffing_agency">
+                    Staffing Agency
                   </option>
                 </select>
               </Field>

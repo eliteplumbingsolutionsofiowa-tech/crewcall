@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 
-type Role = 'company' | 'worker' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | null
 type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
 
 type Profile = {

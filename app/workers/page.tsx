@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-type UserRole = 'worker' | 'company' | null
+type UserRole = 'worker' | 'company' | 'staffing_agency' | null
 type ViewMode = 'list' | 'map'
 
 type CurrentProfile = {
@@ -344,7 +344,7 @@ export default function WorkersPage() {
   }
 
   async function toggleSavedWorker(workerId: string) {
-    if (!currentProfile?.id || currentProfile.role !== 'company') {
+    if (!currentProfile?.id || currentProfile.role !== 'company' && currentProfile.role !== 'staffing_agency') {
       setMessage(t('onlyCompaniesCanSave'))
       return
     }
@@ -638,7 +638,7 @@ export default function WorkersPage() {
                     worker={worker}
                     photo={photoByUserId.get(worker.id) || null}
                     saved={savedWorkerIds.has(worker.id)}
-                    canSave={currentProfile?.role === 'company'}
+                    canSave={(currentProfile?.role === 'company' || currentProfile?.role === 'staffing_agency')}
                     saving={savingWorkerId === worker.id}
                     onSave={() => void toggleSavedWorker(worker.id)}
                   />
@@ -660,7 +660,7 @@ export default function WorkersPage() {
                         photoByUserId.get(selectedWorker.id) || null
                       }
                       saved={savedWorkerIds.has(selectedWorker.id)}
-                      canSave={currentProfile?.role === 'company'}
+                      canSave={(currentProfile?.role === 'company' || currentProfile?.role === 'staffing_agency')}
                       saving={savingWorkerId === selectedWorker.id}
                       onSave={() =>
                         void toggleSavedWorker(selectedWorker.id)

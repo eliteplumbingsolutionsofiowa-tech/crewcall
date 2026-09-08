@@ -111,7 +111,7 @@ export default function PostJobPage() {
 
   const canPost = useMemo(() => {
     return (
-      (profile?.role === 'company' || profile?.role === 'admin') &&
+      (profile?.role === 'company' || profile?.role === 'staffing_agency' || profile?.role === 'admin') &&
       title.trim().length > 1 &&
       trade.trim().length > 1 &&
       location.trim().length > 1 &&
@@ -307,7 +307,7 @@ export default function PostJobPage() {
       return
     }
 
-    if (profile.role !== 'company' && profile.role !== 'admin') {
+    if (profile.role !== 'company' && profile.role !== 'staffing_agency' && profile.role !== 'admin') {
       router.replace('/worker/dashboard')
       return
     }

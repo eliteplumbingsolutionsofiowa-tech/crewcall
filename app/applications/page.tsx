@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-type ProfileRole = 'company' | 'worker' | null
+type ProfileRole = 'company' | 'worker' | 'staffing_agency' | null
 
 type ProfileRow = {
   role: ProfileRole
@@ -49,7 +49,7 @@ export default function ApplicationsRedirectPage() {
 
       const profile = data as ProfileRow | null
 
-      if (profile?.role === 'company') {
+      if ((profile?.role === 'company' || profile?.role === 'staffing_agency')) {
         setMessage(t('openingCompany'))
         router.replace('/company/applications')
         return

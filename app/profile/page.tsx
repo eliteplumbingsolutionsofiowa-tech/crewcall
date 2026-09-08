@@ -11,7 +11,7 @@ import ProfileReviews from '@/app/components/ProfileReviews'
 import ProfileFileUpload from '@/app/components/ProfileFileUpload'
 import ProfileFileList from '@/app/components/ProfileFileList'
 
-type Role = 'company' | 'worker' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | null
 
 type Profile = {
   id: string
@@ -263,7 +263,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
   const canInviteWorker =
     !isOwnProfile &&
-    currentProfile?.role === 'company' &&
+    (currentProfile?.role === 'company' || currentProfile?.role === 'staffing_agency') &&
     profile?.role === 'worker'
 
   const stripeConnected = Boolean(
@@ -499,7 +499,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
     setProfileFiles((files as ProfileFile[]) || [])
 
-    if (current?.role === 'company') {
+    if (current?.role === 'company' || current?.role === 'staffing_agency') {
       const { data: jobs } = await supabaseAny
         .from('jobs')
         .select('id,title,trade,location,status')
@@ -810,9 +810,11 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white">
                       {profile.role === 'company'
                         ? t('company')
-                        : profile.role === 'worker'
-                          ? t('workerPassport')
-                          : 'Role not set'}
+                        : profile.role === 'staffing_agency'
+                          ? 'Staffing Agency'
+                          : profile.role === 'worker'
+                            ? t('workerPassport')
+                            : 'Role not set'}
                     </span>
 
                     {isWorkerProfile && (

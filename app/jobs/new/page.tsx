@@ -61,7 +61,7 @@ export default function NewJobPage() {
       .returns<Profile[]>()
       .maybeSingle()
 
-    if (profile?.role !== 'company') {
+    if (profile?.role !== 'company' && profile?.role !== 'staffing_agency') {
       setMessage('Only company accounts can post jobs.')
       setLoading(false)
       return

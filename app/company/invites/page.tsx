@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 type Profile = {
   id: string
-  role: 'company' | 'worker' | 'admin' | null
+  role: 'company' | 'worker' | 'staffing_agency' | 'admin' | null
   full_name: string | null
   company_name: string | null
 }
@@ -89,6 +89,7 @@ export default function CompanyInvitesPage() {
 
     if (
       currentProfile.role !== 'company' &&
+      currentProfile.role !== 'staffing_agency' &&
       currentProfile.role !== 'admin'
     ) {
       setMessage(t('companyOnly'))

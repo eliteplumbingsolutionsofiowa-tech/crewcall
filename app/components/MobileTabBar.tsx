@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type Role = 'company' | 'worker' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | null
 
 type Profile = {
   role: Role
@@ -123,7 +123,7 @@ export default function MobileTabBar() {
   }
 
   const jobsHref = useMemo(() => {
-    if (role === 'company') return '/my-jobs'
+    if ((role === 'company' || role === 'staffing_agency')) return '/my-jobs'
     return '/jobs'
   }, [role])
 
@@ -163,7 +163,7 @@ export default function MobileTabBar() {
 
         <TabItem
           href={jobsHref}
-          label={role === 'company' ? 'Jobs' : 'Find'}
+          label={(role === 'company' || role === 'staffing_agency') ? 'Jobs' : 'Find'}
           icon="⚒"
           active={
             pathname.startsWith('/jobs') ||

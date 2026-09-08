@@ -18,7 +18,7 @@ import ProfileFileUpload from '@/app/components/ProfileFileUpload'
 import ProfileFileList from '@/app/components/ProfileFileList'
 import ReportModal from '@/app/components/ReportModal'
 
-type Role = 'company' | 'worker' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | null
 
 type Profile = {
   id: string
@@ -223,7 +223,7 @@ function ProfilePageInner() {
 
   const canInviteWorker =
     !isOwnProfile &&
-    currentProfile?.role === 'company' &&
+    (currentProfile?.role === 'company' || currentProfile?.role === 'staffing_agency') &&
     profile?.role === 'worker'
 
   const isWorkerProfile = profile?.role === 'worker'
@@ -426,7 +426,7 @@ function ProfilePageInner() {
 
       setProfileFiles((files as ProfileFile[]) || [])
 
-      if (current?.role === 'company') {
+      if (current?.role === 'company' || current?.role === 'staffing_agency') {
         const { data: jobs, error: jobError } =
           await supabaseAny
             .from('jobs')
@@ -941,9 +941,11 @@ function ProfilePageInner() {
                       label={
                         profile.role === 'company'
                           ? 'Company'
-                          : profile.role === 'worker'
-                            ? 'Worker'
-                            : 'Role Not Set'
+                          : profile.role === 'staffing_agency'
+                            ? 'Staffing Agency'
+                            : profile.role === 'worker'
+                              ? 'Worker'
+                              : 'Role Not Set'
                       }
                       tone="cyan"
                     />

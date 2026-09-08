@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
-type UserRole = 'worker' | 'company' | null
+type UserRole = 'worker' | 'company' | 'staffing_agency' | null
 
 type CurrentProfile = {
   id: string
@@ -408,7 +408,7 @@ const trades = useMemo(
     Number(openOnly) +
     Number(verifiedOnly)
 
-  const canPostJob = currentProfile?.role === 'company'
+  const canPostJob = (currentProfile?.role === 'company' || currentProfile?.role === 'staffing_agency')
   const isWorker = currentProfile?.role === 'worker'
 
   function clearFilters() {

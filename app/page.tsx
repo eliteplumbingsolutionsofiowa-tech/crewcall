@@ -13,7 +13,7 @@ type Profile = {
   id: string
   full_name: string | null
   company_name: string | null
-  role: 'worker' | 'company' | null
+  role: 'worker' | 'company' | 'staffing_agency' | null
 }
 
 type FeaturedJob = {
@@ -163,7 +163,7 @@ export default function HomePage() {
       setMyApplicationsCount(count || 0)
     }
 
-    if (loadedProfile?.role === 'company') {
+    if (loadedProfile?.role === 'company' || loadedProfile?.role === 'staffing_agency') {
       const { count } = await supabase
         .from('jobs')
         .select('*', { count: 'exact', head: true })
@@ -226,7 +226,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              {profile?.role === 'company' ? (
+              {(profile?.role === 'company' || profile?.role === 'staffing_agency') ? (
                 <>
                   <Link href="/company/dashboard" className="primary-btn">
                     {t('companyDashboard')}
@@ -280,7 +280,7 @@ export default function HomePage() {
                 <StatCard label={t('myApplications')} value={myApplicationsCount} />
               )}
 
-              {profile?.role === 'company' && (
+              {(profile?.role === 'company' || profile?.role === 'staffing_agency') && (
                 <StatCard label={t('myPostedJobs')} value={myJobsCount} />
               )}
             </div>

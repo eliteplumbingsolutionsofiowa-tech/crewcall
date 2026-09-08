@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 
 type CompanyProfile = {
   id: string
-  role: 'company' | 'worker' | null
+  role: 'company' | 'staffing_agency' | 'worker' | null
   full_name: string | null
   company_name: string | null
   phone: string | null
@@ -131,7 +131,11 @@ export default function CompanyProfilePage() {
 
       const companyData = data as CompanyProfile | null
 
-      if (!companyData || companyData.role !== 'company') {
+      if (
+        !companyData ||
+        (companyData.role !== 'company' &&
+          companyData.role !== 'staffing_agency')
+      ) {
         throw new Error(t('profileNotFound'))
       }
 

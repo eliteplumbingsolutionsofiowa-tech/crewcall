@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 
 type Profile = {
   id: string
-  role: 'company' | 'worker' | null
+  role: 'company' | 'worker' | 'staffing_agency' | null
   full_name: string | null
   company_name: string | null
   trade: string | null
@@ -118,7 +118,7 @@ export default function SavedWorkersPage() {
     const profile = profileData || null
     setCurrentUser(profile)
 
-    if (profile?.role !== 'company') {
+    if (profile?.role !== 'company' && profile?.role !== 'staffing_agency') {
       setMessage(t('companyOnly'))
       setLoading(false)
       return
@@ -405,7 +405,7 @@ export default function SavedWorkersPage() {
               </div>
             )}
 
-            {currentUser?.role === 'company' && (
+            {(currentUser?.role === 'company' || currentUser?.role === 'staffing_agency') && (
               <div className="sticky top-3 z-10 rounded-3xl border border-white/10 bg-slate-950/90 p-5 shadow-2xl shadow-black/30 backdrop-blur">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
                   <div className="flex-1">
@@ -474,7 +474,7 @@ export default function SavedWorkersPage() {
               </div>
             )}
 
-            {currentUser?.role !== 'company' ? (
+            {currentUser?.role !== 'company' && currentUser?.role !== 'staffing_agency' ? (
               <div className="rounded-3xl border border-orange-400/30 bg-orange-400/10 p-8 text-center">
                 <p className="text-xl font-black text-white">
                   Company account required.

@@ -9,7 +9,7 @@ const appUrl =
 type WelcomeRequest = {
   email?: string
   fullName?: string
-  role?: 'worker' | 'company'
+  role?: 'worker' | 'company' | 'staffing_agency'
 }
 
 export async function GET() {
@@ -43,7 +43,11 @@ export async function POST(req: Request) {
         <div style="font-family:Arial,sans-serif;line-height:1.5;color:#0f172a;">
           <h2>Welcome to CrewCall, ${escapeHtml(name)}.</h2>
           <p>Your ${
-            role === 'company' ? 'company' : 'worker'
+            role === 'company'
+              ? 'company'
+              : role === 'staffing_agency'
+                ? 'staffing agency'
+                : 'worker'
           } account has been created.</p>
           <p>CrewCall helps contractors find skilled help fast and helps workers find jobs fast.</p>
           <p>

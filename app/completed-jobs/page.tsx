@@ -8,7 +8,7 @@ import { resolveCompanyContext } from '@/lib/company-context'
 
 type Profile = {
   id: string
-  role: 'worker' | 'company' | null
+  role: 'worker' | 'company' | 'staffing_agency' | null
 }
 
 type Job = {

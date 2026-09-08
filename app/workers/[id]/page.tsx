@@ -239,7 +239,7 @@ export default function WorkerProfilePage() {
   }
 
   async function toggleSavedWorker() {
-    if (!currentProfile?.id || currentProfile.role !== 'company') {
+    if (!currentProfile?.id || currentProfile.role !== 'company' && currentProfile.role !== 'staffing_agency') {
       setMessage(t('onlyCompaniesCanSave'))
       return
     }
@@ -289,7 +289,7 @@ export default function WorkerProfilePage() {
   }
 
   async function sendInvite() {
-    if (!currentProfile?.id || currentProfile.role !== 'company') {
+    if (!currentProfile?.id || currentProfile.role !== 'company' && currentProfile.role !== 'staffing_agency') {
       setMessage(t('onlyCompaniesCanInvite'))
       return
     }
@@ -353,7 +353,7 @@ export default function WorkerProfilePage() {
   const reviewCount = reviews.length
   const profilePhoto = profileFiles.find((file) => file.category === 'profile_photo')
   const docs = profileFiles.filter((file) => file.category !== 'profile_photo')
-  const isCompany = currentProfile?.role === 'company'
+  const isCompany = (currentProfile?.role === 'company' || currentProfile?.role === 'staffing_agency')
 
   if (loading) {
     return (

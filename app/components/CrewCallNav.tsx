@@ -17,7 +17,7 @@ import { resolveCompanyContext } from '@/lib/company-context'
 import { Capacitor } from '@capacitor/core'
 import { registerPushNotifications } from '@/lib/push/register'
 
-type Role = 'company' | 'worker' | 'admin' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'admin' | null
 
 type Profile = {
   role: Role
@@ -79,7 +79,7 @@ export default function CrewCallNav() {
   const [messagePulse, setMessagePulse] = useState(false)
 
   const isCompanyAccount =
-    role === 'company' || role === 'admin'
+    (role === 'company' || role === 'staffing_agency') || role === 'admin'
 
   const resetNavState = useCallback(() => {
     setUserId(null)
@@ -706,7 +706,7 @@ export default function CrewCallNav() {
   const dashboardHref =
     role === 'admin'
       ? '/admin'
-      : role === 'company'
+      : (role === 'company' || role === 'staffing_agency')
         ? '/company/dashboard'
         : role === 'worker'
           ? '/worker/dashboard'
@@ -715,12 +715,12 @@ export default function CrewCallNav() {
   const logoHref = userId ? dashboardHref : '/'
 
   const workspaceSwitchHref =
-    role === 'company'
+    (role === 'company' || role === 'staffing_agency')
       ? '/worker/dashboard'
       : '/company/dashboard'
 
   const workspaceSwitchLabel =
-    role === 'company'
+    (role === 'company' || role === 'staffing_agency')
       ? tNav('switchToWorker')
       : tNav('switchToCompany')
 

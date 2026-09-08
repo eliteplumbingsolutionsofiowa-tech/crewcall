@@ -8,7 +8,7 @@ type Props = {
 }
 
 type ProfileRole = {
-  role: 'company' | 'worker' | null
+  role: 'company' | 'worker' | 'staffing_agency' | null
 }
 
 type SavedJobRow = {

@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Role = 'company' | 'worker' | 'admin' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'admin' | null
 
 type CommandItem = {
   id: string
@@ -19,7 +19,7 @@ type CommandItem = {
   href: string
   keywords: string[]
   icon: string
-  roles: Array<'company' | 'worker' | 'admin' | 'authenticated'>
+  roles: Array<'company' | 'worker' | 'staffing_agency' | 'admin' | 'authenticated'>
 }
 
 type CommandPaletteProps = {
@@ -37,7 +37,7 @@ const COMMANDS: CommandItem[] = [
     href: '/company/dashboard',
     keywords: ['dashboard', 'company', 'home', 'overview'],
     icon: '▦',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'worker-dashboard',
@@ -55,7 +55,7 @@ const COMMANDS: CommandItem[] = [
     href: '/company/operations',
     keywords: ['operations', 'dispatch', 'schedule', 'active jobs'],
     icon: '◎',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'post-job',
@@ -64,7 +64,7 @@ const COMMANDS: CommandItem[] = [
     href: '/post-job',
     keywords: ['post', 'job', 'create', 'new opportunity', 'hire'],
     icon: '+',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'my-jobs',
@@ -73,7 +73,7 @@ const COMMANDS: CommandItem[] = [
     href: '/my-jobs',
     keywords: ['jobs', 'company jobs', 'manage jobs', 'open jobs'],
     icon: '▣',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'applicants',
@@ -82,7 +82,7 @@ const COMMANDS: CommandItem[] = [
     href: '/company/applications',
     keywords: ['applicants', 'applications', 'candidates', 'hire'],
     icon: '✓',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'invites',
@@ -91,7 +91,7 @@ const COMMANDS: CommandItem[] = [
     href: '/company/invites',
     keywords: ['invites', 'invite workers', 'pending invitations'],
     icon: '→',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'find-workers',
@@ -100,7 +100,7 @@ const COMMANDS: CommandItem[] = [
     href: '/workers',
     keywords: ['workers', 'find workers', 'labor', 'trade', 'map'],
     icon: '⌖',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'worker-map',
@@ -109,7 +109,7 @@ const COMMANDS: CommandItem[] = [
     href: '/company/worker-map',
     keywords: ['worker map', 'location', 'nearby', 'workers'],
     icon: '◎',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'saved-workers',
@@ -118,7 +118,7 @@ const COMMANDS: CommandItem[] = [
     href: '/saved-workers',
     keywords: ['saved', 'favorites', 'saved workers'],
     icon: '★',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'browse-jobs',
@@ -190,7 +190,7 @@ const COMMANDS: CommandItem[] = [
     href: '/billing',
     keywords: ['billing', 'subscription', 'payment', 'stripe'],
     icon: '$',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'company-analytics',
@@ -199,7 +199,7 @@ const COMMANDS: CommandItem[] = [
     href: '/company/analytics',
     keywords: ['analytics', 'reports', 'performance', 'statistics'],
     icon: '↗',
-    roles: ['company', 'admin'],
+    roles: ['company', 'staffing_agency', 'admin'],
   },
   {
     id: 'admin',

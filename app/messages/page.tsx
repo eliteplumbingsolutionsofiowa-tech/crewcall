@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase'
 
 type Profile = {
   id: string
-  role: 'worker' | 'company' | null
+  role: 'worker' | 'company' | 'staffing_agency' | null
   full_name: string | null
   company_name: string | null
   is_online: boolean | null
@@ -292,7 +292,7 @@ export default function MessagesPage() {
           .map(normalizeConversationRow)
           .filter((conversation) => {
             const archivedForMe =
-              profile.role === 'company'
+              (profile.role === 'company' || profile.role === 'staffing_agency')
                 ? Boolean(
                     conversation.archived_by_company
                   )
@@ -748,7 +748,7 @@ export default function MessagesPage() {
     setMessage('')
 
     const updatePayload =
-      currentUser.role === 'company'
+      (currentUser.role === 'company' || currentUser.role === 'staffing_agency')
         ? {
             archived_by_company: !showArchived,
           }

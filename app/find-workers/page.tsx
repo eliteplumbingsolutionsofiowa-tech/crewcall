@@ -248,7 +248,7 @@ export default function FindWorkersPage() {
       return
     }
 
-    if (profileData.role !== 'company') {
+    if (profileData.role !== 'company' && profileData.role !== 'staffing_agency') {
       router.replace('/worker/dashboard')
       return
     }
@@ -332,7 +332,7 @@ export default function FindWorkersPage() {
   }
 
   async function toggleSavedWorker(worker: Profile) {
-    if (!currentUser || currentUser.role !== 'company') {
+    if (!currentUser || currentUser.role !== 'company' && currentUser.role !== 'staffing_agency') {
       return
     }
 

@@ -28,7 +28,10 @@ export async function resolveCompanyContext(
     profile?.is_admin === true ||
     profileRole === 'admin'
 
-  if (profileRole === 'company') {
+  if (
+    profileRole === 'company' ||
+    profileRole === 'staffing_agency'
+  ) {
     return {
       companyId: userId,
       profileRole,

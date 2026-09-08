@@ -13,7 +13,9 @@ type LoginProfile = {
 
 function destinationForRole(role: string | null) {
   if (role === 'admin') return '/admin'
-  if (role === 'company') return '/company/dashboard'
+  if (role === 'company' || role === 'staffing_agency') {
+    return '/company/dashboard'
+  }
   if (role === 'worker') return '/worker/dashboard'
   return '/profile'
 }
