@@ -474,6 +474,7 @@
     "phone": "Teléfono",
     "role": "Tipo de Cuenta",
     "worker": "Trabajador",
+    "workerFreeDescription": "Crear tu perfil de trabajador es gratis. Actualiza tu membresía solo cuando estés listo para solicitar trabajos.",
     "company": "Empresa",
     "joiningTeam": "Uniéndote al equipo...",
     "signInJoinTeam": "Iniciar Sesión y Unirse al Equipo",

@@ -474,6 +474,7 @@
     "phone": "Phone",
     "role": "Role",
     "worker": "Worker",
+    "workerFreeDescription": "Creating your worker profile is free. Upgrade only when you're ready to apply for jobs.",
     "company": "Company",
     "joiningTeam": "Joining team...",
     "signInJoinTeam": "Sign In & Join Team",
