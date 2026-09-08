@@ -726,7 +726,7 @@ export async function POST(request: Request) {
 
     await notifyCompany({
       companyId: job.company_id,
-      type: 'bid_received',
+      type: 'job_bid_received',
       title: 'New contractor bid',
       body: `${bidderName} submitted a bid on your project.`,
       jobId: job.id,
@@ -1106,7 +1106,7 @@ export async function PATCH(request: Request) {
 
       await notifyCompany({
         companyId: bid.company_id,
-        type: 'bid_declined',
+        type: 'job_bid_declined',
         title: 'Bid not selected',
         body: 'Your company bid was not selected for this project.',
         jobId: job.id,
@@ -1230,7 +1230,7 @@ export async function PATCH(request: Request) {
 
     await notifyCompany({
       companyId: bid.company_id,
-      type: 'bid_accepted',
+      type: 'job_bid_accepted',
       title: 'Your bid was accepted',
       body: 'Your company bid was accepted for this project.',
       jobId: job.id,
@@ -1243,7 +1243,7 @@ export async function PATCH(request: Request) {
       (otherPendingBids || []).map((otherBid) =>
         notifyCompany({
           companyId: otherBid.company_id,
-          type: 'bid_declined',
+          type: 'job_bid_declined',
           title: 'Bid not selected',
           body: 'Your company bid was not selected for this project.',
           jobId: job.id,
