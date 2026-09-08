@@ -259,7 +259,7 @@ export async function POST(request: Request) {
                   price: selectedPriceId,
                 },
               ],
-              proration_behavior: 'create_prorations',
+              proration_behavior: 'always_invoice',
               metadata: {
                 ...stripeSubscription.metadata,
                 crewcall_user_id: user.id,
