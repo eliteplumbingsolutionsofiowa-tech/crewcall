@@ -993,8 +993,7 @@ export default function JobDetailsPage() {
   const isWorker = profile.role === 'worker'
 
   const isOwner =
-    (profile.role === 'company' ||
-      profile.role === 'staffing_agency') &&
+    Boolean(resolvedCompanyId) &&
     job.company_id === resolvedCompanyId
 
   const currentStatus = normalize(job.status || 'open')
