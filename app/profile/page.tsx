@@ -1434,10 +1434,12 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               )}
 
 
-              <CrewCard>
-                <h2 className="text-2xl font-black text-slate-950">
-                  {t('verification')}
-                </h2>
+              {isWorkerProfile && (
+                <>
+                  <CrewCard>
+                    <h2 className="text-2xl font-black text-slate-950">
+                      {t('verification')}
+                    </h2>
 
                 <p className="mt-2 text-sm font-semibold text-slate-500">
                   {t('verificationDescription')}
@@ -1651,7 +1653,9 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     active={onlineNow}
                   />
                 </div>
-              </CrewCard>
+                  </CrewCard>
+                </>
+              )}
 
               {isOwnProfile && isWorkerProfile && (
                 <CrewCard>
