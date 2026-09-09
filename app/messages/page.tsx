@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -180,6 +182,10 @@ function presenceLabel(profile: Profile | null, t: ReturnType<typeof useTranslat
 
 export default function MessagesPage() {
   const t = useTranslations('Messages')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const directMessageUserId = searchParams.get('user')
+  const directMessageTargetRef = useRef<string | null>(null)
   const [currentUser, setCurrentUser] =
     useState<Profile | null>(null)
 
@@ -201,6 +207,155 @@ export default function MessagesPage() {
 
   const [archivingId, setArchivingId] =
     useState<string | null>(null)
+
+  useEffect(() => {
+    if (!directMessageUserId) {
+      return
+    }
+
+    if (directMessageTargetRef.current === directMessageUserId) {
+      return
+    }
+
+    directMessageTargetRef.current = directMessageUserId
+
+    let cancelled = false
+
+    const openDirectConversation = async () => {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
+
+        if (userError || !user) {
+          throw new Error(
+            userError?.message || 'Please log in to send messages.'
+          )
+        }
+
+        if (user.id === directMessageUserId) {
+          throw new Error('You cannot start a conversation with yourself.')
+        }
+
+        const { data: profileRows, error: profileError } =
+          await supabase
+            .from('profiles')
+            .select('id, role')
+            .in('id', [user.id, directMessageUserId])
+
+        if (profileError) {
+          throw profileError
+        }
+
+        const myProfile = (profileRows || []).find(
+          (profile) => profile.id === user.id
+        )
+
+        const targetProfile = (profileRows || []).find(
+          (profile) => profile.id === directMessageUserId
+        )
+
+        if (!myProfile || !targetProfile) {
+          throw new Error('CrewCall could not load both profiles.')
+        }
+
+        const myRole = myProfile.role?.toLowerCase()
+        const targetRole = targetProfile.role?.toLowerCase()
+
+        let workerId: string | null = null
+        let companyId: string | null = null
+
+        if (
+          (myRole === 'company' || myRole === 'staffing_agency') &&
+          targetRole === 'worker'
+        ) {
+          companyId = user.id
+          workerId = directMessageUserId
+        } else if (
+          myRole === 'worker' &&
+          (targetRole === 'company' ||
+            targetRole === 'staffing_agency')
+        ) {
+          workerId = user.id
+          companyId = directMessageUserId
+        }
+
+        if (!workerId || !companyId) {
+          throw new Error(
+            'Direct messages are available between workers and companies.'
+          )
+        }
+
+        const {
+          data: existingConversation,
+          error: existingError,
+        } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('worker_id', workerId)
+          .eq('company_id', companyId)
+          .is('job_id', null)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+
+        if (existingError) {
+          throw existingError
+        }
+
+        if (existingConversation?.id) {
+          if (!cancelled) {
+            router.replace(
+              `/messages/${existingConversation.id}`
+            )
+          }
+          return
+        }
+
+        const {
+          data: newConversation,
+          error: createError,
+        } = await supabase
+          .from('conversations')
+          .insert({
+            worker_id: workerId,
+            company_id: companyId,
+            job_id: null,
+          })
+          .select('id')
+          .single()
+
+        if (createError || !newConversation?.id) {
+          throw new Error(
+            createError?.message ||
+              'CrewCall could not start this conversation.'
+          )
+        }
+
+        if (!cancelled) {
+          router.replace(`/messages/${newConversation.id}`)
+        }
+      } catch (error) {
+        directMessageTargetRef.current = null
+
+        if (!cancelled) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : 'CrewCall could not start this conversation.'
+          )
+          setMessageTone('error')
+        }
+      }
+    }
+
+    void openDirectConversation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [directMessageUserId, router])
 
   const loadMessages = useCallback(
     async (backgroundRefresh = false) => {
