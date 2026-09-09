@@ -989,7 +989,8 @@ export default function JobDetailsPage() {
   const isCompany =
   profile.role === 'company' ||
   profile.role === 'staffing_agency' ||
-  profile.role === 'admin'
+  profile.role === 'admin' ||
+  Boolean(resolvedCompanyId)
   const isWorker = profile.role === 'worker'
 
   const isOwner =
