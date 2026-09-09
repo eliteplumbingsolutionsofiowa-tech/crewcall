@@ -824,15 +824,17 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
                 <div>
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${
-                        onlineNow
-                          ? 'bg-emerald-400 text-emerald-950'
-                          : 'bg-slate-700 text-slate-100'
-                      }`}
-                    >
-                      {onlineNow ? 'Online now' : 'Offline'}
-                    </span>
+                    {!isAdminProfile && (
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black ${
+                          onlineNow
+                            ? 'bg-emerald-400 text-emerald-950'
+                            : 'bg-slate-700 text-slate-100'
+                        }`}
+                      >
+                        {onlineNow ? 'Online now' : 'Offline'}
+                      </span>
+                    )}
 
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white">
                       {isAdminProfile
