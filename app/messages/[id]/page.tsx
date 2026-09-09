@@ -29,6 +29,9 @@ export default function MessageConversationPage() {
   const [conversation, setConversation] =
     useState<Conversation | null>(null)
 
+  const [otherParticipantName, setOtherParticipantName] =
+    useState<string | null>(null)
+
   const [messages, setMessages] =
     useState<Message[]>([])
 
@@ -89,6 +92,30 @@ export default function MessageConversationPage() {
     }
 
     setConversation(convo as Conversation)
+
+    const otherParticipantId =
+      convo.worker_id === user.id
+        ? convo.company_id
+        : convo.worker_id
+
+    const {
+      data: otherProfile,
+      error: otherProfileError,
+    } = await supabase
+      .from('profiles')
+      .select('full_name, company_name')
+      .eq('id', otherParticipantId)
+      .maybeSingle()
+
+    if (!otherProfileError && otherProfile) {
+      setOtherParticipantName(
+        otherProfile.company_name ||
+          otherProfile.full_name ||
+          'CrewCall Member'
+      )
+    } else {
+      setOtherParticipantName('CrewCall Member')
+    }
 
     const {
       data: messageData,
@@ -422,12 +449,14 @@ export default function MessageConversationPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <h1 className="text-3xl font-black">
-            {t('title')}
+            {otherParticipantName || t('title')}
           </h1>
 
           {conversation ? (
             <p className="mt-2 text-slate-400">
-              {t('jobConversation')}
+              {conversation.job_id
+                ? t('jobConversation')
+                : 'Direct conversation'}
             </p>
           ) : null}
         </div>
