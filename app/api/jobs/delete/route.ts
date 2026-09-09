@@ -199,11 +199,16 @@ export async function POST(request: Request) {
         .delete()
         .in('link_url', [
           `/jobs/${jobId}`,
+          `/jobs/${jobId}#bids`,
           `/my-jobs/${jobId}`,
           `/my-jobs/${jobId}/applicants`,
           `/my-jobs/${jobId}/recruiter`,
         ]),
 
+      adminClient
+        .from('job_bids')
+        .delete()
+        .eq('job_id', jobId),
       adminClient
         .from('messages')
         .delete()
