@@ -879,7 +879,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:min-w-[420px]">
+              {isWorkerProfile && (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:min-w-[420px]">
                 <StatCard label={t('score')} value={String(crewcallScore)} />
                 <StatCard
                   label={t('experience')}
@@ -903,7 +904,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                       : 'Not set'
                   }
                 />
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -915,7 +917,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
           <div className="grid gap-4 p-3 pb-8 sm:gap-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr]">
             <div className="space-y-4 sm:space-y-6">
-              <CrewCard>
+              {isWorkerProfile && (
+                <CrewCard>
                 <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
@@ -1238,6 +1241,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 )}
 
               </CrewCard>
+              )}
 
 
               {isOwnProfile ? (
