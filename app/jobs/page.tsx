@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
+import { TRADES } from '@/lib/trades'
 
 type UserRole = 'worker' | 'company' | 'staffing_agency' | null
 
@@ -287,21 +288,15 @@ export default function JobsPage() {
     }
   }
 
-const trades = useMemo(
-  () => [
-    'Plumbing',
-    'Electrical',
-    'HVAC',
-    'Framing',
-    'Concrete',
-    'Drywall',
-    'Roofing',
-    'Painting',
-    'Flooring',
-    'General Labor',
-  ],
-  []
-)
+const trades = useMemo(() => {
+  const jobTrades = jobs
+    .map((job) => job.trade?.trim())
+    .filter((trade): trade is string => Boolean(trade))
+
+  return Array.from(
+    new Set([...TRADES, ...jobTrades])
+  ).sort((a, b) => a.localeCompare(b))
+}, [jobs])
 
   const locations = useMemo(() => {
     return Array.from(

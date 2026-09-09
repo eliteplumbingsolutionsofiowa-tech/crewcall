@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { TRADES } from '@/lib/trades'
 import { CrewButton } from '@/app/components/CrewButton'
 import { CrewCard } from '@/app/components/CrewCard'
 import { CrewInput } from '@/app/components/CrewInput'
@@ -13,18 +14,7 @@ type Profile = {
   role: string | null
 }
 
-const trades = [
-  'Plumbing',
-  'Electrical',
-  'HVAC',
-  'Framing',
-  'Concrete',
-  'Drywall',
-  'Roofing',
-  'Painting',
-  'Flooring',
-  'General Labor',
-]
+const trades = TRADES
 
 export default function NewJobPage() {
   const t = useTranslations('NewJob')

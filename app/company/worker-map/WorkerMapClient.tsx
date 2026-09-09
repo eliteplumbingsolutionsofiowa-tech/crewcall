@@ -13,6 +13,7 @@ import {
 } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { supabase } from '@/lib/supabase'
+import { TRADES } from '@/lib/trades'
 import AIRecruiterHeartbeat from '@/app/components/AIRecruiterHeartbeat'
 
 const db = supabase as any
@@ -486,23 +487,7 @@ export default function WorkerMapClient() {
   }
 
   const trades = useMemo(() => {
-    const coreTrades = [
-      'Plumbing',
-      'HVAC',
-      'Electrical',
-      'Carpentry',
-      'Welding',
-      'Concrete',
-      'Roofing',
-      'Painting',
-      'Drywall',
-      'Masonry',
-      'Excavation',
-      'General Labor',
-      'Heavy Equipment',
-      'Landscaping',
-      'Fire Protection',
-    ]
+    const coreTrades = [...TRADES]
 
     const workerTrades = workers
       .map((worker) => worker.trade?.trim())

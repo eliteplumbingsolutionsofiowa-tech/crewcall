@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
+import { TRADES } from '@/lib/trades'
 import { CrewCard } from '@/app/components/CrewCard'
 import { CrewButton } from '@/app/components/CrewButton'
 import ProfileReviews from '@/app/components/ProfileReviews'
@@ -1003,14 +1004,27 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
                   <FieldBlock label={t('trade')}>
                     {isOwnProfile ? (
-                      <input
-                        value={inputValue(profile.trade)}
-                        onChange={(event) =>
-                          updateField('trade', event.target.value)
-                        }
-                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
-                        placeholder="Plumbing, electrical, HVAC..."
-                      />
+                      <>
+                        <input
+                          value={inputValue(profile.trade)}
+                          onChange={(event) =>
+                            updateField('trade', event.target.value)
+                          }
+                          list="crewcall-profile-trades"
+                          autoComplete="off"
+                          className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
+                          placeholder="Plumbing, electrical, HVAC..."
+                        />
+
+                        <datalist id="crewcall-profile-trades">
+                          {TRADES.map((tradeOption) => (
+                            <option
+                              key={tradeOption}
+                              value={tradeOption}
+                            />
+                          ))}
+                        </datalist>
+                      </>
                     ) : (
                       <ReadOnlyValue value={textValue(profile.trade)} />
                     )}

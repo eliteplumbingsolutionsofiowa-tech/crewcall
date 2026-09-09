@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 import { resolveCompanyContext } from '@/lib/company-context'
+import { TRADES } from '@/lib/trades'
 
 type Role = 'company' | 'worker' | 'staffing_agency' | 'admin' | null
 
@@ -635,8 +636,17 @@ export default function PostJobPage() {
                 onChange={(event) => setTrade(event.target.value)}
                 placeholder={t('tradePlaceholder')}
                 autoComplete="off"
+                list="crewcall-trades"
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none ring-cyan-300/40 placeholder:text-slate-500 focus:ring-4"
               />
+              <datalist id="crewcall-trades">
+                {TRADES.map((tradeOption) => (
+                  <option
+                    key={tradeOption}
+                    value={tradeOption}
+                  />
+                ))}
+              </datalist>
             </label>
 
             <label className="block">
