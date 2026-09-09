@@ -864,11 +864,14 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   </h1>
 
                   <p className="mt-3 max-w-2xl text-sm font-semibold text-slate-200 sm:text-base">
-                    {textValue(profile.trade)} ·{' '}
-                    {[profile.city, profile.state]
-                      .map((item) => inputValue(item).trim())
-                      .filter(Boolean)
-                      .join(', ') || t('locationNotAdded')}
+                    {isAdminProfile
+                      ? 'Official CrewCall platform administration account.'
+                      : `${textValue(profile.trade)} · ${
+                          [profile.city, profile.state]
+                            .map((item) => inputValue(item).trim())
+                            .filter(Boolean)
+                            .join(', ') || t('locationNotAdded')
+                        }`}
                   </p>
 
                   {isWorkerProfile && (
