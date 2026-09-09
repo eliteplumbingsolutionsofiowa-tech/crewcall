@@ -1249,7 +1249,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               )}
 
 
-              {isOwnProfile ? (
+              {isOwnProfile && !isAdminProfile ? (
                 <CrewCard>
                   <div className="mb-3 sm:mb-6">
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
@@ -1315,7 +1315,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     />
                   </div>
                 </CrewCard>
-              ) : (
+              ) : !isAdminProfile ? (
                 <CrewCard>
                   <div className="mb-5">
                     <h2 className="text-2xl font-black text-slate-950">
@@ -1333,7 +1333,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     onDeleteComplete={loadProfileFiles}
                   />
                 </CrewCard>
-              )}
+              ) : null}
 
               <CrewCard>
                 <ProfileReviews profileId={profile.id} />
