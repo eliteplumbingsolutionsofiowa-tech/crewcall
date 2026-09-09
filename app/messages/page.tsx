@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type Profile = {
   id: string
@@ -263,12 +264,25 @@ export default function MessagesPage() {
         const myRole = myProfile.role?.toLowerCase()
         const targetRole = targetProfile.role?.toLowerCase()
 
+        const companyContext = await resolveCompanyContext(
+          supabase,
+          user.id
+        )
+
+        const canActAsCompany =
+          companyContext.companyId === user.id &&
+          companyContext.isCompanyOwner
+
         let workerId: string | null = null
         let companyId: string | null = null
 
         if (
-          (myRole === 'company' || myRole === 'staffing_agency') &&
-          targetRole === 'worker'
+          targetRole === 'worker' &&
+          (
+            myRole === 'company' ||
+            myRole === 'staffing_agency' ||
+            canActAsCompany
+          )
         ) {
           companyId = user.id
           workerId = directMessageUserId
@@ -447,7 +461,7 @@ export default function MessagesPage() {
           .map(normalizeConversationRow)
           .filter((conversation) => {
             const archivedForMe =
-              (profile.role === 'company' || profile.role === 'staffing_agency')
+              conversation.company_id === user.id
                 ? Boolean(
                     conversation.archived_by_company
                   )
@@ -885,7 +899,7 @@ export default function MessagesPage() {
   async function archiveConversation(
     conversation: Conversation
   ) {
-    if (!currentUser?.role) {
+    if (!currentUser?.id) {
       return
     }
 
@@ -903,7 +917,7 @@ export default function MessagesPage() {
     setMessage('')
 
     const updatePayload =
-      (currentUser.role === 'company' || currentUser.role === 'staffing_agency')
+      conversation.company_id === currentUser.id
         ? {
             archived_by_company: !showArchived,
           }
