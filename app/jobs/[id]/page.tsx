@@ -23,6 +23,10 @@ type Job = {
   status: string | null
   payment_status: string | null
   payout_status: string | null
+  escrow_status: string | null
+  escrow_amount_cents: number | null
+  stripe_payment_intent_id: string | null
+  stripe_transfer_id: string | null
   company_id: string
   assigned_worker_id: string | null
   assigned_application_id: string | null
@@ -400,6 +404,10 @@ export default function JobDetailsPage() {
         status,
         payment_status,
         payout_status,
+        escrow_status,
+        escrow_amount_cents,
+        stripe_payment_intent_id,
+        stripe_transfer_id,
         company_id,
         assigned_worker_id,
         assigned_application_id,
@@ -995,6 +1003,16 @@ export default function JobDetailsPage() {
   const paymentPaid =
     normalize(job.payment_status) === 'paid'
 
+  const canRefundPayment =
+    !isBidRequest &&
+    isOwner &&
+    normalize(job.payment_status) === 'paid' &&
+    normalize(job.escrow_status) === 'funded' &&
+    Boolean(job.stripe_payment_intent_id) &&
+    !job.stripe_transfer_id &&
+    normalize(job.payout_status) !== 'released' &&
+    normalize(job.payout_status) !== 'processing'
+
   const assignedPhoto = getPhoto(assignedWorker?.id)
 
   const canApply =
@@ -1456,6 +1474,7 @@ export default function JobDetailsPage() {
           <CompanyActions
             currentStatus={currentStatus}
             paymentPaid={paymentPaid}
+            canRefundPayment={canRefundPayment}
             workingId={workingId}
             onMarkInProgress={() =>
               void updateJobStatus('in_progress')
@@ -1842,6 +1861,7 @@ function LoadingState() {
 function CompanyActions({
   currentStatus,
   paymentPaid,
+  canRefundPayment,
   workingId,
   onMarkInProgress,
   onMarkComplete,
@@ -1854,6 +1874,7 @@ function CompanyActions({
 }: {
   currentStatus: string
   paymentPaid: boolean
+  canRefundPayment: boolean
   workingId: string | null
   onMarkInProgress: () => void
   onMarkComplete: () => void
@@ -1964,6 +1985,15 @@ function CompanyActions({
                   {t('waitingForWorkerCompletion')}
                 </div>
               )}
+
+              {canRefundPayment ? (
+                <Link
+                  href={`/jobs/${jobId}/refund`}
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-red-400/30 bg-red-500/10 px-5 py-3 text-center text-sm font-black text-red-200 transition hover:border-red-400/50 hover:bg-red-500/20"
+                >
+                  Cancel Job & Refund Payment
+                </Link>
+              ) : null}
             </>
           )}
         </div>

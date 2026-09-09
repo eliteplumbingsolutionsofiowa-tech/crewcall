@@ -191,6 +191,40 @@ export async function POST(request: Request) {
             break
           }
 
+          const {
+            data: currentPaymentJob,
+            error: currentPaymentJobError,
+          } = await supabase
+            .from('jobs')
+            .select(
+              'id, payment_status, payout_status, escrow_status'
+            )
+            .eq('id', jobId)
+            .maybeSingle()
+
+          if (currentPaymentJobError) {
+            throw new Error(
+              currentPaymentJobError.message
+            )
+          }
+
+          if (
+            currentPaymentJob?.payout_status ===
+              'refund_processing' ||
+            currentPaymentJob?.payout_status ===
+              'refunded' ||
+            currentPaymentJob?.payment_status ===
+              'refunded' ||
+            currentPaymentJob?.escrow_status ===
+              'refunded'
+          ) {
+            console.log(
+              'Ignoring checkout payment event for refunded/refunding CrewCall job:',
+              jobId
+            )
+            break
+          }
+
           const { error } =
             await supabase
               .from('jobs')
@@ -345,6 +379,40 @@ export async function POST(request: Request) {
             intent.id
           )
 
+          break
+        }
+
+        const {
+          data: currentIntentJob,
+          error: currentIntentJobError,
+        } = await supabase
+          .from('jobs')
+          .select(
+            'id, payment_status, payout_status, escrow_status'
+          )
+          .eq('id', jobId)
+          .maybeSingle()
+
+        if (currentIntentJobError) {
+          throw new Error(
+            currentIntentJobError.message
+          )
+        }
+
+        if (
+          currentIntentJob?.payout_status ===
+            'refund_processing' ||
+          currentIntentJob?.payout_status ===
+            'refunded' ||
+          currentIntentJob?.payment_status ===
+            'refunded' ||
+          currentIntentJob?.escrow_status ===
+            'refunded'
+        ) {
+          console.log(
+            'Ignoring payment intent event for refunded/refunding CrewCall job:',
+            jobId
+          )
           break
         }
 

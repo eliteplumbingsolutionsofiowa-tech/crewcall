@@ -485,22 +485,15 @@ export async function POST(req: Request) {
     }
 
     const {
-      data: lockedJob,
+      data: payoutClaimed,
       error: lockError,
-    } = await adminClient
-      .from('jobs')
-      .update({
-        payout_status: 'processing',
-      })
-      .eq('id', job.id)
-      .eq('company_id', job.company_id)
-      .eq('status', 'completed')
-      .eq('payment_status', 'paid')
-      .is('stripe_transfer_id', null)
-      .neq('payout_status', 'released')
-      .neq('payout_status', 'processing')
-      .select('id')
-      .maybeSingle()
+    } = await adminClient.rpc(
+      'claim_job_payout',
+      {
+        p_job_id: job.id,
+        p_company_id: job.company_id,
+      }
+    )
 
     if (lockError) {
       return NextResponse.json(
@@ -509,13 +502,13 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!lockedJob) {
+    if (!payoutClaimed) {
       const {
         data: currentJob,
       } = await adminClient
         .from('jobs')
         .select(
-          'payout_status, stripe_transfer_id'
+          'payout_status, stripe_transfer_id, payment_status, escrow_status'
         )
         .eq('id', job.id)
         .maybeSingle()
@@ -535,12 +528,33 @@ export async function POST(req: Request) {
         })
       }
 
+      if (
+        currentJob?.payout_status ===
+          'refund_processing' ||
+        currentJob?.payout_status ===
+          'refunded' ||
+        currentJob?.payment_status ===
+          'refunded' ||
+        currentJob?.escrow_status ===
+          'refunded'
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            refunded: true,
+            message:
+              'This payment is being refunded or has already been refunded. Worker payout cannot be released.',
+          },
+          { status: 409 }
+        )
+      }
+
       return NextResponse.json(
         {
           success: false,
           processing: true,
           message:
-            'Payout is already processing.',
+            'Payout is already processing or is no longer eligible for release.',
         },
         { status: 409 }
       )
