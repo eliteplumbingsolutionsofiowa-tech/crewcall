@@ -50,8 +50,15 @@ const adminClient = createClient(
 
 const PLATFORM_FEE_PERCENT = 10
 
+const PAYMENT_RELEASE_ACK_VERSION = '2026-09-09-v1'
+
+const PAYMENT_RELEASE_ACK_TEXT =
+  'I confirm that the work for this CrewCall job has been completed and authorize CrewCall to release the agreed payment to the worker. I understand that once payment is released, the job will be recorded as paid and completed.'
+
 type ReleasePaymentRequest = {
   jobId?: string
+  paymentReleaseAcknowledged?: boolean
+  acknowledgmentVersion?: string
 }
 
 type JobRow = {
@@ -162,6 +169,20 @@ export async function POST(req: Request) {
     if (!jobId) {
       return NextResponse.json(
         { error: 'Missing jobId.' },
+        { status: 400 }
+      )
+    }
+
+    if (
+      body?.paymentReleaseAcknowledged !== true ||
+      body?.acknowledgmentVersion !== PAYMENT_RELEASE_ACK_VERSION
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Payment authorization acknowledgment is required before payout can be released.',
+          code: 'PAYMENT_RELEASE_ACK_REQUIRED',
+        },
         { status: 400 }
       )
     }
@@ -414,6 +435,48 @@ export async function POST(req: Request) {
     const workerAmount =
       grossAmount - platformFee
 
+    const authorizedAt = new Date().toISOString()
+
+    const {
+      error: acknowledgmentError,
+    } = await adminClient
+      .from('payment_release_acknowledgments')
+      .upsert(
+        {
+          job_id: job.id,
+          company_id: job.company_id,
+          authorized_by: user.id,
+          worker_id: job.assigned_worker_id,
+          gross_amount_cents: grossAmount,
+          platform_fee_cents: platformFee,
+          worker_payout_cents: workerAmount,
+          acknowledgment_version:
+            PAYMENT_RELEASE_ACK_VERSION,
+          acknowledgment_text:
+            PAYMENT_RELEASE_ACK_TEXT,
+          authorized_at: authorizedAt,
+        },
+        {
+          onConflict: 'job_id',
+          ignoreDuplicates: true,
+        }
+      )
+
+    if (acknowledgmentError) {
+      console.error(
+        'Unable to save payment release acknowledgment:',
+        acknowledgmentError
+      )
+
+      return NextResponse.json(
+        {
+          error:
+            'CrewCall could not record the payment authorization. Payout was not released.',
+        },
+        { status: 500 }
+      )
+    }
+
     if (workerAmount <= 0) {
       return NextResponse.json(
         { error: 'Invalid payout amount.' },
@@ -541,6 +604,23 @@ export async function POST(req: Request) {
 
     const releasedAt =
       new Date().toISOString()
+
+    const {
+      error: acknowledgmentTransferError,
+    } = await adminClient
+      .from('payment_release_acknowledgments')
+      .update({
+        stripe_transfer_id: transfer.id,
+      })
+      .eq('job_id', job.id)
+      .is('stripe_transfer_id', null)
+
+    if (acknowledgmentTransferError) {
+      console.error(
+        'Unable to attach Stripe transfer to payment acknowledgment:',
+        acknowledgmentTransferError
+      )
+    }
 
     console.log('CREWCALL PAYOUT SAVE', {
       jobId: job.id,

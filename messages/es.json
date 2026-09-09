@@ -3286,7 +3286,14 @@
     "processingPayment": "Procesando Pago...",
     "releasePayout": "Liberar Pago",
     "payoutLocked": "Pago Bloqueado",
-    "backToJob": "Volver al Trabajo"
+    "backToJob": "Volver al Trabajo",
+    "acknowledgmentTitle": "Autorización de Pago y Confirmación de Finalización",
+    "acknowledgmentText": "Confirmo que el trabajo correspondiente a este trabajo de CrewCall ha sido completado y autorizo a CrewCall a liberar el pago acordado al trabajador. Entiendo que una vez liberado el pago, el trabajo quedará registrado como pagado y completado.",
+    "acknowledgmentCheckbox": "Confirmo que el trabajo está completo y autorizo a CrewCall a liberar este pago.",
+    "acknowledgmentRequired": "Debes confirmar la autorización de pago antes de liberar el pago al trabajador.",
+    "authorizationRecordNotice": "CrewCall registrará esta autorización junto con el trabajo, el monto del pago, la cuenta que autoriza, la fecha y hora, y la transacción del pago.",
+    "authorizeAndRelease": "Autorizar y Liberar Pago",
+    "releaseWarning": "El pago no puede liberarse hasta que marques la casilla de autorización."
   },
   "EditJob": {
     "jobNotFound": "Trabajo no encontrado.",

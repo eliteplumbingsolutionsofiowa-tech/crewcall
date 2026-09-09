@@ -37,6 +37,8 @@ export default function ReleasePayoutPage() {
 
   const [success, setSuccess] =
     useState(false)
+  const [acknowledged, setAcknowledged] =
+    useState(false)
 
   useEffect(() => {
     void loadJob()
@@ -164,11 +166,10 @@ export default function ReleasePayoutPage() {
       return
     }
 
-    const confirmed = window.confirm(
-      t('confirmRelease')
-    )
-
-    if (!confirmed) return
+    if (!acknowledged) {
+      setMessage(t('acknowledgmentRequired'))
+      return
+    }
 
     setLoading(true)
     setMessage('')
@@ -196,6 +197,9 @@ export default function ReleasePayoutPage() {
           },
           body: JSON.stringify({
             jobId,
+            paymentReleaseAcknowledged: true,
+            acknowledgmentVersion:
+              '2026-09-09-v1',
           }),
         }
       )
@@ -366,16 +370,67 @@ export default function ReleasePayoutPage() {
         {!success &&
         !alreadyReleased ? (
           canRelease ? (
-            <button
-              type="button"
-              onClick={handleRelease}
-              disabled={loading}
-              className="w-full rounded-2xl bg-green-500 px-6 py-5 text-xl font-black text-black transition hover:bg-green-400 disabled:opacity-50"
-            >
-              {loading
-                ? t('processingPayment')
-                : t('releasePayout')}
-            </button>
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-5 sm:p-6">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-xl">
+                    ✓
+                  </div>
+
+                  <div>
+                    <h2 className="text-lg font-black text-cyan-100">
+                      {t('acknowledgmentTitle')}
+                    </h2>
+
+                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+                      {t('acknowledgmentText')}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-slate-950/60 p-4">
+                  <input
+                    type="checkbox"
+                    checked={acknowledged}
+                    onChange={(event) => {
+                      setAcknowledged(
+                        event.target.checked
+                      )
+                      if (event.target.checked) {
+                        setMessage('')
+                      }
+                    }}
+                    disabled={loading}
+                    className="mt-1 h-5 w-5 shrink-0 accent-cyan-400"
+                  />
+
+                  <span className="text-sm font-black leading-6 text-white">
+                    {t('acknowledgmentCheckbox')}
+                  </span>
+                </label>
+
+                <p className="mt-4 text-xs font-semibold leading-5 text-slate-400">
+                  {t('authorizationRecordNotice')}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRelease}
+                disabled={
+                  loading || !acknowledged
+                }
+                className="w-full rounded-2xl bg-green-500 px-6 py-5 text-xl font-black text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {loading
+                  ? t('processingPayment')
+                  : t('authorizeAndRelease')}
+              </button>
+
+              <p className="text-center text-xs font-semibold leading-5 text-slate-500">
+                {t('releaseWarning')}
+              </p>
+            </div>
           ) : (
             <div className="rounded-2xl border border-orange-400/20 bg-orange-500/10 p-5 text-center">
               <p className="font-black text-orange-200">

@@ -754,58 +754,13 @@ export default function JobDetailsPage() {
     window.location.href = `/jobs/${job.id}/pay`
   }
 
-  async function releasePayment() {
+  function releasePayment() {
     if (!job) {
       return
     }
 
-    setWorkingId('release')
-    setMessage(null)
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session?.access_token) {
-        setMessage(t('sessionExpired'))
-        setMessageTone('error')
-        setWorkingId(null)
-        return
-      }
-
-      const response = await fetch('/api/stripe/release-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          jobId: job.id,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setMessage(
-          data.error || t('unableReleasePayout')
-        )
-        setMessageTone('error')
-        setWorkingId(null)
-        return
-      }
-
-      setMessage(t('workerPayoutReleasedSuccessfully'))
-      setMessageTone('success')
-
-      await loadPage(true)
-    } catch {
-      setMessage(t('unableReleasePayout'))
-      setMessageTone('error')
-    } finally {
-      setWorkingId(null)
-    }
+    window.location.href =
+      `/jobs/${job.id}/release-payout`
   }
 
   async function deleteJob() {

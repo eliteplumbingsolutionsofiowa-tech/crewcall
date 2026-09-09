@@ -3286,7 +3286,14 @@
     "processingPayment": "Processing Payment...",
     "releasePayout": "Release Payout",
     "payoutLocked": "Payout Locked",
-    "backToJob": "Back to Job"
+    "backToJob": "Back to Job",
+    "acknowledgmentTitle": "Payment Authorization & Completion Acknowledgment",
+    "acknowledgmentText": "I confirm that the work for this CrewCall job has been completed and authorize CrewCall to release the agreed payment to the worker. I understand that once payment is released, the job will be recorded as paid and completed.",
+    "acknowledgmentCheckbox": "I confirm the work is complete and authorize CrewCall to release this payment.",
+    "acknowledgmentRequired": "You must confirm the payment authorization before releasing the worker payout.",
+    "authorizationRecordNotice": "CrewCall will record this authorization with the job, payment amount, authorizing account, date and time, and payout transaction.",
+    "authorizeAndRelease": "Authorize & Release Payment",
+    "releaseWarning": "Payment cannot be released until you check the authorization box above."
   },
   "EditJob": {
     "jobNotFound": "Job not found.",
