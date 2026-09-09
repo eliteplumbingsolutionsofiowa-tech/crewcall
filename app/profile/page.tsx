@@ -17,6 +17,7 @@ type Role = 'company' | 'worker' | 'staffing_agency' | null
 type Profile = {
   id: string
   role: Role
+  is_admin: boolean | null
   full_name: string | null
   company_name: string | null
   phone: string | null
@@ -74,6 +75,7 @@ type CompanyJob = {
 const profileSelect = `
   id,
   role,
+  is_admin,
   full_name,
   company_name,
   phone,
@@ -125,6 +127,7 @@ function emptyProfile(id: string): Profile {
   return {
     id,
     role: null,
+    is_admin: false,
     full_name: '',
     company_name: '',
     phone: '',
@@ -260,7 +263,9 @@ const [skillsText, setSkillsText] = useState('')
 const [preferredWorkText, setPreferredWorkText] = useState('')
 
   const isOwnProfile = !viewedUserId || viewedUserId === currentUserId
-  const isWorkerProfile = profile?.role === 'worker'
+  const isAdminProfile = profile?.is_admin === true
+  const isWorkerProfile =
+    profile?.role === 'worker' && !isAdminProfile
 
   const canInviteWorker =
     !isOwnProfile &&
@@ -473,7 +478,10 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
     setProfile(loadedProfile)
     setIsWorkerPro(false)
 
-    if (loadedProfile?.role === 'worker') {
+    if (
+      loadedProfile?.role === 'worker' &&
+      loadedProfile?.is_admin !== true
+    ) {
       const {
         data: { session },
       } = await supabase.auth.getSession()
@@ -827,13 +835,15 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     </span>
 
                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white">
-                      {profile.role === 'company'
-                        ? t('company')
-                        : profile.role === 'staffing_agency'
-                          ? 'Staffing Agency'
-                          : profile.role === 'worker'
-                            ? t('workerPassport')
-                            : 'Role not set'}
+                      {isAdminProfile
+                        ? 'CREWCALL ADMIN'
+                        : profile.role === 'company'
+                          ? t('company')
+                          : profile.role === 'staffing_agency'
+                            ? 'Staffing Agency'
+                            : profile.role === 'worker'
+                              ? t('workerPassport')
+                              : 'Role not set'}
                     </span>
 
                     {isWorkerProfile && (
