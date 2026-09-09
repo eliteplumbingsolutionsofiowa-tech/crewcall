@@ -1044,10 +1044,14 @@ export default function JobDetailsPage() {
       <div className="relative mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <Link
-            href="/jobs"
+            href={
+              isCompany && isOwner
+                ? "/company/jobs"
+                : "/jobs"
+            }
             className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
-            ← {t('backToJobs')}
+            ← {isCompany && isOwner ? "Back to Company Jobs" : t('backToJobs')}
           </Link>
 
           <button
