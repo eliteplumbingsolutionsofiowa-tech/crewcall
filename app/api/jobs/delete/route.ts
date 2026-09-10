@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -123,9 +124,23 @@ export async function POST(request: Request) {
       )
     }
 
+    const companyContext = await resolveCompanyContext(
+      adminClient,
+      user.id
+    )
+
+    const companyId = companyContext.companyId
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'Unable to resolve your company.' },
+        { status: 403 }
+      )
+    }
+
     if (
       requestedCompanyId &&
-      requestedCompanyId !== user.id
+      requestedCompanyId !== companyId
     ) {
       return NextResponse.json(
         {
@@ -159,7 +174,7 @@ export async function POST(request: Request) {
       )
     }
 
-    if (job.company_id !== user.id) {
+    if (job.company_id !== companyId) {
       return NextResponse.json(
         { error: 'You do not own this job.' },
         { status: 403 }
