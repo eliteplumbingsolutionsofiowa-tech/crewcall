@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { HiredEmail } from '@/emails/HiredEmail'
 import { sendCrewCallEmail } from '@/lib/resend'
 import { sendApnsPush } from '@/lib/push/apns'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -203,7 +204,17 @@ export async function POST(req: Request) {
       )
     }
 
-    if (job.company_id !== user.id) {
+    const companyContext = await resolveCompanyContext(
+      adminClient,
+      user.id
+    )
+
+    const companyId = companyContext.companyId
+
+    if (
+      !companyId ||
+      job.company_id !== companyId
+    ) {
       return NextResponse.json(
         { error: 'You do not own this job.' },
         { status: 403 }
@@ -263,11 +274,7 @@ export async function POST(req: Request) {
       )
     }
 
-    if (
-      companyProfile.role &&
-      companyProfile.role !== 'company' &&
-      companyProfile.role !== 'staffing_agency'
-    ) {
+    if (!companyContext.companyId) {
       return NextResponse.json(
         {
           error:
@@ -432,7 +439,7 @@ export async function POST(req: Request) {
         pay_rate: finalPay,
       })
       .eq('id', jobId)
-      .eq('company_id', user.id)
+      .eq('company_id', companyId)
       .is('assigned_worker_id', null)
       .eq('status', 'open')
       .select(
@@ -606,7 +613,7 @@ export async function POST(req: Request) {
         .from('conversations')
         .insert({
           job_id: jobId,
-          company_id: user.id,
+          company_id: companyId,
           worker_id: workerId,
         })
 
