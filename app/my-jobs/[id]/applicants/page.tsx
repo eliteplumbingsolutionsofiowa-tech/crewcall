@@ -1515,179 +1515,6 @@ export default function ApplicantsPage() {
                 </div>
               )}
 
-              {!job.assigned_worker_id &&
-              normalizedStatus !== 'completed' ? (
-                <section className="mb-8 rounded-[1.75rem] border border-cyan-300/20 bg-cyan-400/[0.045] p-5 md:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                      {t('crewCallAi')}
-                    </p>
-
-                    <h3 className="mt-2 text-2xl font-black text-white">
-                      {t('aiRecommendedWorkers')}
-                    </h3>
-
-                    <p className="mt-2 text-sm font-semibold text-slate-400">
-                      {t('recommendedWorkersDescription')}
-                    </p>
-                  </div>
-
-                  {recommendedWorkers.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={inviteTopMatches}
-                      disabled={inviteLoading}
-                      className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
-                    >
-                      {inviteLoading
-                        ? t('inviting')
-                        : t('inviteTopThree')}
-                    </button>
-                  )}
-                </div>
-
-                {recommendedWorkers.length === 0 ? (
-                  <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-7 text-center">
-                    <p className="font-black text-white">
-                      No AI recommendations yet
-                    </p>
-
-                    <p className="mt-2 text-sm text-slate-400">
-                      Run AI Match to find and rank available workers.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="mt-5 space-y-4">
-                    {recommendedWorkers.map(
-                      (match, index) => {
-                        const worker =
-                          match.worker
-
-                        const name =
-                          worker?.full_name ||
-                          worker?.company_name ||
-                          t('crewCallWorker')
-
-                        const photo =
-                          getWorkerPhoto(
-                            match.worker_id
-                          )
-
-                        return (
-                          <article
-                            key={
-                              match.worker_id
-                            }
-                            className="rounded-3xl border border-white/10 bg-slate-950/40 p-5"
-                          >
-                            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                              <div className="flex min-w-0 items-center gap-4">
-                                <Link
-                                  href={`/profile?user=${match.worker_id}`}
-                                  className="shrink-0"
-                                >
-                                  {photo ? (
-                                    <img
-                                      src={photo}
-                                      alt={name}
-                                      className="h-20 w-20 rounded-2xl border border-white/10 object-cover"
-                                    />
-                                  ) : (
-                                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-3xl font-black text-slate-950">
-                                      {name.charAt(
-                                        0
-                                      )}
-                                    </div>
-                                  )}
-                                </Link>
-
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black text-cyan-100">
-                                      #
-                                      {index +
-                                        1}
-                                    </span>
-
-                                    <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-black text-emerald-200">
-                                      {Math.round(
-                                        Number(
-                                          match.match_score ||
-                                            0
-                                        )
-                                      )}
-                                      % {t('match').toUpperCase()}
-                                    </span>
-                                  </div>
-
-                                  <Link
-                                    href={`/profile?user=${match.worker_id}`}
-                                  >
-                                    <h4 className="mt-2 truncate text-2xl font-black text-white hover:text-cyan-200">
-                                      {name}
-                                    </h4>
-                                  </Link>
-
-                                  <p className="mt-1 text-sm font-semibold text-slate-400">
-                                    {[
-                                      worker?.trade,
-                                      [worker?.city, worker?.state]
-                                        .filter(Boolean)
-                                        .join(', '),
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' • ') ||
-                                      t('availableCrewCallWorker')}
-                                  </p>
-
-                                  {match.reason && (
-                                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-                                      {
-                                        match.reason
-                                      }
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex shrink-0 flex-wrap gap-3">
-                                <Link
-                                  href={`/profile?user=${match.worker_id}`}
-                                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
-                                >
-                                  {t('viewProfile')}
-                                </Link>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    inviteRecommendedWorker(
-                                      match.worker_id
-                                    )
-                                  }
-                                  disabled={
-                                    actionLoadingId ===
-                                    `invite-${match.worker_id}`
-                                  }
-                                  className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
-                                >
-                                  {actionLoadingId ===
-                                  `invite-${match.worker_id}`
-                                    ? t('inviting')
-                                    : t('inviteWorker')}
-                                </button>
-                              </div>
-                            </div>
-                          </article>
-                        )
-                      }
-                    )}
-                  </div>
-                )}
-                </section>
-              ) : null}
-
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
@@ -2196,6 +2023,179 @@ export default function ApplicantsPage() {
                   })}
                 </div>
               )}
+              {!job.assigned_worker_id &&
+              normalizedStatus !== 'completed' ? (
+                <section className="mt-8 rounded-[1.75rem] border border-cyan-300/20 bg-cyan-400/[0.045] p-5 md:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                      {t('crewCallAi')}
+                    </p>
+
+                    <h3 className="mt-2 text-2xl font-black text-white">
+                      {t('aiRecommendedWorkers')}
+                    </h3>
+
+                    <p className="mt-2 text-sm font-semibold text-slate-400">
+                      {t('recommendedWorkersDescription')}
+                    </p>
+                  </div>
+
+                  {recommendedWorkers.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={inviteTopMatches}
+                      disabled={inviteLoading}
+                      className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                    >
+                      {inviteLoading
+                        ? t('inviting')
+                        : t('inviteTopThree')}
+                    </button>
+                  )}
+                </div>
+
+                {recommendedWorkers.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-7 text-center">
+                    <p className="font-black text-white">
+                      No AI recommendations yet
+                    </p>
+
+                    <p className="mt-2 text-sm text-slate-400">
+                      Run AI Match to find and rank available workers.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    {recommendedWorkers.map(
+                      (match, index) => {
+                        const worker =
+                          match.worker
+
+                        const name =
+                          worker?.full_name ||
+                          worker?.company_name ||
+                          t('crewCallWorker')
+
+                        const photo =
+                          getWorkerPhoto(
+                            match.worker_id
+                          )
+
+                        return (
+                          <article
+                            key={
+                              match.worker_id
+                            }
+                            className="rounded-3xl border border-white/10 bg-slate-950/40 p-5"
+                          >
+                            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="flex min-w-0 items-center gap-4">
+                                <Link
+                                  href={`/profile?user=${match.worker_id}`}
+                                  className="shrink-0"
+                                >
+                                  {photo ? (
+                                    <img
+                                      src={photo}
+                                      alt={name}
+                                      className="h-20 w-20 rounded-2xl border border-white/10 object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-3xl font-black text-slate-950">
+                                      {name.charAt(
+                                        0
+                                      )}
+                                    </div>
+                                  )}
+                                </Link>
+
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-black text-cyan-100">
+                                      #
+                                      {index +
+                                        1}
+                                    </span>
+
+                                    <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-black text-emerald-200">
+                                      {Math.round(
+                                        Number(
+                                          match.match_score ||
+                                            0
+                                        )
+                                      )}
+                                      % {t('match').toUpperCase()}
+                                    </span>
+                                  </div>
+
+                                  <Link
+                                    href={`/profile?user=${match.worker_id}`}
+                                  >
+                                    <h4 className="mt-2 truncate text-2xl font-black text-white hover:text-cyan-200">
+                                      {name}
+                                    </h4>
+                                  </Link>
+
+                                  <p className="mt-1 text-sm font-semibold text-slate-400">
+                                    {[
+                                      worker?.trade,
+                                      [worker?.city, worker?.state]
+                                        .filter(Boolean)
+                                        .join(', '),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' • ') ||
+                                      t('availableCrewCallWorker')}
+                                  </p>
+
+                                  {match.reason && (
+                                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+                                      {
+                                        match.reason
+                                      }
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex shrink-0 flex-wrap gap-3">
+                                <Link
+                                  href={`/profile?user=${match.worker_id}`}
+                                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
+                                >
+                                  {t('viewProfile')}
+                                </Link>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    inviteRecommendedWorker(
+                                      match.worker_id
+                                    )
+                                  }
+                                  disabled={
+                                    actionLoadingId ===
+                                    `invite-${match.worker_id}`
+                                  }
+                                  className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                                >
+                                  {actionLoadingId ===
+                                  `invite-${match.worker_id}`
+                                    ? t('inviting')
+                                    : t('inviteWorker')}
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        )
+                      }
+                    )}
+                  </div>
+                )}
+                </section>
+              ) : null}
+
             </div>
           </section>
         )}
