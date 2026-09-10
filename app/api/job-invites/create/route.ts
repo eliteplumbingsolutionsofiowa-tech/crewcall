@@ -120,6 +120,7 @@ export async function POST(req: Request) {
       .from('jobs')
       .select('id, title, company_id, job_type')
       .eq('id', jobId)
+      .eq('is_test', false)
       .maybeSingle()
 
     if (jobError) {

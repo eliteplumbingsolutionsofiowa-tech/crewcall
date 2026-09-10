@@ -106,6 +106,7 @@ export default function BidOpportunitiesPage() {
         )
         .eq('job_type', 'bid_request')
         .eq('status', 'open')
+        .eq('is_test', false)
         .neq('company_id', context.companyId)
         .order('created_at', { ascending: false })
 

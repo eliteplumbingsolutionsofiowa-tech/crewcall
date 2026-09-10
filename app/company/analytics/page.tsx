@@ -96,6 +96,7 @@ export default function CompanyAnalyticsPage() {
         .from('jobs')
         .select('*')
         .eq('company_id', user.id)
+        .eq('is_test', false)
         .order('created_at', { ascending: false })
 
       if (jobsError) throw jobsError

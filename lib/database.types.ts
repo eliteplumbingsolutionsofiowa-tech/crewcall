@@ -17,7 +17,7 @@ export type Database = {
       admin_audit_logs: {
         Row: {
           action: string
-          admin_id: string
+          admin_id: string | null
           created_at: string
           details: string | null
           id: string
@@ -26,7 +26,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          admin_id: string
+          admin_id?: string | null
           created_at?: string
           details?: string | null
           id?: string
@@ -35,7 +35,7 @@ export type Database = {
         }
         Update: {
           action?: string
-          admin_id?: string
+          admin_id?: string | null
           created_at?: string
           details?: string | null
           id?: string
@@ -179,6 +179,117 @@ export type Database = {
           {
             foreignKeyName: "applications_worker_id_fkey"
             columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_branches: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_headquarters: boolean
+          name: string
+          phone: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_headquarters?: boolean
+          name: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_headquarters?: boolean
+          name?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_branches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_team_members: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          email: string
+          id: string
+          invited_at: string
+          joined_at: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invited_at?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_at?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_team_members_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_team_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_team_members_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -356,6 +467,77 @@ export type Database = {
           },
         ]
       }
+      job_bids: {
+        Row: {
+          amount_cents: number
+          availability: string | null
+          company_id: string
+          created_at: string
+          estimated_duration: string | null
+          id: string
+          job_id: string
+          note: string | null
+          status: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          availability?: string | null
+          company_id: string
+          created_at?: string
+          estimated_duration?: string | null
+          id?: string
+          job_id: string
+          note?: string | null
+          status?: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          availability?: string | null
+          company_id?: string
+          created_at?: string
+          estimated_duration?: string | null
+          id?: string
+          job_id?: string
+          note?: string | null
+          status?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_bids_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_bids_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_bids_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_bids_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_files: {
         Row: {
           category: string | null
@@ -481,6 +663,7 @@ export type Database = {
           id: string
           job_id: string
           location_score: number
+          match_rank: number | null
           match_score: number
           online_score: number
           pay_score: number
@@ -495,6 +678,7 @@ export type Database = {
           id?: string
           job_id: string
           location_score?: number
+          match_rank?: number | null
           match_score?: number
           online_score?: number
           pay_score?: number
@@ -509,6 +693,7 @@ export type Database = {
           id?: string
           job_id?: string
           location_score?: number
+          match_rank?: number | null
           match_score?: number
           online_score?: number
           pay_score?: number
@@ -533,6 +718,96 @@ export type Database = {
           },
           {
             foreignKeyName: "job_matches_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_refunds: {
+        Row: {
+          amount_cents: number
+          company_id: string | null
+          created_at: string
+          failure_message: string | null
+          id: string
+          job_id: string
+          reason: string | null
+          refunded_at: string | null
+          requested_at: string
+          requested_by: string | null
+          status: string
+          stripe_payment_intent_id: string
+          stripe_refund_id: string | null
+          updated_at: string
+          worker_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          company_id?: string | null
+          created_at?: string
+          failure_message?: string | null
+          id?: string
+          job_id: string
+          reason?: string | null
+          refunded_at?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          stripe_payment_intent_id: string
+          stripe_refund_id?: string | null
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          company_id?: string | null
+          created_at?: string
+          failure_message?: string | null
+          id?: string
+          job_id?: string
+          reason?: string | null
+          refunded_at?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          stripe_payment_intent_id?: string
+          stripe_refund_id?: string | null
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_refunds_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_refunds_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_refunds_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_refunds_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_refunds_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -595,8 +870,8 @@ export type Database = {
           assigned_application_id: string | null
           assigned_to: string | null
           assigned_worker_id: string | null
-          boost_expires_at: string | null
           bid_deadline: string | null
+          boost_expires_at: string | null
           company_id: string
           completed_at: string | null
           completion_approved_at: string | null
@@ -612,6 +887,7 @@ export type Database = {
           hired_worker_id: string | null
           id: string
           is_featured: boolean | null
+          is_test: boolean
           job_type: string
           lat: number | null
           lng: number | null
@@ -653,8 +929,8 @@ export type Database = {
           assigned_application_id?: string | null
           assigned_to?: string | null
           assigned_worker_id?: string | null
-          boost_expires_at?: string | null
           bid_deadline?: string | null
+          boost_expires_at?: string | null
           company_id: string
           completed_at?: string | null
           completion_approved_at?: string | null
@@ -670,6 +946,7 @@ export type Database = {
           hired_worker_id?: string | null
           id?: string
           is_featured?: boolean | null
+          is_test?: boolean
           job_type?: string
           lat?: number | null
           lng?: number | null
@@ -711,8 +988,8 @@ export type Database = {
           assigned_application_id?: string | null
           assigned_to?: string | null
           assigned_worker_id?: string | null
-          boost_expires_at?: string | null
           bid_deadline?: string | null
+          boost_expires_at?: string | null
           company_id?: string
           completed_at?: string | null
           completion_approved_at?: string | null
@@ -728,6 +1005,7 @@ export type Database = {
           hired_worker_id?: string | null
           id?: string
           is_featured?: boolean | null
+          is_test?: boolean
           job_type?: string
           lat?: number | null
           lng?: number | null
@@ -978,6 +1256,90 @@ export type Database = {
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_release_acknowledgments: {
+        Row: {
+          acknowledgment_text: string
+          acknowledgment_version: string
+          authorized_at: string
+          authorized_by: string | null
+          company_id: string | null
+          created_at: string
+          gross_amount_cents: number
+          id: string
+          job_id: string
+          platform_fee_cents: number
+          stripe_transfer_id: string | null
+          worker_id: string | null
+          worker_payout_cents: number
+        }
+        Insert: {
+          acknowledgment_text: string
+          acknowledgment_version: string
+          authorized_at?: string
+          authorized_by?: string | null
+          company_id?: string | null
+          created_at?: string
+          gross_amount_cents: number
+          id?: string
+          job_id: string
+          platform_fee_cents: number
+          stripe_transfer_id?: string | null
+          worker_id?: string | null
+          worker_payout_cents: number
+        }
+        Update: {
+          acknowledgment_text?: string
+          acknowledgment_version?: string
+          authorized_at?: string
+          authorized_by?: string | null
+          company_id?: string | null
+          created_at?: string
+          gross_amount_cents?: number
+          id?: string
+          job_id?: string
+          platform_fee_cents?: number
+          stripe_transfer_id?: string | null
+          worker_id?: string | null
+          worker_payout_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_release_acknowledgments_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_release_acknowledgments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_release_acknowledgments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "active_urgent_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_release_acknowledgments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_release_acknowledgments_worker_id_fkey"
+            columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1620,6 +1982,27 @@ export type Database = {
           },
         ]
       }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           is_online: boolean
@@ -1821,6 +2204,33 @@ export type Database = {
       }
     }
     Functions: {
+      accept_job_bid: {
+        Args: { p_bid_id: string; p_job_id: string }
+        Returns: {
+          amount_cents: number
+          availability: string | null
+          company_id: string
+          created_at: string
+          estimated_duration: string | null
+          id: string
+          job_id: string
+          note: string | null
+          status: string
+          submitted_by: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "job_bids"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      claim_job_payout: {
+        Args: { p_company_id: string; p_job_id: string }
+        Returns: boolean
+      }
+      claim_job_refund: { Args: { p_job_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
@@ -1840,12 +2250,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1869,11 +2279,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1894,11 +2304,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1919,11 +2329,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1936,11 +2346,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -100,6 +100,7 @@ export async function GET(request: Request) {
         created_at
       `)
       .eq('company_id', companyContext.companyId)
+      .eq('is_test', false)
       .order('created_at', { ascending: false })
 
     if (jobsError) {
@@ -215,6 +216,7 @@ export async function POST(request: Request) {
         'id, company_id, status, payment_status, payout_status, assigned_worker_id'
       )
       .eq('id', jobId)
+      .eq('is_test', false)
       .maybeSingle()
 
     if (jobError) {

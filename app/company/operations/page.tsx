@@ -237,6 +237,7 @@ export default function CompanyOperationsPage() {
             `,
           )
           .eq('company_id', companyId)
+          .eq('is_test', false)
           .order('created_at', { ascending: false })
 
         if (jobsError) {

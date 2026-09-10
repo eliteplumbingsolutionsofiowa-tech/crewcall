@@ -212,6 +212,7 @@ export async function POST(
           ai_recruiting_complete
         `)
         .eq('id', jobId)
+        .eq('is_test', false)
         .maybeSingle()
 
     if (jobError) {

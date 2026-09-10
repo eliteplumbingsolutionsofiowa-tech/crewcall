@@ -84,6 +84,7 @@ function ReviewContent() {
       .from('jobs')
       .select('id, title, company_id, assigned_worker_id, status, payment_status')
       .eq('id', jobId)
+      .eq('is_test', false)
       .returns<Job[]>()
       .maybeSingle()
 

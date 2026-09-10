@@ -300,6 +300,7 @@ export default function CompanyDashboardPage() {
         assigned_worker_id
       `)
       .eq('company_id', companyId)
+      .eq('is_test', false)
       .order('created_at', { ascending: false })
 
     if (jobsError) {

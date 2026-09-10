@@ -177,6 +177,7 @@ export async function POST(req: Request) {
         `
         )
         .eq('id', jobId)
+        .eq('is_test', false)
         .maybeSingle<JobRow>()
 
     if (jobFetchError) {

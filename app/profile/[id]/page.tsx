@@ -432,6 +432,7 @@ function ProfilePageInner() {
             .from('jobs')
             .select('id,title,trade,location,status')
             .eq('company_id', user.id)
+            .eq('is_test', false)
             .in('status', ['open', 'assigned'])
             .order('created_at', {
               ascending: false,

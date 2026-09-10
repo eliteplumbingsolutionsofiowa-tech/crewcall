@@ -165,6 +165,7 @@ export default function ApplyPage() {
       `
       )
       .eq('id', jobId)
+      .eq('is_test', false)
       .maybeSingle<Job>()
 
     if (jobError) {

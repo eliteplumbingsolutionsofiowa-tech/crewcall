@@ -142,6 +142,7 @@ export default function CompanyPaymentsPage() {
         )
         .eq('company_id', companyId)
         .eq('payment_status', 'paid')
+        .eq('is_test', false)
         .order('payout_released_at', {
           ascending: false,
         })

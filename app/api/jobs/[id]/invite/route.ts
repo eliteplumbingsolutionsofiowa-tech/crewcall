@@ -149,6 +149,7 @@ export async function POST(
         'id,title,company_id,status,trade,location,pay_rate,start_date,job_type'
       )
       .eq('id', jobId)
+      .eq('is_test', false)
       .maybeSingle()
 
     if (jobError || !job) {

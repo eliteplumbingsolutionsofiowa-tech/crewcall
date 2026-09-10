@@ -156,6 +156,7 @@ export default function CompletedJobsPage() {
       `
       )
       .eq('status', 'completed')
+      .eq('is_test', false)
       .order('completed_at', {
         ascending: false,
       })

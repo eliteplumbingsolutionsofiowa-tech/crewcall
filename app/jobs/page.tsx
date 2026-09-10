@@ -224,6 +224,7 @@ export default function JobsPage() {
         )
         .eq('status','open')
         .eq('job_type', 'worker_job')
+        .eq('is_test', false)
         .is('assigned_worker_id', null)
         .order('created_at', {
           ascending: false,

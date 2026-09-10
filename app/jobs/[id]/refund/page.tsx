@@ -127,6 +127,7 @@ export default function RefundJobPage() {
         `
       )
       .eq('id', jobId)
+      .eq('is_test', false)
       .maybeSingle()
 
     if (jobError) {

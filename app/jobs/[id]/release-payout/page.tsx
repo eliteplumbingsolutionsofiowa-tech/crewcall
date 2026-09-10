@@ -84,6 +84,7 @@ export default function ReleasePayoutPage() {
         `
         )
         .eq('id', jobId)
+        .eq('is_test', false)
         .maybeSingle<JobRow>()
 
       if (error) {

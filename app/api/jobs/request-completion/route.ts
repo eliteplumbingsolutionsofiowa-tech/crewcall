@@ -122,6 +122,7 @@ export async function POST(req: Request) {
           'id, title, company_id, assigned_worker_id, status, job_type'
         )
         .eq('id', jobId)
+        .eq('is_test', false)
         .maybeSingle<JobRow>()
 
     if (jobError) {

@@ -56,6 +56,7 @@ export default function CompletedJobsPage() {
       .from('jobs')
       .select('*')
       .eq('payment_status', 'paid')
+      .eq('is_test', false)
       .order('paid_at', { ascending: false })
 
     if ((profileData?.role === 'company' || profileData?.role === 'staffing_agency')) {

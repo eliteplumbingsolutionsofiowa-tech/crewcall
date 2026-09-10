@@ -146,6 +146,7 @@ export default function MyWorkPage() {
         )
       `)
       .eq('assigned_worker_id', user.id)
+      .eq('is_test', false)
       .order('start_date', { ascending: false })
 
     if (error) {

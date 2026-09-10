@@ -39,6 +39,7 @@ export default function PayPage() {
       .from('jobs')
       .select('id, title, assigned_worker_id, status, pay_rate, payment_status')
       .eq('id', jobId)
+      .eq('is_test', false)
       .maybeSingle()
 
     if (error || !data) {

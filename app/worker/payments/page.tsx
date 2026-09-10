@@ -115,6 +115,7 @@ export default function WorkerPaymentsPage() {
         )
         .eq('assigned_worker_id', profile.id)
         .eq('payout_status', 'released')
+        .eq('is_test', false)
         .order('payout_released_at', {
           ascending: false,
         })
@@ -142,6 +143,7 @@ export default function WorkerPaymentsPage() {
         .eq('assigned_worker_id', profile.id)
         .eq('payment_status', 'paid')
         .eq('payout_status', 'not_released')
+        .eq('is_test', false)
         .order('id', {
           ascending: false,
         })

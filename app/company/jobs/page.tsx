@@ -110,6 +110,7 @@ export default function CompanyJobsPage() {
         'company_id',
         companyContext.companyId
       )
+      .eq('is_test', false)
       .order('created_at', { ascending: false })
       .returns<Job[]>()
 

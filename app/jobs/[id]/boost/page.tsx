@@ -29,6 +29,7 @@ export default function BoostJobPage({
           } as never
         )
         .eq('id', jobId)
+        .eq('is_test', false)
 
       if (error) {
         console.error('Boost job error:', error)

@@ -421,6 +421,7 @@ export default function JobDetailsPage() {
       `
       )
       .eq('id', jobId)
+      .eq('is_test', false)
       .returns<Job[]>()
       .maybeSingle()
 

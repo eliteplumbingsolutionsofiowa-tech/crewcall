@@ -72,6 +72,7 @@ export default function EditJobPage() {
           'id, company_id, title, description, trade, location, pay_rate, start_date, status'
         )
         .eq('id', jobId)
+        .eq('is_test', false)
         .maybeSingle<EditableJob>()
 
       if (error) {
@@ -133,6 +134,7 @@ export default function EditJobPage() {
       .from('jobs')
       .update(payload as never)
       .eq('id', jobId)
+      .eq('is_test', false)
 
     if (error) {
       setMessage(error.message)

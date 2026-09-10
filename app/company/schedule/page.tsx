@@ -122,6 +122,7 @@ export default function WorkforceSchedulePage() {
             'company_id',
             companyContext.companyId
           )
+          .eq('is_test', false)
           .not('start_date', 'is', null)
           .order('start_date', {
             ascending: true,

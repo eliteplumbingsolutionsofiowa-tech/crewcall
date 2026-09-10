@@ -332,6 +332,7 @@ export default function CompanyRecruitingPage() {
               ai_next_worker_index
             `)
             .eq('company_id', resolvedCompanyId)
+            .eq('is_test', false)
             .order('created_at', { ascending: false })
 
         if (jobsError) throw jobsError

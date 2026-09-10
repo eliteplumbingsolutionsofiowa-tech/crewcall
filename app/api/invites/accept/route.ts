@@ -216,6 +216,7 @@ export async function POST(req: Request) {
       `
       )
       .eq('id', invite.job_id)
+      .eq('is_test', false)
       .maybeSingle()
 
     if (jobError) {
