@@ -784,14 +784,25 @@ export default function JobDetailsPage() {
     setMessage(null)
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.access_token) {
+        setMessage('Your session has expired. Please sign in again.')
+        setMessageTone('error')
+        setWorkingId(null)
+        return
+      }
+
       const response = await fetch('/api/jobs/delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           jobId: job.id,
-          companyId: profile.id,
         }),
       })
 
