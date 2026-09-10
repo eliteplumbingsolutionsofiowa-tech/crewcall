@@ -798,14 +798,14 @@ export default function MyJobsPage() {
 
                     {completionRequested && (
                       <Link
-                        href={`/my-jobs/${job.id}`}
+                        href={`/jobs/${job.id}`}
                         className="rounded-2xl bg-orange-500 px-5 py-3 text-center text-sm font-black text-slate-950 transition hover:bg-orange-400"
                       >
                         {t('reviewCompleteJob')}
                       </Link>
                     )}
                     <Link
-                      href={`/my-jobs/${job.id}`}
+                      href={`/jobs/${job.id}`}
                       className="rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/20"
                     >
                       {t('viewJob')}

@@ -496,19 +496,15 @@ export default function JobDetailsPage() {
     }
 
     const companyContext =
-      profileData.role === 'company' ||
-      profileData.role === 'staffing_agency'
-        ? await resolveCompanyContext(
-            supabase,
-            user.id
-          )
-        : null
+      await resolveCompanyContext(
+        supabase,
+        user.id
+      )
 
     setResolvedCompanyId(companyContext?.companyId ?? null)
 
     const isOwner =
-      (profileData.role === 'company' ||
-        profileData.role === 'staffing_agency') &&
+      Boolean(companyContext?.companyId) &&
       jobData.company_id ===
         companyContext?.companyId
 
@@ -986,16 +982,19 @@ export default function JobDetailsPage() {
     )
   }
 
-  const isCompany =
-  profile.role === 'company' ||
-  profile.role === 'staffing_agency' ||
-  profile.role === 'admin' ||
-  Boolean(resolvedCompanyId)
-  const isWorker = profile.role === 'worker'
-
   const isOwner =
     Boolean(resolvedCompanyId) &&
     job.company_id === resolvedCompanyId
+
+  const isCompany =
+    profile.role === 'company' ||
+    profile.role === 'staffing_agency' ||
+    profile.role === 'admin' ||
+    Boolean(resolvedCompanyId)
+
+  const isWorker =
+    profile.role === 'worker' &&
+    !isOwner
 
   const currentStatus = normalize(job.status || 'open')
   const isBidRequest = job.job_type === 'bid_request'

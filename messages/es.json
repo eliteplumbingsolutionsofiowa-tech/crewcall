@@ -331,7 +331,8 @@
     "completionPhotos": "Fotos de Finalización",
     "description": "Descripción del Trabajo",
     "jobFiles": "Archivos del Trabajo",
-    "trade": "Oficio"
+    "trade": "Oficio",
+    "applicants": "Solicitantes"
   },
   "Profile": {
     "company": "Empresa",

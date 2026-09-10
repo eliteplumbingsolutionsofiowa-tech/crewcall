@@ -331,7 +331,8 @@
     "completionPhotos": "Completion Photos",
     "description": "Job Description",
     "jobFiles": "Job Files",
-    "trade": "Trade"
+    "trade": "Trade",
+    "applicants": "Applicants"
   },
   "Profile": {
     "company": "Company",
