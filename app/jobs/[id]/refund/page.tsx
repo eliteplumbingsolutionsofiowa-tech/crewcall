@@ -318,7 +318,7 @@ export default function RefundJobPage() {
               </div>
             )}
 
-            {!refundable && job && (
+            {!refundable && job && !success && (
               <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
                 <p className="font-bold text-amber-200">
                   This payment is not eligible for

@@ -1904,7 +1904,6 @@ function CompanyActions({
 
         <p className="mt-2 text-sm leading-6 text-cyan-100/70">
           {t('jobPaymentLifecycle')}
-          lifecycle.
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

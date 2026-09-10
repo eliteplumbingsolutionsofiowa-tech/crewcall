@@ -1620,12 +1620,12 @@ export default function ApplicantsPage() {
                                   )}
 
                                   <StatusPill
-                                    value={applicant.status || 'pending'}
+                                    value={
+                                      isAssigned
+                                        ? 'assigned'
+                                        : applicant.status || 'pending'
+                                    }
                                   />
-
-                                  {isAssigned && (
-                                    <StatusPill value="assigned" />
-                                  )}
                                 </div>
 
                                 <Link
