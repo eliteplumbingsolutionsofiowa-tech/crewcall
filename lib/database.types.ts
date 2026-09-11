@@ -1406,6 +1406,7 @@ export type Database = {
           expected_pay_min: number | null
           featured_worker: boolean | null
           full_name: string | null
+          first_job_used_at: string | null
           id: string
           insurance_company: string | null
           insurance_expiration: string | null
@@ -1497,6 +1498,7 @@ export type Database = {
           expected_pay_min?: number | null
           featured_worker?: boolean | null
           full_name?: string | null
+          first_job_used_at?: string | null
           id: string
           insurance_company?: string | null
           insurance_expiration?: string | null
@@ -1588,6 +1590,7 @@ export type Database = {
           expected_pay_min?: number | null
           featured_worker?: boolean | null
           full_name?: string | null
+          first_job_used_at?: string | null
           id?: string
           insurance_company?: string | null
           insurance_expiration?: string | null

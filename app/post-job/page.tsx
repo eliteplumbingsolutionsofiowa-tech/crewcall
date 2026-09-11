@@ -20,24 +20,6 @@ type Profile = {
 
 type JobType = 'worker_job' | 'bid_request'
 
-type JobInsert = {
-  company_id: string
-  title: string
-  trade: string
-  location: string
-  pay_rate: string
-  description: string
-  status: 'open'
-  payment_status: 'unpaid'
-  job_type: JobType
-  bid_deadline: string | null
-  work_deadline: string | null
-}
-
-type JobRow = {
-  id: string
-}
-
 type GeneratedJob = {
   title: string
   description: string
@@ -90,10 +72,6 @@ type InsertTable<TInsert, TReturn> = {
 
 function profilesTable() {
   return supabase.from('profiles') as unknown as SelectTable<Profile>
-}
-
-function jobsTable() {
-  return supabase.from('jobs') as unknown as InsertTable<JobInsert, JobRow>
 }
 
 export default function PostJobPage() {
@@ -376,38 +354,57 @@ export default function PostJobPage() {
     setMessage(t('postingJob'))
 
     try {
-      const payload: JobInsert = {
-        company_id: profile.id,
-        title: title.trim(),
-        trade: trade.trim(),
-        location: location.trim(),
-        pay_rate: isBidRequest ? '' : payRate.trim(),
-        description: description.trim(),
-        status: 'open',
-        payment_status: 'unpaid',
-        job_type: jobType,
-        bid_deadline:
-          isBidRequest && bidDeadline
-            ? new Date(bidDeadline).toISOString()
-            : null,
-        work_deadline:
-          isBidRequest && workDeadline
-            ? workDeadline
-            : null,
-      }
+      const response = await crewCallAuthedFetch(
+        '/api/company/jobs/create',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: title.trim(),
+            trade: trade.trim(),
+            location: location.trim(),
+            pay_rate: isBidRequest ? '' : payRate.trim(),
+            description: description.trim(),
+            job_type: jobType,
+            bid_deadline:
+              isBidRequest && bidDeadline
+                ? new Date(bidDeadline).toISOString()
+                : null,
+            work_deadline:
+              isBidRequest && workDeadline
+                ? workDeadline
+                : null,
+          }),
+        }
+      )
 
-      const { data, error } = await jobsTable()
-        .insert(payload)
-        .select('id')
-        .single()
+      const result = (await response.json().catch(() => null)) as
+        | {
+            success?: boolean
+            id?: string
+            error?: string
+            code?: string
+          }
+        | null
 
-      if (error) {
-        setMessage(error.message)
+      if (!response.ok) {
+        if (
+          result?.code === 'COMPANY_MEMBERSHIP_REQUIRED'
+        ) {
+          router.push('/billing?reason=first-job-used')
+          return
+        }
+
+        setMessage(
+          result?.error || t('unableToPost')
+        )
         setSaving(false)
         return
       }
 
-      if (!data?.id) {
+      if (!result?.id) {
         setMessage(t('missingJobId'))
         setSaving(false)
         return
@@ -415,7 +412,7 @@ export default function PostJobPage() {
 
       if (!isBidRequest) {
         setMessage(t('findingMatches'))
-        await generateMatches(data.id)
+        await generateMatches(result.id)
       } else {
         setMessage(t('bidRequestPosted'))
       }
@@ -423,9 +420,9 @@ export default function PostJobPage() {
       window.dispatchEvent(new Event('crewcall-refresh-nav'))
 
       if (isBidRequest) {
-        router.replace(`/jobs/${data.id}#bids`)
+        router.replace(`/jobs/${result.id}#bids`)
       } else {
-        router.replace(`/my-jobs/${data.id}`)
+        router.replace(`/my-jobs/${result.id}`)
       }
       router.refresh()
     } catch (error) {

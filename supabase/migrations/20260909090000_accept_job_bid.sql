@@ -89,11 +89,9 @@ begin
   return v_bid;
 end;
 $$;
-
 revoke all
 on function public.accept_job_bid(uuid, uuid)
 from public, anon, authenticated;
-
 grant execute
 on function public.accept_job_bid(uuid, uuid)
 to service_role;

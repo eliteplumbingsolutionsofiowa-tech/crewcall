@@ -3,7 +3,7 @@ import Link from 'next/link'
 const actions = [
   {
     title: 'Post Job',
-    href: '/jobs/new',
+    href: '/post-job',
     color: 'bg-sky-600 hover:bg-sky-500',
   },
   {
