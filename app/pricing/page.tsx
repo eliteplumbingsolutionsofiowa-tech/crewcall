@@ -9,7 +9,7 @@ export default function PricingPage() {
   const nativeIOS = isNativeIOS()
 
   const membershipFeatures = [
-    t('unlimitedJobPosts'),
+    t('firstJobPostFree'),
     t('unlimitedApplicants'),
     t('workerSearch'),
     t('directMessaging'),
