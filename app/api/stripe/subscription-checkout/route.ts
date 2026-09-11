@@ -368,9 +368,6 @@ export async function POST(request: Request) {
           plan: requestedPlan,
         },
         subscription_data: {
-          ...(requestedPlan === 'founding_member'
-            ? { trial_period_days: 14 }
-            : {}),
           metadata: {
             crewcall_user_id: user.id,
             plan: requestedPlan,
