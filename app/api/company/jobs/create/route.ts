@@ -49,6 +49,139 @@ type CreateJobBody = {
   work_deadline?: string | null
 }
 
+export async function GET(request: Request) {
+  try {
+    if (!supabaseAdmin || !authClient) {
+      return NextResponse.json(
+        { error: 'Supabase authentication is not fully configured.' },
+        { status: 500 }
+      )
+    }
+
+    const token = getBearerToken(request)
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Authentication required.' },
+        { status: 401 }
+      )
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await authClient.auth.getUser(token)
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid or expired session.' },
+        { status: 401 }
+      )
+    }
+
+    const companyContext = await resolveCompanyContext(
+      supabaseAdmin,
+      user.id
+    )
+
+    const companyId =
+      companyContext.companyId ||
+      (companyContext.isPlatformAdmin ? user.id : null)
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'Company access required.' },
+        { status: 403 }
+      )
+    }
+
+    const { data: profile, error: profileError } =
+      await supabaseAdmin
+        .from('profiles')
+        .select('first_job_used_at')
+        .eq('id', companyId)
+        .maybeSingle()
+
+    if (profileError) {
+      console.error(
+        'Posting eligibility profile lookup failed:',
+        profileError
+      )
+
+      return NextResponse.json(
+        { error: 'Unable to check posting access.' },
+        { status: 500 }
+      )
+    }
+
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'Company profile not found.' },
+        { status: 404 }
+      )
+    }
+
+    const { data: subscriptions, error: subscriptionError } =
+      await supabaseAdmin
+        .from('subscriptions')
+        .select(
+          'plan, status, stripe_subscription_id'
+        )
+        .eq('user_id', companyId)
+        .eq('plan', 'founding_member')
+
+    if (subscriptionError) {
+      console.error(
+        'Posting eligibility subscription lookup failed:',
+        subscriptionError
+      )
+
+      return NextResponse.json(
+        { error: 'Unable to check posting access.' },
+        { status: 500 }
+      )
+    }
+
+    const membershipActive = Boolean(
+      subscriptions?.some(
+        (subscription) =>
+          Boolean(subscription.stripe_subscription_id) &&
+          (subscription.status === 'active' ||
+            subscription.status === 'trialing')
+      )
+    )
+
+    const firstJobUsedAt =
+      profile.first_job_used_at || null
+
+    const firstJobAvailable = !firstJobUsedAt
+
+    const canPost =
+      companyContext.isPlatformAdmin ||
+      firstJobAvailable ||
+      membershipActive
+
+    return NextResponse.json({
+      success: true,
+      canPost,
+      firstJobAvailable,
+      membershipActive,
+      firstJobUsedAt,
+      isPlatformAdmin:
+        companyContext.isPlatformAdmin,
+    })
+  } catch (error) {
+    console.error(
+      'Posting eligibility API error:',
+      error
+    )
+
+    return NextResponse.json(
+      { error: 'Unable to check posting access.' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: Request) {
   try {
     if (!supabaseAdmin || !authClient) {

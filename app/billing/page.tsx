@@ -368,7 +368,7 @@ function BillingContent() {
 
   const membershipActive = Boolean(
     subscription?.stripe_subscription_id &&
-      ['active', 'trialing', 'past_due'].includes(subscription.status)
+      ['active', 'trialing'].includes(subscription.status)
   )
 
   const trialActive = useMemo(() => {
@@ -501,6 +501,23 @@ function BillingContent() {
                 {message}
               </MessageBox>
             )}
+
+            {isCompany &&
+              searchParams.get('reason') === 'first-job-used' && (
+                <section className="rounded-3xl border border-cyan-300/25 bg-gradient-to-br from-cyan-400/15 via-blue-500/10 to-white/5 p-6 shadow-2xl sm:p-8">
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-200">
+                    {t('firstJobUsedEyebrow')}
+                  </p>
+
+                  <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
+                    {t('firstJobUsedTitle')}
+                  </h2>
+
+                  <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-300">
+                    {t('firstJobUsedDescription')}
+                  </p>
+                </section>
+              )}
 
             {!profile ? (
               <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-6">
@@ -783,7 +800,15 @@ function CompanyMembershipSection({
               {t('viewMembershipStatus')}
             </p>
           </div>
-        ) : !hasPaidStripeSubscription ? (
+        ) : membershipActive ? (
+          <button
+            type="button"
+            disabled
+            className="mt-8 w-full cursor-not-allowed rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-6 py-4 text-lg font-black text-emerald-200"
+          >
+            {t('membershipActive')}
+          </button>
+        ) : (
           <button
             type="button"
             onClick={onStartSubscription}
@@ -796,17 +821,11 @@ function CompanyMembershipSection({
           >
             {startingCheckout
               ? t('openingCheckout')
-              : trialActive
-                ? t('activateMembership')
-                : t('startMonthlyMembership')}
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled
-            className="mt-8 w-full cursor-not-allowed rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-6 py-4 text-lg font-black text-emerald-200"
-          >
-            {t('membershipActive')}
+              : hasPaidStripeSubscription
+                ? 'Restart Company Pro — $29/month'
+                : trialActive
+                  ? t('activateMembership')
+                  : t('startMonthlyMembership')}
           </button>
         )}
 

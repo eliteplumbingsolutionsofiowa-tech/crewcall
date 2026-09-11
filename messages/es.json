@@ -2928,7 +2928,10 @@
     "trialEnds": "La Prueba Termina",
     "unpaid": "No Pagado",
     "workerPayouts": "Pagos al Trabajador",
-    "yes": "Sí"
+    "yes": "Sí",
+    "firstJobUsedEyebrow": "TU PRIMER TRABAJO CORRIÓ POR NUESTRA CUENTA",
+    "firstJobUsedTitle": "¿Listo para tu próximo CrewCall?",
+    "firstJobUsedDescription": "Actualiza a Company Pro para seguir publicando trabajos y desbloquear las herramientas de reclutamiento de CrewCall."
   },
   "SavedJobs": {
     "loading": "Cargando trabajos...",

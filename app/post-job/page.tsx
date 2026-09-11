@@ -20,6 +20,16 @@ type Profile = {
 
 type JobType = 'worker_job' | 'bid_request'
 
+type PostingAccess = {
+  success?: boolean
+  canPost: boolean
+  firstJobAvailable: boolean
+  membershipActive: boolean
+  firstJobUsedAt: string | null
+  isPlatformAdmin: boolean
+  error?: string
+}
+
 type GeneratedJob = {
   title: string
   description: string
@@ -79,6 +89,8 @@ export default function PostJobPage() {
   const t = useTranslations('PostJob')
 
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [postingAccess, setPostingAccess] =
+    useState<PostingAccess | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -193,6 +205,36 @@ export default function PostJobPage() {
             : 'company',
       })
 
+      const accessResponse =
+        await crewCallAuthedFetch(
+          '/api/company/jobs/create',
+          {
+            method: 'GET',
+          }
+        )
+
+      const accessResult =
+        (await accessResponse.json().catch(() => null)) as
+          | PostingAccess
+          | null
+
+      if (!active) {
+        return
+      }
+
+      if (
+        !accessResponse.ok ||
+        !accessResult
+      ) {
+        setMessage(
+          accessResult?.error ||
+            'Unable to check your job posting access.'
+        )
+        setLoading(false)
+        return
+      }
+
+      setPostingAccess(accessResult)
       setLoading(false)
     }
 
@@ -450,6 +492,86 @@ export default function PostJobPage() {
               {message}
             </div>
           ) : null}
+        </section>
+      </main>
+    )
+  }
+
+  if (!postingAccess) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-red-400/20 bg-white/5 p-6 shadow-2xl sm:p-8">
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-red-300">
+            CrewCall
+          </p>
+
+          <h1 className="mt-3 text-3xl font-black">
+            Unable to check posting access
+          </h1>
+
+          <p className="mt-3 text-slate-300">
+            {message ||
+              'CrewCall could not verify your company posting access. Please try again.'}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950"
+          >
+            Try Again
+          </button>
+        </section>
+      </main>
+    )
+  }
+
+  if (!postingAccess.canPost) {
+    return (
+      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <section className="mx-auto max-w-3xl">
+          <div className="overflow-hidden rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/15 via-blue-500/10 to-white/5 p-7 shadow-2xl sm:p-10">
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-200">
+              Company Pro
+            </p>
+
+            <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
+              Ready for your next CrewCall?
+            </h1>
+
+            <p className="mt-5 max-w-2xl text-lg font-semibold leading-8 text-slate-300">
+              Your first job was on us. Upgrade to Company Pro to
+              continue posting jobs and unlock CrewCall&apos;s
+              recruiting tools.
+            </p>
+
+            <div className="mt-7 rounded-2xl border border-white/10 bg-slate-950/40 p-5">
+              <p className="text-sm font-black text-white">
+                Keep building your crew with CrewCall.
+              </p>
+
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+                Company Pro gives your company continued job posting
+                access and CrewCall&apos;s company recruiting tools.
+              </p>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/billing?reason=first-job-used"
+                className="rounded-2xl bg-gradient-to-r from-cyan-300 to-blue-400 px-6 py-4 text-center text-sm font-black text-slate-950 shadow-xl transition hover:scale-[1.01]"
+              >
+                Upgrade to Company Pro
+              </Link>
+
+              <Link
+                href="/company/dashboard"
+                className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-white/10"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
+          </div>
         </section>
       </main>
     )

@@ -2928,7 +2928,10 @@
     "trialEnds": "Trial Ends",
     "unpaid": "Unpaid",
     "workerPayouts": "Worker Payouts",
-    "yes": "Yes"
+    "yes": "Yes",
+    "firstJobUsedEyebrow": "YOUR FIRST JOB WAS ON US",
+    "firstJobUsedTitle": "Ready for your next CrewCall?",
+    "firstJobUsedDescription": "Upgrade to Company Pro to continue posting jobs and unlock CrewCall's recruiting tools."
   },
   "SavedJobs": {
     "loading": "Loading jobs...",
