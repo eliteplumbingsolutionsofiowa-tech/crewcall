@@ -100,37 +100,52 @@ export default function PricingPage() {
           </p>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-3">
-          <div className="rounded-[2rem] border-2 border-cyan-400 bg-cyan-400/10 p-8 shadow-2xl shadow-cyan-500/10">
+        <section>
+          <div className="mb-6 text-center">
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
+              {t('forCompanies')}
+            </p>
+            <p className="mx-auto mt-3 max-w-3xl text-slate-300">
+              {t('forCompaniesDescription')}
+            </p>
+          </div>
+
+          <div className="mx-auto max-w-4xl rounded-[2rem] border-2 border-cyan-400 bg-cyan-400/10 p-8 shadow-2xl shadow-cyan-500/10">
             <div className="mb-6 inline-flex rounded-full bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950">
               {t('foundingMember')}
             </div>
 
-            <h2 className="text-2xl font-black">{t('companyMembership')}</h2>
+            <h2 className="text-3xl font-black">{t('companyMembership')}</h2>
 
-            <p className="mt-6 text-xl font-black uppercase text-cyan-300">
-              {t('freeTrial')}
-            </p>
+            <div className="mt-6 grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <p className="text-xl font-black uppercase text-cyan-300">
+                  {t('freeTrial')}
+                </p>
 
-            <p className="mt-2 text-7xl font-black text-cyan-300">{t('free')}</p>
+                <p className="mt-2 text-7xl font-black text-cyan-300">
+                  {t('free')}
+                </p>
 
-            <p className="mt-2 text-lg text-slate-300">
-              {t('noCreditCard')}
-            </p>
+                <p className="mt-2 text-lg text-slate-300">
+                  {t('noCreditCard')}
+                </p>
+              </div>
 
-            <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-slate-950/60 p-5 text-center">
-              <p className="text-xl font-black text-cyan-200">
-                {t('thenOnly')}
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-400">
-                {t('forFoundingMembers')}
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-500">
-                {t('regularPrice')}
-              </p>
+              <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/60 p-6 text-center md:min-w-64">
+                <p className="text-2xl font-black text-cyan-200">
+                  {t('thenOnly')}
+                </p>
+                <p className="mt-2 text-sm font-bold text-slate-400">
+                  {t('forFoundingMembers')}
+                </p>
+                <p className="mt-1 text-sm font-bold text-slate-500">
+                  {t('regularPrice')}
+                </p>
+              </div>
             </div>
 
-            <ul className="mt-8 space-y-3 text-slate-200">
+            <ul className="mt-8 grid gap-3 text-slate-200 sm:grid-cols-2">
               {membershipFeatures.map((feature) => (
                 <li key={feature} className="font-semibold">
                   ✅ {feature}
@@ -146,141 +161,198 @@ export default function PricingPage() {
             </Link>
 
             <p className="mt-4 text-center text-sm font-bold text-slate-400">
-              {t('cancelAnytime')}
+              {t('companyUpgradeNote')}
             </p>
-          </div>
-
-          <div className="rounded-[2rem] border-2 border-yellow-400 bg-yellow-400/10 p-8 shadow-2xl shadow-yellow-400/10">
-            <div className="mb-6 inline-flex rounded-full bg-yellow-400 px-4 py-2 text-sm font-black text-slate-950">
-              {t('featured')}
-            </div>
-
-            <h2 className="text-2xl font-black">{t('featuredJob')}</h2>
-
-            <p className="mt-6 text-6xl font-black text-yellow-300">$25</p>
-
-            <p className="text-lg text-slate-300">{t('oneTime')}</p>
-
-            <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
-              {t('featuredDescription')}
-            </p>
-
-            <ul className="mt-8 space-y-4 text-slate-200">
-              <li>⭐ {t('appearsAbove')}</li>
-              <li>⭐ {t('moreVisibility')}</li>
-              <li>⭐ {t('featuredBadge')}</li>
-              <li>⭐ {t('highlightedSearch')}</li>
-              <li>⭐ {t('betterResponse')}</li>
-            </ul>
-
-            <Link
-              href="/faq"
-              className="mt-10 inline-flex w-full justify-center rounded-2xl border border-yellow-400 px-6 py-4 text-lg font-black text-white hover:bg-yellow-400 hover:text-slate-950"
-            >
-              {t('learnMore')}
-            </Link>
-          </div>
-
-          <div className="rounded-[2rem] border border-red-400/40 bg-red-500/10 p-8">
-            <div className="mb-6 inline-flex rounded-full bg-red-400 px-4 py-2 text-sm font-black text-slate-950">
-              {t('urgent')}
-            </div>
-
-            <h2 className="text-2xl font-black">{t('urgentHiring')}</h2>
-
-            <p className="mt-6 text-6xl font-black text-red-300">$15</p>
-
-            <p className="text-lg text-slate-300">{t('oneTime')}</p>
-
-            <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
-              {t('urgentDescription')}
-            </p>
-
-            <ul className="mt-8 space-y-4 text-slate-200">
-              <li>🚨 {t('urgentBadge')}</li>
-              <li>🚨 {t('higherPlacement')}</li>
-              <li>🚨 {t('increasedVisibility')}</li>
-              <li>🚨 {t('fasterResponse')}</li>
-              <li>🚨 {t('sameDayNeeds')}</li>
-            </ul>
-
-            <Link
-              href="/faq"
-              className="mt-10 inline-flex w-full justify-center rounded-2xl border border-red-400 px-6 py-4 text-lg font-black text-white hover:bg-red-400 hover:text-slate-950"
-            >
-              {t('learnMore')}
-            </Link>
           </div>
         </section>
 
         <section>
-          <div className="rounded-[2rem] border-2 border-cyan-300 bg-cyan-300/10 p-8 shadow-2xl shadow-cyan-400/10">
-            <div className="mb-6 inline-flex rounded-full bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950">
-              {t('workerMembership')}
+          <div className="mb-6 text-center">
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-cyan-300">
+              {t('forWorkers')}
+            </p>
+            <p className="mx-auto mt-3 max-w-3xl text-slate-300">
+              {t('forWorkersDescription')}
+            </p>
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="rounded-[2rem] border border-white/15 bg-white/5 p-8">
+              <div className="mb-6 inline-flex rounded-full bg-white/10 px-4 py-2 text-sm font-black text-white">
+                {t('freeWorker')}
+              </div>
+
+              <h2 className="text-2xl font-black">
+                {t('freeWorkerTitle')}
+              </h2>
+
+              <p className="mt-6 text-5xl font-black text-white">
+                {t('freeWorkerPrice')}
+              </p>
+
+              <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+                {t('freeWorkerDescription')}
+              </p>
+
+              <ul className="mt-8 space-y-4 text-slate-200">
+                <li>✓ {t('freeWorkerProfile')}</li>
+                <li>✓ {t('freeWorkerBrowse')}</li>
+                <li>✓ {t('freeWorkerVisibility')}</li>
+              </ul>
+
+              <Link
+                href="/signup"
+                className="mt-10 inline-flex w-full justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-4 text-lg font-black text-white hover:bg-white/20"
+              >
+                {t('freeWorkerJoin')}
+              </Link>
             </div>
 
-            <h2 className="text-2xl font-black">
-              {t('workerMembershipTitle')}
-            </h2>
+            <div className="rounded-[2rem] border-2 border-cyan-300 bg-cyan-300/10 p-8 shadow-2xl shadow-cyan-400/10">
+              <div className="mb-6 inline-flex rounded-full bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950">
+                {t('workerMembership')}
+              </div>
 
-            <p className="mt-6 text-5xl font-black text-cyan-300">
-              {t('workerMembershipPrice')}
-            </p>
+              <h2 className="text-2xl font-black">
+                {t('workerMembershipTitle')}
+              </h2>
 
-            <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
-              {t('workerMembershipDescription')}
-            </p>
+              <p className="mt-6 text-5xl font-black text-cyan-300">
+                {t('workerMembershipPrice')}
+              </p>
 
-            <ul className="mt-8 space-y-4 text-slate-200">
-              <li>✓ {t('workerMembershipApply')}</li>
-              <li>✓ {t('workerMembershipInvites')}</li>
-              <li>✓ {t('workerMembershipAccess')}</li>
-            </ul>
+              <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+                {t('workerMembershipDescription')}
+              </p>
 
-            <Link
-              href="/signup"
-              className="mt-10 inline-flex w-full justify-center rounded-2xl bg-cyan-300 px-6 py-4 text-lg font-black text-slate-950 hover:bg-cyan-200"
-            >
-              {t('workerMembershipJoin')}
-            </Link>
+              <ul className="mt-8 space-y-4 text-slate-200">
+                <li>✓ {t('workerMembershipApply')}</li>
+                <li>✓ {t('workerMembershipInvites')}</li>
+                <li>✓ {t('workerMembershipAccess')}</li>
+              </ul>
+
+              <Link
+                href="/signup"
+                className="mt-10 inline-flex w-full justify-center rounded-2xl bg-cyan-300 px-6 py-4 text-lg font-black text-slate-950 hover:bg-cyan-200"
+              >
+                {t('workerMembershipJoin')}
+              </Link>
+            </div>
+
+            <div className="relative rounded-[2rem] border-2 border-amber-300 bg-amber-300/10 p-8 shadow-2xl shadow-amber-400/10">
+              <div className="absolute right-5 top-5 rounded-full bg-amber-300 px-3 py-1 text-xs font-black text-amber-950">
+                {t('bestValue')}
+              </div>
+
+              <div className="mb-6 inline-flex rounded-full bg-amber-300 px-4 py-2 text-sm font-black text-amber-950">
+                {t('workerPro')}
+              </div>
+
+              <h2 className="text-2xl font-black">
+                {t('workerProTitle')}
+              </h2>
+
+              <p className="mt-6 text-5xl font-black text-amber-300">
+                {t('workerProPrice')}
+              </p>
+
+              <p className="mt-2 text-sm font-bold text-slate-400">
+                {t('workerProMonthly')}
+              </p>
+
+              <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+                {t('workerProDescription')}
+              </p>
+
+              <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-center text-sm font-bold text-amber-100">
+                {t('workerProSavings')}
+              </p>
+
+              <ul className="mt-8 space-y-4 text-slate-200">
+                <li>✓ {t('workerProAccess')}</li>
+                <li>⭐ {t('workerProBadge')}</li>
+                <li>⭐ {t('workerProPriority')}</li>
+                <li>⭐ {t('workerProVisibility')}</li>
+              </ul>
+
+              <Link
+                href="/signup"
+                className="mt-10 inline-flex w-full justify-center rounded-2xl bg-amber-300 px-6 py-4 text-lg font-black text-amber-950 hover:bg-amber-200"
+              >
+                {t('workerProJoin')}
+              </Link>
+            </div>
           </div>
         </section>
 
         <section>
-          <div className="rounded-[2rem] border-2 border-amber-300 bg-amber-300/10 p-8 shadow-2xl shadow-amber-400/10">
-            <div className="mb-6 inline-flex rounded-full bg-amber-300 px-4 py-2 text-sm font-black text-amber-950">
-              {t('workerPro')}
+          <div className="mb-6 text-center">
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-yellow-300">
+              {t('optionalBoosts')}
+            </p>
+            <p className="mx-auto mt-3 max-w-3xl text-slate-300">
+              {t('optionalBoostsDescription')}
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2">
+            <div className="rounded-[2rem] border-2 border-yellow-400 bg-yellow-400/10 p-8 shadow-2xl shadow-yellow-400/10">
+              <div className="mb-6 inline-flex rounded-full bg-yellow-400 px-4 py-2 text-sm font-black text-slate-950">
+                {t('featured')}
+              </div>
+
+              <h2 className="text-2xl font-black">{t('featuredJob')}</h2>
+              <p className="mt-6 text-6xl font-black text-yellow-300">$25</p>
+              <p className="text-lg text-slate-300">{t('oneTime')}</p>
+
+              <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+                {t('featuredDescription')}
+              </p>
+
+              <ul className="mt-8 space-y-4 text-slate-200">
+                <li>⭐ {t('appearsAbove')}</li>
+                <li>⭐ {t('moreVisibility')}</li>
+                <li>⭐ {t('featuredBadge')}</li>
+                <li>⭐ {t('highlightedSearch')}</li>
+                <li>⭐ {t('betterResponse')}</li>
+              </ul>
+
+              <Link
+                href="/faq"
+                className="mt-10 inline-flex w-full justify-center rounded-2xl border border-yellow-400 px-6 py-4 text-lg font-black text-white hover:bg-yellow-400 hover:text-slate-950"
+              >
+                {t('learnMore')}
+              </Link>
             </div>
 
-            <h2 className="text-2xl font-black">
-              {t('workerProTitle')}
-            </h2>
+            <div className="rounded-[2rem] border border-red-400/40 bg-red-500/10 p-8">
+              <div className="mb-6 inline-flex rounded-full bg-red-400 px-4 py-2 text-sm font-black text-slate-950">
+                {t('urgent')}
+              </div>
 
-            <p className="mt-6 text-5xl font-black text-amber-300">
-              {t('workerProPrice')}
-            </p>
+              <h2 className="text-2xl font-black">{t('urgentHiring')}</h2>
+              <p className="mt-6 text-6xl font-black text-red-300">$15</p>
+              <p className="text-lg text-slate-300">{t('oneTime')}</p>
 
-            <p className="mt-2 text-sm font-bold text-slate-400">
-              {t('workerProMonthly')}
-            </p>
+              <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
+                {t('urgentDescription')}
+              </p>
 
-            <p className="mt-6 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-center text-slate-300">
-              {t('workerProDescription')}
-            </p>
+              <ul className="mt-8 space-y-4 text-slate-200">
+                <li>🚨 {t('urgentBadge')}</li>
+                <li>🚨 {t('higherPlacement')}</li>
+                <li>🚨 {t('increasedVisibility')}</li>
+                <li>🚨 {t('fasterResponse')}</li>
+                <li>🚨 {t('sameDayNeeds')}</li>
+              </ul>
 
-            <ul className="mt-8 space-y-4 text-slate-200">
-              <li>✓ {t('workerProAccess')}</li>
-              <li>⭐ {t('workerProBadge')}</li>
-              <li>⭐ {t('workerProPriority')}</li>
-              <li>⭐ {t('workerProVisibility')}</li>
-            </ul>
-
-            <Link
-              href="/signup"
-              className="mt-10 inline-flex w-full justify-center rounded-2xl bg-amber-300 px-6 py-4 text-lg font-black text-amber-950 hover:bg-amber-200"
-            >
-              {t('workerProJoin')}
-            </Link>
+              <Link
+                href="/faq"
+                className="mt-10 inline-flex w-full justify-center rounded-2xl border border-red-400 px-6 py-4 text-lg font-black text-white hover:bg-red-400 hover:text-slate-950"
+              >
+                {t('learnMore')}
+              </Link>
+            </div>
           </div>
         </section>
 
