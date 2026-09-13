@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendApnsPush } from '@/lib/push/apns'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 export const runtime = 'nodejs'
 
@@ -168,7 +169,13 @@ export async function POST(req: Request) {
       )
     }
 
-    if (job.company_id !== user.id) {
+    const companyContext = await resolveCompanyContext(
+      adminClient,
+      user.id
+    )
+    const companyId = companyContext.companyId
+
+    if (!companyId || job.company_id !== companyId) {
       return NextResponse.json(
         {
           error:
