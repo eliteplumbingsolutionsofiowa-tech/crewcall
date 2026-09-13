@@ -666,7 +666,7 @@
     "companyQ5": "How do payments work?",
     "companyA5": "Payments are securely processed through Stripe. Companies pay through CrewCall and workers receive payouts after approved job completion.",
     "workerQ1": "Is CrewCall free for workers?",
-    "workerA1": "Yes. Workers can create an account, build a profile, browse jobs, and apply at no cost.",
+    "workerA1": "Workers can create an account, build a profile, and browse jobs for free. Applying to jobs requires an active Worker Membership or Worker Pro.",
     "workerQ2": "How do I get paid?",
     "workerA2": "Companies pay through CrewCall. Approved payments are released to your connected payout account.",
     "workerQ3": "Can I work for multiple companies?",

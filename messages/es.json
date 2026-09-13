@@ -666,7 +666,7 @@
     "companyQ5": "¿Cómo funcionan los pagos?",
     "companyA5": "Los pagos se procesan de forma segura mediante Stripe. Las empresas pagan a través de CrewCall y los trabajadores reciben pagos después de que se aprueba la finalización del trabajo.",
     "workerQ1": "¿CrewCall es gratis para los trabajadores?",
-    "workerA1": "Sí. Los trabajadores pueden crear una cuenta, crear un perfil, buscar trabajos y solicitar sin costo.",
+    "workerA1": "Los trabajadores pueden crear una cuenta, crear un perfil y buscar trabajos gratis. Para solicitar trabajos se requiere una Membresía de Trabajador activa o Worker Pro.",
     "workerQ2": "¿Cómo recibo mi pago?",
     "workerA2": "Las empresas pagan a través de CrewCall. Los pagos aprobados se envían a tu cuenta de pagos conectada.",
     "workerQ3": "¿Puedo trabajar para varias empresas?",
