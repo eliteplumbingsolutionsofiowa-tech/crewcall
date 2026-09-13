@@ -373,38 +373,6 @@ function BillingContent() {
       ['active', 'trialing'].includes(subscription.status)
   )
 
-  const trialActive = useMemo(() => {
-    if (
-      subscription?.status !== 'trialing' ||
-      !subscription.trial_ends_at
-    ) {
-      return false
-    }
-
-    return (
-      new Date(subscription.trial_ends_at).getTime() >
-      Date.now()
-    )
-  }, [subscription])
-
-  const trialDaysRemaining = useMemo(() => {
-    if (!trialActive || !subscription?.trial_ends_at) {
-      return 0
-    }
-
-    const milliseconds =
-      new Date(subscription.trial_ends_at).getTime() -
-      Date.now()
-
-    return Math.max(
-      0,
-      Math.ceil(
-        milliseconds /
-          (1000 * 60 * 60 * 24)
-      )
-    )
-  }, [subscription, trialActive])
-
   const accountName = useMemo(() => {
     return profile?.company_name || profile?.full_name || 'CrewCall account'
   }, [profile])
@@ -563,7 +531,7 @@ function BillingContent() {
                     }
                     good={
                       isCompany
-                        ? membershipActive || trialActive
+                        ? membershipActive
                         : stripeConnected
                     }
                   />
@@ -573,8 +541,6 @@ function BillingContent() {
                   <CompanyMembershipSection
                     subscription={subscription}
                     membershipActive={membershipActive}
-                    trialActive={trialActive}
-                    trialDaysRemaining={trialDaysRemaining}
                     startingCheckout={
                       startingCheckout === 'founding_member'
                     }
@@ -662,8 +628,6 @@ function BillingContent() {
 function CompanyMembershipSection({
   subscription,
   membershipActive,
-  trialActive,
-  trialDaysRemaining,
   startingCheckout,
   onStartSubscription,
   openingPortal,
@@ -672,8 +636,6 @@ function CompanyMembershipSection({
 }: {
   subscription: Subscription | null
   membershipActive: boolean
-  trialActive: boolean
-  trialDaysRemaining: number
   startingCheckout: boolean
   onStartSubscription: () => void
   openingPortal: boolean
@@ -685,6 +647,13 @@ function CompanyMembershipSection({
 
   const hasPaidStripeSubscription = Boolean(
     subscription?.stripe_subscription_id
+  )
+
+  const isLegacyFreeAccount = Boolean(
+    subscription &&
+      subscription.plan === 'starter' &&
+      subscription.status === 'trialing' &&
+      !subscription.stripe_subscription_id
   )
 
   return (
@@ -716,23 +685,6 @@ function CompanyMembershipSection({
             </div>
           ) : null}
         </div>
-
-        {trialActive && !hasPaidStripeSubscription && (
-          <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
-            <p className="font-black text-emerald-200">
-              {t('yourFreeTrialActive')}
-            </p>
-
-            <p className="mt-2 text-sm font-semibold text-emerald-100/80">
-              {t('trialRemaining', {
-                count: trialDaysRemaining,
-              })}
-              {!nativeIOS
-                ? ` ${t('subscribeAfterTrial')}`
-                : ''}
-            </p>
-          </div>
-        )}
 
         {membershipActive && hasPaidStripeSubscription && (
           <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-5">
@@ -793,9 +745,7 @@ function CompanyMembershipSection({
             <p className="text-lg font-black text-white">
               {membershipActive
                 ? t('membershipActive')
-                : trialActive
-                  ? t('freeTrialActive')
-                  : t('membershipStatus')}
+                : t('freeAccount')}
             </p>
 
             <p className="mt-2 text-sm font-semibold text-slate-400">
@@ -825,9 +775,7 @@ function CompanyMembershipSection({
               ? t('openingCheckout')
               : hasPaidStripeSubscription
                 ? 'Restart Company Pro — $29/month'
-                : trialActive
-                  ? t('activateMembership')
-                  : t('startMonthlyMembership')}
+                : t('activateMembership')}
           </button>
         )}
 
@@ -847,9 +795,11 @@ function CompanyMembershipSection({
           <DetailRow
             label={t('plan')}
             value={
-              subscription?.plan
-                ? formatPlan(subscription.plan, t)
-                : t('starterTrial')
+              isLegacyFreeAccount
+                ? t('free')
+                : subscription?.plan
+                  ? formatPlan(subscription.plan, t)
+                  : t('free')
             }
           />
 
@@ -857,15 +807,12 @@ function CompanyMembershipSection({
             label={t('status')}
             value={formatSubscriptionStatus(subscription, t)}
           />
-
-          <DetailRow
-            label={t('trialEnds')}
-            value={
-              subscription?.trial_ends_at
-                ? formatDate(subscription.trial_ends_at, locale)
-                : t('notAvailable')
-            }
-          />
+          {!isLegacyFreeAccount && subscription?.trial_ends_at ? (
+            <DetailRow
+              label={t('trialEnds')}
+              value={formatDate(subscription.trial_ends_at, locale)}
+            />
+          ) : null}
 
           <DetailRow
             label={t('billingPeriodEnds')}
@@ -1432,7 +1379,15 @@ function formatSubscriptionStatus(
   subscription: Subscription | null,
   t: ReturnType<typeof useTranslations>
 ) {
-  if (!subscription) return t('noMembership')
+  if (!subscription) return t('freeAccount')
+
+  if (
+    subscription.plan === 'starter' &&
+    subscription.status === 'trialing' &&
+    !subscription.stripe_subscription_id
+  ) {
+    return t('freeAccount')
+  }
 
   const labels: Record<string, string> = {
     trialing: t('freeTrial'),

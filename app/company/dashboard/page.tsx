@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
-import SubscriptionGate from '@/app/components/SubscriptionGate'
 
 import GlassCard from '@/app/components/ui/GlassCard'
 import PageHeader from '@/app/components/ui/PageHeader'
