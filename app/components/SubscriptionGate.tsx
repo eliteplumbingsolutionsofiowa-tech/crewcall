@@ -66,8 +66,12 @@ function subscriptionAllowsAccess(
 }
 
 function getSubscriptionReason(
-  subscription: SubscriptionRow
+  subscription: SubscriptionRow | null
 ) {
+  if (!subscription) {
+    return 'subscription-required'
+  }
+
   if (
     subscription.status === 'trialing' &&
     !isDateInFuture(subscription.trial_ends_at)
@@ -169,57 +173,12 @@ export default function SubscriptionGate({
           throw subscriptionError
         }
 
-        let subscription = existingSubscription
+        const subscription = existingSubscription
 
-        /*
-         * Older accounts may have been created before the
-         * subscriptions trigger existed. Create a 14-day trial
-         * the first time one of those accounts enters a protected
-         * area.
-         */
-        if (!subscription) {
-          const trialStartsAt = new Date()
-          const trialEndsAt = new Date(
-            trialStartsAt.getTime() +
-              14 * 24 * 60 * 60 * 1000
-          )
-
-          const {
-            data: createdSubscription,
-            error: createError,
-          } = await supabase
-            .from('subscriptions')
-            .insert({
-              user_id: user.id,
-              plan: 'starter',
-              status: 'trialing',
-              trial_starts_at:
-                trialStartsAt.toISOString(),
-              trial_ends_at: trialEndsAt.toISOString(),
-            })
-            .select(
-              [
-                'id',
-                'user_id',
-                'plan',
-                'status',
-                'trial_starts_at',
-                'trial_ends_at',
-                'current_period_starts_at',
-                'current_period_ends_at',
-                'cancel_at_period_end',
-              ].join(', ')
-            )
-            .single<SubscriptionRow>()
-
-          if (createError) {
-            throw createError
-          }
-
-          subscription = createdSubscription
-        }
-
-        if (subscriptionAllowsAccess(subscription)) {
+        if (
+          subscription &&
+          subscriptionAllowsAccess(subscription)
+        ) {
           if (!active) {
             return
           }
