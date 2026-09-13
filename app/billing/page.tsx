@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { resolveCompanyContext } from '@/lib/company-context'
 import { isNativeIOS } from '@/app/lib/nativePlatform'
@@ -62,6 +62,7 @@ export default function BillingPage() {
 function BillingContent() {
   const t = useTranslations('Billing')
   const locale = useLocale()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const nativeIOS = isNativeIOS()
 
@@ -118,7 +119,8 @@ function BillingContent() {
         const authUser = authResult.data.user
 
         if (!authUser) {
-          throw new Error('You must be logged in to view billing.')
+          router.replace('/login')
+          return
         }
 
         if (!active) return
@@ -223,7 +225,7 @@ function BillingContent() {
     return () => {
       active = false
     }
-  }, [])
+  }, [router])
 
 
   async function handleStartSubscription(
