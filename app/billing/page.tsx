@@ -814,28 +814,34 @@ function CompanyMembershipSection({
             />
           ) : null}
 
-          <DetailRow
-            label={t('billingPeriodEnds')}
-            value={
-              subscription?.current_period_ends_at
-                ? formatDate(subscription.current_period_ends_at, locale)
-                : t('notStarted')
-            }
-          />
+          {!isLegacyFreeAccount ? (
+            <>
+              <DetailRow
+                label={t('billingPeriodEnds')}
+                value={
+                  subscription?.current_period_ends_at
+                    ? formatDate(subscription.current_period_ends_at, locale)
+                    : t('notStarted')
+                }
+              />
 
-          <DetailRow
-            label={t('cancelAtPeriodEnd')}
-            value={
-              subscription?.cancel_at_period_end ? t('yes') : t('no')
-            }
-          />
+              <DetailRow
+                label={t('cancelAtPeriodEnd')}
+                value={
+                  subscription?.cancel_at_period_end ? t('yes') : t('no')
+                }
+              />
+            </>
+          ) : null}
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm font-semibold leading-6 text-slate-400">
-            {t('customerPortalDescription')}
-          </p>
-        </div>
+        {!isLegacyFreeAccount ? (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm font-semibold leading-6 text-slate-400">
+              {t('customerPortalDescription')}
+            </p>
+          </div>
+        ) : null}
       </aside>
     </section>
   )
