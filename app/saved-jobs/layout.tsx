@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import SubscriptionGate from '@/app/components/SubscriptionGate'
+import AuthGate from '@/app/components/AuthGate'
 
 export default function SubscriptionProtectedLayout({
   children,
@@ -7,8 +7,8 @@ export default function SubscriptionProtectedLayout({
   children: ReactNode
 }) {
   return (
-    <SubscriptionGate>
+    <AuthGate>
       {children}
-    </SubscriptionGate>
+    </AuthGate>
   )
 }
