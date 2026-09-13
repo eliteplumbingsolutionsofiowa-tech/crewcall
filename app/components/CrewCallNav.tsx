@@ -1056,22 +1056,22 @@ export default function CrewCallNav() {
             <Link
               href={logoHref}
               onClick={closeMobileMenu}
-              className="group flex min-w-0 items-center gap-3 no-underline"
+              className="group flex shrink-0 items-center gap-3 no-underline"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081328] shadow-xl shadow-blue-900/20 transition group-hover:scale-105"><img src="/brand/crewcall-icon.png" alt="CrewCall" className="h-8 w-8 rounded-lg object-cover" /></div>
 
-              <div className="min-w-0 leading-tight">
-                <div className="truncate text-xl font-black tracking-tight !text-white">
+              <div className="shrink-0 leading-tight">
+                <div className="whitespace-nowrap text-xl font-black tracking-tight !text-white">
                   CrewCall
                 </div>
 
-                <div className="truncate text-xs font-black uppercase tracking-wide !text-blue-100/80">
+                <div className="whitespace-nowrap text-xs font-black uppercase tracking-wide !text-blue-100/80">
                   The Skilled Trades Network
                 </div>
               </div>
             </Link>
 
-            <div className="hidden flex-wrap items-center justify-end gap-2 text-sm font-black lg:flex">
+            <div className="hidden flex-wrap items-center justify-end gap-2 text-sm font-black xl:flex">
               {userId ? (
                 <button
                   type="button"
@@ -1089,10 +1089,9 @@ export default function CrewCallNav() {
                 </button>
               ) : null}
 
-              {renderNavigation()}
             </div>
 
-            <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex items-center gap-2 xl:hidden">
               {userId ? (
                 <button
                   type="button"
@@ -1151,8 +1150,14 @@ export default function CrewCallNav() {
             </div>
           </div>
 
+          {userId ? (
+            <div className="mt-3 hidden flex-wrap items-center gap-2 border-t border-white/5 pt-3 text-sm font-black xl:flex">
+              {renderNavigation()}
+            </div>
+          ) : null}
+
           {loading ? (
-            <div className="mt-3 flex items-center gap-2 text-xs font-bold !text-slate-400 lg:hidden">
+            <div className="mt-3 flex items-center gap-2 text-xs font-bold !text-slate-400 xl:hidden">
               <span className="h-2 w-2 animate-pulse rounded-full bg-blue-600" />
               Restoring your CrewCall session...
             </div>
