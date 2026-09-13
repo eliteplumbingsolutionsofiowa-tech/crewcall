@@ -132,7 +132,7 @@ export async function POST(req: Request) {
         job_id,
         worker_id,
         status,
-        jobs (
+        jobs!applications_job_id_fkey (
           id,
           title,
           company_id
