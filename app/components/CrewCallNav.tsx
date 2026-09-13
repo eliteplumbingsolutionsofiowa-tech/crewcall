@@ -1087,7 +1087,14 @@ export default function CrewCallNav() {
                     ⌘K
                   </span>
                 </button>
-              ) : null}
+               ) : (
+                <NavLink
+                  href="/login"
+                  active={pathname.startsWith('/login')}
+                >
+                  {tNav('login')}
+                </NavLink>
+              )}
 
             </div>
 
@@ -1166,7 +1173,7 @@ export default function CrewCallNav() {
           {mobileMenuOpen ? (
             <div
               id="crewcall-mobile-menu"
-              className="mt-3 border-t border-white/10 pt-3 lg:hidden"
+              className="mt-3 border-t border-white/10 pt-3 xl:hidden"
             >
               <div className="grid max-h-[calc(100vh-110px)] grid-cols-1 gap-2 overflow-y-auto pb-3 text-sm font-black sm:grid-cols-2">
                 {renderNavigation(closeMobileMenu)}
