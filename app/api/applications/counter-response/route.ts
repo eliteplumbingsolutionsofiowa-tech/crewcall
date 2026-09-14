@@ -131,7 +131,7 @@ export async function POST(req: Request) {
         requested_pay_rate,
         company_counter_offer,
         negotiation_status,
-        jobs (
+        jobs!applications_job_id_fkey (
           id,
           title,
           company_id
