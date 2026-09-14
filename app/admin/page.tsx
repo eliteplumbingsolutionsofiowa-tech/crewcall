@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   ReactNode,
   useCallback,
@@ -192,6 +193,7 @@ function isFullyVerified(profile: Profile) {
 }
 
 export default function AdminPage() {
+  const t = useTranslations('AdminDashboard')
   const db = supabase as any
 
   const [loading, setLoading] = useState(true)
@@ -824,31 +826,29 @@ export default function AdminPage() {
               <div>
                 <div className="flex flex-wrap gap-2">
                   <Badge
-                    label="CrewCall Admin"
+                    label={t('crewCallAdmin')}
                     tone="cyan"
                   />
 
                   <Badge
-                    label="Live Control Center"
+                    label={t('liveControlCenter')}
                     tone="green"
                   />
 
                   {stats.unpaidJobs > 0 ? (
                     <Badge
-                      label={`${stats.unpaidJobs} Unpaid Jobs`}
+                      label={t('unpaidJobs', { count: stats.unpaidJobs })}
                       tone="amber"
                     />
                   ) : null}
                 </div>
 
                 <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-                  Control Center
+                  {t('controlCenter')}
                 </h1>
 
                 <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-400 sm:text-base">
-                  Monitor CrewCall users, jobs, payments,
-                  applications, invites, payouts, and
-                  verification activity from one place.
+                  {t('controlCenterDescription')}
                 </p>
               </div>
 
@@ -861,8 +861,8 @@ export default function AdminPage() {
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {refreshing
-                  ? 'Refreshing...'
-                  : 'Refresh Dashboard'}
+                  ? t('refreshing')
+                  : t('refreshDashboard')}
               </button>
             </div>
           </div>
@@ -876,33 +876,43 @@ export default function AdminPage() {
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Total Users"
+            label={t('totalUsers')}
             value={stats.users}
-            detail={`${stats.workers} workers · ${stats.companies} companies`}
+            detail={t('userBreakdown', {
+              workers: stats.workers,
+              companies: stats.companies,
+            })}
             tone="cyan"
           />
 
           <MetricCard
-            label="Open Jobs"
+            label={t('openJobs')}
             value={stats.openJobs}
-            detail={`${stats.assignedJobs} assigned or active`}
+            detail={t('assignedOrActive', {
+              count: stats.assignedJobs,
+            })}
             tone="blue"
           />
 
           <MetricCard
-            label="Completed Jobs"
+            label={t('completedJobs')}
             value={stats.completedJobs}
-            detail={`${stats.fillRate}% overall fill rate`}
+            detail={t('overallFillRate', {
+              rate: stats.fillRate,
+            })}
             tone="green"
           />
 
           <MetricCard
-            label="Pending Activity"
+            label={t('pendingActivity')}
             value={
               stats.pendingApplications +
               stats.pendingInvites
             }
-            detail={`${stats.pendingApplications} applications · ${stats.pendingInvites} invites`}
+            detail={t('applicationInviteBreakdown', {
+              applications: stats.pendingApplications,
+              invites: stats.pendingInvites,
+            })}
             tone="amber"
           />
         </section>
@@ -917,16 +927,18 @@ export default function AdminPage() {
                 </span>
 
                 <h2 className="text-xl font-black text-white">
-                  Live Workers
+                  {t('liveWorkers')}
                 </h2>
 
                 <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-200">
-                  {liveWorkers.length} online now
+                  {t('onlineNow', {
+                    count: liveWorkers.length,
+                  })}
                 </span>
               </div>
 
               <p className="mt-2 text-sm font-semibold text-slate-400">
-                Workers actively connected to CrewCall within the last 90 seconds.
+                {t('liveWorkersDescription')}
               </p>
             </div>
 
@@ -934,7 +946,7 @@ export default function AdminPage() {
               href="/admin/users"
               className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/10"
             >
-              View All Users
+              {t('viewAllUsers')}
             </Link>
           </div>
 
@@ -945,11 +957,11 @@ export default function AdminPage() {
               </div>
 
               <p className="mt-4 font-black text-white">
-                No workers online right now
+                {t('noWorkersOnline')}
               </p>
 
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                Workers will appear here automatically when they become active.
+                {t('workersAppearAutomatically')}
               </p>
             </div>
           ) : (
@@ -972,22 +984,22 @@ export default function AdminPage() {
                         <p className="truncate font-black text-white">
                           {worker.full_name ||
                             worker.company_name ||
-                            'CrewCall Worker'}
+                            t('crewCallWorker')}
                         </p>
                       </div>
 
                       <p className="mt-1 truncate text-sm font-semibold text-slate-400">
-                        {worker.trade || 'Trade not listed'}
+                        {worker.trade || t('tradeNotListed')}
                       </p>
 
                       <p className="mt-1 truncate text-xs font-semibold text-slate-500">
                         {[worker.city, worker.state]
                           .filter(Boolean)
-                          .join(', ') || 'Location not listed'}
+                          .join(', ') || t('locationNotListed')}
                       </p>
 
                       <p className="mt-3 text-xs font-black uppercase tracking-wide text-emerald-300">
-                        Last seen {formatDateTime(worker.last_seen)}
+                        {t('lastSeen', { date: formatDateTime(worker.last_seen) })}
                       </p>
                     </div>
 
@@ -1007,10 +1019,10 @@ export default function AdminPage() {
             className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-5 transition hover:bg-cyan-400/20"
           >
             <h2 className="font-black text-cyan-200">
-              🚀 Launch Checklist
+              🚀 {t('launchChecklist')}
             </h2>
             <p className="mt-2 text-sm text-slate-400">
-              Track final launch readiness.
+              {t('trackLaunchReadiness')}
             </p>
           </a>
 
@@ -1019,10 +1031,10 @@ export default function AdminPage() {
             className="rounded-2xl border border-purple-400/20 bg-purple-400/10 p-5 transition hover:bg-purple-400/20"
           >
             <h2 className="font-black text-purple-200">
-              🚀 Launch Readiness
+              🚀 {t('launchReadiness')}
             </h2>
             <p className="mt-2 text-sm text-slate-400">
-              Check marketplace readiness before going live.
+              {t('checkMarketplaceReadiness')}
             </p>
           </a>
 
@@ -1031,10 +1043,10 @@ export default function AdminPage() {
             className="rounded-2xl border border-green-400/20 bg-green-400/10 p-5 transition hover:bg-green-400/20"
           >
             <h2 className="font-black text-green-200">
-              🟢 System Health
+              🟢 {t('systemHealth')}
             </h2>
             <p className="mt-2 text-sm text-slate-400">
-              Monitor production services.
+              {t('monitorProductionServices')}
             </p>
           </a>
 
@@ -1043,38 +1055,38 @@ export default function AdminPage() {
             className="rounded-2xl border border-red-400/20 bg-red-400/10 p-5 transition hover:bg-red-400/20"
           >
             <h2 className="font-black text-red-200">
-              ⚠️ Error Center
+              ⚠️ {t('errorCenter')}
             </h2>
             <p className="mt-2 text-sm text-slate-400">
-              Review application issues.
+              {t('reviewApplicationIssues')}
             </p>
           </a>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <ProgressCard
-            label="Verification Rate"
+            label={t('verificationRate')}
             value={stats.verificationRate}
-            detail={`${stats.fullyVerified} users fully verified`}
+            detail={t('fullyVerifiedUsers', { count: stats.fullyVerified })}
             tone="cyan"
           />
 
           <ProgressCard
-            label="Job Fill Rate"
+            label={t('jobFillRate')}
             value={stats.fillRate}
-            detail="Assigned and completed jobs"
+            detail={t('assignedCompletedJobs')}
             tone="green"
           />
 
           <ProgressCard
-            label="Active Job Rate"
+            label={t('activeJobRate')}
             value={stats.activeJobRate}
-            detail="Open, assigned, or in progress"
+            detail={t('openAssignedInProgress')}
             tone="blue"
           />
 
           <ProgressCard
-            label="Paid Job Rate"
+            label={t('paidJobRate')}
             value={
               jobs.length > 0
                 ? Math.round(
@@ -1083,96 +1095,96 @@ export default function AdminPage() {
                   )
                 : 0
             }
-            detail={`${stats.paidJobs} paid · ${stats.unpaidJobs} unpaid`}
+            detail={t('paidUnpaidBreakdown', { paid: stats.paidJobs, unpaid: stats.unpaidJobs })}
             tone="amber"
           />
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <MiniStat
-            label="Workers"
+            label={t('workers')}
             value={stats.workers}
           />
 
           <MiniStat
-            label="Companies"
+            label={t('companies')}
             value={stats.companies}
           />
 
           <MiniStat
-            label="Assigned"
+            label={t('assigned')}
             value={stats.assignedJobs}
           />
 
           <MiniStat
-            label="Paid Jobs"
+            label={t('paidJobs')}
             value={stats.paidJobs}
           />
 
           <MiniStat
-            label="Applications"
+            label={t('applications')}
             value={stats.pendingApplications}
           />
 
           <MiniStat
-            label="Invites"
+            label={t('invites')}
             value={stats.pendingInvites}
           />
 
           <MiniStat
-            label="Marketplace Volume"
+            label={t('marketplaceVolume')}
             value={Math.round(Number(stats.marketplaceVolume || 0))}
           />
 
           <MiniStat
-            label="CrewCall Revenue"
+            label={t('crewCallRevenue')}
             value={Math.round(Number(stats.crewcallRevenue || 0) / 100)}
           />
 
           <MiniStat
-            label="Worker Payouts"
+            label={t('workerPayouts')}
             value={Math.round(Number(stats.workerPayouts || 0) / 100)}
           />
 
           <MiniStat
-            label="Pending Payouts"
+            label={t('pendingPayouts')}
             value={stats.pendingPayouts}
           />
         </section>
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
-            eyebrow="Marketplace Activity"
-            title="Jobs"
-            description="Review active work, payment status, payouts, assigned workers, and job activity."
+            eyebrow={t('marketplaceActivity')}
+            title={t('jobs')}
+            description={t('jobsDescription')}
             actions={
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/admin/jobs"
                   className="rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-black text-white transition hover:bg-white/[0.1]"
                 >
-                  All Jobs
+                  {t('allJobs')}
                 </Link>
 
                 <Link
                   href="/admin/payments"
                   className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
                 >
-                  Payments
+                  {t('payments')}
                 </Link>
 
                 <Link
                   href="/admin/revenue"
                   className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-200 transition hover:bg-emerald-400/20"
                 >
-                  Revenue
+                  {t('revenue')}
                 </Link>
 
                 <Link
                   href="/admin/analytics"
                   className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-200 transition hover:bg-cyan-400/20"
                 >
-                  Analytics
+                  {t('analytics')}
                 </Link>
               </div>
             }
@@ -1185,7 +1197,7 @@ export default function AdminPage() {
                 onChange={(event) =>
                   setJobSearch(event.target.value)
                 }
-                placeholder="Search jobs, trades, companies, locations, or payments..."
+                placeholder={t('searchJobs')}
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40"
               />
 
@@ -1199,25 +1211,25 @@ export default function AdminPage() {
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-400/40"
               >
                 <option value="all">
-                  All Jobs
+                  {t('allJobs')}
                 </option>
 
-                <option value="open">Open</option>
+                <option value="open">{t('open')}</option>
 
                 <option value="assigned">
-                  Assigned
+                  {t('assigned')}
                 </option>
 
                 <option value="in_progress">
-                  In Progress
+                  {t('inProgress')}
                 </option>
 
                 <option value="completed">
-                  Completed
+                  {t('completed')}
                 </option>
 
                 <option value="unpaid">
-                  Unpaid
+                  {t('unpaid')}
                 </option>
               </select>
 
@@ -1231,7 +1243,7 @@ export default function AdminPage() {
                   }}
                   className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.1]"
                 >
-                  Clear
+                  {t('clear')}
                 </button>
               )}
             </div>
@@ -1241,35 +1253,35 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-white/10 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
                     <th className="px-3 py-4">
-                      Job
+                      {t('job')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Company
+                      {t('company')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Status
+                      {t('status')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Payment
+                      {t('payment')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Payout
+                      {t('payout')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Worker
+                      {t('worker')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Created
+                      {t('created')}
                     </th>
 
                     <th className="px-3 py-4 text-right">
-                      Action
+                      {t('action')}
                     </th>
                   </tr>
                 </thead>
@@ -1299,7 +1311,7 @@ export default function AdminPage() {
                           <td className="px-3 py-4">
                             <p className="font-black text-white">
                               {job.title ||
-                                'Untitled Job'}
+                                t('untitledJob')}
                             </p>
 
                             <p className="mt-1 text-xs font-semibold text-slate-500">
@@ -1309,7 +1321,7 @@ export default function AdminPage() {
                                 job.pay_rate,
                               ]
                                 .filter(Boolean)
-                                .join(' · ') || 'No details'}
+                                .join(' · ') || t('noDetails')}
                             </p>
                           </td>
 
@@ -1319,7 +1331,7 @@ export default function AdminPage() {
                                 ? getProfileName(
                                     company
                                   )
-                                : 'Unknown Company'}
+                                : t('unknownCompany')}
                             </p>
                           </td>
 
@@ -1351,7 +1363,7 @@ export default function AdminPage() {
                                 ? getProfileName(
                                     worker
                                   )
-                                : 'Unassigned'}
+                                : t('unassigned')}
                             </span>
                           </td>
 
@@ -1366,7 +1378,7 @@ export default function AdminPage() {
                               href={`/jobs/${job.id}`}
                               className="inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-300 transition hover:bg-cyan-500/20"
                             >
-                              View Job
+                              {t('viewJob')}
                             </Link>
                           </td>
                         </tr>
@@ -1378,8 +1390,8 @@ export default function AdminPage() {
 
             {filteredJobs.length === 0 ? (
               <EmptyState
-                title="No jobs found"
-                description="Try changing the search or job-status filter."
+                title={t('noJobsFound')}
+                description={t('tryJobSearchFilter')}
               />
             ) : null}
           </div>
@@ -1387,15 +1399,15 @@ export default function AdminPage() {
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
-            eyebrow="Trust and Compliance"
-            title="Users and Verification"
-            description="Review companies, workers, insurance, liability forms, and verification status."
+            eyebrow={t('trustCompliance')}
+            title={t('usersAndVerification')}
+            description={t('usersVerificationDescription')}
             actions={
               <Link
                 href="/admin/users"
                 className="rounded-2xl bg-cyan-400 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
               >
-                All Users
+                {t('allUsers')}
               </Link>
             }
           />
@@ -1407,7 +1419,7 @@ export default function AdminPage() {
                 onChange={(event) =>
                   setUserSearch(event.target.value)
                 }
-                placeholder="Search users, companies, or roles..."
+                placeholder={t('searchUsers')}
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40"
               />
 
@@ -1421,23 +1433,23 @@ export default function AdminPage() {
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none focus:border-cyan-400/40"
               >
                 <option value="all">
-                  All Users
+                  {t('allUsers')}
                 </option>
 
                 <option value="worker">
-                  Workers
+                  {t('workers')}
                 </option>
 
                 <option value="company">
-                  Companies
+                  {t('companies')}
                 </option>
 
                 <option value="admin">
-                  Admins
+                  {t('admins')}
                 </option>
 
                 <option value="unverified">
-                  Needs Verification
+                  {t('needsVerification')}
                 </option>
               </select>
 
@@ -1451,7 +1463,7 @@ export default function AdminPage() {
                   }}
                   className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.1]"
                 >
-                  Clear
+                  {t('clear')}
                 </button>
               )}
             </div>
@@ -1461,39 +1473,39 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-white/10 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
                     <th className="px-3 py-4">
-                      User
+                      {t('user')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Role
+                      {t('role')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Company
+                      {t('company')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Company
+                      {t('company')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Insurance
+                      {t('insurance')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Liability
+                      {t('liability')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Verification
+                      {t('verification')}
                     </th>
 
                     <th className="px-3 py-4">
-                      Joined
+                      {t('joined')}
                     </th>
 
                     <th className="px-3 py-4 text-right">
-                      Profile
+                      {t('profile')}
                     </th>
                   </tr>
                 </thead>
@@ -1555,7 +1567,7 @@ export default function AdminPage() {
 
                           <td className="px-3 py-4">
                             <VerifyButton
-                              label="Company"
+                              label={t('company')}
                               active={
                                 profile.company_verified
                               }
@@ -1572,7 +1584,7 @@ export default function AdminPage() {
 
                           <td className="px-3 py-4">
                             <VerifyButton
-                              label="Insurance"
+                              label={t('insurance')}
                               active={
                                 profile.insurance_verified
                               }
@@ -1589,7 +1601,7 @@ export default function AdminPage() {
 
                           <td className="px-3 py-4">
                             <VerifyButton
-                              label="Liability"
+                              label={t('liability')}
                               active={
                                 profile.liability_form_verified
                               }
@@ -1657,7 +1669,7 @@ export default function AdminPage() {
                               href={`/admin/users/${profile.id}`}
                               className="inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-300 transition hover:bg-cyan-500/20"
                             >
-                              View
+                              {t('view')}
                             </Link>
                           </td>
                         </tr>
@@ -1669,8 +1681,8 @@ export default function AdminPage() {
 
             {filteredProfiles.length === 0 ? (
               <EmptyState
-                title="No users found"
-                description="Try changing the user search or verification filter."
+                title={t('noUsersFound')}
+                description={t('tryUserSearchFilter')}
               />
             ) : null}
           </div>
@@ -1678,14 +1690,14 @@ export default function AdminPage() {
 
         <section className="grid gap-6 xl:grid-cols-2">
           <ActivityPanel
-            eyebrow="Hiring Activity"
-            title="Recent Applications"
+            eyebrow={t('hiringActivity')}
+            title={t('recentApplications')}
             count={applications.length}
           >
             {applications.length === 0 ? (
               <EmptyState
-                title="No applications yet"
-                description="Worker applications will appear here."
+                title={t('noApplicationsYet')}
+                description={t('workerApplicationsAppear')}
               />
             ) : (
               <div className="space-y-3">
@@ -1711,19 +1723,20 @@ export default function AdminPage() {
                         title={
                           worker
                             ? getProfileName(worker)
-                            : 'Unknown Worker'
+                            : t('unknownWorker')
                         }
                         subtitle={
                           job?.title ||
-                          'Unknown Job'
+                          t('unknownJob')
                         }
                         status={
                           application.status
                         }
-                        detail={`Requested pay: ${
-                          application.requested_pay_rate ||
-                          'Not provided'
-                        }`}
+                        detail={t('requestedPay', {
+                          pay:
+                            application.requested_pay_rate ||
+                            t('notProvided'),
+                        })}
                         date={application.created_at}
                         href={
                           application.job_id
@@ -1738,14 +1751,14 @@ export default function AdminPage() {
           </ActivityPanel>
 
           <ActivityPanel
-            eyebrow="Recruiting Activity"
-            title="Recent Invites"
+            eyebrow={t('recruitingActivity')}
+            title={t('recentInvites')}
             count={invites.length}
           >
             {invites.length === 0 ? (
               <EmptyState
-                title="No invites yet"
-                description="Company invitations will appear here."
+                title={t('noInvitesYet')}
+                description={t('companyInvitationsAppear')}
               />
             ) : (
               <div className="space-y-3">
@@ -1776,20 +1789,18 @@ export default function AdminPage() {
                         title={
                           worker
                             ? getProfileName(worker)
-                            : 'Unknown Worker'
+                            : t('unknownWorker')
                         }
                         subtitle={
                           job?.title ||
-                          'Unknown Job'
+                          t('unknownJob')
                         }
                         status={invite.status}
-                        detail={`From ${
-                          company
-                            ? getProfileName(
-                                company
-                              )
-                            : 'Unknown Company'
-                        }`}
+                        detail={t('fromCompany', {
+                          company: company
+                            ? getProfileName(company)
+                            : t('unknownCompany'),
+                        })}
                         date={invite.created_at}
                         href={
                           invite.job_id
@@ -1809,6 +1820,8 @@ export default function AdminPage() {
 }
 
 function AdminLoadingState() {
+  const t = useTranslations('AdminDashboard')
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6">
       <div className="mx-auto max-w-[1500px]">
@@ -1817,11 +1830,11 @@ function AdminLoadingState() {
 
           <div className="p-6 sm:p-8">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-              CrewCall Admin
+              {t('crewCallAdmin')}
             </p>
 
             <h1 className="mt-3 text-3xl font-black">
-              Loading Control Center...
+              {t('loadingControlCenter')}
             </h1>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -2034,6 +2047,8 @@ function ActivityCard({
   date: string | null
   href?: string
 }) {
+  const t = useTranslations('AdminDashboard')
+
   return (
     <article className="rounded-3xl border border-white/10 bg-slate-950/55 p-4 transition hover:border-cyan-400/20">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -2064,7 +2079,7 @@ function ActivityCard({
             href={href}
             className="shrink-0 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-300 transition hover:bg-cyan-500/20"
           >
-            Open
+            {t('openAction')}
           </Link>
         ) : null}
       </div>
@@ -2083,12 +2098,15 @@ function VerifyButton({
   working: boolean
   onClick: () => void
 }) {
+  const t = useTranslations('AdminDashboard')
+  const action = active ? t('remove') : t('approve')
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={working}
-      title={`${active ? 'Remove' : 'Approve'} ${label} verification`}
+      title={t('verificationTitle', { action, label })}
       className={
         active
           ? 'rounded-full border border-emerald-400/20 bg-emerald-500/15 px-3 py-1.5 text-xs font-black text-emerald-300 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50'
@@ -2096,10 +2114,10 @@ function VerifyButton({
       }
     >
       {working
-        ? 'Updating...'
+        ? t('updating')
         : active
-          ? 'Verified'
-          : 'Verify'}
+          ? t('verified')
+          : t('verify')}
     </button>
   )
 }
@@ -2109,7 +2127,49 @@ function StatusPill({
 }: {
   value: string | null
 }) {
+  const t = useTranslations('AdminDashboard')
   const normalized = normalizeValue(value)
+
+  const displayValue = (() => {
+    switch (normalized) {
+      case 'paid':
+        return t('paid')
+      case 'completed':
+        return t('completed')
+      case 'accepted':
+        return t('accepted')
+      case 'verified':
+        return t('verified')
+      case 'released':
+        return t('released')
+      case 'pending':
+        return t('pending')
+      case 'open':
+        return t('open')
+      case 'unpaid':
+        return t('unpaid')
+      case 'assigned':
+        return t('assigned')
+      case 'in_progress':
+        return t('inProgress')
+      case 'declined':
+        return t('declined')
+      case 'rejected':
+        return t('rejected')
+      case 'cancelled':
+        return t('cancelled')
+      case 'failed':
+        return t('failed')
+      case 'worker':
+        return t('worker')
+      case 'company':
+        return t('company')
+      case 'admin':
+        return t('admin')
+      default:
+        return value ? titleCase(value) : t('unknown')
+    }
+  })()
 
   let classes =
     'border-white/10 bg-white/[0.055] text-slate-300'
@@ -2157,7 +2217,7 @@ function StatusPill({
     <span
       className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${classes}`}
     >
-      {titleCase(value)}
+      {displayValue}
     </span>
   )
 }
