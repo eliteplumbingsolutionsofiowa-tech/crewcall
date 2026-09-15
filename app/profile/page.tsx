@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { TRADES } from '@/lib/trades'
@@ -242,6 +242,30 @@ function isRecentlyOnline(value: unknown) {
 }
 
 function ProfilePageInner() {
+  const router = useRouter()
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  async function handleMobileLogout() {
+    if (loggingOut) return
+
+    setLoggingOut(true)
+
+    try {
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        throw error
+      }
+
+      window.dispatchEvent(new Event('crewcall-refresh-nav'))
+      router.replace('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Unable to log out:', error)
+      setLoggingOut(false)
+    }
+  }
+
   const t = useTranslations('Profile')
   const searchParams = useSearchParams()
   const viewedUserId = searchParams.get('user')
@@ -1726,6 +1750,15 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
             >
               {saving ? t('saving') : t('saveProfile')}
             </CrewButton>
+
+            <button
+              type="button"
+              onClick={() => void handleMobileLogout()}
+              disabled={loggingOut}
+              className="mt-3 flex min-h-12 w-full items-center justify-center rounded-2xl border border-red-400/40 bg-red-500/15 px-5 py-3 text-sm font-black text-red-700 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loggingOut ? 'Logging Out...' : 'Log Out'}
+            </button>
           </div>
         </div>
       )}

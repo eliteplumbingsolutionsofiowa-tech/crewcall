@@ -1056,16 +1056,16 @@ export default function CrewCallNav() {
             <Link
               href={logoHref}
               onClick={closeMobileMenu}
-              className="group flex shrink-0 items-center gap-3 no-underline"
+              className="group flex min-w-0 flex-1 items-center gap-2 sm:gap-3 no-underline"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#081328] shadow-xl shadow-blue-900/20 transition group-hover:scale-105"><img src="/brand/crewcall-icon.png" alt="CrewCall" className="h-8 w-8 rounded-lg object-cover" /></div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#081328] sm:h-12 sm:w-12 shadow-xl shadow-blue-900/20 transition group-hover:scale-105"><img src="/brand/crewcall-icon.png" alt="CrewCall" className="h-8 w-8 rounded-lg object-cover" /></div>
 
-              <div className="shrink-0 leading-tight">
-                <div className="whitespace-nowrap text-xl font-black tracking-tight !text-white">
+              <div className="min-w-0 leading-tight">
+                <div className="whitespace-nowrap text-lg font-black tracking-tight !text-white sm:text-xl">
                   CrewCall
                 </div>
 
-                <div className="whitespace-nowrap text-xs font-black uppercase tracking-wide !text-blue-100/80">
+                <div className="hidden whitespace-nowrap text-xs font-black uppercase tracking-wide !text-blue-100/80 sm:block">
                   The Skilled Trades Network
                 </div>
               </div>
@@ -1098,7 +1098,7 @@ export default function CrewCallNav() {
 
             </div>
 
-            <div className="flex items-center gap-2 xl:hidden">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 xl:hidden">
               {userId ? (
                 <button
                   type="button"
@@ -1137,7 +1137,7 @@ export default function CrewCallNav() {
                     (current) => !current
                   )
                 }
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-slate-800 px-4 text-sm font-black !text-white shadow-md shadow-black/20 transition hover:border-blue-600/50 hover:bg-slate-700 hover:!text-blue-100"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-slate-800 text-sm font-black !text-white sm:w-auto sm:gap-2 sm:px-4 shadow-md shadow-black/20 transition hover:border-blue-600/50 hover:bg-slate-700 hover:!text-blue-100"
                 aria-expanded={mobileMenuOpen}
                 aria-controls="crewcall-mobile-menu"
                 aria-label={
@@ -1150,7 +1150,7 @@ export default function CrewCallNav() {
                   {mobileMenuOpen ? '×' : '☰'}
                 </span>
 
-                <span>
+                <span className="hidden sm:inline">
                   {mobileMenuOpen ? tNav('close') : tNav('menu')}
                 </span>
               </button>
