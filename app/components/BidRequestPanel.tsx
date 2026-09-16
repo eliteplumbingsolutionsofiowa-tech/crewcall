@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
@@ -570,7 +571,7 @@ export default function BidRequestPanel({
               </div>
 
               <div className="mt-1 text-xs font-semibold text-slate-400">
-                Lowest price is shown first.
+                Compare price, availability, experience, verification, and contractor reputation.
               </div>
             </div>
 
@@ -608,8 +609,18 @@ export default function BidRequestPanel({
                 return (
                   <article
                     key={bid.id}
-                    className="rounded-2xl border border-white/10 bg-slate-950/35 p-5"
+                    className={
+                      bid.status === 'accepted'
+                        ? 'rounded-3xl border border-emerald-400/40 bg-gradient-to-br from-emerald-500/[0.14] via-slate-950/70 to-cyan-500/[0.08] p-5 shadow-xl shadow-emerald-500/10 ring-1 ring-emerald-400/10 sm:p-6'
+                        : 'rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950/70 to-slate-900/55 p-5 shadow-xl shadow-black/20 transition hover:border-cyan-400/25 sm:p-6'
+                    }
                   >
+                    {bid.status === 'accepted' && (
+                      <div className="mb-5 flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-black uppercase tracking-[0.16em] text-emerald-200">
+                        <span aria-hidden="true">✓</span>
+                        Contractor Selected
+                      </div>
+                    )}
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -709,9 +720,19 @@ export default function BidRequestPanel({
                       })}
                     </div>
 
-                    {canManage && bid.status === 'pending' && (
-                      <div className="mt-5 flex flex-wrap gap-3 border-t border-white/10 pt-4">
-                        <button
+                    <div className="mt-5 flex flex-wrap gap-3 border-t border-white/10 pt-4">
+                      {company?.id && (
+                        <Link
+                          href={`/companies/${company.id}`}
+                          className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-500/20 hover:text-white"
+                        >
+                          View Contractor
+                        </Link>
+                      )}
+
+                      {canManage && bid.status === 'pending' && (
+                        <>
+                          <button
                           type="button"
                           disabled={busy}
                           onClick={() =>
@@ -731,9 +752,10 @@ export default function BidRequestPanel({
                           className="rounded-2xl border border-red-400/30 bg-red-500/10 px-5 py-3 text-sm font-black text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {t('declineBid')}
-                        </button>
-                      </div>
-                    )}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </article>
                 )
               })}
