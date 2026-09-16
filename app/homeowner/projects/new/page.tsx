@@ -128,7 +128,7 @@ export default function NewHomeownerProjectPage() {
 
   if (checking) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(37,99,235,0.12),_transparent_30%),linear-gradient(to_bottom,_#020617,_#07111f_55%,_#020617)] px-4 py-10 text-white sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <p className="text-sm font-bold text-slate-400">
             Loading CrewCall...
@@ -139,21 +139,21 @@ export default function NewHomeownerProjectPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(37,99,235,0.12),_transparent_30%),linear-gradient(to_bottom,_#020617,_#07111f_55%,_#020617)] px-4 py-10 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8">
           <Link
             href="/homeowner/projects"
-            className="text-sm font-bold text-sky-400 hover:text-sky-300"
+            className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
             ← My Projects
           </Link>
 
-          <p className="mt-6 text-xs font-black uppercase tracking-[0.22em] text-sky-400">
+          <p className="mt-6 text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
             CrewCall Homeowner
           </p>
 
-          <h1 className="mt-2 text-3xl font-black sm:text-4xl">
+          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
             Post a Project
           </h1>
 
@@ -166,7 +166,7 @@ export default function NewHomeownerProjectPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-8"
+          className="space-y-6 rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_top_right,_rgba(37,99,235,0.12),_transparent_35%),linear-gradient(135deg,_rgba(15,23,42,0.97),_rgba(8,25,42,0.94))] p-5 shadow-[0_25px_80px_-35px_rgba(6,182,212,0.55)] ring-1 ring-white/5 sm:p-8"
         >
           <div>
             <label
@@ -182,7 +182,7 @@ export default function NewHomeownerProjectPage() {
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Example: Replace water heater"
               required
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             />
           </div>
 
@@ -199,7 +199,7 @@ export default function NewHomeownerProjectPage() {
               value={trade}
               onChange={(event) => setTrade(event.target.value)}
               required
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-sky-400"
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             >
               <option value="">Select a trade</option>
 
@@ -225,7 +225,7 @@ export default function NewHomeownerProjectPage() {
               onChange={(event) => setLocation(event.target.value)}
               placeholder="City, State"
               required
-              className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+              className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             />
           </div>
 
@@ -244,7 +244,7 @@ export default function NewHomeownerProjectPage() {
               placeholder="Describe the work you need completed, important details, existing conditions, and anything contractors should know before bidding."
               rows={7}
               required
-              className="w-full resize-y rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
+              className="w-full resize-y rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             />
           </div>
 
@@ -265,7 +265,7 @@ export default function NewHomeownerProjectPage() {
                   setBidDeadline(event.target.value)
                 }
                 required
-                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-sky-400"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
               />
             </div>
 
@@ -284,13 +284,13 @@ export default function NewHomeownerProjectPage() {
                 onChange={(event) =>
                   setWorkDeadline(event.target.value)
                 }
-                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-sky-400"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
               />
             </div>
           </div>
 
           {error ? (
-            <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-200">
+            <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-200 shadow-[0_12px_30px_-20px_rgba(248,113,113,0.6)]">
               {error}
             </div>
           ) : null}
@@ -298,14 +298,14 @@ export default function NewHomeownerProjectPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-sky-500 px-5 py-4 text-base font-black text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-base font-black text-slate-950 shadow-[0_12px_35px_-12px_rgba(34,211,238,0.75)] transition hover:scale-[1.01] hover:shadow-[0_16px_45px_-12px_rgba(34,211,238,0.9)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
               ? 'Posting Project...'
               : 'Post Project for Contractor Bids'}
           </button>
 
-          <p className="text-center text-xs font-medium leading-5 text-slate-400">
+          <p className="text-center text-xs font-semibold leading-5 text-slate-300">
             Contractors will be able to review the project and submit
             their bid through CrewCall.
           </p>
