@@ -31,6 +31,11 @@ export default function NewHomeownerProjectPage() {
   const [description, setDescription] = useState('')
   const [bidDeadline, setBidDeadline] = useState('')
   const [workDeadline, setWorkDeadline] = useState('')
+  const [photos, setPhotos] = useState<File[]>([])
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+
+  const MAX_PHOTOS = 10
+  const MAX_PHOTO_SIZE = 10 * 1024 * 1024
 
   useEffect(() => {
     let active = true
@@ -69,6 +74,111 @@ export default function NewHomeownerProjectPage() {
       active = false
     }
   }, [router])
+
+  function handlePhotoSelection(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const selected = Array.from(event.target.files || [])
+
+    if (!selected.length) return
+
+    const invalidType = selected.find(
+      (file) => !file.type.startsWith('image/')
+    )
+    if (invalidType) {
+      setError('Project photos must be image files.')
+      event.target.value = ''
+      return
+    }
+
+    const oversized = selected.find(
+      (file) => file.size > MAX_PHOTO_SIZE
+    )
+    if (oversized) {
+      setError('Each project photo must be 10 MB or smaller.')
+      event.target.value = ''
+      return
+    }
+
+    if (photos.length + selected.length > MAX_PHOTOS) {
+      setError(`You can add up to ${MAX_PHOTOS} project photos.`)
+      event.target.value = ''
+      return
+    }
+
+    setError(null)
+    setPhotos((current) => [...current, ...selected])
+    event.target.value = ''
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((current) =>
+      current.filter((_, photoIndex) => photoIndex !== index)
+    )
+  }
+
+  async function uploadProjectPhotos(
+    jobId: string,
+    userId: string
+  ) {
+    for (let index = 0; index < photos.length; index += 1) {
+      const file = photos[index]
+      setUploadStatus(
+        `Uploading photo ${index + 1} of ${photos.length}...`
+      )
+
+      const extension =
+        file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const safeName =
+        file.name
+          .replace(/\.[^/.]+$/, '')
+          .replace(/[^a-zA-Z0-9-_]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || 'project-photo'
+
+      const storagePath =
+        `${jobId}/${userId}/job_attachment/` +
+        `${Date.now()}-${index}-${safeName}.${extension}`
+
+      const { error: storageError } = await supabase.storage
+        .from('job-files')
+        .upload(storagePath, file, {
+          upsert: false,
+          contentType: file.type,
+        })
+
+      if (storageError) {
+        throw new Error(
+          `Project created, but photo ${index + 1} could not be uploaded: ${storageError.message}`
+        )
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('job-files')
+        .getPublicUrl(storagePath)
+
+      const { error: fileError } = await supabase
+        .from('job_files')
+        .insert({
+          job_id: jobId,
+          uploaded_by: userId,
+          file_name: file.name,
+          file_url: publicUrlData.publicUrl,
+          file_type: file.type,
+          category: 'job_attachment',
+        })
+
+      if (fileError) {
+        await supabase.storage
+          .from('job-files')
+          .remove([storagePath])
+
+        throw new Error(
+          `Project created, but photo ${index + 1} could not be saved: ${fileError.message}`
+        )
+      }
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -112,6 +222,23 @@ export default function NewHomeownerProjectPage() {
         throw new Error(
           payload?.error || 'Unable to post your project.'
         )
+      }
+
+      if (photos.length > 0) {
+        setUploadStatus(
+          `Project created. Uploading ${photos.length} ${
+            photos.length === 1 ? 'photo' : 'photos'
+          }...`
+        )
+
+        try {
+          await uploadProjectPhotos(payload.id, session.user.id)
+        } catch (photoError) {
+          console.error(photoError)
+          setUploadStatus(
+            'Project created. Some photos may not have uploaded.'
+          )
+        }
       }
 
       router.push(`/jobs/${payload.id}`)
@@ -158,7 +285,7 @@ export default function NewHomeownerProjectPage() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300 sm:text-base">
-            Tell local contractors what you need done. Your project
+            Tell contractors what you need done. Your project
             will be listed as a CrewCall bid opportunity so qualified
             companies can submit bids.
           </p>
@@ -248,6 +375,66 @@ export default function NewHomeownerProjectPage() {
             />
           </div>
 
+          <div className="rounded-3xl border border-cyan-400/15 bg-slate-950/45 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-black text-white">
+                  Project Photos
+                </p>
+                <p className="mt-1 text-sm font-medium leading-6 text-slate-400">
+                  Add photos of the work area or existing conditions.
+                  Up to 10 photos, 10 MB each.
+                </p>
+              </div>
+
+              <label className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15">
+                + Add Photos
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoSelection}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {photos.length > 0 ? (
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {photos.map((photo, index) => (
+                  <div
+                    key={`${photo.name}-${photo.lastModified}-${index}`}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/70"
+                  >
+                    <img
+                      src={URL.createObjectURL(photo)}
+                      alt={`Project photo ${index + 1}`}
+                      className="h-32 w-full object-cover"
+                    />
+                    <div className="flex items-center justify-between gap-2 p-3">
+                      <p className="min-w-0 truncate text-xs font-bold text-slate-300">
+                        {photo.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="shrink-0 text-xs font-black text-rose-300 transition hover:text-rose-200"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-7 text-center">
+                <p className="text-sm font-bold text-slate-500">
+                  No photos added yet.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
@@ -288,6 +475,12 @@ export default function NewHomeownerProjectPage() {
               />
             </div>
           </div>
+
+          {uploadStatus ? (
+            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-200">
+              {uploadStatus}
+            </div>
+          ) : null}
 
           {error ? (
             <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-200 shadow-[0_12px_30px_-20px_rgba(248,113,113,0.6)]">
