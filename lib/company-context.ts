@@ -71,7 +71,22 @@ export async function resolveCompanyContext(
    * Legacy/founder fallback:
    * some early CrewCall company owners have a worker profile
    * but already own company data.
+   *
+   * IMPORTANT:
+   * Homeowner projects also use the homeowner profile ID in jobs.company_id,
+   * so this fallback must never reinterpret a homeowner as a company owner.
    */
+  if (profileRole !== 'worker') {
+    return {
+      companyId: null,
+      profileRole,
+      isPlatformAdmin,
+      isCompanyOwner: false,
+      isTeamMember: false,
+      teamRole: null,
+    }
+  }
+
   const [
     ownedBranchResult,
     ownedJobResult,
