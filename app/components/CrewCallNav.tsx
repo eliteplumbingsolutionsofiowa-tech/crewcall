@@ -903,14 +903,6 @@ export default function CrewCallNav() {
         {role === 'homeowner' ? (
           <>
             <NavLink
-              href="/homeowner/dashboard"
-              onClick={onNavigate}
-              active={pathname.startsWith('/homeowner/dashboard')}
-            >
-              {tNav('dashboard')}
-            </NavLink>
-
-            <NavLink
               href="/homeowner/projects"
               onClick={onNavigate}
               active={pathname.startsWith('/homeowner/projects')}
@@ -919,7 +911,6 @@ export default function CrewCallNav() {
             </NavLink>
           </>
         ) : null}
-
         {role === 'worker' ? (
           <>
             <NavLink

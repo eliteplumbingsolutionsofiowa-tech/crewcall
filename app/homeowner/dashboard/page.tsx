@@ -75,9 +75,9 @@ export default function HomeownerDashboardPage() {
     profile?.full_name?.trim().split(/\s+/)[0] || 'there'
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(37,99,235,0.12),_transparent_30%),linear-gradient(to_bottom,_#020617,_#07111f_55%,_#020617)] px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        <section className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-gradient-to-br from-cyan-400/10 via-slate-900 to-blue-500/10 p-6 shadow-2xl sm:p-10">
+        <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/30 bg-[radial-gradient(circle_at_top_right,_rgba(37,99,235,0.24),_transparent_38%),radial-gradient(circle_at_bottom_left,_rgba(6,182,212,0.18),_transparent_35%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(7,18,35,0.98))] p-6 shadow-[0_25px_80px_-30px_rgba(6,182,212,0.55)] ring-1 ring-white/5 sm:p-10">
           <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
             CrewCall for Homeowners
           </p>
@@ -128,7 +128,7 @@ export default function HomeownerDashboardPage() {
           />
         </section>
 
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/5 p-6 sm:p-8">
+        <section className="mt-6 group rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-slate-900/95 via-slate-900/80 to-cyan-950/20 p-6 shadow-[0_18px_50px_-28px_rgba(6,182,212,0.45)] ring-1 ring-white/5 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_65px_-28px_rgba(6,182,212,0.65)] sm:p-8">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-400">
             Your Projects
           </p>
@@ -164,8 +164,8 @@ function DashboardCard({
   description: string
 }) {
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-sm font-black text-cyan-300">
+    <div className="group rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-slate-900/95 via-slate-900/80 to-cyan-950/20 p-6 shadow-[0_18px_50px_-28px_rgba(6,182,212,0.45)] ring-1 ring-white/5 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_65px_-28px_rgba(6,182,212,0.65)]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-400/25 to-blue-500/15 text-base font-black text-cyan-200 shadow-[0_0_30px_-8px_rgba(34,211,238,0.75)] ring-1 ring-white/10 transition group-hover:scale-110">
         {number}
       </div>
 
