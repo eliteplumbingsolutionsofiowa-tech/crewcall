@@ -101,8 +101,6 @@ async function notifyCompany({
         type,
         title,
         body,
-        message: body,
-        job_id: jobId,
         link_url: linkUrl,
         is_read: false,
         read: false,
