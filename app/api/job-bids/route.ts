@@ -220,7 +220,7 @@ export async function GET(request: Request) {
       user.id
     )
 
-    if (!companyContext.companyId) {
+    if (mine && !companyContext.companyId) {
       return NextResponse.json(
         {
           error:
@@ -299,8 +299,25 @@ export async function GET(request: Request) {
       )
     }
 
+    const { data: viewerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const isHomeownerOwner =
+      viewerProfile?.role === 'homeowner' &&
+      job.company_id === user.id
+
     const isProjectCompany =
       job.company_id === companyContext.companyId
+
+
+    const isProjectOwner = isProjectCompany || isHomeownerOwner
+    if (!isProjectOwner && !companyContext.companyId) {
+      return NextResponse.json({ error: 'Project access required.' }, { status: 403 })
+    }
+
 
     let query = supabaseAdmin
       .from('job_bids')
@@ -321,7 +338,7 @@ export async function GET(request: Request) {
       .order('amount_cents', { ascending: true })
       .order('created_at', { ascending: true })
 
-    if (!isProjectCompany) {
+    if (!isProjectOwner) {
       query = query.eq(
         'company_id',
         companyContext.companyId
@@ -409,9 +426,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      role: isProjectCompany ? 'project_owner' : 'bidder',
+      role: isProjectOwner ? 'project_owner' : 'bidder',
       canManage:
-        isProjectCompany &&
+        isHomeownerOwner || (isProjectCompany &&
         (
           companyContext.isPlatformAdmin ||
           companyContext.isCompanyOwner ||
@@ -419,7 +436,7 @@ export async function GET(request: Request) {
             companyContext.isTeamMember &&
             companyContext.teamRole === 'admin'
           )
-        ),
+        )),
       job: {
         id: job.id,
         status: job.status,
@@ -833,13 +850,12 @@ export async function PATCH(request: Request) {
       supabaseAdmin,
       user.id
     )
+    const { data: viewerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
 
-    if (!companyContext.companyId) {
-      return NextResponse.json(
-        { error: 'A CrewCall company account is required.' },
-        { status: 403 }
-      )
-    }
 
     const { data: bid, error: bidError } =
       await supabaseAdmin
@@ -896,21 +912,31 @@ export async function PATCH(request: Request) {
     }
 
     const isBidCompany =
+      Boolean(companyContext.companyId) &&
       bid.company_id === companyContext.companyId
 
+    const isHomeownerOwner =
+      viewerProfile?.role === 'homeowner' &&
+      job.company_id === user.id
+
     const isProjectCompany =
+      Boolean(companyContext.companyId) &&
       job.company_id === companyContext.companyId
 
     const canManageProject =
-      isProjectCompany &&
+      isHomeownerOwner ||
       (
-        companyContext.isPlatformAdmin ||
-        companyContext.isCompanyOwner ||
+        isProjectCompany &&
         (
-          companyContext.isTeamMember &&
-          companyContext.teamRole === 'admin'
+          companyContext.isPlatformAdmin ||
+          companyContext.isCompanyOwner ||
+          (
+            companyContext.isTeamMember &&
+            companyContext.teamRole === 'admin'
+          )
         )
       )
+
 
     if (action === 'edit') {
       if (!isBidCompany) {
@@ -1010,7 +1036,7 @@ export async function PATCH(request: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', bid.id)
-          .eq('company_id', companyContext.companyId)
+          .eq('company_id', companyContext.companyId!)
           .select()
           .single()
 
@@ -1054,7 +1080,7 @@ export async function PATCH(request: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', bid.id)
-          .eq('company_id', companyContext.companyId)
+          .eq('company_id', companyContext.companyId!)
 
       if (withdrawError) {
         return NextResponse.json(
@@ -1073,7 +1099,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json(
         {
           error:
-            'Only an authorized project company administrator can manage bids.',
+            'Only an authorized project owner can manage bids.',
         },
         { status: 403 }
       )
