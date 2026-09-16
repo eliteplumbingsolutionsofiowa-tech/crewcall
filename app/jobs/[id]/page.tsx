@@ -505,9 +505,10 @@ export default function JobDetailsPage() {
     setResolvedCompanyId(companyContext?.companyId ?? null)
 
     const isOwner =
-      Boolean(companyContext?.companyId) &&
-      jobData.company_id ===
-        companyContext?.companyId
+      (Boolean(companyContext?.companyId) &&
+        jobData.company_id === companyContext?.companyId) ||
+      (profileData.role === 'homeowner' &&
+        jobData.company_id === profileData.id)
 
     if (isOwner) {
       const { data: applicantData, error: applicantError } =
@@ -994,9 +995,11 @@ export default function JobDetailsPage() {
     )
   }
 
+  const isHomeowner = profile.role === 'homeowner'
   const isOwner =
-    Boolean(resolvedCompanyId) &&
-    job.company_id === resolvedCompanyId
+    (Boolean(resolvedCompanyId) &&
+      job.company_id === resolvedCompanyId) ||
+    (isHomeowner && job.company_id === profile.id)
 
   const isCompany =
     profile.role === 'company' ||
@@ -1056,13 +1059,19 @@ export default function JobDetailsPage() {
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <Link
             href={
-              isCompany && isOwner
-                ? "/company/jobs"
-                : "/jobs"
+              isHomeowner && isOwner
+                ? "/homeowner/projects"
+                : isCompany && isOwner
+                  ? "/company/jobs"
+                  : "/jobs"
             }
             className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
-            ← {isCompany && isOwner ? "Back to Company Jobs" : t('backToJobs')}
+            ← {isHomeowner && isOwner
+              ? "Back to My Projects"
+              : isCompany && isOwner
+                ? "Back to Company Jobs"
+                : t('backToJobs')}
           </Link>
 
           <button
@@ -1532,9 +1541,21 @@ export default function JobDetailsPage() {
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
-            eyebrow="Plans and Documents"
-            title={t('jobFiles')}
-            description="Upload and review plans, photos, PDFs, specifications, and job documents."
+            eyebrow={
+              isHomeowner && isOwner
+                ? "Project Photos"
+                : "Plans and Documents"
+            }
+            title={
+              isHomeowner && isOwner
+                ? "Photos"
+                : t('jobFiles')
+            }
+            description={
+              isHomeowner && isOwner
+                ? "Add photos to help contractors understand the project and prepare an accurate bid."
+                : "Upload and review plans, photos, PDFs, specifications, and job documents."
+            }
             badge={`${jobFiles.filter(
               (file) => file.category !== 'completion_photo'
             ).length} ${
@@ -1551,6 +1572,27 @@ export default function JobDetailsPage() {
               <JobFileUpload
                 jobId={job.id}
                 userId={profile.id}
+                title={
+                  isHomeowner && isOwner
+                    ? "Project Photos"
+                    : undefined
+                }
+                description={
+                  isHomeowner && isOwner
+                    ? "Upload clear photos of the work area, existing conditions, or anything contractors should see."
+                    : undefined
+                }
+                accept={
+                  isHomeowner && isOwner
+                    ? "image/*"
+                    : undefined
+                }
+                buttonLabel={
+                  isHomeowner && isOwner
+                    ? "Add Photos"
+                    : undefined
+                }
+                dark={isHomeowner && isOwner}
                 onUploadComplete={() => void loadPage(true)}
               />
             </div>
@@ -1560,7 +1602,10 @@ export default function JobDetailsPage() {
                 files={jobFiles.filter(
                   (file) => file.category !== 'completion_photo'
                 )}
-                canDelete={isCompany && isOwner}
+                canDelete={
+                  (isCompany && isOwner) ||
+                  (isHomeowner && isOwner)
+                }
                 currentUserId={profile.id}
                 onDeleteComplete={() => void loadPage(true)}
               />

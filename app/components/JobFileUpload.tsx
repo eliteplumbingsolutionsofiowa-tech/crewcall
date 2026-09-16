@@ -19,6 +19,7 @@ type Props = {
   accept?: string
   buttonLabel?: string
   onUploadComplete?: () => void
+  dark?: boolean
 }
 
 type JobFileInsert = {
@@ -54,6 +55,7 @@ export default function JobFileUpload({
   accept,
   buttonLabel = 'Upload Files',
   onUploadComplete,
+  dark = false,
 }: Props) {
   const fileInputRef =
     useRef<HTMLInputElement | null>(null)
@@ -149,25 +151,25 @@ export default function JobFileUpload({
   }
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className={dark ? "rounded-3xl border border-cyan-400/20 bg-slate-950/55 p-5 shadow-[0_18px_45px_-30px_rgba(6,182,212,0.65)]" : "rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-black text-slate-950">
+          <h3 className={dark ? "text-lg font-black text-white" : "text-lg font-black text-slate-950"}>
             {title}
           </h3>
 
-          <p className="mt-1 text-sm font-bold text-slate-500">
+          <p className={dark ? "mt-1 text-sm font-semibold text-slate-300" : "mt-1 text-sm font-bold text-slate-500"}>
             {description}
           </p>
 
           {message ? (
-            <p className="mt-3 text-sm font-bold text-blue-700">
+            <p className={dark ? "mt-3 text-sm font-bold text-cyan-300" : "mt-3 text-sm font-bold text-blue-700"}>
               {message}
             </p>
           ) : null}
         </div>
 
-        <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-500">
+        <label className={dark ? "inline-flex cursor-pointer items-center justify-center rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-slate-950 shadow-[0_12px_30px_-15px_rgba(34,211,238,0.75)] transition hover:scale-[1.02]" : "inline-flex cursor-pointer items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-500"}>
           {uploading
             ? 'Uploading...'
             : buttonLabel}
