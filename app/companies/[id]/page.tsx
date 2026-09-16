@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
+import { resolveCompanyContext } from '@/lib/company-context'
 
 type CompanyProfile = {
   id: string
@@ -131,11 +132,28 @@ export default function CompanyProfilePage() {
 
       const companyData = data as CompanyProfile | null
 
-      if (
-        !companyData ||
-        (companyData.role !== 'company' &&
-          companyData.role !== 'staffing_agency')
-      ) {
+      if (!companyData) {
+        throw new Error(t('profileNotFound'))
+      }
+
+      const isStandardCompany =
+        companyData.role === 'company' ||
+        companyData.role === 'staffing_agency'
+
+      let isLegacyCompanyOwner = false
+
+      if (companyData.role === 'worker') {
+        const companyContext = await resolveCompanyContext(
+          supabase,
+          companyData.id
+        )
+
+        isLegacyCompanyOwner =
+          companyContext.companyId === companyData.id &&
+          companyContext.isCompanyOwner
+      }
+
+      if (!isStandardCompany && !isLegacyCompanyOwner) {
         throw new Error(t('profileNotFound'))
       }
 
