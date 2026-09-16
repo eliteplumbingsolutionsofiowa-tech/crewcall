@@ -11,7 +11,7 @@ import { resolveCompanyContext } from '@/lib/company-context'
 import MessageJobButton from '@/app/components/MessageJobButton'
 import BidRequestPanel from '@/app/components/BidRequestPanel'
 
-type UserRole = 'worker' | 'company' | 'staffing_agency' | 'admin'
+type UserRole = 'worker' | 'company' | 'staffing_agency' | 'homeowner' | 'admin'
 
 type Job = {
   id: string

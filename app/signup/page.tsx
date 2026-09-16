@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { useTranslations } from 'next-intl'
 import { Eye, EyeOff } from 'lucide-react'
 
-type Role = 'worker' | 'company' | 'staffing_agency'
+type Role = 'worker' | 'company' | 'staffing_agency' | 'homeowner'
 
 export default function SignupPage() {
   return (
@@ -663,6 +663,9 @@ function SignupForm() {
                   <option value="company">
                     {t('company')}
                   </option>
+                  <option value="homeowner">
+                    {t('homeowner')}
+                  </option>
                 </select>
               </Field>
             )}
@@ -670,6 +673,12 @@ function SignupForm() {
             {!acceptingTeamInvite && role === 'worker' && (
               <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-semibold leading-6 text-cyan-100">
                 {t('workerFreeDescription')}
+              </div>
+            )}
+
+            {!acceptingTeamInvite && role === 'homeowner' && (
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-semibold leading-6 text-cyan-100">
+                {t('homeownerDescription')}
               </div>
             )}
 

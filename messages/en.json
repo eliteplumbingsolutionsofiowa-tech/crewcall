@@ -48,7 +48,8 @@
     "close": "Close",
     "closeNavigationMenu": "Close navigation menu",
     "openNavigationMenu": "Open navigation menu",
-    "bids": "Bids"
+    "bids": "Bids",
+    "myProjects": "My Projects"
   },
   "MobileNav": {
     "home": "Home",
@@ -56,7 +57,8 @@
     "myJobs": "My Jobs",
     "messages": "Messages",
     "alerts": "Alerts",
-    "profile": "Profile"
+    "profile": "Profile",
+    "myProjects": "My Projects"
   },
   "WorkerDashboard": {
     "eyebrow": "CrewCall Worker",
@@ -497,7 +499,9 @@
     "accountAlreadyExists": "An account already exists for this email. Sign in below to accept your company invitation.",
     "accountCreatedInviteFailed": "Account created, but the team invitation could not be accepted.",
     "accountCreatedConfirmInvite": "Account created. Check your email to confirm your account, then CrewCall will finish accepting your team invitation.",
-    "accountCreatedConfirm": "Account created. Check your email to confirm your signup."
+    "accountCreatedConfirm": "Account created. Check your email to confirm your signup.",
+    "homeowner": "Homeowner",
+    "homeownerDescription": "Post home projects, receive bids from contractors, compare your options, and connect directly with the contractor you choose."
   },
   "Home": {
     "loading": "Loading...",

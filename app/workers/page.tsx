@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-type UserRole = 'worker' | 'company' | 'staffing_agency' | null
+type UserRole = 'worker' | 'company' | 'staffing_agency' | 'homeowner' | null
 type ViewMode = 'list' | 'map'
 
 type CurrentProfile = {

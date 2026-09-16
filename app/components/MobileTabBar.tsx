@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | null
 
 type Profile = {
   role: Role
@@ -125,7 +125,8 @@ export default function MobileTabBar() {
   }
 
   const jobsHref = useMemo(() => {
-    if ((role === 'company' || role === 'staffing_agency')) return '/my-jobs'
+    if (role === 'company' || role === 'staffing_agency') return '/my-jobs'
+    if (role === 'homeowner') return '/homeowner/projects'
     return '/jobs'
   }, [role])
 
@@ -163,20 +164,30 @@ export default function MobileTabBar() {
         } rounded-[2rem] border border-white/10 bg-white/10 p-2`}
       >
         <TabItem
-          href="/dashboard"
+          href={role === 'homeowner' ? '/homeowner/dashboard' : '/dashboard'}
           label="Home"
           icon="⌂"
-          active={pathname === '/dashboard'}
+          active={
+            pathname === '/dashboard' ||
+            pathname === '/homeowner/dashboard'
+          }
         />
 
         <TabItem
           href={jobsHref}
-          label={(role === 'company' || role === 'staffing_agency') ? 'Jobs' : 'Find'}
+          label={
+            role === 'company' || role === 'staffing_agency'
+              ? 'Jobs'
+              : role === 'homeowner'
+                ? 'Projects'
+                : 'Find'
+          }
           icon="⚒"
           active={
             pathname.startsWith('/jobs') ||
             pathname.startsWith('/my-jobs') ||
-            pathname.startsWith('/company/jobs')
+            pathname.startsWith('/company/jobs') ||
+            pathname.startsWith('/homeowner/projects')
           }
         />
 

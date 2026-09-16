@@ -18,7 +18,7 @@ import ProfileFileUpload from '@/app/components/ProfileFileUpload'
 import ProfileFileList from '@/app/components/ProfileFileList'
 import ReportModal from '@/app/components/ReportModal'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | null
 
 type Profile = {
   id: string

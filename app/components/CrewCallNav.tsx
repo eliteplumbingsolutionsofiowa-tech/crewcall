@@ -17,7 +17,7 @@ import { resolveCompanyContext } from '@/lib/company-context'
 import { Capacitor } from '@capacitor/core'
 import { registerPushNotifications } from '@/lib/push/register'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | 'admin' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | 'admin' | null
 
 type Profile = {
   role: Role
@@ -710,7 +710,9 @@ export default function CrewCallNav() {
         ? '/company/dashboard'
         : role === 'worker'
           ? '/worker/dashboard'
-          : '/dashboard'
+          : role === 'homeowner'
+            ? '/homeowner/dashboard'
+            : '/dashboard'
 
   const logoHref = userId ? dashboardHref : '/'
 
@@ -894,6 +896,26 @@ export default function CrewCallNav() {
               )}
             >
               {tNav('saved')}
+            </NavLink>
+          </>
+        ) : null}
+
+        {role === 'homeowner' ? (
+          <>
+            <NavLink
+              href="/homeowner/dashboard"
+              onClick={onNavigate}
+              active={pathname.startsWith('/homeowner/dashboard')}
+            >
+              {tNav('dashboard')}
+            </NavLink>
+
+            <NavLink
+              href="/homeowner/projects"
+              onClick={onNavigate}
+              active={pathname.startsWith('/homeowner/projects')}
+            >
+              {tNav('myProjects')}
             </NavLink>
           </>
         ) : null}

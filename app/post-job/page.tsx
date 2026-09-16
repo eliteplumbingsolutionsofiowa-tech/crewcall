@@ -9,7 +9,7 @@ import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 import { resolveCompanyContext } from '@/lib/company-context'
 import { TRADES } from '@/lib/trades'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | 'admin' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | 'admin' | null
 
 type Profile = {
   id: string

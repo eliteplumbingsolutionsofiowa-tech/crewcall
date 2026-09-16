@@ -12,7 +12,7 @@ import ProfileReviews from '@/app/components/ProfileReviews'
 import ProfileFileUpload from '@/app/components/ProfileFileUpload'
 import ProfileFileList from '@/app/components/ProfileFileList'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | null
 
 type Profile = {
   id: string

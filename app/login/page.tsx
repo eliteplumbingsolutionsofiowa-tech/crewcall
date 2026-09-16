@@ -17,6 +17,7 @@ function destinationForRole(role: string | null) {
     return '/company/dashboard'
   }
   if (role === 'worker') return '/worker/dashboard'
+  if (role === 'homeowner') return '/homeowner/dashboard'
   return '/profile'
 }
 

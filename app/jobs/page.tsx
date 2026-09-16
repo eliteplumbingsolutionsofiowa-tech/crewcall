@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 import { TRADES } from '@/lib/trades'
 
-type UserRole = 'worker' | 'company' | 'staffing_agency' | null
+type UserRole = 'worker' | 'company' | 'staffing_agency' | 'homeowner' | null
 
 type CurrentProfile = {
   id: string

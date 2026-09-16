@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | null
 
 type Profile = {
   role: Role
@@ -98,21 +98,27 @@ export default function MobileBottomNav() {
       ? '/company/dashboard'
       : role === 'worker'
         ? '/worker/dashboard'
-        : '/dashboard'
+        : role === 'homeowner'
+          ? '/homeowner/dashboard'
+          : '/dashboard'
 
   const jobsHref =
     (role === 'company' || role === 'staffing_agency')
       ? '/my-jobs'
       : role === 'worker'
         ? '/my-work'
-        : '/jobs'
+        : role === 'homeowner'
+          ? '/homeowner/projects'
+          : '/jobs'
 
   const jobsLabel =
     (role === 'company' || role === 'staffing_agency')
       ? t('myJobs')
       : role === 'worker'
         ? 'My Work'
-        : t('jobs')
+        : role === 'homeowner'
+          ? t('myProjects')
+          : t('jobs')
   const alertTotal = unreadMessages + unreadNotifications
 
   return (
@@ -137,7 +143,9 @@ export default function MobileBottomNav() {
               ? pathname.startsWith('/my-jobs')
               : role === 'worker'
                 ? pathname.startsWith('/my-work')
-                : pathname.startsWith('/jobs')
+                : role === 'homeowner'
+                  ? pathname.startsWith('/homeowner/projects')
+                  : pathname.startsWith('/jobs')
           }
         />
 

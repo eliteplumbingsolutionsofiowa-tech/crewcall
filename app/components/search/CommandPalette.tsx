@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Role = 'company' | 'worker' | 'staffing_agency' | 'admin' | null
+type Role = 'company' | 'worker' | 'staffing_agency' | 'homeowner' | 'admin' | null
 
 type CommandItem = {
   id: string
@@ -19,7 +19,7 @@ type CommandItem = {
   href: string
   keywords: string[]
   icon: string
-  roles: Array<'company' | 'worker' | 'staffing_agency' | 'admin' | 'authenticated'>
+  roles: Array<'company' | 'worker' | 'staffing_agency' | 'homeowner' | 'admin' | 'authenticated'>
 }
 
 type CommandPaletteProps = {
