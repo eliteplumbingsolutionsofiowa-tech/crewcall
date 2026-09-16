@@ -290,6 +290,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
   const isAdminProfile = profile?.is_admin === true
   const isWorkerProfile =
     profile?.role === 'worker' && !isAdminProfile
+  const isHomeownerProfile =
+    profile?.role === 'homeowner' && !isAdminProfile
 
   const canInviteWorker =
     !isOwnProfile &&
@@ -868,7 +870,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                           ? t('company')
                           : profile.role === 'staffing_agency'
                             ? 'Staffing Agency'
-                            : profile.role === 'worker'
+                            : profile.role === 'homeowner' ? 'Homeowner' : profile.role === 'worker'
                               ? t('workerPassport')
                               : 'Role not set'}
                     </span>
@@ -893,7 +895,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                   <p className="mt-3 max-w-2xl text-sm font-semibold text-slate-200 sm:text-base">
                     {isAdminProfile
                       ? 'Official CrewCall platform administration account.'
-                      : `${textValue(profile.trade)} · ${
+                      : `${isHomeownerProfile ? 'Homeowner' : textValue(profile.trade)} · ${
                           [profile.city, profile.state]
                             .map((item) => inputValue(item).trim())
                             .filter(Boolean)
@@ -948,7 +950,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
           <div className="grid gap-4 p-3 pb-8 sm:gap-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr]">
             <div className="space-y-4 sm:space-y-6">
               {isWorkerProfile && (
-                <CrewCard>
+              <CrewCard>
                 <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
@@ -1274,8 +1276,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               )}
 
 
-              {isOwnProfile && !isAdminProfile ? (
-                <CrewCard>
+              {isOwnProfile && !isAdminProfile && !isHomeownerProfile ? (
+              <CrewCard>
                   <div className="mb-3 sm:mb-6">
                     <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
                       {t('profileFiles')}
@@ -1340,8 +1342,8 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                     />
                   </div>
                 </CrewCard>
-              ) : !isAdminProfile ? (
-                <CrewCard>
+              ) : !isAdminProfile && !isHomeownerProfile ? (
+              <CrewCard>
                   <div className="mb-5">
                     <h2 className="text-2xl font-black text-slate-950">
                       Documents
@@ -1360,14 +1362,16 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
                 </CrewCard>
               ) : null}
 
+              {!isHomeownerProfile && (
               <CrewCard>
                 <ProfileReviews profileId={profile.id} />
               </CrewCard>
+              )}
             </div>
 
             <aside className="space-y-4 sm:space-y-6">
               {canInviteWorker && (
-                <CrewCard>
+              <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
                     Invite Worker
                   </h2>
@@ -1408,7 +1412,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               )}
 
               {isOwnProfile && isWorkerProfile && (
-                <CrewCard>
+              <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
                     {t('stripePayouts')}
                   </h2>
@@ -1470,7 +1474,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
               {isWorkerProfile && (
                 <>
-                  <CrewCard>
+              <CrewCard>
                     <h2 className="text-2xl font-black text-slate-950">
                       {t('verification')}
                     </h2>
@@ -1692,7 +1696,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               )}
 
               {isOwnProfile && isWorkerProfile && (
-                <CrewCard>
+              <CrewCard>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">
@@ -1717,7 +1721,7 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
               )}
 
               {isOwnProfile && (
-                <CrewCard>
+              <CrewCard>
                   <h2 className="text-2xl font-black text-slate-950">
                     {t('account')}
                   </h2>
