@@ -2238,6 +2238,8 @@
     "crewCallJob": "CrewCall Job",
     "paid": "Net Payout",
     "platformFee": "Platform Fee",
+    "workerFee": "CrewCall Worker Fee",
+    "keep100": "You keep 100% of your CrewCall job earnings.",
     "date": "Released On",
     "transfer": "Transfer",
     "sessionExpired": "Your login session expired. Please log in again.",

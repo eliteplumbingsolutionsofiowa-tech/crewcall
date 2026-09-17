@@ -48,7 +48,6 @@ const adminClient = createClient(
   }
 )
 
-const PLATFORM_FEE_PERCENT = 10
 
 const PAYMENT_RELEASE_ACK_VERSION = '2026-09-09-v1'
 
@@ -427,13 +426,11 @@ export async function POST(req: Request) {
       )
     }
 
-    const platformFee = Math.round(
-      grossAmount *
-        (PLATFORM_FEE_PERCENT / 100)
-    )
+    // CrewCall does not deduct a platform fee from worker earnings.
+    // The worker receives 100% of the funded job amount.
+    const platformFee = 0
 
-    const workerAmount =
-      grossAmount - platformFee
+    const workerAmount = grossAmount
 
     const authorizedAt = new Date().toISOString()
 

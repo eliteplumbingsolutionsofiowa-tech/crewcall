@@ -2238,6 +2238,8 @@
     "crewCallJob": "Trabajo de CrewCall",
     "paid": "Pago Neto",
     "platformFee": "Tarifa de Plataforma",
+    "workerFee": "Tarifa de CrewCall para el Trabajador",
+    "keep100": "Conservas el 100% de tus ganancias de trabajos de CrewCall.",
     "date": "Liberado El",
     "transfer": "Transferencia",
     "sessionExpired": "Tu sesión ha expirado. Inicia sesión nuevamente.",

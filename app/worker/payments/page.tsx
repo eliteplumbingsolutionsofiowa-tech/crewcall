@@ -178,7 +178,8 @@ export default function WorkerPaymentsPage() {
     }
 
     const grossCents = Math.round(gross * 100)
-    return grossCents - Math.round(grossCents * 0.10)
+    // CrewCall does not deduct a platform fee from worker earnings.
+    return grossCents
   }
 
   const total = payments.reduce(
@@ -414,12 +415,15 @@ export default function WorkerPaymentsPage() {
 
                   <div>
                     <p className="text-sm text-slate-400">
-                      {t('platformFee')}
+                      {t('workerFee')}
                     </p>
                     <p className="font-bold">
                       {formatMoney(
                         (payment.platform_fee_cents || 0) / 100
                       )}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-emerald-300">
+                      {t('keep100')}
                     </p>
                   </div>
 

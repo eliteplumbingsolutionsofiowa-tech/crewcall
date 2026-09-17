@@ -40,6 +40,7 @@ type Job = {
   status: string | null
   payment_status: string | null
   payout_status: string | null
+  platform_fee_cents: number | null
   is_featured: boolean | null
   featured_until: string | null
   created_at: string | null
@@ -73,8 +74,6 @@ type JobFilter =
 type SortMode = 'newest' | 'oldest' | 'highest_pay' | 'lowest_pay'
 
 const db = supabase as any
-const PLATFORM_FEE_PERCENT = 10
-
 function firstOrNull<T>(value: T | T[] | null): T | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value
@@ -188,6 +187,7 @@ export default function AdminJobsPage() {
         status,
         payment_status,
         payout_status,
+        platform_fee_cents,
         is_featured,
         featured_until,
         created_at,
@@ -262,7 +262,11 @@ export default function AdminJobsPage() {
       paidValue,
       unpaidValue,
       pendingPayoutValue,
-      platformRevenue: paidValue * (PLATFORM_FEE_PERCENT / 100),
+      platformRevenue: paidJobs.reduce(
+        (sum, job) =>
+          sum + Number(job.platform_fee_cents || 0) / 100,
+        0
+      ),
       averageJobValue: jobs.length ? totalValue / jobs.length : 0,
     }
   }, [jobs])
@@ -769,7 +773,7 @@ export default function AdminJobsPage() {
                             <p><span className="text-cyan-300">Start:</span> {formatDate(job.start_date)}</p>
                             <p><span className="text-cyan-300">Posted:</span> {formatDate(job.created_at)}</p>
                             <p><span className="text-cyan-300">Job Value:</span> {money(parseMoney(job.pay_rate))}</p>
-                            <p><span className="text-cyan-300">Platform Fee:</span> {money(parseMoney(job.pay_rate) * 0.1)}</p>
+                            <p><span className="text-cyan-300">Worker Fee:</span> {money(Number(job.platform_fee_cents || 0) / 100)}</p>
                             <p className="md:col-span-2"><span className="text-cyan-300">Featured Until:</span> {formatDate(job.featured_until)}</p>
                           </div>
                         </div>
