@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 const TRADES = [
@@ -43,8 +44,47 @@ const TRADES = [
   'Other',
 ]
 
+const TRADE_TRANSLATION_KEYS: Record<string, string> = {
+  'Plumbing': 'plumbing',
+  'Electrical': 'electrical',
+  'HVAC / Refrigeration': 'hvac',
+  'Carpentry': 'carpentry',
+  'Roofing': 'roofing',
+  'Concrete / Masonry': 'concrete',
+  'Painting / Drywall': 'painting',
+  'Landscaping / Excavation': 'landscaping',
+  'General Contracting': 'generalContracting',
+  'Remodeling / Renovation': 'remodeling',
+  'Kitchen Remodeling': 'kitchenRemodeling',
+  'Bathroom Remodeling': 'bathroomRemodeling',
+  'Flooring': 'flooring',
+  'Tile': 'tile',
+  'Drywall': 'drywall',
+  'Siding': 'siding',
+  'Windows / Doors': 'windowsDoors',
+  'Decks / Patios': 'decksPatios',
+  'Fencing': 'fencing',
+  'Gutters': 'gutters',
+  'Insulation': 'insulation',
+  'Garage Doors': 'garageDoors',
+  'Handyman / Home Repair': 'handyman',
+  'Appliance Installation': 'applianceInstallation',
+  'Water / Sewer': 'waterSewer',
+  'Drain / Sewer Cleaning': 'drainCleaning',
+  'Septic': 'septic',
+  'Fire Protection / Sprinklers': 'fireProtection',
+  'Solar': 'solar',
+  'Demolition': 'demolition',
+  'Foundation / Basement': 'foundation',
+  'Waterproofing': 'waterproofing',
+  'Pools / Spas': 'poolsSpas',
+  'Cleaning / Restoration': 'cleaningRestoration',
+  'Other': 'other',
+}
+
 export default function NewHomeownerProjectPage() {
   const router = useRouter()
+  const t = useTranslations('HomeownerNewProject')
 
   const [checking, setChecking] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -111,7 +151,7 @@ export default function NewHomeownerProjectPage() {
       (file) => !file.type.startsWith('image/')
     )
     if (invalidType) {
-      setError('Project photos must be image files.')
+      setError(t('invalidPhotoType'))
       event.target.value = ''
       return
     }
@@ -120,13 +160,13 @@ export default function NewHomeownerProjectPage() {
       (file) => file.size > MAX_PHOTO_SIZE
     )
     if (oversized) {
-      setError('Each project photo must be 10 MB or smaller.')
+      setError(t('photoTooLarge'))
       event.target.value = ''
       return
     }
 
     if (photos.length + selected.length > MAX_PHOTOS) {
-      setError(`You can add up to ${MAX_PHOTOS} project photos.`)
+      setError(t('tooManyPhotos', { count: MAX_PHOTOS }))
       event.target.value = ''
       return
     }
@@ -149,7 +189,10 @@ export default function NewHomeownerProjectPage() {
     for (let index = 0; index < photos.length; index += 1) {
       const file = photos[index]
       setUploadStatus(
-        `Uploading photo ${index + 1} of ${photos.length}...`
+        t('uploadingPhoto', {
+          current: index + 1,
+          total: photos.length,
+        })
       )
 
       const extension =
@@ -174,7 +217,10 @@ export default function NewHomeownerProjectPage() {
 
       if (storageError) {
         throw new Error(
-          `Project created, but photo ${index + 1} could not be uploaded: ${storageError.message}`
+          t('photoCouldNotUpload', {
+            number: index + 1,
+            message: storageError.message,
+          })
         )
       }
 
@@ -199,7 +245,10 @@ export default function NewHomeownerProjectPage() {
           .remove([storagePath])
 
         throw new Error(
-          `Project created, but photo ${index + 1} could not be saved: ${fileError.message}`
+          t('photoCouldNotSave', {
+            number: index + 1,
+            message: fileError.message,
+          })
         )
       }
     }
@@ -245,15 +294,15 @@ export default function NewHomeownerProjectPage() {
 
       if (!response.ok || !payload?.id) {
         throw new Error(
-          payload?.error || 'Unable to post your project.'
+          payload?.error || t('unableToPost')
         )
       }
 
       if (photos.length > 0) {
         setUploadStatus(
-          `Project created. Uploading ${photos.length} ${
-            photos.length === 1 ? 'photo' : 'photos'
-          }...`
+          t('uploadingPhotos', {
+            count: photos.length,
+          })
         )
 
         try {
@@ -261,7 +310,7 @@ export default function NewHomeownerProjectPage() {
         } catch (photoError) {
           console.error(photoError)
           setUploadStatus(
-            'Project created. Some photos may not have uploaded.'
+            t('photoUploadFailed')
           )
         }
       }
@@ -271,7 +320,7 @@ export default function NewHomeownerProjectPage() {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : 'Unable to post your project.'
+          : t('unableToPost')
       )
     } finally {
       setSubmitting(false)
@@ -283,7 +332,7 @@ export default function NewHomeownerProjectPage() {
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(37,99,235,0.12),_transparent_30%),linear-gradient(to_bottom,_#020617,_#07111f_55%,_#020617)] px-4 py-10 text-white sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <p className="text-sm font-bold text-slate-400">
-            Loading CrewCall...
+            {t('loading')}
           </p>
         </div>
       </main>
@@ -298,21 +347,19 @@ export default function NewHomeownerProjectPage() {
             href="/homeowner/projects"
             className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
-            ← My Projects
+            {t('back')}
           </Link>
 
           <p className="mt-6 text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
-            CrewCall Homeowner
+            {t('eyebrow')}
           </p>
 
           <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-            Post a Project
+            {t('title')}
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-300 sm:text-base">
-            Tell contractors what you need done. Your project
-            will be listed as a CrewCall bid opportunity so qualified
-            companies can submit bids.
+            {t('description')}
           </p>
         </div>
 
@@ -325,14 +372,14 @@ export default function NewHomeownerProjectPage() {
               htmlFor="project-title"
               className="mb-2 block text-sm font-black text-white"
             >
-              Project title
+              {t('projectTitle')}
             </label>
 
             <input
               id="project-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Example: Replace water heater"
+              placeholder={t('projectTitlePlaceholder')}
               required
               className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             />
@@ -343,7 +390,7 @@ export default function NewHomeownerProjectPage() {
               htmlFor="project-trade"
               className="mb-2 block text-sm font-black text-white"
             >
-              Trade
+              {t('trade')}
             </label>
 
             <select
@@ -353,11 +400,13 @@ export default function NewHomeownerProjectPage() {
               required
               className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             >
-              <option value="">Select a trade</option>
+              <option value="">{t('selectTrade')}</option>
 
               {TRADES.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {t(
+                    `trades.${TRADE_TRANSLATION_KEYS[item]}`,
+                  )}
                 </option>
               ))}
             </select>
@@ -368,14 +417,14 @@ export default function NewHomeownerProjectPage() {
               htmlFor="project-location"
               className="mb-2 block text-sm font-black text-white"
             >
-              Project location
+              {t('projectLocation')}
             </label>
 
             <input
               id="project-location"
               value={location}
               onChange={(event) => setLocation(event.target.value)}
-              placeholder="City, State"
+              placeholder={t('locationPlaceholder')}
               required
               className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
             />
@@ -386,14 +435,14 @@ export default function NewHomeownerProjectPage() {
               htmlFor="project-description"
               className="mb-2 block text-sm font-black text-white"
             >
-              Describe the project
+              {t('describeProject')}
             </label>
 
             <textarea
               id="project-description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Describe the work you need completed, important details, existing conditions, and anything contractors should know before bidding."
+              placeholder={t('descriptionPlaceholder')}
               rows={7}
               required
               className="w-full resize-y rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-4 text-white shadow-inner outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/10"
@@ -404,16 +453,15 @@ export default function NewHomeownerProjectPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-black text-white">
-                  Project Photos
+                  {t('projectPhotos')}
                 </p>
                 <p className="mt-1 text-sm font-medium leading-6 text-slate-400">
-                  Add photos of the work area or existing conditions.
-                  Up to 10 photos, 10 MB each.
+                  {t('photoHelp')}
                 </p>
               </div>
 
               <label className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-500/15">
-                + Add Photos
+                {t('addPhotos')}
                 <input
                   type="file"
                   accept="image/*"
@@ -433,7 +481,7 @@ export default function NewHomeownerProjectPage() {
                   >
                     <img
                       src={URL.createObjectURL(photo)}
-                      alt={`Project photo ${index + 1}`}
+                      alt={t('projectPhotoAlt', { number: index + 1 })}
                       className="h-32 w-full object-cover"
                     />
                     <div className="flex items-center justify-between gap-2 p-3">
@@ -445,7 +493,7 @@ export default function NewHomeownerProjectPage() {
                         onClick={() => removePhoto(index)}
                         className="shrink-0 text-xs font-black text-rose-300 transition hover:text-rose-200"
                       >
-                        Remove
+                        {t('remove')}
                       </button>
                     </div>
                   </div>
@@ -454,7 +502,7 @@ export default function NewHomeownerProjectPage() {
             ) : (
               <div className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-7 text-center">
                 <p className="text-sm font-bold text-slate-500">
-                  No photos added yet.
+                  {t('noPhotos')}
                 </p>
               </div>
             )}
@@ -466,7 +514,7 @@ export default function NewHomeownerProjectPage() {
                 htmlFor="bid-deadline"
                 className="mb-2 block text-sm font-black text-white"
               >
-                Bids due
+                {t('bidsDue')}
               </label>
 
               <input
@@ -486,7 +534,7 @@ export default function NewHomeownerProjectPage() {
                 htmlFor="work-deadline"
                 className="mb-2 block text-sm font-black text-white"
               >
-                Desired completion
+                {t('desiredCompletion')}
               </label>
 
               <input
@@ -519,13 +567,12 @@ export default function NewHomeownerProjectPage() {
             className="w-full rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-base font-black text-slate-950 shadow-[0_12px_35px_-12px_rgba(34,211,238,0.75)] transition hover:scale-[1.01] hover:shadow-[0_16px_45px_-12px_rgba(34,211,238,0.9)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? 'Posting Project...'
-              : 'Post Project for Contractor Bids'}
+              ? t('postingProject')
+              : t('postProjectForBids')}
           </button>
 
           <p className="text-center text-xs font-semibold leading-5 text-slate-300">
-            Contractors will be able to review the project and submit
-            their bid through CrewCall.
+            {t('contractorBidNote')}
           </p>
         </form>
       </div>

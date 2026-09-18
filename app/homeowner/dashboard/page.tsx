@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase'
 
 type HomeownerProfile = {
@@ -13,6 +14,7 @@ type HomeownerProfile = {
 
 export default function HomeownerDashboardPage() {
   const router = useRouter()
+  const t = useTranslations('HomeownerDashboard')
   const [profile, setProfile] = useState<HomeownerProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -72,23 +74,22 @@ export default function HomeownerDashboardPage() {
   }
 
   const firstName =
-    profile?.full_name?.trim().split(/\s+/)[0] || 'there'
+    profile?.full_name?.trim().split(/\s+/)[0] || t('fallbackName')
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(37,99,235,0.12),_transparent_30%),linear-gradient(to_bottom,_#020617,_#07111f_55%,_#020617)] px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/30 bg-[radial-gradient(circle_at_top_right,_rgba(37,99,235,0.24),_transparent_38%),radial-gradient(circle_at_bottom_left,_rgba(6,182,212,0.18),_transparent_35%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(7,18,35,0.98))] p-6 shadow-[0_25px_80px_-30px_rgba(6,182,212,0.55)] ring-1 ring-white/5 sm:p-10">
           <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-            CrewCall for Homeowners
+            {t('eyebrow')}
           </p>
 
           <h1 className="mt-4 max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">
-            Welcome, {firstName}.
+            {t('welcome', { name: firstName })}
           </h1>
 
           <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-300">
-            Get your project in front of contractors, receive bids, compare
-            your options, and connect directly with the contractor you choose.
+            {t('description')}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -96,14 +97,14 @@ export default function HomeownerDashboardPage() {
               href="/homeowner/projects/new"
               className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 text-center text-sm font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01]"
             >
-              Post a Project
+              {t('postProject')}
             </Link>
 
             <Link
               href="/homeowner/projects"
               className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-white/10"
             >
-              View My Projects
+              {t('viewProjects')}
             </Link>
           </div>
         </section>
@@ -111,42 +112,41 @@ export default function HomeownerDashboardPage() {
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <DashboardCard
             number="1"
-            title="Post Your Project"
-            description="Tell contractors what you need done, where the project is located, and when you want to get started."
+            title={t('step1Title')}
+            description={t('step1Description')}
           />
 
           <DashboardCard
             number="2"
-            title="Receive Contractor Bids"
-            description="Contractors can review your project and submit their bid through CrewCall."
+            title={t('step2Title')}
+            description={t('step2Description')}
           />
 
           <DashboardCard
             number="3"
-            title="Choose Who You Want"
-            description="Compare your options, review contractor information, message them directly, and choose the right fit for your project."
+            title={t('step3Title')}
+            description={t('step3Description')}
           />
         </section>
 
         <section className="mt-6 group rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-slate-900/95 via-slate-900/80 to-cyan-950/20 p-6 shadow-[0_18px_50px_-28px_rgba(6,182,212,0.45)] ring-1 ring-white/5 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_65px_-28px_rgba(6,182,212,0.65)] sm:p-8">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-400">
-            Your Projects
+            {t('yourProjects')}
           </p>
 
           <h2 className="mt-3 text-2xl font-black">
-            Ready to find a contractor?
+            {t('readyTitle')}
           </h2>
 
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-400">
-            Your active projects and contractor bids will appear here as we
-            connect the homeowner project system to CrewCall bidding.
+            {t('readyDescription')}
           </p>
 
           <Link
             href="/homeowner/projects/new"
             className="mt-6 inline-flex rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-200 transition hover:bg-cyan-400/20"
           >
-            Start a Project
+            {t('startProject')}
           </Link>
         </section>
       </div>
