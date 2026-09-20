@@ -38,6 +38,28 @@ type StatusFilter =
   | 'accepted'
   | 'rejected'
 
+function formatMoney(
+  value: string | null | undefined,
+  locale: string
+) {
+  if (!value) return '—'
+
+  const numericValue = Number(
+    value.replace(/[$,\s]/g, '')
+  )
+
+  if (!Number.isFinite(numericValue)) {
+    return value.replace(/^\$+/, '$')
+  }
+
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numericValue)
+}
+
 export default function WorkerApplicationsPage() {
 
   const t = useTranslations('WorkerApplications')
@@ -670,7 +692,7 @@ export default function WorkerApplicationsPage() {
                                   <p>
                                     {t('yourRequest')}:
                                     <span className="ml-2 text-emerald-300">
-                                      ${app.requested_pay_rate || '—'}
+                                      {formatMoney(app.requested_pay_rate, locale)}
                                     </span>
                                   </p>
 
@@ -678,7 +700,7 @@ export default function WorkerApplicationsPage() {
                                     {t('companyCounter')}:
                                     <span className="ml-2 text-cyan-300">
                                       {app.company_counter_offer
-                                        ? `$${app.company_counter_offer}`
+                                        ? formatMoney(app.company_counter_offer, locale)
                                         : t('noCounterYet')}
                                     </span>
                                   </p>
