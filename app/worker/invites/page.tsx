@@ -42,9 +42,6 @@ export default function WorkerInvitesPage() {
   const [message, setMessage] = useState('')
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'declined'>('all')
   const [workingId, setWorkingId] = useState<string | null>(null)
-  const [hasWorkerMembership, setHasWorkerMembership] =
-    useState(false)
-
   const filteredInvites = useMemo(() => {
     if (filter === 'all') return invites
     return invites.filter((invite) => invite.status === filter)
@@ -71,30 +68,9 @@ export default function WorkerInvitesPage() {
     if (userError || !user) {
       setMessage(t('mustBeLoggedIn'))
       setInvites([])
-      setHasWorkerMembership(false)
       setLoading(false)
       return
     }
-
-    const {
-      data: workerMembership,
-      error: workerMembershipError,
-    } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', user.id)
-      .in('plan', ['worker_membership', 'worker_pro'])
-      .eq('status', 'active')
-      .maybeSingle()
-
-    if (workerMembershipError) {
-      console.warn(
-        'Unable to verify Worker Membership:',
-        workerMembershipError.message
-      )
-    }
-
-    setHasWorkerMembership(Boolean(workerMembership))
 
     const { error: seenError } = await supabase
       .from('job_invites')
@@ -505,23 +481,14 @@ export default function WorkerInvitesPage() {
 
                         {invite.status === 'pending' && (
                           <>
-                            {hasWorkerMembership ? (
-                              <button
-                                type="button"
-                                onClick={() => acceptInvite(invite)}
-                                disabled={workingId === invite.id}
-                                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white hover:bg-emerald-400 disabled:opacity-60"
-                              >
-                                {workingId === invite.id ? t('accepting') : t('accept')}
-                              </button>
-                            ) : (
-                              <Link
-                                href="/billing"
-                                className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300"
-                              >
-                                Unlock Jobs — $4.99/month
-                              </Link>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => acceptInvite(invite)}
+                              disabled={workingId === invite.id}
+                              className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white hover:bg-emerald-400 disabled:opacity-60"
+                            >
+                              {workingId === invite.id ? t('accepting') : t('accept')}
+                            </button>
 
                             <button
                               type="button"

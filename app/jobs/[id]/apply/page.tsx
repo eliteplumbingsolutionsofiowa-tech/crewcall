@@ -71,27 +71,15 @@ export default function ApplyPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [requestedPayRate, setRequestedPayRate] = useState('')
   const [negotiationMessage, setNegotiationMessage] = useState('')
-  const [hasWorkerMembership, setHasWorkerMembership] =
-    useState(false)
-
   const canApply = useMemo(() => {
     return (
       profile?.role === 'worker' &&
-      job?.status === 'open' &&
-      (alreadyApplied || hasWorkerMembership)
+      job?.status === 'open'
     )
   }, [
     profile?.role,
     job?.status,
-    alreadyApplied,
-    hasWorkerMembership,
   ])
-
-  const needsWorkerMembership =
-    profile?.role === 'worker' &&
-    job?.status === 'open' &&
-    !alreadyApplied &&
-    !hasWorkerMembership
 
   const loadPage = useCallback(async () => {
     setLoading(true)
@@ -128,29 +116,6 @@ export default function ApplyPage() {
 
     setProfile(profileData)
 
-    if (profileData?.role === 'worker') {
-      const {
-        data: workerMembership,
-        error: workerMembershipError,
-      } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', user.id)
-        .in('plan', ['worker_membership', 'worker_pro'])
-        .eq('status', 'active')
-        .maybeSingle()
-
-      if (workerMembershipError) {
-        console.warn(
-          'Unable to verify Worker Membership:',
-          workerMembershipError.message
-        )
-      }
-
-      setHasWorkerMembership(Boolean(workerMembership))
-    } else {
-      setHasWorkerMembership(false)
-    }
 
     const { data: jobData, error: jobError } = await supabase
       .from('jobs')
@@ -435,7 +400,7 @@ export default function ApplyPage() {
           </div>
 
           <div className="space-y-8 p-6 md:p-8">
-            {!canApply && !needsWorkerMembership && (
+            {!canApply && (
               <div className="rounded-3xl border border-red-400/20 bg-red-400/10 p-5">
                 <p className="text-sm font-black text-red-100">
                   {profile?.role !== 'worker'
@@ -445,34 +410,6 @@ export default function ApplyPage() {
               </div>
             )}
 
-            {needsWorkerMembership && (
-              <div className="rounded-3xl border border-cyan-400/30 bg-cyan-400/10 p-6 md:p-8">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                  Worker Membership
-                </p>
-                <h3 className="mt-3 text-2xl font-black text-white">
-                  Unlock CrewCall jobs.
-                </h3>
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
-                  Create your worker profile for free. A Worker Membership
-                  unlocks job opportunities and applications on CrewCall.
-                </p>
-                <div className="mt-5 flex flex-wrap gap-4">
-                  <Link
-                    href="/billing"
-                    className="rounded-2xl bg-cyan-400 px-6 py-4 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
-                  >
-                    Unlock Jobs — $4.99/month
-                  </Link>
-                  <Link
-                    href={`/jobs/${jobId}`}
-                    className="rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-sm font-black text-white transition hover:bg-white/20"
-                  >
-                    Back to Job
-                  </Link>
-                </div>
-              </div>
-            )}
 
             {alreadyApplied && (
               <div className="rounded-3xl border border-orange-400/20 bg-orange-400/10 p-5">
@@ -488,7 +425,6 @@ export default function ApplyPage() {
               </div>
             )}
 
-            {!needsWorkerMembership && (
               <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-6">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
@@ -520,9 +456,7 @@ export default function ApplyPage() {
                 </ul>
               </div>
             </div>
-            )}
 
-            {!needsWorkerMembership && (
             <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-6">
               <label className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
                 {t('negotiationMessage')}
@@ -546,9 +480,7 @@ export default function ApplyPage() {
                 </div>
               </div>
             </div>
-            )}
 
-            {!needsWorkerMembership && (
             <div className="flex flex-wrap gap-4">
               <button
                 type="button"
@@ -572,7 +504,6 @@ export default function ApplyPage() {
                 {t('myApplications')}
               </Link>
             </div>
-            )}
           </div>
         </section>
       </div>
