@@ -95,29 +95,27 @@ async function notifyCompany({
     const now = new Date().toISOString()
     const linkUrl = `/jobs/${jobId}#bids`
 
-    const notifications = recipientIds.map(
-      (userId) => ({
-        user_id: userId,
-        type,
-        title,
-        body,
-        link_url: linkUrl,
-        is_read: false,
-        read: false,
-        created_at: now,
-      })
-    )
+    for (const userId of recipientIds) {
+      const { error: notificationError } =
+        await supabaseAdmin
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            type,
+            title,
+            body,
+            link_url: linkUrl,
+            read: false,
+            is_read: false,
+            created_at: now,
+          })
 
-    const { error: notificationError } =
-      await supabaseAdmin
-        .from('notifications')
-        .insert(notifications as never)
-
-    if (notificationError) {
-      console.error(
-        'Unable to create bid notification:',
-        notificationError
-      )
+      if (notificationError) {
+        console.error(
+          'Unable to create bid notification:',
+          notificationError
+        )
+      }
     }
   } catch (notificationError) {
     console.error(
