@@ -125,6 +125,29 @@ function cleanStatus(value: string | null | undefined) {
     .join(' ')
 }
 
+function homeownerStatusLabel(
+  value: string | null | undefined,
+  t: (key: any) => string
+) {
+  switch (normalize(value || 'open')) {
+    case 'open':
+      return t('statusOpen')
+    case 'filled':
+    case 'assigned':
+      return t('statusFilled')
+    case 'in_progress':
+      return t('statusInProgress')
+    case 'completed':
+      return t('statusCompleted')
+    case 'closed':
+      return t('statusClosed')
+    case 'pending':
+      return t('statusPending')
+    default:
+      return cleanStatus(value)
+  }
+}
+
 function getInitial(value: string | null | undefined) {
   return String(value || 'W').charAt(0).toUpperCase()
 }
@@ -187,7 +210,6 @@ export default function JobDetailsPage() {
 
   const [workerApplication, setWorkerApplication] =
     useState<Applicant | null>(null)
-
   useEffect(() => {
     void loadPage()
 
@@ -1032,9 +1054,9 @@ export default function JobDetailsPage() {
             className="inline-flex items-center gap-2 text-sm font-black text-cyan-300 transition hover:text-cyan-200"
           >
             ← {isHomeowner && isOwner
-              ? "Back to My Projects"
+              ? t('backToMyProjects')
               : isCompany && isOwner
-                ? "Back to Company Jobs"
+                ? t('backToCompanyJobs')
                 : t('backToJobs')}
           </Link>
 
@@ -1060,7 +1082,11 @@ export default function JobDetailsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge
-                    label={cleanStatus(currentStatus)}
+                    label={
+                      isHomeowner && isOwner
+                        ? homeownerStatusLabel(currentStatus, t)
+                        : cleanStatus(currentStatus)
+                    }
                     tone={getJobStatusTone(currentStatus)}
                   />
 
@@ -1209,17 +1235,15 @@ export default function JobDetailsPage() {
                 {job.job_type === 'bid_request' ? (
                   <div className="rounded-3xl border border-blue-400/20 bg-blue-500/10 p-6">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
-                      Request Bids
+                      {t('requestBids')}
                     </p>
 
                     <p className="mt-3 text-2xl font-black tracking-tight text-white">
-                      Contractor Pricing
+                      {t('contractorPricing')}
                     </p>
 
                     <p className="mt-3 text-sm leading-6 text-blue-100/70">
-                      Contractors submit their own price,
-                      availability, estimated duration, and project
-                      notes.
+                      {t('contractorPricingDescription')}
                     </p>
                   </div>
                 ) : (
@@ -1242,7 +1266,11 @@ export default function JobDetailsPage() {
                 <div className="mt-3 grid gap-3">
                   <SummaryCard
                     label={t('jobStatus')}
-                    value={cleanStatus(currentStatus)}
+                    value={
+                      isHomeowner && isOwner
+                        ? homeownerStatusLabel(currentStatus, t)
+                        : cleanStatus(currentStatus)
+                    }
                   />
 
                   {!isBidRequest ? (
@@ -1442,15 +1470,19 @@ export default function JobDetailsPage() {
 
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-xl shadow-black/20 backdrop-blur-xl">
           <SectionHeader
-            eyebrow="Job Information"
+            eyebrow={t('jobInformation')}
             title={t('description')}
-            description="Review the company’s job scope and requirements."
+            description={
+              isHomeowner && isOwner
+                ? t('homeownerJobDescriptionHelp')
+                : t('jobDescriptionHelp')
+            }
           />
 
           <div className="p-5 sm:p-6">
             <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-5 sm:p-6">
               <p className="whitespace-pre-wrap text-base leading-8 text-slate-300">
-                {job.description || 'No description provided.'}
+                {job.description || t('noDescriptionProvided')}
               </p>
             </div>
           </div>
@@ -1468,18 +1500,18 @@ export default function JobDetailsPage() {
           <SectionHeader
             eyebrow={
               isHomeowner && isOwner
-                ? "Project Photos"
-                : "Plans and Documents"
+                ? t('projectPhotos')
+                : t('plansAndDocuments')
             }
             title={
               isHomeowner && isOwner
-                ? "Photos"
+                ? t('photos')
                 : t('jobFiles')
             }
             description={
               isHomeowner && isOwner
-                ? "Add photos to help contractors understand the project and prepare an accurate bid."
-                : "Upload and review plans, photos, PDFs, specifications, and job documents."
+                ? t('projectPhotosHelp')
+                : t('jobFilesHelp')
             }
             badge={`${jobFiles.filter(
               (file) => file.category !== 'completion_photo'
@@ -1499,12 +1531,12 @@ export default function JobDetailsPage() {
                 userId={profile.id}
                 title={
                   isHomeowner && isOwner
-                    ? "Project Photos"
+                    ? t('projectPhotos')
                     : undefined
                 }
                 description={
                   isHomeowner && isOwner
-                    ? "Upload clear photos of the work area, existing conditions, or anything contractors should see."
+                    ? t('projectPhotoUploadHelp')
                     : undefined
                 }
                 accept={
@@ -1514,7 +1546,7 @@ export default function JobDetailsPage() {
                 }
                 buttonLabel={
                   isHomeowner && isOwner
-                    ? "Add Photos"
+                    ? t('addPhotos')
                     : undefined
                 }
                 dark={isHomeowner && isOwner}

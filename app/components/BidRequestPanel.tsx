@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { crewCallAuthedFetch } from '@/lib/authed-fetch'
 
 type BidCompany = {
@@ -59,8 +59,8 @@ type Props = {
   workDeadline?: string | null
 }
 
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat('en-US', {
+function formatMoney(cents: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
@@ -68,7 +68,7 @@ function formatMoney(cents: number) {
   }).format(cents / 100)
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined, locale: string) {
   if (!value) return null
 
   const date = new Date(value)
@@ -77,14 +77,14 @@ function formatDate(value: string | null | undefined) {
     return value
   }
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   }).format(date)
 }
 
-function formatDateTime(value: string | null | undefined) {
+function formatDateTime(value: string | null | undefined, locale: string) {
   if (!value) return null
 
   const date = new Date(value)
@@ -93,7 +93,7 @@ function formatDateTime(value: string | null | undefined) {
     return value
   }
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -102,11 +102,14 @@ function formatDateTime(value: string | null | undefined) {
   }).format(date)
 }
 
-function companyName(company: BidCompany | null) {
+function companyName(
+  company: BidCompany | null,
+  fallbackName: string
+) {
   return (
     company?.company_name?.trim() ||
     company?.full_name?.trim() ||
-    'CrewCall Contractor'
+    fallbackName
   )
 }
 
@@ -150,6 +153,7 @@ export default function BidRequestPanel({
   bidDeadline,
   workDeadline,
 }: Props) {
+  const locale = useLocale()
   const t = useTranslations('PostJob')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -198,7 +202,7 @@ export default function BidRequestPanel({
 
           setCompanyRequired(false)
           setMessage(
-            data.error || 'Unable to load contractor bids.'
+            data.error || t('unableLoadBids')
           )
           return
         }
@@ -304,8 +308,8 @@ export default function BidRequestPanel({
         setMessage(
           data.error ||
             (isExistingBid
-              ? 'Unable to update bid.'
-              : 'Unable to submit bid.')
+              ? t('unableUpdateBid')
+              : t('unableSubmitBid'))
         )
         return
       }
@@ -315,8 +319,8 @@ export default function BidRequestPanel({
       setMessage(
         data.message ||
           (isExistingBid
-            ? 'Bid updated successfully.'
-            : 'Your bid was submitted successfully.')
+            ? t('bidUpdatedSuccessfully')
+            : t('bidSubmittedSuccessfully'))
       )
 
       await loadBids(false)
@@ -324,8 +328,8 @@ export default function BidRequestPanel({
       console.error('Submit/update bid error:', error)
       setMessage(
         ownBid
-          ? 'Unable to update bid.'
-          : 'Unable to submit bid.'
+          ? t('unableUpdateBid')
+          : t('unableSubmitBid')
       )
     } finally {
       setSubmitting(false)
@@ -346,11 +350,13 @@ export default function BidRequestPanel({
 
     if (action === 'accept') {
       const confirmed = window.confirm(
-        `Accept the ${formatMoney(
-          bid.amount_cents
-        )} bid from ${companyName(
-          bid.company
-        )}? The other pending bids will be declined.`
+        t('acceptConfirm', {
+          amount: formatMoney(bid.amount_cents, locale),
+          company: companyName(
+            bid.company,
+            t('crewCallContractor')
+          ),
+        })
       )
 
       if (!confirmed) return
@@ -359,7 +365,10 @@ export default function BidRequestPanel({
     if (action === 'decline') {
       const confirmed = window.confirm(
         t('declineConfirm', {
-          company: companyName(bid.company),
+          company: companyName(
+            bid.company,
+            t('crewCallContractor')
+          ),
         })
       )
 
@@ -388,20 +397,20 @@ export default function BidRequestPanel({
 
       if (!response.ok) {
         setMessage(
-          data.error || 'Unable to update this bid.'
+          data.error || t('unableUpdateBid')
         )
         return
       }
 
       resetForm()
       setMessage(
-        data.message || 'Bid updated successfully.'
+        data.message || t('bidUpdatedSuccessfully')
       )
 
       await loadBids(false)
     } catch (error) {
       console.error('Bid action error:', error)
-      setMessage('Unable to update this bid.')
+      setMessage(t('unableUpdateBid'))
     } finally {
       setActionBidId(null)
     }
@@ -469,7 +478,7 @@ export default function BidRequestPanel({
 
         <label className="block">
           <span className="text-sm font-black text-white">
-            Note
+            {t('note')}
           </span>
 
           <textarea
@@ -488,7 +497,7 @@ export default function BidRequestPanel({
             onClick={() => void submitBid()}
             className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? 'Saving...' : buttonLabel}
+            {submitting ? t('saving') : buttonLabel}
           </button>
 
           {editing && (
@@ -500,7 +509,7 @@ export default function BidRequestPanel({
               }}
               className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/20 disabled:opacity-50"
             >
-              Cancel
+              {t('cancel')}
             </button>
           )}
         </div>
@@ -513,7 +522,7 @@ export default function BidRequestPanel({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
-            Request Bids
+            {t('requestBids')}
           </div>
 
           <h2 className="mt-2 text-2xl font-black text-white">
@@ -533,7 +542,7 @@ export default function BidRequestPanel({
           {bidDeadline && (
             <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-slate-200">
               {t('bidsClose', {
-                date: formatDateTime(bidDeadline!) || '',
+                date: formatDateTime(bidDeadline!, locale) || '',
               })}
             </span>
           )}
@@ -541,7 +550,7 @@ export default function BidRequestPanel({
           {workDeadline && (
             <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-slate-200">
               {t('workDue', {
-                date: formatDate(workDeadline!) || '',
+                date: formatDate(workDeadline!, locale) || '',
               })}
             </span>
           )}
@@ -565,13 +574,12 @@ export default function BidRequestPanel({
               <div className="text-lg font-black text-white">
                 {bids.length}{' '}
                 {bids.length === 1
-                  ? t('bidSingular')
-                  : t('bidPlural')}{' '}
-                {t('received')}
+                  ? t('bidReceivedSingular')
+                  : t('bidsReceivedPlural')}
               </div>
 
               <div className="mt-1 text-xs font-semibold text-slate-400">
-                Compare price, availability, experience, verification, and contractor reputation.
+                {t('compareBidFactors')}
               </div>
             </div>
 
@@ -618,14 +626,14 @@ export default function BidRequestPanel({
                     {bid.status === 'accepted' && (
                       <div className="mb-5 flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-black uppercase tracking-[0.16em] text-emerald-200">
                         <span aria-hidden="true">✓</span>
-                        Contractor Selected
+                        {t('contractorSelected')}
                       </div>
                     )}
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-black text-white">
-                            {companyName(company)}
+                            {companyName(company, t('crewCallContractor'))}
                           </h3>
 
                           <span
@@ -636,13 +644,13 @@ export default function BidRequestPanel({
 
                           {company?.company_verified && (
                             <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-[11px] font-black text-blue-300">
-                              Verified
+                              {t('verified')}
                             </span>
                           )}
 
                           {company?.insurance_verified && (
                             <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-black text-emerald-300">
-                              Insurance Verified
+                              {t('insuranceVerified')}
                             </span>
                           )}
                         </div>
@@ -670,11 +678,11 @@ export default function BidRequestPanel({
 
                       <div className="lg:text-right">
                         <div className="text-xs font-black uppercase tracking-wider text-slate-500">
-                          Bid
+                          {t('bidSingular')}
                         </div>
 
                         <div className="mt-1 text-3xl font-black text-emerald-300">
-                          {formatMoney(bid.amount_cents)}
+                          {formatMoney(bid.amount_cents, locale)}
                         </div>
                       </div>
                     </div>
@@ -716,7 +724,7 @@ export default function BidRequestPanel({
 
                     <div className="mt-4 text-xs font-semibold text-slate-500">
                       {t('submittedOn', {
-                        date: formatDateTime(bid.created_at || '') || '',
+                        date: formatDateTime(bid.created_at || '', locale) || '',
                       })}
                     </div>
 
@@ -726,7 +734,7 @@ export default function BidRequestPanel({
                           href={`/companies/${company.id}`}
                           className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-5 py-3 text-sm font-black text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-500/20 hover:text-white"
                         >
-                          View Contractor
+                          {t('viewContractor')}
                         </Link>
                       )}
 
@@ -768,7 +776,7 @@ export default function BidRequestPanel({
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                  Your Bid
+                  {t('yourBid')}
                 </div>
 
                 <span className={statusClass(ownBid.status)}>
@@ -777,7 +785,7 @@ export default function BidRequestPanel({
               </div>
 
               <div className="mt-2 text-3xl font-black text-white">
-                {formatMoney(ownBid.amount_cents)}
+                {formatMoney(ownBid.amount_cents, locale)}
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -845,13 +853,13 @@ export default function BidRequestPanel({
 
               {ownBid.status === 'accepted' && (
                 <div className="mt-5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm font-black text-emerald-200">
-                  Your bid was accepted by the project owner.
+                  {t('acceptedOwnerMessage')}
                 </div>
               )}
 
               {ownBid.status === 'declined' && (
                 <div className="mt-5 rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
-                  The project owner selected another bid.
+                  {t('declinedOwnerMessage')}
                 </div>
               )}
             </div>
@@ -886,8 +894,7 @@ export default function BidRequestPanel({
       ) : (
         !message && (
           <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/30 p-5 text-sm font-bold text-slate-300">
-            Sign in with a CrewCall Company account to submit or
-            manage contractor bids.
+            {t('companyBidSignIn')}
           </div>
         )
       )}
