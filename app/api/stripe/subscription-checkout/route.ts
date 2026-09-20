@@ -10,8 +10,6 @@ const foundingMemberPriceId =
   process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID
 const workerProPriceId =
   process.env.STRIPE_WORKER_PRO_PRICE_ID
-const workerMembershipPriceId =
-  process.env.STRIPE_WORKER_MEMBERSHIP_PRICE_ID
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -129,8 +127,7 @@ export async function POST(request: Request) {
 
     if (
       requestedPlan !== 'founding_member' &&
-      requestedPlan !== 'worker_pro' &&
-      requestedPlan !== 'worker_membership'
+      requestedPlan !== 'worker_pro'
     ) {
       return NextResponse.json(
         { error: 'Invalid CrewCall membership plan.' },
@@ -151,19 +148,6 @@ export async function POST(request: Request) {
       )
     }
 
-    if (
-      requestedPlan === 'worker_membership' &&
-      !workerMembershipPriceId
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Missing STRIPE_WORKER_MEMBERSHIP_PRICE_ID.',
-        },
-        { status: 500 }
-      )
-    }
-
     const companyContext = await resolveCompanyContext(
       supabase,
       user.id
@@ -178,8 +162,7 @@ export async function POST(request: Request) {
       !isCompanyMembershipRole
 
     if (
-      ((requestedPlan === 'worker_pro' ||
-        requestedPlan === 'worker_membership') &&
+      (requestedPlan === 'worker_pro' &&
         !isWorker) ||
       (requestedPlan === 'founding_member' &&
         !isCompanyMembershipRole)
@@ -194,11 +177,9 @@ export async function POST(request: Request) {
     }
 
     const selectedPriceId =
-      requestedPlan === 'worker_membership'
-        ? workerMembershipPriceId
-        : requestedPlan === 'worker_pro'
-          ? workerProPriceId
-          : foundingMemberPriceId
+      requestedPlan === 'worker_pro'
+        ? workerProPriceId
+        : foundingMemberPriceId
 
     const {
       data: existingSubscription,

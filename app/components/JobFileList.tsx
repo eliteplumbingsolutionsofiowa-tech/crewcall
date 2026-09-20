@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useTranslations } from 'next-intl'
 
 type JobFile = {
   id: string
@@ -70,6 +71,7 @@ export default function JobFileList({
   currentUserId = null,
   onDeleteComplete,
 }: Props) {
+  const t = useTranslations('JobFiles')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -127,11 +129,11 @@ export default function JobFileList({
         </div>
 
         <h3 className="mt-4 text-lg font-black text-white">
-          No files uploaded yet
+          {t('noFilesUploaded')}
         </h3>
 
         <p className="mt-2 text-sm font-semibold text-slate-400">
-          Uploaded plans, specs, photos, and PDFs will show here.
+          {t('emptyDescription')}
         </p>
       </div>
     )
@@ -141,9 +143,9 @@ export default function JobFileList({
     <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-xl font-black text-white">Uploaded Files</h3>
+          <h3 className="text-xl font-black text-white">{t('uploadedFiles')}</h3>
           <p className="mt-1 text-sm font-semibold text-slate-400">
-            Open files in a new tab or remove outdated uploads.
+            {t('uploadedFilesHelp')}
           </p>
         </div>
 
