@@ -1045,6 +1045,35 @@ export async function PATCH(request: Request) {
         )
       }
 
+      const { data: bidderProfile } =
+        await supabaseAdmin
+          .from('profiles')
+          .select('company_name, full_name')
+          .eq('id', bid.company_id)
+          .maybeSingle()
+
+      const bidderName =
+        bidderProfile?.company_name ||
+        bidderProfile?.full_name ||
+        'A contractor'
+
+      await notifyCompany({
+        companyId: job.company_id,
+        type:
+          bid.status === 'withdrawn'
+            ? 'job_bid_resubmitted'
+            : 'job_bid_updated',
+        title:
+          bid.status === 'withdrawn'
+            ? 'Contractor bid resubmitted'
+            : 'Contractor bid updated',
+        body:
+          bid.status === 'withdrawn'
+            ? `${bidderName} resubmitted a bid on your project.`
+            : `${bidderName} updated a bid on your project.`,
+        jobId: job.id,
+      })
+
       return NextResponse.json({
         success: true,
         bid: updatedBid,
@@ -1086,6 +1115,26 @@ export async function PATCH(request: Request) {
           { status: 400 }
         )
       }
+
+      const { data: bidderProfile } =
+        await supabaseAdmin
+          .from('profiles')
+          .select('company_name, full_name')
+          .eq('id', bid.company_id)
+          .maybeSingle()
+
+      const bidderName =
+        bidderProfile?.company_name ||
+        bidderProfile?.full_name ||
+        'A contractor'
+
+      await notifyCompany({
+        companyId: job.company_id,
+        type: 'job_bid_withdrawn',
+        title: 'Contractor bid withdrawn',
+        body: `${bidderName} withdrew a bid from your project.`,
+        jobId: job.id,
+      })
 
       return NextResponse.json({
         success: true,
