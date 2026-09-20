@@ -223,7 +223,26 @@ export async function POST(
       .maybeSingle()
 
     if (existingInvite) {
-      await adminClient
+      const existingStatus =
+        (existingInvite.status || '').toLowerCase()
+
+      if (
+        existingStatus === 'pending' ||
+        existingStatus === 'accepted'
+      ) {
+        return NextResponse.json({
+          success: true,
+          inviteId: existingInvite.id,
+          alreadyInvited: true,
+          status: existingStatus,
+          message:
+            existingStatus === 'accepted'
+              ? 'Worker has already accepted this invitation.'
+              : 'Worker has already been invited.',
+        })
+      }
+
+      const { error: reinviteError } = await adminClient
         .from('job_invites')
         .update({
           status: 'pending',
@@ -231,6 +250,15 @@ export async function POST(
           company_seen: true,
         })
         .eq('id', existingInvite.id)
+
+      if (reinviteError) {
+        return NextResponse.json(
+          {
+            error: reinviteError.message,
+          },
+          { status: 500 }
+        )
+      }
 
       await createInviteNotification(
         adminClient,
@@ -242,6 +270,7 @@ export async function POST(
       return NextResponse.json({
         success: true,
         inviteId: existingInvite.id,
+        status: 'pending',
         message: 'Worker invited successfully.',
       })
     }
