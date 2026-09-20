@@ -3919,5 +3919,11 @@
       "cleaningRestoration": "Limpieza / Restauración",
       "other": "Otro"
     }
+  },
+  "JobFiles": {
+    "noFilesUploaded": "Aún no se han subido archivos",
+    "emptyDescription": "Los planos, especificaciones, fotos y archivos PDF que subas aparecerán aquí.",
+    "uploadedFiles": "Archivos Subidos",
+    "uploadedFilesHelp": "Abre los archivos en una pestaña nueva o elimina las cargas que ya no necesites."
   }
 }

@@ -3931,5 +3931,11 @@
       "cleaningRestoration": "Cleaning / Restoration",
       "other": "Other"
     }
+  },
+  "JobFiles": {
+    "noFilesUploaded": "No files uploaded yet",
+    "emptyDescription": "Uploaded plans, specs, photos, and PDFs will show here.",
+    "uploadedFiles": "Uploaded Files",
+    "uploadedFilesHelp": "Open files in a new tab or remove outdated uploads."
   }
 }
