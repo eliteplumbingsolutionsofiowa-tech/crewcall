@@ -221,9 +221,9 @@ export default function LoginPage() {
       />
 
       {/* Cinematic overlays */}
-      <div className="absolute inset-0 bg-slate-950/25" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/35 to-slate-950/15" />
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-slate-950/15" />
+      <div className="absolute inset-0 bg-slate-950/15" />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/65 via-slate-950/25 to-slate-950/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-slate-950/10" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col items-center gap-8 px-5 pb-10 pt-4 sm:px-8 lg:flex-row lg:gap-12 lg:px-12 lg:pb-10">
