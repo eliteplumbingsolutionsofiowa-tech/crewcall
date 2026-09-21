@@ -287,6 +287,29 @@ export async function POST(request: Request) {
     let stripeCustomerId =
       existingSubscription?.stripe_customer_id ?? null
 
+    if (stripeCustomerId) {
+      try {
+        const existingCustomer =
+          await stripe.customers.retrieve(stripeCustomerId)
+
+        if ('deleted' in existingCustomer && existingCustomer.deleted) {
+          stripeCustomerId = null
+        }
+      } catch (error) {
+        if (
+          error instanceof Stripe.errors.StripeError &&
+          error.code === 'resource_missing'
+        ) {
+          console.log(
+            'Stored Stripe customer does not exist in the current Stripe account. Creating a new customer.'
+          )
+          stripeCustomerId = null
+        } else {
+          throw error
+        }
+      }
+    }
+
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
