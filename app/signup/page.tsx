@@ -466,7 +466,11 @@ function SignupForm() {
     }
 
     if (data.session?.access_token && !inviteCode) {
-      window.location.assign('/profile')
+      window.location.assign(
+        role === 'homeowner'
+          ? '/homeowner/dashboard'
+          : '/profile'
+      )
       return
     }
 
