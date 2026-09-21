@@ -226,10 +226,10 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-slate-950/10" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col items-center gap-8 px-5 pb-10 pt-4 sm:px-8 lg:flex-row lg:gap-12 lg:px-12 lg:pb-10">
+        <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col items-center gap-5 px-5 pb-8 pt-2 sm:px-8 lg:flex-row lg:gap-12 lg:px-12 lg:pb-10">
           {/* Hero */}
-          <section className="w-full max-w-3xl pt-4 lg:w-[58%] lg:flex-none lg:pt-0">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-4 py-2 backdrop-blur-md">
+          <section className="w-full max-w-3xl pt-2 lg:w-[58%] lg:flex-none lg:pt-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-4 py-2 backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.9)]" />
               <span className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-200">
                 Built for the skilled trades
@@ -243,16 +243,16 @@ export default function LoginPage() {
               </span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-lg font-bold leading-7 text-slate-100 drop-shadow-lg sm:text-xl lg:text-xl">
+            <p className="mt-4 max-w-2xl text-lg font-bold leading-7 text-slate-100 drop-shadow-lg sm:text-xl lg:text-xl">
               Find help. Find work. Find contractors. Fast.
             </p>
 
-            <p className="mt-4 max-w-xl text-sm font-semibold leading-6 text-slate-300 sm:text-base">
+            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-slate-300 sm:text-base">
               One network connecting the people who build,
               repair, maintain, and improve America.
             </p>
 
-            <div className="mt-7 grid max-w-2xl grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="mt-5 hidden max-w-2xl grid-cols-4 gap-3 lg:grid">
               {[
                 ['⚒', 'Workers'],
                 ['▣', 'Companies'],
