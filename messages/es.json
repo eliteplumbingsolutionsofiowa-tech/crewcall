@@ -464,7 +464,7 @@
   },
   "Login": {
     "welcomeBack": "Bienvenido de Nuevo",
-    "loginDescription": "Inicia sesión en tu cuenta de trabajador, empresa o administrador.",
+    "loginDescription": "Inicia sesión y conéctate con los oficios especializados.",
     "resetPassword": "Restablecer tu Contraseña",
     "resetDescription": "Ingresa tu correo electrónico y te enviaremos un enlace seguro para restablecer tu contraseña.",
     "email": "Correo Electrónico",
