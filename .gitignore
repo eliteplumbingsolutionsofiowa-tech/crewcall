@@ -61,3 +61,6 @@ supabase/.temp/
 # Supabase temp files
 supabase/.temp/
 android/app/crewcall-release.keystore
+
+# Local backup files
+*.bak-*
