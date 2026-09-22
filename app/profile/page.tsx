@@ -949,6 +949,62 @@ const [preferredWorkText, setPreferredWorkText] = useState('')
 
           <div className="grid gap-4 p-3 pb-8 sm:gap-6 sm:p-8 lg:grid-cols-[1.4fr_0.8fr]">
             <div className="space-y-4 sm:space-y-6">
+              {isAdminProfile && isOwnProfile && (
+                <CrewCard>
+                  <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
+                        Admin Profile
+                      </h2>
+
+                      <p className="text-sm font-semibold text-slate-500">
+                        Manage the public CrewCall administration profile.
+                      </p>
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <CrewButton onClick={saveProfile} disabled={saving}>
+                        {saving ? t('saving') : t('saveProfile')}
+                      </CrewButton>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <FieldBlock label="Display Name">
+                      <input
+                        value={inputValue(profile.full_name)}
+                        onChange={(event) =>
+                          updateField('full_name', event.target.value)
+                        }
+                        className="input min-h-[44px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-[48px] sm:rounded-2xl sm:px-4 sm:py-3"
+                        placeholder="CrewCall"
+                      />
+                    </FieldBlock>
+
+                    <FieldBlock label="About">
+                      <textarea
+                        value={inputValue(profile.bio)}
+                        onChange={(event) =>
+                          updateField('bio', event.target.value)
+                        }
+                        className="input min-h-24 sm:min-h-32"
+                        placeholder="Official CrewCall platform administration account."
+                      />
+                    </FieldBlock>
+
+                    <div className="sm:hidden">
+                      <CrewButton
+                        onClick={saveProfile}
+                        disabled={saving}
+                        fullWidth
+                      >
+                        {saving ? t('saving') : t('saveProfile')}
+                      </CrewButton>
+                    </div>
+                  </div>
+                </CrewCard>
+              )}
+
               {isWorkerProfile && (
               <CrewCard>
                 <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
