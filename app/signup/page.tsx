@@ -393,6 +393,22 @@ function SignupForm() {
       return
     }
 
+    try {
+      const metaWindow = window as typeof window & {
+        fbq?: (...args: unknown[]) => void
+      }
+
+      metaWindow.fbq?.('track', 'CompleteRegistration', {
+        content_name: 'CrewCall Signup',
+        status: role,
+      })
+    } catch (error) {
+      console.error(
+        'Meta registration tracking failed:',
+        error
+      )
+    }
+
     if (
       data.session?.access_token &&
       inviteCode
