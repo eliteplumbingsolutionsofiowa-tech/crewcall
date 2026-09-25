@@ -9,6 +9,7 @@ import ToastProvider from './components/ToastProvider'
 import LiveNotificationSound from './components/LiveNotificationSound'
 import MobileBottomNav from './components/MobileBottomNav'
 import LanguageSwitcher from './components/LanguageSwitcher'
+import MetaPixel from './components/MetaPixel'
 
 export const metadata: Metadata = {
   title: 'CrewCall',
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale} data-scroll-behavior="smooth">
       <body className="min-h-screen bg-slate-950 text-white antialiased">
+        <MetaPixel />
         <NextIntlClientProvider messages={messages}>
         <CrewCallPresence />
         <ToastProvider />
