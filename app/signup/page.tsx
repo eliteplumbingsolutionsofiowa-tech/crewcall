@@ -524,9 +524,9 @@ function SignupForm() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10 text-white">
-      <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-25 sm:opacity-40" style={{ backgroundImage: "url('/brand/crewcall-login-bg.png')" }} />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/80 to-slate-950" />
-      <div className="relative z-10 w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950/90 p-8 shadow-2xl backdrop-blur-xl">
+      <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-45 sm:opacity-60" style={{ backgroundImage: "url('/brand/crewcall-login-bg.png')" }} />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-950/60 to-slate-950/85" />
+      <div className="relative z-10 w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-950/80 p-8 shadow-2xl backdrop-blur-xl">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
           {acceptingTeamInvite
             ? t('teamInvitation')
