@@ -1029,13 +1029,20 @@ export default function CrewCallNav() {
         ) : null}
 
         {!loading && !userId ? (
-          <NavLink
-            href="/login"
-            onClick={onNavigate}
-            active={pathname.startsWith('/login')}
-          >
-            {tNav('login')}
-          </NavLink>
+          <>
+            <a href="/jobs" onClick={onNavigate}
+              className="rounded-xl border border-sky-400/40 px-3 py-2 font-bold text-sky-100 hover:bg-sky-400/10">
+              Browse Jobs
+            </a>
+            <a href="/signup" onClick={onNavigate}
+              className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 font-extrabold text-white shadow-lg shadow-blue-500/25 hover:brightness-110">
+              Join Free
+            </a>
+            <NavLink href="/login" onClick={onNavigate}
+              active={pathname.startsWith('/login')}>
+              {tNav('login')}
+            </NavLink>
+          </>
         ) : null}
       </>
     )
@@ -1101,12 +1108,17 @@ export default function CrewCallNav() {
                   </span>
                 </button>
                ) : (
-                <NavLink
-                  href="/login"
-                  active={pathname.startsWith('/login')}
-                >
-                  {tNav('login')}
-                </NavLink>
+                <>
+                  <a href="/jobs" className="rounded-xl border border-sky-400/40 px-3 py-2 font-bold text-sky-100 hover:bg-sky-400/10">
+                    Browse Jobs
+                  </a>
+                  <a href="/signup" className="rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 font-extrabold text-white shadow-lg shadow-blue-500/25 hover:brightness-110">
+                    Join Free
+                  </a>
+                  <NavLink href="/login" active={pathname.startsWith('/login')}>
+                    {tNav('login')}
+                  </NavLink>
+                </>
               )}
 
             </div>

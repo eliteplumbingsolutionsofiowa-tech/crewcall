@@ -1,4 +1,5 @@
 'use client'
+import './home-launch.css'
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -182,23 +183,8 @@ export default function HomePage() {
   const displayName =
     profile?.company_name || profile?.full_name || t('welcomeToCrewCall')
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-              CrewCall
-            </p>
-            <h1 className="mt-3 text-3xl font-black">{t('loading')}</h1>
-          </div>
-        </div>
-      </main>
-    )
-  }
-
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="home-launch min-h-screen text-white">
       <section className="px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
@@ -263,51 +249,19 @@ export default function HomePage() {
             )}
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-500/10">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-              {t('liveSnapshot')}
-            </p>
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <StatCard label={t('companies')} value={stats.companies} />
-              <StatCard label={t('workers')} value={stats.workers} />
-              <StatCard label={t('openJobs')} value={stats.openJobs} />
-              <StatCard label={t('completed')} value={stats.completedJobs} />
-              <StatCard label={t('applications')} value={stats.applications} />
-              <StatCard label={t('reviews')} value={stats.reviews} />
-
-              {profile?.role === 'worker' && (
-                <StatCard label={t('myApplications')} value={myApplicationsCount} />
-              )}
-
-              {(profile?.role === 'company' || profile?.role === 'staffing_agency') && (
-                <StatCard label={t('myPostedJobs')} value={myJobsCount} />
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-12 max-w-7xl">
-          <div className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-black shadow-2xl shadow-cyan-500/20">
-            <div className="border-b border-white/10 bg-slate-950/80 px-5 py-4">
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-cyan-300">
-                {t('watchInAction')}
-              </p>
-            </div>
-
-            <video
-              className="aspect-video w-full bg-black object-cover"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="auto"
-            >
-              <source src={CREWCALL_VIDEO_URL} type="video/mp4" />
-            </video>
-          </div>
-        </div>
+          <div className="home-video">
+  <p className="home-video-title">{t('watchInAction')}</p>
+  <video autoPlay muted loop playsInline controls preload="metadata"
+    aria-label={t('watchInAction')}>
+    <source src={CREWCALL_VIDEO_URL} type="video/mp4" />
+  </video>
+  <div className="home-flow">
+    {[t('postAJob'), t('messageWorkers'), t('hireRightPerson')].map((label, i) => (
+      <div key={label}><span>0{i + 1}</span>{label}</div>
+    ))}
+  </div>
+</div>
+</div>
       </section>
 
       <section className="px-4 py-10 sm:px-6 lg:px-8">
@@ -318,7 +272,7 @@ export default function HomePage() {
             text={t('platformText')}
           />
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 flex flex-wrap gap-3">
             {[
               t('plumbing'),
               t('hvac'),
@@ -339,7 +293,7 @@ export default function HomePage() {
             ].map((trade) => (
               <div
                 key={trade}
-                className="flex min-h-[110px] items-center rounded-3xl border border-white/10 bg-white/5 p-6"
+                className="home-trade-pill flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-3"
               >
                 <p className="text-2xl font-black">{trade}</p>
               </div>
