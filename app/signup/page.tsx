@@ -349,6 +349,12 @@ function SignupForm() {
           )}`
         : undefined
 
+    const signupParams = new URLSearchParams(window.location.search)
+    const signupAttribution = {
+      utm_source: signupParams.get('utm_source')?.slice(0, 120) || null,
+      utm_medium: signupParams.get('utm_medium')?.slice(0, 120) || null,
+      utm_campaign: signupParams.get('utm_campaign')?.slice(0, 120) || null,
+    }
     const { data, error } =
       await supabase.auth.signUp({
         email: cleanEmail,
@@ -359,6 +365,9 @@ function SignupForm() {
             full_name: cleanFullName,
             phone: cleanPhone,
             role,
+            utm_source: signupAttribution.utm_source,
+            utm_medium: signupAttribution.utm_medium,
+            utm_campaign: signupAttribution.utm_campaign,
             invite_code_used:
               inviteCode,
             team_invite_id:
@@ -408,6 +417,9 @@ function SignupForm() {
       metaWindow.fbq?.('track', 'CompleteRegistration', {
         content_name: 'CrewCall Signup',
         status: role,
+        utm_source: signupAttribution.utm_source,
+        utm_medium: signupAttribution.utm_medium,
+        utm_campaign: signupAttribution.utm_campaign,
       })
     } catch (error) {
       console.error(
