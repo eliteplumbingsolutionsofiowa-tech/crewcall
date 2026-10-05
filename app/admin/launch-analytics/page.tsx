@@ -11,8 +11,18 @@ type Lead = {
   created_at: string | null
 }
 
+type AttributedSignup = {
+  role: string
+  source: string
+  medium: string
+  campaign: string
+  created_at: string
+}
+
 export default function LaunchAnalyticsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
+  const [attributed, setAttributed] = useState<AttributedSignup[]>([])
+  const [attributedTotal, setAttributedTotal] = useState(0)
 
   async function load() {
     const { data } = await supabase
@@ -25,6 +35,19 @@ export default function LaunchAnalyticsPage() {
       })
 
     setLeads(data || [])
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      const response = await fetch('/api/admin/signup-attribution', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setAttributed(result.signups || [])
+        setAttributedTotal(result.total || 0)
+      }
+    }
   }
 
   useEffect(() => {
@@ -102,6 +125,27 @@ export default function LaunchAnalyticsPage() {
 
         </section>
 
+
+        <section className="rounded-2xl border border-cyan-400/20 bg-white/5 p-6">
+          <h2 className="text-2xl font-black">Campaign Signups</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            {attributedTotal} account signups with campaign tags
+          </p>
+          <div className="mt-5 space-y-3">
+            {attributed.length ? attributed.map((signup, i) => (
+              <div key={`${signup.created_at}-${i}`} className="rounded-xl bg-slate-900 p-4">
+                <p className="font-bold">{signup.campaign}</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  {signup.source} / {signup.medium} · {signup.role} · {new Date(signup.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            )) : (
+              <p className="text-sm text-slate-400">
+                Tagged signups will appear here when people join through a campaign link.
+              </p>
+            )}
+          </div>
+        </section>
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
 
