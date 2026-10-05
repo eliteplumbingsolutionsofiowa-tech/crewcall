@@ -503,6 +503,7 @@
     "role": "Role",
     "worker": "Worker",
     "workerFreeDescription": "Your worker profile is free. Browse and apply for jobs at no cost.",
+    "companyFreeDescription": "Your company profile is free. Your first job post is free. No credit card required.",
     "company": "Company",
     "staffingAgency": "Staffing Agency",
     "joiningTeam": "Joining team...",

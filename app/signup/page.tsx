@@ -696,6 +696,12 @@ function SignupForm() {
               </div>
             )}
 
+            {!acceptingTeamInvite && role === 'company' && (
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-semibold leading-6 text-cyan-100">
+                {t('companyFreeDescription')}
+              </div>
+            )}
+
             {!acceptingTeamInvite && role === 'homeowner' && (
               <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-semibold leading-6 text-cyan-100">
                 {t('homeownerDescription')}
