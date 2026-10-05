@@ -52,6 +52,13 @@ function SignupForm() {
   const [role, setRole] =
     useState<Role>('worker')
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('role') === 'company') {
+      setRole('company')
+    }
+  }, [])
+
+
   const [loading, setLoading] =
     useState(false)
 
