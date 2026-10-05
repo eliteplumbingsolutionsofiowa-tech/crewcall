@@ -120,6 +120,10 @@ export default function MobileBottomNav() {
           ? t('myProjects')
           : t('jobs')
   const alertTotal = unreadMessages + unreadNotifications
+  const hideBottomNav = ['/', '/login', '/signup', '/reset-password'].includes(pathname)
+
+  if (hideBottomNav) return null
+
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-2xl shadow-black/40 backdrop-blur-xl md:hidden">
